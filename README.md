@@ -15,6 +15,14 @@ Here are some ideas to get you started:
 - ⚡ Fun fact: ...
 -->
 
+- 🔭 I am currently studying in Beijing Institute of Technology.
+- 🌱 My current research interests include spatio-temporal data mining, natural language processing, recommendation systems and large language models
+- 🔧 Passionate about coding and problem-solving.
+- 💻 Mainly working with Python, and machine learning.
+- 📚 I hope I can contact some theoretical computer directions in the future and integrate theory and application.
+- 📫 You can reach me at: [c2675668@gmail.com].
+- 🚀 Let's collaborate on interesting open-source projects!
+
 ![Metrics](/github-metrics.svg)
 
 ![Anurag's GitHub stats](https://github-readme-stats.vercel.app/api?username=wcx12)
