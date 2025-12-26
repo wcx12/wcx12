@@ -15,11 +15,11 @@ Here are some ideas to get you started:
 - ⚡ Fun fact: ...
 -->
 
-- 🔭 I am currently studying in Beijing Institute of Technology.
-- 🌱 My current research interests include spatio-temporal data mining, natural language processing, recommendation systems and large language models
+- 🔭 I am currently studying in Beijing Institute of Technology, and will graduate in 2026.
+- 🌱 My current research interests include **point set registration** and **anomaly detection**.
 - 🔧 Passionate about coding and problem-solving.
 - 💻 Mainly working with Python, and machine learning.
-- 📚 I hope I can contact some theoretical computer directions in the future and integrate theory and application.
+- 📚 **Currently, I am in the process of applying for a master's or doctoral degree.**
 - 📫 You can reach me at: [c2675668@gmail.com].
 - 🚀 Let's collaborate on interesting open-source projects!
 
