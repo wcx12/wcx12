@@ -6,8 +6,23 @@ const typeTarget = document.getElementById('typeTarget');
 const repoGrid = document.getElementById('repoGrid');
 const repoSearch = document.getElementById('repoSearch');
 const repoSort = document.getElementById('repoSort');
+const repoMode = document.getElementById('repoMode');
+const repoPageSize = document.getElementById('repoPageSize');
 const repoCount = document.getElementById('repoCount');
+const repoPager = document.getElementById('repoPager');
+const repoPrev = document.getElementById('repoPrev');
+const repoNext = document.getElementById('repoNext');
+const repoPageInfo = document.getElementById('repoPageInfo');
+
 const pubList = document.getElementById('pubList');
+const pubMode = document.getElementById('pubMode');
+const pubPageSize = document.getElementById('pubPageSize');
+const pubCount = document.getElementById('pubCount');
+const pubPager = document.getElementById('pubPager');
+const pubPrev = document.getElementById('pubPrev');
+const pubNext = document.getElementById('pubNext');
+const pubPageInfo = document.getElementById('pubPageInfo');
+
 const langToggle = document.getElementById('langToggle');
 const openProjects = document.getElementById('openProjects');
 const modal = document.getElementById('detailModal');
@@ -20,7 +35,22 @@ let currentLang = 'en';
 let allRepos = [];
 let filteredRepos = [];
 let loadedPublications = [];
+
 const ORCID_ID = '0009-0005-6139-4327';
+
+const repoState = {
+  mode: 'pagination',
+  pageSize: 12,
+  page: 1,
+  infiniteCount: 12
+};
+
+const pubState = {
+  mode: 'pagination',
+  pageSize: 6,
+  page: 1,
+  infiniteCount: 6
+};
 
 const fallbackPublications = {
   en: [
@@ -94,7 +124,14 @@ const i18n = {
     sort_updated: 'Sort: Updated',
     sort_stars: 'Sort: Stars',
     sort_name: 'Sort: Name',
-    repo_count: '{n} repositories',
+    mode_pagination: 'Mode: Pagination',
+    mode_infinite: 'Mode: Infinite',
+    page_prev: 'Prev',
+    page_next: 'Next',
+    page_info: 'Page {page}/{total}',
+    repo_count: 'Showing {shown}/{total} repositories',
+    pub_count: 'Showing {shown}/{total} publications',
+    infinite_hint: 'Scroll down to auto-load more',
     timeline_title: 'Timeline',
     timeline_2024: 'Focused on strengthening ML engineering foundations and reproducible workflows.',
     timeline_2025: 'Deepening research on point set registration and anomaly signal analysis.',
@@ -126,7 +163,6 @@ const i18n = {
     details_research_title: 'Research Details',
     details_research_body: 'Current work emphasizes robust geometric matching, anomaly signal understanding, and reproducible engineering pipelines.',
     details_project_link_text: 'Open Repository',
-    details_research_link_text: 'Close',
     modal_close: 'x',
     lang_btn: '中文',
     chip_loaded: 'Loaded: {tag} -> actively used in my current workflow.',
@@ -168,7 +204,14 @@ const i18n = {
     sort_updated: '排序：最近更新',
     sort_stars: '排序：星标数',
     sort_name: '排序：名称',
-    repo_count: '{n} 个仓库',
+    mode_pagination: '模式：分页',
+    mode_infinite: '模式：无限加载',
+    page_prev: '上一页',
+    page_next: '下一页',
+    page_info: '第 {page}/{total} 页',
+    repo_count: '显示 {shown}/{total} 个仓库',
+    pub_count: '显示 {shown}/{total} 篇论文',
+    infinite_hint: '向下滚动自动加载更多',
     timeline_title: '时间线',
     timeline_2024: '强化机器学习工程基础与可复现实验流程。',
     timeline_2025: '深入开展点集配准与异常信号分析研究。',
@@ -200,7 +243,6 @@ const i18n = {
     details_research_title: '研究详情',
     details_research_body: '当前重点在稳健几何匹配、异常信号理解，以及可复现的工程化流程。',
     details_project_link_text: '打开仓库',
-    details_research_link_text: '关闭',
     modal_close: 'x',
     lang_btn: 'EN',
     chip_loaded: '已加载: {tag} -> 已纳入当前工作流。',
@@ -221,10 +263,7 @@ function activateView(viewId) {
   if (targetView) targetView.classList.add('active');
 }
 
-commands.forEach((btn) => {
-  btn.addEventListener('click', () => activateView(btn.dataset.view));
-});
-
+commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view)));
 openProjects.addEventListener('click', () => {
   activateView('projects');
   repoSearch.focus();
@@ -234,8 +273,7 @@ chips.forEach((chip) => {
   chip.addEventListener('click', () => {
     chips.forEach((c) => c.classList.remove('active'));
     chip.classList.add('active');
-    const template = i18n[currentLang].chip_loaded;
-    chipOutput.textContent = template.replace('{tag}', chip.dataset.tag);
+    chipOutput.textContent = i18n[currentLang].chip_loaded.replace('{tag}', chip.dataset.tag);
   });
 });
 
@@ -269,7 +307,7 @@ document.querySelectorAll('.detail-trigger').forEach((btn) => {
       openModal({
         title: i18n[currentLang].details_research_title,
         body: i18n[currentLang].details_research_body,
-        linkText: i18n[currentLang].details_research_link_text,
+        linkText: '',
         link: null
       });
     }
@@ -279,13 +317,9 @@ document.querySelectorAll('.detail-trigger').forEach((btn) => {
 function sortedRepos(repos) {
   const key = repoSort.value;
   const items = [...repos];
-  if (key === 'stars') {
-    items.sort((a, b) => b.stargazers_count - a.stargazers_count || a.name.localeCompare(b.name));
-  } else if (key === 'name') {
-    items.sort((a, b) => a.name.localeCompare(b.name));
-  } else {
-    items.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-  }
+  if (key === 'stars') items.sort((a, b) => b.stargazers_count - a.stargazers_count || a.name.localeCompare(b.name));
+  else if (key === 'name') items.sort((a, b) => a.name.localeCompare(b.name));
+  else items.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
   return items;
 }
 
@@ -295,20 +329,46 @@ function applyRepoFilter() {
     const hay = `${repo.name} ${repo.description || ''} ${repo.language || ''}`.toLowerCase();
     return hay.includes(q);
   });
+  repoState.page = 1;
+  repoState.infiniteCount = repoState.pageSize;
   renderRepos(filteredRepos);
 }
 
-function renderRepos(repos) {
-  if (!repoGrid) return;
+function renderRepos(repos, preserveScroll = false) {
+  const beforeScroll = repoGrid.scrollTop;
   const items = sortedRepos(repos);
-  repoCount.textContent = i18n[currentLang].repo_count.replace('{n}', String(items.length));
+  const total = items.length;
+  let shown = [];
 
-  if (!items.length) {
+  if (repoState.mode === 'pagination') {
+    const totalPages = Math.max(1, Math.ceil(total / repoState.pageSize));
+    repoState.page = Math.min(Math.max(repoState.page, 1), totalPages);
+    const start = (repoState.page - 1) * repoState.pageSize;
+    shown = items.slice(start, start + repoState.pageSize);
+
+    repoPager.style.display = 'flex';
+    repoPageInfo.textContent = i18n[currentLang].page_info
+      .replace('{page}', String(repoState.page))
+      .replace('{total}', String(totalPages));
+    repoPrev.disabled = repoState.page <= 1;
+    repoNext.disabled = repoState.page >= totalPages;
+  } else {
+    repoState.infiniteCount = Math.max(repoState.pageSize, repoState.infiniteCount);
+    shown = items.slice(0, repoState.infiniteCount);
+    repoPager.style.display = 'none';
+    repoPageInfo.textContent = '';
+  }
+
+  repoCount.textContent = i18n[currentLang].repo_count
+    .replace('{shown}', String(shown.length))
+    .replace('{total}', String(total));
+
+  if (!shown.length) {
     repoGrid.innerHTML = `<p class="muted">${i18n[currentLang].no_repos}</p>`;
     return;
   }
 
-  repoGrid.innerHTML = items.map((repo) => `
+  repoGrid.innerHTML = shown.map((repo) => `
     <article class="repo-card" data-repo="${repo.name}">
       <h3><a href="${repo.html_url}" target="_blank" rel="noreferrer">${repo.name}</a></h3>
       <p class="muted">${repo.description || i18n[currentLang].no_desc}</p>
@@ -323,6 +383,10 @@ function renderRepos(repos) {
     </article>
   `).join('');
 
+  if (repoState.mode === 'infinite' && shown.length < total) {
+    repoGrid.insertAdjacentHTML('beforeend', `<p class="muted">${i18n[currentLang].infinite_hint}</p>`);
+  }
+
   document.querySelectorAll('.repo-detail').forEach((btn) => {
     btn.addEventListener('click', () => {
       const repo = allRepos.find((item) => item.name === btn.dataset.repo);
@@ -335,15 +399,49 @@ function renderRepos(repos) {
       });
     });
   });
+
+  if (preserveScroll) repoGrid.scrollTop = beforeScroll;
 }
 
-function renderPublications() {
-  const items = loadedPublications.length ? loadedPublications : fallbackPublications[currentLang];
-  if (!items.length) {
+function currentPublications() {
+  return loadedPublications.length ? loadedPublications : fallbackPublications[currentLang];
+}
+
+function renderPublications(preserveScroll = false) {
+  const beforeScroll = pubList.scrollTop;
+  const items = currentPublications();
+  const total = items.length;
+  let shown = [];
+
+  if (pubState.mode === 'pagination') {
+    const totalPages = Math.max(1, Math.ceil(total / pubState.pageSize));
+    pubState.page = Math.min(Math.max(pubState.page, 1), totalPages);
+    const start = (pubState.page - 1) * pubState.pageSize;
+    shown = items.slice(start, start + pubState.pageSize);
+
+    pubPager.style.display = 'flex';
+    pubPageInfo.textContent = i18n[currentLang].page_info
+      .replace('{page}', String(pubState.page))
+      .replace('{total}', String(totalPages));
+    pubPrev.disabled = pubState.page <= 1;
+    pubNext.disabled = pubState.page >= totalPages;
+  } else {
+    pubState.infiniteCount = Math.max(pubState.pageSize, pubState.infiniteCount);
+    shown = items.slice(0, pubState.infiniteCount);
+    pubPager.style.display = 'none';
+    pubPageInfo.textContent = '';
+  }
+
+  pubCount.textContent = i18n[currentLang].pub_count
+    .replace('{shown}', String(shown.length))
+    .replace('{total}', String(total));
+
+  if (!shown.length) {
     pubList.innerHTML = `<p class="muted">${i18n[currentLang].pub_empty}</p>`;
     return;
   }
-  pubList.innerHTML = items.map((item) => `
+
+  pubList.innerHTML = shown.map((item) => `
     <article class="pub-card">
       <div class="pub-meta">
         <span>${item.venue}</span>
@@ -355,22 +453,29 @@ function renderPublications() {
       <a class="btn btn-outline" href="${item.link}" target="_blank" rel="noreferrer">${i18n[currentLang].pub_open}</a>
     </article>
   `).join('');
+
+  if (pubState.mode === 'infinite' && shown.length < total) {
+    pubList.insertAdjacentHTML('beforeend', `<p class="muted">${i18n[currentLang].infinite_hint}</p>`);
+  }
+
+  if (preserveScroll) pubList.scrollTop = beforeScroll;
 }
 
 function mapOrcidWorks(payload) {
   const groups = Array.isArray(payload.group) ? payload.group : [];
-  const works = groups
+  return groups
     .map((group) => {
       const summary = Array.isArray(group['work-summary']) ? group['work-summary'][0] : null;
       if (!summary) return null;
-
-      const title = summary.title?.title?.value || null;
+      const title = summary.title?.title?.value;
       if (!title) return null;
 
       const year = summary['publication-date']?.year?.value || '';
       const venue = summary['journal-title']?.value || 'ORCID Record';
       const status = currentLang === 'zh' ? '已发表' : 'Published';
-      const summaryText = summary.type ? `Type: ${summary.type}` : (currentLang === 'zh' ? '来自 ORCID 公开记录。' : 'From ORCID public record.');
+      const summaryText = summary.type
+        ? `Type: ${summary.type}`
+        : (currentLang === 'zh' ? '来自 ORCID 公开记录。' : 'From ORCID public record.');
       const link = summary.url?.value
         || summary['external-ids']?.['external-id']?.[0]?.['external-id-url']?.value
         || './publications.md';
@@ -378,29 +483,6 @@ function mapOrcidWorks(payload) {
       return { title, venue, year, status, summary: summaryText, link };
     })
     .filter(Boolean);
-
-  return works;
-}
-
-async function loadPublications() {
-  pubList.innerHTML = `<p class="muted">${i18n[currentLang].pub_loading}</p>`;
-  try {
-    const response = await fetch(`https://pub.orcid.org/v3.0/${ORCID_ID}/works`, {
-      headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    loadedPublications = mapOrcidWorks(payload);
-    if (!loadedPublications.length) {
-      renderPublications();
-      return;
-    }
-    renderPublications();
-  } catch {
-    loadedPublications = [];
-    renderPublications();
-    pubList.insertAdjacentHTML('afterbegin', `<p class="muted">${i18n[currentLang].pub_load_fail}</p>`);
-  }
 }
 
 async function loadRepos() {
@@ -417,8 +499,84 @@ async function loadRepos() {
   }
 }
 
+async function loadPublications() {
+  pubList.innerHTML = `<p class="muted">${i18n[currentLang].pub_loading}</p>`;
+  try {
+    const response = await fetch(`https://pub.orcid.org/v3.0/${ORCID_ID}/works`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    loadedPublications = mapOrcidWorks(payload);
+    renderPublications();
+  } catch {
+    loadedPublications = [];
+    renderPublications();
+    pubList.insertAdjacentHTML('afterbegin', `<p class="muted">${i18n[currentLang].pub_load_fail}</p>`);
+  }
+}
+
 repoSearch.addEventListener('input', applyRepoFilter);
 repoSort.addEventListener('change', () => renderRepos(filteredRepos));
+repoMode.addEventListener('change', () => {
+  repoState.mode = repoMode.value;
+  repoState.page = 1;
+  repoState.infiniteCount = repoState.pageSize;
+  renderRepos(filteredRepos);
+});
+repoPageSize.addEventListener('change', () => {
+  repoState.pageSize = Number(repoPageSize.value);
+  repoState.page = 1;
+  repoState.infiniteCount = repoState.pageSize;
+  renderRepos(filteredRepos);
+});
+repoPrev.addEventListener('click', () => {
+  repoState.page -= 1;
+  renderRepos(filteredRepos);
+});
+repoNext.addEventListener('click', () => {
+  repoState.page += 1;
+  renderRepos(filteredRepos);
+});
+repoGrid.addEventListener('scroll', () => {
+  if (repoState.mode !== 'infinite') return;
+  const nearBottom = repoGrid.scrollTop + repoGrid.clientHeight >= repoGrid.scrollHeight - 40;
+  if (!nearBottom) return;
+  const items = sortedRepos(filteredRepos);
+  if (repoState.infiniteCount >= items.length) return;
+  repoState.infiniteCount += repoState.pageSize;
+  renderRepos(filteredRepos, true);
+});
+
+pubMode.addEventListener('change', () => {
+  pubState.mode = pubMode.value;
+  pubState.page = 1;
+  pubState.infiniteCount = pubState.pageSize;
+  renderPublications();
+});
+pubPageSize.addEventListener('change', () => {
+  pubState.pageSize = Number(pubPageSize.value);
+  pubState.page = 1;
+  pubState.infiniteCount = pubState.pageSize;
+  renderPublications();
+});
+pubPrev.addEventListener('click', () => {
+  pubState.page -= 1;
+  renderPublications();
+});
+pubNext.addEventListener('click', () => {
+  pubState.page += 1;
+  renderPublications();
+});
+pubList.addEventListener('scroll', () => {
+  if (pubState.mode !== 'infinite') return;
+  const nearBottom = pubList.scrollTop + pubList.clientHeight >= pubList.scrollHeight - 40;
+  if (!nearBottom) return;
+  const items = currentPublications();
+  if (pubState.infiniteCount >= items.length) return;
+  pubState.infiniteCount += pubState.pageSize;
+  renderPublications(true);
+});
 
 let statusIndex = 0;
 let charIndex = 0;
@@ -474,8 +632,8 @@ function applyTranslations() {
 
   langToggle.textContent = i18n[currentLang].lang_btn;
   modalClose.textContent = i18n[currentLang].modal_close;
-  renderPublications();
   renderRepos(filteredRepos);
+  renderPublications();
 }
 
 langToggle.addEventListener('click', () => {
@@ -485,23 +643,15 @@ langToggle.addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'p' || event.key === 'P') {
-    activateView('projects');
-  }
-  if (event.key === 'r' || event.key === 'R') {
-    activateView('research');
-  }
-  if (event.key === 'l' || event.key === 'L') {
-    langToggle.click();
-  }
+  if (event.key === 'p' || event.key === 'P') activateView('projects');
+  if (event.key === 'r' || event.key === 'R') activateView('research');
+  if (event.key === 'l' || event.key === 'L') langToggle.click();
   if (event.key === '/') {
     event.preventDefault();
     activateView('projects');
     repoSearch.focus();
   }
-  if (event.key === 'Escape' && modal.classList.contains('open')) {
-    closeModal();
-  }
+  if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
 });
 
 const canvas = document.getElementById('starfield');

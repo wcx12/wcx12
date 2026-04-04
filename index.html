@@ -90,10 +90,24 @@
             <option value="stars" data-i18n="sort_stars">Sort: Stars</option>
             <option value="name" data-i18n="sort_name">Sort: Name</option>
           </select>
+          <select id="repoMode" aria-label="Repository list mode">
+            <option value="pagination" data-i18n="mode_pagination">Mode: Pagination</option>
+            <option value="infinite" data-i18n="mode_infinite">Mode: Infinite</option>
+          </select>
+          <select id="repoPageSize" aria-label="Items per page">
+            <option value="12">12</option>
+            <option value="24">24</option>
+            <option value="48">48</option>
+          </select>
           <span id="repoCount" class="muted"></span>
         </div>
 
         <div id="repoGrid" class="repo-grid"></div>
+        <div id="repoPager" class="pager">
+          <button id="repoPrev" class="btn btn-outline" type="button" data-i18n="page_prev">Prev</button>
+          <span id="repoPageInfo" class="muted"></span>
+          <button id="repoNext" class="btn btn-outline" type="button" data-i18n="page_next">Next</button>
+        </div>
       </div>
 
       <div class="view" id="timeline">
@@ -134,7 +148,24 @@
           <article class="resource-card span-2">
             <h3 data-i18n="pub_title">Publications</h3>
             <p data-i18n="pub_desc">Publication entries are shown below with status and links.</p>
+            <div class="pub-toolbar">
+              <select id="pubMode" aria-label="Publication list mode">
+                <option value="pagination" data-i18n="mode_pagination">Mode: Pagination</option>
+                <option value="infinite" data-i18n="mode_infinite">Mode: Infinite</option>
+              </select>
+              <select id="pubPageSize" aria-label="Publication items per page">
+                <option value="6">6</option>
+                <option value="12">12</option>
+                <option value="24">24</option>
+              </select>
+              <span id="pubCount" class="muted"></span>
+            </div>
             <div id="pubList" class="pub-list"></div>
+            <div id="pubPager" class="pager">
+              <button id="pubPrev" class="btn btn-outline" type="button" data-i18n="page_prev">Prev</button>
+              <span id="pubPageInfo" class="muted"></span>
+              <button id="pubNext" class="btn btn-outline" type="button" data-i18n="page_next">Next</button>
+            </div>
           </article>
           <article class="resource-card">
             <h3 data-i18n="cv_title">Resume</h3>

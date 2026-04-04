@@ -192,7 +192,7 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 
 .repo-toolbar {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto auto;
   gap: 10px;
   align-items: center;
   margin: 10px 0 12px;
@@ -204,8 +204,20 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   backdrop-filter: blur(4px);
 }
 
+.pub-toolbar {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 0 10px;
+}
+
 #repoSearch,
-#repoSort {
+#repoSort,
+#repoMode,
+#repoPageSize,
+#pubMode,
+#pubPageSize {
   border: 1px solid rgba(0, 245, 255, 0.28);
   border-radius: 10px;
   background: rgba(6, 10, 28, 0.75);
@@ -215,7 +227,11 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 }
 
 #repoSearch:focus,
-#repoSort:focus {
+#repoSort:focus,
+#repoMode:focus,
+#repoPageSize:focus,
+#pubMode:focus,
+#pubPageSize:focus {
   outline: none;
   border-color: var(--pink);
 }
@@ -248,6 +264,14 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 }
 
 .repo-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pager {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
 
 .resource-grid {
   display: grid;
@@ -364,6 +388,10 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
 
 @media (max-width: 820px) {
   .repo-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .pub-toolbar {
     grid-template-columns: 1fr;
   }
 
