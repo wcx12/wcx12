@@ -33,6 +33,11 @@
   <img src="./github-metrics.svg" alt="GitHub metrics" />
 </p>
 
+
+## Resources
+- Publications: [publications.md](./publications.md)
+- Resume: [resume.md](./resume.md)
+
 ## Quick Notes
 ```text
 [Neon Lab Mode: ON]
@@ -44,3 +49,4 @@
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:FF2E88,50:8A2BE2,100:00F5FF" />
 </p>
+

@@ -15,28 +15,31 @@
 
   <header class="topbar">
     <div class="brand">WCX12 // NEON LAB</div>
-    <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
+    <div class="top-actions">
+      <button id="langToggle" class="ghost-btn" type="button">中文</button>
+      <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
+    </div>
   </header>
 
   <main>
     <section class="hero">
-      <p class="kicker">Machine Learning Researcher</p>
-      <h1>Hi, I am <span class="neon">wcx12</span></h1>
-      <p class="type-line">Status: <span id="typeTarget"></span></p>
-      <p class="subtitle">
+      <p class="kicker" data-i18n="hero_kicker">Machine Learning Researcher</p>
+      <h1><span data-i18n="hero_hi">Hi, I am</span> <span class="neon">wcx12</span></h1>
+      <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget"></span></p>
+      <p class="subtitle" data-i18n="hero_subtitle_html">
         Point Set Registration + Anomaly Detection.<br />
         Building clean pipelines and practical open-source tools.
       </p>
 
       <div class="hero-actions">
-        <a href="mailto:c2675668@gmail.com" class="btn btn-primary">Contact Me</a>
-        <a href="https://github.com/wcx12?tab=repositories" class="btn btn-outline" target="_blank" rel="noreferrer">My Repos</a>
+        <a href="mailto:c2675668@gmail.com" class="btn btn-primary" data-i18n="btn_contact">Contact Me</a>
+        <a href="https://github.com/wcx12?tab=repositories" class="btn btn-outline" target="_blank" rel="noreferrer" data-i18n="btn_repos">My Repos</a>
       </div>
 
       <div class="quick-stats">
-        <article><span>Focus Areas</span><strong>2</strong></article>
-        <article><span>Graduation</span><strong>2026</strong></article>
-        <article><span>Main Stack</span><strong>Python + ML</strong></article>
+        <article><span data-i18n="stat_focus">Focus Areas</span><strong>2</strong></article>
+        <article><span data-i18n="stat_grad">Graduation</span><strong>2026</strong></article>
+        <article><span data-i18n="stat_stack">Main Stack</span><strong>Python + ML</strong></article>
       </div>
     </section>
 
@@ -49,55 +52,57 @@
       </div>
 
       <div class="command-row">
-        <button class="cmd active" data-view="about">about</button>
-        <button class="cmd" data-view="research">research</button>
-        <button class="cmd" data-view="projects">projects</button>
-        <button class="cmd" data-view="timeline">timeline</button>
-        <button class="cmd" data-view="skills">skills</button>
-        <button class="cmd" data-view="contact">contact</button>
+        <button class="cmd active" data-view="about" data-i18n="tab_about">about</button>
+        <button class="cmd" data-view="research" data-i18n="tab_research">research</button>
+        <button class="cmd" data-view="projects" data-i18n="tab_projects">projects</button>
+        <button class="cmd" data-view="timeline" data-i18n="tab_timeline">timeline</button>
+        <button class="cmd" data-view="skills" data-i18n="tab_skills">skills</button>
+        <button class="cmd" data-view="resources" data-i18n="tab_resources">resources</button>
+        <button class="cmd" data-view="contact" data-i18n="tab_contact">contact</button>
       </div>
 
       <div class="view active" id="about">
-        <h2>About</h2>
-        <p>I study at Beijing Institute of Technology and expect to graduate in 2026.</p>
-        <p>I enjoy combining geometric understanding with reliable engineering delivery.</p>
+        <h2 data-i18n="about_title">About</h2>
+        <p data-i18n="about_line1">I study at Beijing Institute of Technology and expect to graduate in 2026.</p>
+        <p data-i18n="about_line2">I enjoy combining geometric understanding with reliable engineering delivery.</p>
       </div>
 
       <div class="view" id="research">
-        <h2>Research Focus</h2>
+        <h2 data-i18n="research_title">Research Focus</h2>
         <ul>
-          <li>Point set registration under noisy and incomplete observations</li>
-          <li>Anomaly detection for complex and high-dimensional signals</li>
-          <li>Robust ML pipelines and reproducible experiments</li>
+          <li data-i18n="research_1">Point set registration under noisy and incomplete observations</li>
+          <li data-i18n="research_2">Anomaly detection for complex and high-dimensional signals</li>
+          <li data-i18n="research_3">Robust ML pipelines and reproducible experiments</li>
         </ul>
+        <button class="btn btn-outline detail-trigger" type="button" data-detail="research" data-i18n="view_details">View Details</button>
       </div>
 
       <div class="view" id="projects">
-        <h2>Featured Repositories</h2>
-        <p class="muted">Auto-loaded from my public GitHub repositories.</p>
+        <h2 data-i18n="project_title">Featured Repositories</h2>
+        <p class="muted" data-i18n="project_desc">Auto-loaded from my public GitHub repositories.</p>
         <div id="repoGrid" class="repo-grid"></div>
       </div>
 
       <div class="view" id="timeline">
-        <h2>Timeline</h2>
+        <h2 data-i18n="timeline_title">Timeline</h2>
         <div class="timeline">
           <article>
             <time>2024</time>
-            <p>Focused on strengthening ML engineering foundations and reproducible workflows.</p>
+            <p data-i18n="timeline_2024">Focused on strengthening ML engineering foundations and reproducible workflows.</p>
           </article>
           <article>
             <time>2025</time>
-            <p>Deepening research on point set registration and anomaly signal analysis.</p>
+            <p data-i18n="timeline_2025">Deepening research on point set registration and anomaly signal analysis.</p>
           </article>
           <article>
             <time>2026</time>
-            <p>Graduation year and active applications for Master's / PhD opportunities.</p>
+            <p data-i18n="timeline_2026">Graduation year and active applications for Master's / PhD opportunities.</p>
           </article>
         </div>
       </div>
 
       <div class="view" id="skills">
-        <h2>Skill Matrix</h2>
+        <h2 data-i18n="skill_title">Skill Matrix</h2>
         <div class="chips">
           <button class="chip" data-tag="Python">Python</button>
           <button class="chip" data-tag="PyTorch">PyTorch</button>
@@ -107,20 +112,45 @@
           <button class="chip" data-tag="Linux">Linux</button>
           <button class="chip" data-tag="Git">Git</button>
         </div>
-        <p id="chipOutput">Click a skill chip to highlight what I use.</p>
+        <p id="chipOutput" data-i18n="skill_hint">Click a skill chip to highlight what I use.</p>
+      </div>
+
+      <div class="view" id="resources">
+        <h2 data-i18n="res_title">Publications & Resume</h2>
+        <div class="resource-grid">
+          <article class="resource-card">
+            <h3 data-i18n="pub_title">Publications</h3>
+            <p data-i18n="pub_desc">A living list for papers, reports, and technical notes.</p>
+            <a class="btn btn-outline" href="./publications.md" target="_blank" rel="noreferrer" data-i18n="pub_open">Open Publication List</a>
+          </article>
+          <article class="resource-card">
+            <h3 data-i18n="cv_title">Resume</h3>
+            <p data-i18n="cv_desc">Download my latest CV snapshot from this repository.</p>
+            <a class="btn btn-primary" href="./resume.md" download data-i18n="cv_download">Download Resume</a>
+          </article>
+        </div>
       </div>
 
       <div class="view" id="contact">
-        <h2>Contact</h2>
+        <h2 data-i18n="contact_title">Contact</h2>
         <p>Email: <a href="mailto:c2675668@gmail.com">c2675668@gmail.com</a></p>
         <p>GitHub: <a href="https://github.com/wcx12" target="_blank" rel="noreferrer">github.com/wcx12</a></p>
-        <p>Open to research collaboration and open-source building.</p>
+        <p data-i18n="contact_last">Open to research collaboration and open-source building.</p>
       </div>
     </section>
   </main>
 
+  <div id="detailModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <button id="modalClose" class="modal-close" type="button" aria-label="Close">x</button>
+      <h3 id="modalTitle"></h3>
+      <p id="modalBody"></p>
+      <a id="modalLink" class="btn btn-primary" href="#" target="_blank" rel="noreferrer">Open Link</a>
+    </div>
+  </div>
+
   <footer>
-    <p>© 2026 wcx12 · Neon Full Interactive Profile</p>
+    <p data-i18n="footer">© 2026 wcx12 · Neon Full Interactive Profile</p>
   </footer>
 
   <script src="script.js"></script>
