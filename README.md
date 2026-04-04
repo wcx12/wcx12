@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://wcx12.github.io/"><img src="https://img.shields.io/badge/Interactive%20Website-LIVE-00F5FF?style=for-the-badge&logo=google-chrome&logoColor=white"/></a>
+  <a href="https://wcx12.github.io/wcx12/"><img src="https://img.shields.io/badge/Interactive%20Website-LIVE-00F5FF?style=for-the-badge&logo=google-chrome&logoColor=white"/></a>
   <a href="mailto:c2675668@gmail.com"><img src="https://img.shields.io/badge/Email-c2675668%40gmail.com-FF2E88?style=for-the-badge&logo=gmail&logoColor=white"/></a>
   <img src="https://img.shields.io/badge/Graduation-2026-8A2BE2?style=for-the-badge&logo=academia&logoColor=white"/>
 </p>
@@ -12,7 +12,7 @@
 <p align="center"><b>BIT Student · ML Researcher · Open Source Builder</b></p>
 
 <p align="center">
-  <a href="https://wcx12.github.io/"><b>Open My Interactive Neon Website</b></a>
+  <a href="https://wcx12.github.io/wcx12/"><b>Open My Interactive Neon Website</b></a>
 </p>
 
 ---
@@ -50,3 +50,4 @@ If the interactive website link above is not online yet, enable GitHub Pages in 
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:FF2E88,50:8A2BE2,100:00F5FF" />
 </p>
+
