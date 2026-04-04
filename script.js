@@ -19,8 +19,10 @@ const modalClose = document.getElementById('modalClose');
 let currentLang = 'en';
 let allRepos = [];
 let filteredRepos = [];
+let loadedPublications = [];
+const ORCID_ID = '0009-0005-6139-4327';
 
-const publications = {
+const fallbackPublications = {
   en: [
     {
       title: 'Point Set Registration Under Partial Observation',
@@ -102,6 +104,9 @@ const i18n = {
     res_title: 'Publications & Resume',
     pub_title: 'Publications',
     pub_desc: 'Publication entries are shown below with status and links.',
+    pub_loading: 'Loading publications from ORCID...',
+    pub_load_fail: 'Unable to load from ORCID right now. Showing local fallback list.',
+    pub_empty: 'No public publication records found yet.',
     pub_open: 'Open Publication List',
     pub_file_title: 'Raw Publication File',
     pub_file_desc: 'Open source markdown list.',
@@ -173,6 +178,9 @@ const i18n = {
     res_title: '论文与简历',
     pub_title: '论文发表',
     pub_desc: '论文条目直接展示在页面中，包含状态和跳转链接。',
+    pub_loading: '正在从 ORCID 加载论文...',
+    pub_load_fail: '当前无法从 ORCID 加载，已显示本地备用列表。',
+    pub_empty: '暂未发现公开论文记录。',
     pub_open: '打开论文列表文件',
     pub_file_title: '原始论文文件',
     pub_file_desc: '查看仓库中的 markdown 列表。',
@@ -330,7 +338,11 @@ function renderRepos(repos) {
 }
 
 function renderPublications() {
-  const items = publications[currentLang];
+  const items = loadedPublications.length ? loadedPublications : fallbackPublications[currentLang];
+  if (!items.length) {
+    pubList.innerHTML = `<p class="muted">${i18n[currentLang].pub_empty}</p>`;
+    return;
+  }
   pubList.innerHTML = items.map((item) => `
     <article class="pub-card">
       <div class="pub-meta">
@@ -343,6 +355,52 @@ function renderPublications() {
       <a class="btn btn-outline" href="${item.link}" target="_blank" rel="noreferrer">${i18n[currentLang].pub_open}</a>
     </article>
   `).join('');
+}
+
+function mapOrcidWorks(payload) {
+  const groups = Array.isArray(payload.group) ? payload.group : [];
+  const works = groups
+    .map((group) => {
+      const summary = Array.isArray(group['work-summary']) ? group['work-summary'][0] : null;
+      if (!summary) return null;
+
+      const title = summary.title?.title?.value || null;
+      if (!title) return null;
+
+      const year = summary['publication-date']?.year?.value || '';
+      const venue = summary['journal-title']?.value || 'ORCID Record';
+      const status = currentLang === 'zh' ? '已发表' : 'Published';
+      const summaryText = summary.type ? `Type: ${summary.type}` : (currentLang === 'zh' ? '来自 ORCID 公开记录。' : 'From ORCID public record.');
+      const link = summary.url?.value
+        || summary['external-ids']?.['external-id']?.[0]?.['external-id-url']?.value
+        || './publications.md';
+
+      return { title, venue, year, status, summary: summaryText, link };
+    })
+    .filter(Boolean);
+
+  return works;
+}
+
+async function loadPublications() {
+  pubList.innerHTML = `<p class="muted">${i18n[currentLang].pub_loading}</p>`;
+  try {
+    const response = await fetch(`https://pub.orcid.org/v3.0/${ORCID_ID}/works`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    loadedPublications = mapOrcidWorks(payload);
+    if (!loadedPublications.length) {
+      renderPublications();
+      return;
+    }
+    renderPublications();
+  } catch {
+    loadedPublications = [];
+    renderPublications();
+    pubList.insertAdjacentHTML('afterbegin', `<p class="muted">${i18n[currentLang].pub_load_fail}</p>`);
+  }
 }
 
 async function loadRepos() {
@@ -480,6 +538,7 @@ function drawStars() {
 applyTranslations();
 restartTypeLoop();
 loadRepos();
+loadPublications();
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 drawStars();
