@@ -196,6 +196,12 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   gap: 10px;
   align-items: center;
   margin: 10px 0 12px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 0;
+  background: linear-gradient(180deg, rgba(11, 14, 34, 0.95), rgba(11, 14, 34, 0.78));
+  backdrop-filter: blur(4px);
 }
 
 #repoSearch,
@@ -219,6 +225,9 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
+  max-height: 58vh;
+  overflow: auto;
+  padding-right: 6px;
 }
 
 .repo-card {
@@ -257,6 +266,11 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 .span-2 { grid-column: span 2; }
 
 .pub-list { display: grid; gap: 10px; }
+.pub-list {
+  max-height: 52vh;
+  overflow: auto;
+  padding-right: 6px;
+}
 
 .pub-card {
   border: 1px solid rgba(0, 245, 255, 0.2);
@@ -322,6 +336,23 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   border-radius: 8px;
   padding: 4px 8px;
   cursor: pointer;
+}
+
+.repo-grid::-webkit-scrollbar,
+.pub-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.repo-grid::-webkit-scrollbar-track,
+.pub-list::-webkit-scrollbar-track {
+  background: rgba(10, 14, 36, 0.7);
+  border-radius: 999px;
+}
+
+.repo-grid::-webkit-scrollbar-thumb,
+.pub-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--cyan), var(--pink));
+  border-radius: 999px;
 }
 
 footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 0.92rem; }
