@@ -33,7 +33,7 @@
 
       <div class="hero-actions">
         <a href="mailto:c2675668@gmail.com" class="btn btn-primary" data-i18n="btn_contact">Contact Me</a>
-        <a href="https://github.com/wcx12?tab=repositories" class="btn btn-outline" target="_blank" rel="noreferrer" data-i18n="btn_repos">My Repos</a>
+        <button id="openProjects" type="button" class="btn btn-outline" data-i18n="btn_repos">Explore My Repos</button>
       </div>
 
       <div class="quick-stats">
@@ -50,6 +50,8 @@
         <span class="dot violet"></span>
         <p>neon-terminal</p>
       </div>
+
+      <p class="hint-row" data-i18n="hints">Shortcuts: P projects · R research · L language · / search repos</p>
 
       <div class="command-row">
         <button class="cmd active" data-view="about" data-i18n="tab_about">about</button>
@@ -78,8 +80,19 @@
       </div>
 
       <div class="view" id="projects">
-        <h2 data-i18n="project_title">Featured Repositories</h2>
-        <p class="muted" data-i18n="project_desc">Auto-loaded from my public GitHub repositories.</p>
+        <h2 data-i18n="project_title">Repositories</h2>
+        <p class="muted" data-i18n="project_desc">All public repositories are listed below with quick jump links.</p>
+
+        <div class="repo-toolbar">
+          <input id="repoSearch" type="search" data-i18n-ph="repo_search_ph" placeholder="Search repositories..." />
+          <select id="repoSort" aria-label="Sort repositories">
+            <option value="updated" data-i18n="sort_updated">Sort: Updated</option>
+            <option value="stars" data-i18n="sort_stars">Sort: Stars</option>
+            <option value="name" data-i18n="sort_name">Sort: Name</option>
+          </select>
+          <span id="repoCount" class="muted"></span>
+        </div>
+
         <div id="repoGrid" class="repo-grid"></div>
       </div>
 
@@ -118,15 +131,20 @@
       <div class="view" id="resources">
         <h2 data-i18n="res_title">Publications & Resume</h2>
         <div class="resource-grid">
-          <article class="resource-card">
+          <article class="resource-card span-2">
             <h3 data-i18n="pub_title">Publications</h3>
-            <p data-i18n="pub_desc">A living list for papers, reports, and technical notes.</p>
-            <a class="btn btn-outline" href="./publications.md" target="_blank" rel="noreferrer" data-i18n="pub_open">Open Publication List</a>
+            <p data-i18n="pub_desc">Publication entries are shown below with status and links.</p>
+            <div id="pubList" class="pub-list"></div>
           </article>
           <article class="resource-card">
             <h3 data-i18n="cv_title">Resume</h3>
             <p data-i18n="cv_desc">Download my latest CV snapshot from this repository.</p>
             <a class="btn btn-primary" href="./resume.md" download data-i18n="cv_download">Download Resume</a>
+          </article>
+          <article class="resource-card">
+            <h3 data-i18n="pub_file_title">Raw Publication File</h3>
+            <p data-i18n="pub_file_desc">Open source markdown list.</p>
+            <a class="btn btn-outline" href="./publications.md" target="_blank" rel="noreferrer" data-i18n="pub_open">Open Publication List</a>
           </article>
         </div>
       </div>
