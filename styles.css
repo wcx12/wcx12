@@ -1,0 +1,266 @@
+﻿:root {
+  --bg: #070914;
+  --panel: rgba(11, 14, 34, 0.72);
+  --line: rgba(0, 245, 255, 0.28);
+  --text: #e8f0ff;
+  --muted: #9ca9cf;
+  --cyan: #00f5ff;
+  --violet: #9b5cff;
+  --pink: #ff2e88;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at 20% 20%, #15143a 0%, #0a0d1f 35%, #070914 70%, #04050b 100%);
+  color: var(--text);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+
+#starfield {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: 0.45;
+}
+
+.topbar,
+main,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+}
+
+.brand {
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.75);
+}
+
+.ghost-btn {
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  transition: 0.2s ease;
+}
+
+.ghost-btn:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0, 245, 255, 0.35);
+}
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 18px 20px 60px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+}
+
+.hero {
+  background: linear-gradient(130deg, rgba(14, 20, 48, 0.78), rgba(8, 9, 24, 0.86));
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 0 40px rgba(0, 245, 255, 0.09), inset 0 0 40px rgba(155, 92, 255, 0.08);
+}
+
+.kicker {
+  margin: 0;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+}
+
+h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(2rem, 7vw, 4rem);
+  line-height: 1.05;
+}
+
+.neon {
+  color: var(--cyan);
+  text-shadow: 0 0 22px rgba(0, 245, 255, 0.95);
+}
+
+.type-line {
+  font-family: "JetBrains Mono", monospace;
+  color: var(--pink);
+  min-height: 1.4em;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn {
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, var(--cyan), var(--violet));
+  color: #04050b;
+}
+
+.btn-outline {
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.console {
+  background: var(--panel);
+  border: 1px solid rgba(155, 92, 255, 0.32);
+  border-radius: 18px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.console-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(155, 92, 255, 0.28);
+  font-family: "JetBrains Mono", monospace;
+  color: var(--muted);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.pink { background: var(--pink); }
+.cyan { background: var(--cyan); }
+.violet { background: var(--violet); }
+
+.command-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0, 245, 255, 0.14);
+  flex-wrap: wrap;
+}
+
+.cmd,
+.chip {
+  border: 1px solid rgba(0, 245, 255, 0.24);
+  background: rgba(0, 245, 255, 0.04);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
+}
+
+.cmd.active,
+.cmd:hover,
+.chip:hover,
+.chip.active {
+  border-color: var(--pink);
+  box-shadow: 0 0 16px rgba(255, 46, 136, 0.25);
+}
+
+.view {
+  display: none;
+  padding: 18px 16px 22px;
+}
+
+.view.active {
+  display: block;
+  animation: fadeUp 0.25s ease;
+}
+
+.view h2 {
+  margin-top: 0;
+  color: var(--cyan);
+}
+
+.view p,
+.view li,
+.view a {
+  color: var(--muted);
+}
+
+.view a {
+  color: #b8f3ff;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+#chipOutput {
+  min-height: 1.4em;
+  font-family: "JetBrains Mono", monospace;
+}
+
+footer {
+  text-align: center;
+  color: #7c89b6;
+  padding: 8px 16px 24px;
+  font-size: 0.92rem;
+}
+
+@keyframes fadeUp {
+  from {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 900px) {
+  main {
+    padding-top: 28px;
+  }
+
+  .hero,
+  .console {
+    padding-left: 26px;
+    padding-right: 26px;
+  }
+}

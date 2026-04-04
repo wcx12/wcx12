@@ -1,0 +1,96 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>wcx12 | Neon Lab</title>
+  <meta name="description" content="wcx12 interactive profile website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="starfield" aria-hidden="true"></canvas>
+
+  <header class="topbar">
+    <div class="brand">WCX12 // NEON LAB</div>
+    <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="kicker">Machine Learning Researcher</p>
+      <h1>Hi, I am <span class="neon">wcx12</span></h1>
+      <p class="type-line">Status: <span id="typeTarget"></span></p>
+      <p class="subtitle">
+        Point Set Registration + Anomaly Detection.<br />
+        Building clean pipelines and practical open-source tools.
+      </p>
+
+      <div class="hero-actions">
+        <a href="mailto:c2675668@gmail.com" class="btn btn-primary">Contact Me</a>
+        <a href="https://github.com/wcx12?tab=repositories" class="btn btn-outline" target="_blank" rel="noreferrer">My Repos</a>
+      </div>
+    </section>
+
+    <section class="console" aria-label="interactive panel">
+      <div class="console-head">
+        <span class="dot pink"></span>
+        <span class="dot cyan"></span>
+        <span class="dot violet"></span>
+        <p>neon-terminal</p>
+      </div>
+
+      <div class="command-row">
+        <button class="cmd active" data-view="about">about</button>
+        <button class="cmd" data-view="research">research</button>
+        <button class="cmd" data-view="skills">skills</button>
+        <button class="cmd" data-view="contact">contact</button>
+      </div>
+
+      <div class="view active" id="about">
+        <h2>About</h2>
+        <p>I study at Beijing Institute of Technology and expect to graduate in 2026.</p>
+        <p>I enjoy combining geometric understanding with reliable engineering delivery.</p>
+      </div>
+
+      <div class="view" id="research">
+        <h2>Research Focus</h2>
+        <ul>
+          <li>Point set registration under noisy and incomplete observations</li>
+          <li>Anomaly detection for complex and high-dimensional signals</li>
+          <li>Robust ML pipelines and reproducible experiments</li>
+        </ul>
+      </div>
+
+      <div class="view" id="skills">
+        <h2>Skill Matrix</h2>
+        <div class="chips">
+          <button class="chip" data-tag="Python">Python</button>
+          <button class="chip" data-tag="PyTorch">PyTorch</button>
+          <button class="chip" data-tag="TensorFlow">TensorFlow</button>
+          <button class="chip" data-tag="OpenCV">OpenCV</button>
+          <button class="chip" data-tag="Scikit-learn">Scikit-learn</button>
+          <button class="chip" data-tag="Linux">Linux</button>
+          <button class="chip" data-tag="Git">Git</button>
+        </div>
+        <p id="chipOutput">Click a skill chip to highlight what I use.</p>
+      </div>
+
+      <div class="view" id="contact">
+        <h2>Contact</h2>
+        <p>Email: <a href="mailto:c2675668@gmail.com">c2675668@gmail.com</a></p>
+        <p>GitHub: <a href="https://github.com/wcx12" target="_blank" rel="noreferrer">github.com/wcx12</a></p>
+        <p>Open to research collaboration and open-source building.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 wcx12 · Neon Full Interactive Profile</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
