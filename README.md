@@ -28,10 +28,9 @@
   <img src="https://skillicons.dev/icons?i=python,pytorch,tensorflow,opencv,sklearn,linux,git,vscode&perline=8" />
 </p>
 
-## Stats
+## Metrics (Stable Local Render)
 <p align="center">
-  <img height="170" src="https://github-readme-stats.vercel.app/api?username=wcx12&show_icons=true&theme=tokyonight&hide_border=true&bg_color=00000000&title_color=00F5FF&icon_color=FF2E88&text_color=C9D1D9"/>
-  <img height="170" src="https://github-readme-stats.vercel.app/api/top-langs/?username=wcx12&layout=compact&theme=tokyonight&hide_border=true&bg_color=00000000&title_color=00F5FF&text_color=C9D1D9"/>
+  <img src="./github-metrics.svg" alt="GitHub metrics" />
 </p>
 
 ## Quick Notes
@@ -42,12 +41,6 @@
 - Building useful open-source tooling
 ```
 
----
-
-If the interactive website link above is not online yet, enable GitHub Pages in this repository:
-`Settings -> Pages -> Build and deployment -> Deploy from a branch -> main /(root)`.
-
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:FF2E88,50:8A2BE2,100:00F5FF" />
 </p>
-

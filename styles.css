@@ -121,6 +121,31 @@ h1 {
   gap: 10px;
 }
 
+.quick-stats {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.quick-stats article {
+  border: 1px solid rgba(155, 92, 255, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(155, 92, 255, 0.08);
+}
+
+.quick-stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.quick-stats strong {
+  font-size: 1rem;
+  color: var(--cyan);
+}
+
 .btn {
   text-decoration: none;
   border-radius: 12px;
@@ -215,12 +240,55 @@ h1 {
 
 .view p,
 .view li,
-.view a {
+.view a,
+.muted {
   color: var(--muted);
 }
 
 .view a {
   color: #b8f3ff;
+}
+
+.repo-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.repo-card {
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(0, 245, 255, 0.04);
+}
+
+.repo-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.repo-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+  color: #b8f3ff;
+}
+
+.timeline {
+  display: grid;
+  gap: 12px;
+}
+
+.timeline article {
+  border-left: 2px solid rgba(255, 46, 136, 0.55);
+  padding-left: 12px;
+}
+
+.timeline time {
+  color: var(--pink);
+  font-family: "JetBrains Mono", monospace;
 }
 
 .chips {

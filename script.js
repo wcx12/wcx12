@@ -3,6 +3,7 @@ const commands = document.querySelectorAll('.cmd');
 const chips = document.querySelectorAll('.chip');
 const chipOutput = document.getElementById('chipOutput');
 const typeTarget = document.getElementById('typeTarget');
+const repoGrid = document.getElementById('repoGrid');
 
 commands.forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -53,6 +54,41 @@ function typeLoop() {
 }
 
 typeLoop();
+
+async function loadRepos() {
+  if (!repoGrid) return;
+  repoGrid.innerHTML = '<p class="muted">Loading repositories...</p>';
+  try {
+    const response = await fetch('https://api.github.com/users/wcx12/repos?sort=updated&per_page=100');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const repos = await response.json();
+    const featured = repos
+      .filter((repo) => !repo.fork)
+      .sort((a, b) => (b.stargazers_count - a.stargazers_count) || (new Date(b.updated_at) - new Date(a.updated_at)))
+      .slice(0, 6);
+
+    if (!featured.length) {
+      repoGrid.innerHTML = '<p class="muted">No public repositories found yet.</p>';
+      return;
+    }
+
+    repoGrid.innerHTML = featured.map((repo) => `
+      <article class="repo-card">
+        <h3><a href="${repo.html_url}" target="_blank" rel="noreferrer">${repo.name}</a></h3>
+        <p class="muted">${repo.description || 'No description yet.'}</p>
+        <div class="repo-meta">
+          <span>Stars ${repo.stargazers_count}</span>
+          <span>${repo.language || 'Mixed'}</span>
+        </div>
+      </article>
+    `).join('');
+  } catch (error) {
+    repoGrid.innerHTML = '<p class="muted">Unable to load repositories right now.</p>';
+  }
+}
+
+loadRepos();
 
 const canvas = document.getElementById('starfield');
 const ctx = canvas.getContext('2d');
