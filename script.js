@@ -23,20 +23,312 @@ const pubPrev = document.getElementById('pubPrev');
 const pubNext = document.getElementById('pubNext');
 const pubPageInfo = document.getElementById('pubPageInfo');
 
+const themeSelect = document.getElementById('themeSelect');
 const langToggle = document.getElementById('langToggle');
+const openCommand = document.getElementById('openCommand');
 const openProjects = document.getElementById('openProjects');
 const modal = document.getElementById('detailModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
 const modalLink = document.getElementById('modalLink');
 const modalClose = document.getElementById('modalClose');
+const manageResearch = document.getElementById('manageResearch');
+const researchManager = document.getElementById('researchManager');
+const managerClose = document.getElementById('managerClose');
+const managerDomain = document.getElementById('managerDomain');
+const managerInterest = document.getElementById('managerInterest');
+const managerLabel = document.getElementById('managerLabel');
+const managerAnimation = document.getElementById('managerAnimation');
+const managerAdd = document.getElementById('managerAdd');
+const managerSave = document.getElementById('managerSave');
+const managerDelete = document.getElementById('managerDelete');
+const managerActive = document.getElementById('managerActive');
+const managerProjects = document.getElementById('managerProjects');
+const managerPapers = document.getElementById('managerPapers');
+const commandPalette = document.getElementById('commandPalette');
+const commandInput = document.getElementById('commandInput');
+const commandList = document.getElementById('commandList');
+
+const registrationCanvas = document.getElementById('registrationCanvas');
+const regCtx = registrationCanvas?.getContext('2d');
+const noiseRange = document.getElementById('noiseRange');
+const missingRange = document.getElementById('missingRange');
+const rotationRange = document.getElementById('rotationRange');
+const noiseValue = document.getElementById('noiseValue');
+const missingValue = document.getElementById('missingValue');
+const rotationValue = document.getElementById('rotationValue');
+const labScore = document.getElementById('labScore');
+const alignDemo = document.getElementById('alignDemo');
+const resetDemo = document.getElementById('resetDemo');
+
+const repoMap = document.getElementById('repoMap');
+const repoMapCtx = repoMap.getContext('2d');
+const repoMapHint = document.getElementById('repoMapHint');
+
+const interestRail = document.getElementById('interestRail');
+const interestPath = document.getElementById('interestPath');
+const interestTitle = document.getElementById('interestTitle');
+const interestTag = document.getElementById('interestTag');
+const interestDescription = document.getElementById('interestDescription');
+const interestCanvas = document.getElementById('interestCanvas');
+const interestCtx = interestCanvas.getContext('2d');
+const interestProjects = document.getElementById('interestProjects');
+const interestPapers = document.getElementById('interestPapers');
+const customCursor = document.getElementById('customCursor');
 
 let currentLang = 'en';
+let currentTheme = localStorage.getItem('wcx12-theme') || 'neon';
 let allRepos = [];
 let filteredRepos = [];
 let loadedPublications = [];
+let commandCursor = 0;
+let repoNodes = [];
+let hoveredRepo = null;
+let activeInterestId = 'point-cloud-registration';
+let interestTick = 0;
+
+const pointCloudInteraction = {
+  active: false,
+  dragging: false,
+  x: 0.5,
+  y: 0.5,
+  scrub: 0.48,
+  targetScrub: 0.48,
+  energy: 0
+};
 
 const ORCID_ID = '0009-0005-6139-4327';
+
+const registrationState = {
+  points: [],
+  target: [],
+  progress: 0,
+  seed: 7,
+  animationFrame: null
+};
+
+function initCustomCursor() {
+  if (!customCursor || !window.matchMedia('(pointer: fine)').matches) return;
+
+  const hoverSelector = 'a, button, select, input, textarea, [role="button"], .repo-card, .pub-card, #interestCanvas';
+  const textSelector = 'input, textarea, [contenteditable="true"]';
+  let clickTimer = null;
+
+  document.body.classList.add('cursor-enabled');
+
+  window.addEventListener('pointermove', (event) => {
+    customCursor.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
+    document.body.classList.add('cursor-visible');
+    document.body.classList.toggle('cursor-hover', Boolean(event.target.closest(hoverSelector)));
+    document.body.classList.toggle('cursor-text', Boolean(event.target.closest(textSelector)));
+  }, { passive: true });
+
+  window.addEventListener('pointerdown', () => {
+    document.body.classList.add('cursor-down', 'cursor-clicking');
+    clearTimeout(clickTimer);
+    clickTimer = window.setTimeout(() => document.body.classList.remove('cursor-clicking'), 430);
+  }, { passive: true });
+
+  window.addEventListener('pointerup', () => {
+    document.body.classList.remove('cursor-down');
+  }, { passive: true });
+
+  document.addEventListener('mouseleave', () => {
+    document.body.classList.remove('cursor-visible', 'cursor-down', 'cursor-hover', 'cursor-text');
+  });
+
+  document.addEventListener('mouseenter', () => {
+    document.body.classList.add('cursor-visible');
+  });
+}
+
+const localRepos = [
+  {
+    name: 'FusionTrack',
+    description: 'Graduation thesis and tracking-related research artifacts.',
+    language: 'TeX',
+    stargazers_count: 0,
+    updated_at: '2026-05-16T15:24:53Z',
+    html_url: 'https://github.com/wcx12/FusionTrack',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/FusionTrack/main/README.md',
+    interests: ['vpr', 'point-cloud-registration']
+  },
+  {
+    name: 'wcx12',
+    description: 'Interactive GitHub profile and research homepage.',
+    language: 'JavaScript',
+    stargazers_count: 2,
+    updated_at: '2026-05-16T15:56:07Z',
+    html_url: 'https://github.com/wcx12/wcx12',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/wcx12/main/README.md',
+    interests: ['agent', 'ai4edu']
+  },
+  {
+    name: 'hlpp-crossword',
+    description: 'Interactive learning/game project for classroom selection and practice.',
+    language: 'TypeScript',
+    stargazers_count: 1,
+    updated_at: '2026-05-13T11:45:15Z',
+    html_url: 'https://github.com/wcx12/hlpp-crossword',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/hlpp-crossword/master/README.md',
+    interests: ['ai4edu']
+  },
+  {
+    name: 'codex-pet-battle',
+    description: 'Agent-style companion project with leveling, skills, and battles.',
+    language: null,
+    stargazers_count: 0,
+    updated_at: '2026-05-06T14:30:11Z',
+    html_url: 'https://github.com/wcx12/codex-pet-battle',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/codex-pet-battle/main/README.md',
+    interests: ['agent']
+  },
+  {
+    name: 'shuxuepeiyou',
+    description: 'Mathematics enrichment notes and education resources.',
+    language: 'TeX',
+    stargazers_count: 0,
+    updated_at: '2026-05-05T03:08:07Z',
+    html_url: 'https://github.com/wcx12/shuxuepeiyou',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/shuxuepeiyou/main/README.md',
+    interests: ['ai4edu']
+  },
+  {
+    name: 'tetrahedron-visualizer',
+    description: 'Geometry visualization for mathematical intuition.',
+    language: 'JavaScript',
+    stargazers_count: 0,
+    updated_at: '2026-04-18T15:51:40Z',
+    html_url: 'https://github.com/wcx12/tetrahedron-visualizer',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/tetrahedron-visualizer/master/README.md',
+    interests: ['ai4edu', 'point-cloud-registration']
+  },
+  {
+    name: 'BIT-The-mathematical-foundation-of-big-Data',
+    description: 'Course notes for mathematical foundations of big data.',
+    language: 'TeX',
+    stargazers_count: 0,
+    updated_at: '2024-10-05T11:04:02Z',
+    html_url: 'https://github.com/wcx12/BIT-The-mathematical-foundation-of-big-Data',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/BIT-The-mathematical-foundation-of-big-Data/main/README.md',
+    interests: ['ai4edu']
+  }
+];
+
+const staticPublications = [
+  {
+    title: 'TF-VPR: A novel benchmark for training-free visual place recognition',
+    venue: 'Neurocomputing',
+    year: '2026',
+    status: 'Published',
+    summary: 'Benchmark work connected to visual place recognition and visual localization.',
+    link: 'https://doi.org/10.1016/j.neucom.2026.133399',
+    interests: ['vpr']
+  }
+];
+
+let researchInterests = [
+  {
+    id: 'point-cloud',
+    title: { en: 'Point Cloud', zh: '点云' },
+    label: { en: '3D Geometry', zh: '三维几何' },
+    children: [
+      {
+        id: 'point-cloud-registration',
+        title: { en: 'Registration', zh: '配准' },
+        label: { en: 'alignment', zh: '对齐' },
+        animation: 'point-cloud',
+        description: {
+          en: 'Robust point set registration under noisy, partial, and imperfect observations.',
+          zh: '研究噪声、缺失与不完美观测条件下的稳健点集配准。'
+        }
+      }
+    ]
+  },
+  {
+    id: 'computer-vision',
+    title: { en: 'Computer Vision', zh: '计算机视觉' },
+    label: { en: 'visual matching', zh: '视觉匹配' },
+    children: [
+      {
+        id: 'vpr',
+        title: { en: 'VPR', zh: 'VPR' },
+        label: { en: 'Visual Place Recognition', zh: '视觉地点识别' },
+        animation: 'vpr',
+        description: {
+          en: 'Visual place recognition, retrieval, and localization-oriented benchmark work.',
+          zh: '围绕视觉地点识别、检索与定位基准展开的研究。'
+        }
+      }
+    ]
+  },
+  {
+    id: 'llm',
+    title: { en: 'Large Models', zh: '大模型' },
+    label: { en: 'LLM systems', zh: 'LLM 系统' },
+    children: [
+      {
+        id: 'agent',
+        title: { en: 'Agent', zh: 'Agent' },
+        label: { en: 'Agentic Systems', zh: '智能体系统' },
+        animation: 'agent',
+        description: {
+          en: 'Agentic workflows with planning, tool use, retrieval, and evaluation loops.',
+          zh: '关注规划、工具调用、检索与评测闭环的大模型智能体工作流。'
+        }
+      }
+    ]
+  },
+  {
+    id: 'ai4edu',
+    title: { en: 'AI for Education', zh: 'AI4教育' },
+    label: { en: 'learning systems', zh: '学习系统' },
+    children: [
+      {
+        id: 'ai4edu',
+        title: { en: 'Learning Tools', zh: '学习工具' },
+        label: { en: 'AI4Education', zh: 'AI4教育' },
+        animation: 'education',
+        description: {
+          en: 'AI-assisted learning tools, practice generation, feedback, and knowledge tracing ideas.',
+          zh: '面向学习工具、练习生成、反馈闭环与知识追踪的 AI4教育方向。'
+        }
+      }
+    ]
+  }
+];
+
+const CONFIG_KEY = 'wcx12-research-config';
+
+function defaultAssignments(kind) {
+  const source = kind === 'repo' ? localRepos : staticPublications;
+  return Object.fromEntries(source.map((item) => [item.name || item.title, item.interests || []]));
+}
+
+function loadResearchConfig() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    return {
+      interests: Array.isArray(parsed.interests) ? parsed.interests : researchInterests,
+      repoAssignments: parsed.repoAssignments || defaultAssignments('repo'),
+      paperAssignments: parsed.paperAssignments || defaultAssignments('paper')
+    };
+  } catch {
+    return {
+      interests: researchInterests,
+      repoAssignments: defaultAssignments('repo'),
+      paperAssignments: defaultAssignments('paper')
+    };
+  }
+}
+
+let researchConfig = loadResearchConfig();
+researchInterests = researchConfig.interests;
+
+function saveResearchConfig() {
+  researchConfig.interests = researchInterests;
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
+}
 
 const repoState = {
   mode: 'pagination',
@@ -53,56 +345,34 @@ const pubState = {
 };
 
 const fallbackPublications = {
-  en: [
-    {
-      title: 'Point Set Registration Under Partial Observation',
-      venue: 'In Preparation',
-      year: '2026',
-      status: 'In progress',
-      summary: 'A robust registration pipeline designed for noisy and incomplete 3D observations.',
-      link: './publications.md'
-    },
-    {
-      title: 'Robust Anomaly Detection Pipelines for Complex Signals',
-      venue: 'In Preparation',
-      year: '2026',
-      status: 'In progress',
-      summary: 'Focuses on reproducible anomaly benchmarks and engineering-friendly implementations.',
-      link: './publications.md'
-    }
-  ],
-  zh: [
-    {
-      title: '部分观测条件下的点集配准研究',
-      venue: '撰写中',
-      year: '2026',
-      status: '进行中',
-      summary: '面向噪声与缺失观测场景的稳健点集配准流程。',
-      link: './publications.md'
-    },
-    {
-      title: '复杂信号异常检测稳健流程研究',
-      venue: '撰写中',
-      year: '2026',
-      status: '进行中',
-      summary: '关注可复现异常检测基准和可工程化实现。',
-      link: './publications.md'
-    }
-  ]
+  en: [],
+  zh: []
 };
 
 const i18n = {
   en: {
+    theme_neon: 'Default',
+    theme_warm: 'Warm Archive',
+    theme_mono: 'Mono Lab',
     hero_kicker: 'Machine Learning Researcher',
     hero_hi: 'Hi, I am',
     hero_status: 'Status',
     hero_subtitle_html: 'Point Set Registration + Anomaly Detection.<br />Building clean pipelines and practical open-source tools.',
+    btn_command: 'Command',
     btn_contact: 'Contact Me',
     btn_repos: 'Explore My Repos',
+    lab_eyebrow: 'live sandbox',
+    lab_title: 'Point Set Registration',
+    lab_desc: 'Tune noise, missing points, and rotation, then run a lightweight alignment preview.',
+    lab_noise: 'Noise',
+    lab_missing: 'Missing',
+    lab_rotation: 'Rotation',
+    lab_align: 'Align',
+    lab_reset: 'Reset',
     stat_focus: 'Focus Areas',
     stat_grad: 'Graduation',
     stat_stack: 'Main Stack',
-    hints: 'Shortcuts: P projects · R research · L language · / search repos',
+    hints: 'Shortcuts: Ctrl/⌘K commands · P projects · R research · L language · / search repos',
     tab_about: 'about',
     tab_research: 'research',
     tab_projects: 'projects',
@@ -113,13 +383,37 @@ const i18n = {
     about_title: 'About',
     about_line1: 'I study at Beijing Institute of Technology and expect to graduate in 2026.',
     about_line2: 'I enjoy combining geometric understanding with reliable engineering delivery.',
-    research_title: 'Research Focus',
+    research_title: 'Research Interests',
+    research_intro: 'Choose a sub-interest to see related demos, projects, and papers.',
+    manage_research: 'Manage Mapping',
     research_1: 'Point set registration under noisy and incomplete observations',
     research_2: 'Anomaly detection for complex and high-dimensional signals',
     research_3: 'Robust ML pipelines and reproducible experiments',
     view_details: 'View Details',
+    related_projects: 'Related Projects',
+    related_papers: 'Related Papers',
+    no_related_projects: 'No mapped project yet.',
+    no_related_papers: 'No mapped paper yet.',
+    manager_title: 'Research Mapping',
+    manager_add_title: 'Add Category',
+    manager_domain: 'Domain',
+    manager_interest: 'Sub-interest',
+    manager_label: 'Label',
+    manager_animation: 'Animation',
+    manager_add: 'Add',
+    manager_assign_title: 'Assign Current Category',
+    manager_save: 'Save Mapping',
+    manager_delete: 'Delete Category',
+    manager_projects: 'Projects',
+    manager_papers: 'Papers',
+    manager_saved: 'Saved.',
+    readme_loading: 'Loading README...',
+    readme_unavailable: 'README is unavailable right now.',
+    open_external: 'Open Link',
     project_title: 'Repositories',
     project_desc: 'All public repositories are listed below with quick jump links.',
+    repo_map_title: 'Repo Constellation',
+    repo_map_hint: 'Hover nodes to inspect projects.',
     repo_search_ph: 'Search repositories...',
     sort_updated: 'Sort: Updated',
     sort_stars: 'Sort: Stars',
@@ -152,7 +446,20 @@ const i18n = {
     cv_download: 'Download Resume',
     contact_title: 'Contact',
     contact_last: 'Open to research collaboration and open-source building.',
-    footer: '© 2026 wcx12 · Neon Full Interactive Profile',
+    footer: '© 2026 wcx12',
+    command_placeholder: 'Type a command or repository...',
+    command_empty: 'No matching command.',
+    command_open: 'Open',
+    command_jump: 'Jump',
+    command_run: 'Run',
+    command_search: 'Search',
+    command_repo: 'Repository',
+    command_palette: 'Command palette',
+    command_toggle_lang: 'Toggle language',
+    command_search_repos: 'Search repositories',
+    command_alignment: 'Run point-set demo',
+    command_github: 'Open GitHub profile',
+    command_orcid: 'Open ORCID record',
     loading_repos: 'Loading repositories...',
     no_repos: 'No repositories found.',
     load_fail: 'Unable to load repositories right now.',
@@ -173,16 +480,28 @@ const i18n = {
     ]
   },
   zh: {
+    theme_neon: '默认风格',
+    theme_warm: '暖色档案',
+    theme_mono: '黑白极简',
     hero_kicker: '机器学习研究者',
     hero_hi: '你好，我是',
     hero_status: '状态',
     hero_subtitle_html: '点集配准 + 异常检测。<br />专注于可复现、可落地的机器学习工程。',
+    btn_command: '命令',
     btn_contact: '联系我',
     btn_repos: '查看我的仓库',
+    lab_eyebrow: '实时实验台',
+    lab_title: '点集配准演示',
+    lab_desc: '调节噪声、缺失比例和旋转角度，然后运行一次轻量配准预览。',
+    lab_noise: '噪声',
+    lab_missing: '缺失',
+    lab_rotation: '旋转',
+    lab_align: '配准',
+    lab_reset: '重置',
     stat_focus: '研究方向',
     stat_grad: '毕业时间',
     stat_stack: '主要技术栈',
-    hints: '快捷键：P 项目 · R 研究 · L 语言切换 · / 搜索仓库',
+    hints: '快捷键：Ctrl/⌘K 命令 · P 项目 · R 研究 · L 语言切换 · / 搜索仓库',
     tab_about: '关于',
     tab_research: '研究',
     tab_projects: '项目',
@@ -193,13 +512,37 @@ const i18n = {
     about_title: '关于我',
     about_line1: '我目前在北京理工大学学习，预计 2026 年毕业。',
     about_line2: '我喜欢把几何理解和可靠工程实现结合起来。',
-    research_title: '研究重点',
+    research_title: '研究兴趣',
+    research_intro: '选择一个子兴趣，查看关联动画、项目和论文。',
+    manage_research: '管理映射',
     research_1: '在噪声和缺失观测下的点集配准',
     research_2: '复杂高维信号中的异常检测',
     research_3: '稳健的机器学习流水线与可复现实验',
     view_details: '查看详情',
+    related_projects: '相关项目',
+    related_papers: '相关论文',
+    no_related_projects: '暂未映射项目。',
+    no_related_papers: '暂未映射论文。',
+    manager_title: '研究映射',
+    manager_add_title: '添加分类',
+    manager_domain: '一级领域',
+    manager_interest: '子兴趣',
+    manager_label: '标签',
+    manager_animation: '动画',
+    manager_add: '添加',
+    manager_assign_title: '分配当前分类',
+    manager_save: '保存映射',
+    manager_delete: '删除分类',
+    manager_projects: '项目',
+    manager_papers: '论文',
+    manager_saved: '已保存。',
+    readme_loading: '正在加载 README...',
+    readme_unavailable: '当前无法加载 README。',
+    open_external: '打开链接',
     project_title: '仓库列表',
     project_desc: '这里列出全部公开仓库，可直接跳转到对应项目。',
+    repo_map_title: '仓库星图',
+    repo_map_hint: '悬停节点查看项目。',
     repo_search_ph: '搜索仓库...',
     sort_updated: '排序：最近更新',
     sort_stars: '排序：星标数',
@@ -232,7 +575,20 @@ const i18n = {
     cv_download: '下载简历',
     contact_title: '联系方式',
     contact_last: '欢迎研究合作与开源协作。',
-    footer: '© 2026 wcx12 · Neon 交互主页',
+    footer: '© 2026 wcx12',
+    command_placeholder: '输入命令或仓库名称...',
+    command_empty: '没有匹配的命令。',
+    command_open: '打开',
+    command_jump: '跳转',
+    command_run: '运行',
+    command_search: '搜索',
+    command_repo: '仓库',
+    command_palette: '命令面板',
+    command_toggle_lang: '切换语言',
+    command_search_repos: '搜索仓库',
+    command_alignment: '运行点集配准演示',
+    command_github: '打开 GitHub 主页',
+    command_orcid: '打开 ORCID 记录',
     loading_repos: '正在加载仓库...',
     no_repos: '未找到仓库。',
     load_fail: '当前无法加载仓库，请稍后重试。',
@@ -261,6 +617,11 @@ function activateView(viewId) {
   const targetView = document.getElementById(viewId);
   if (targetCmd) targetCmd.classList.add('active');
   if (targetView) targetView.classList.add('active');
+  if (viewId === 'projects') requestAnimationFrame(() => renderRepoMap(filteredRepos));
+  if (viewId === 'research') requestAnimationFrame(renderResearchInterest);
+  if (targetView && ['projects', 'research'].includes(viewId)) {
+    requestAnimationFrame(() => targetView.closest('.console')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
 }
 
 commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view)));
@@ -268,6 +629,393 @@ openProjects.addEventListener('click', () => {
   activateView('projects');
   repoSearch.focus();
 });
+
+function commandItems() {
+  const viewItems = Array.from(commands).map((btn) => ({
+    title: btn.textContent,
+    detail: i18n[currentLang].command_jump,
+    type: i18n[currentLang].command_palette,
+    action: () => activateView(btn.dataset.view)
+  }));
+
+  const utilityItems = [
+    {
+      title: i18n[currentLang].command_search_repos,
+      detail: '/',
+      type: i18n[currentLang].command_search,
+      action: () => {
+        activateView('projects');
+        repoSearch.focus();
+      }
+    },
+    {
+      title: i18n[currentLang].command_toggle_lang,
+      detail: i18n[currentLang].lang_btn,
+      type: i18n[currentLang].command_run,
+      action: () => langToggle.click()
+    },
+    {
+      title: i18n[currentLang].command_github,
+      detail: 'github.com/wcx12',
+      type: i18n[currentLang].command_open,
+      action: () => window.open('https://github.com/wcx12', '_blank', 'noreferrer')
+    },
+    {
+      title: i18n[currentLang].command_orcid,
+      detail: ORCID_ID,
+      type: i18n[currentLang].command_open,
+      action: () => window.open(`https://orcid.org/${ORCID_ID}`, '_blank', 'noreferrer')
+    }
+  ];
+
+  const repoItems = allRepos.map((repo) => ({
+    title: repo.name,
+    detail: repo.description || i18n[currentLang].no_desc,
+    type: i18n[currentLang].command_repo,
+    action: () => openRepoDetail(repo.name)
+  }));
+
+  return [...utilityItems, ...viewItems, ...repoItems];
+}
+
+function filteredCommandItems() {
+  const query = commandInput.value.trim().toLowerCase();
+  const items = commandItems();
+  if (!query) return items.slice(0, 12);
+  return items
+    .filter((item) => `${item.title} ${item.detail} ${item.type}`.toLowerCase().includes(query))
+    .slice(0, 12);
+}
+
+function renderCommandList() {
+  const items = filteredCommandItems();
+  commandCursor = Math.min(commandCursor, Math.max(items.length - 1, 0));
+  if (!items.length) {
+    commandList.innerHTML = `<p class="muted">${i18n[currentLang].command_empty}</p>`;
+    return;
+  }
+
+  commandList.innerHTML = items.map((item, index) => `
+    <button class="command-item ${index === commandCursor ? 'active' : ''}" type="button" data-index="${index}">
+      <span><strong>${item.title}</strong><span>${item.detail}</span></span>
+      <span class="command-shortcut">${item.type}</span>
+    </button>
+  `).join('');
+
+  commandList.querySelectorAll('.command-item').forEach((button) => {
+    button.addEventListener('mouseenter', () => {
+      commandCursor = Number(button.dataset.index);
+      renderCommandList();
+    });
+    button.addEventListener('click', () => {
+      const item = filteredCommandItems()[Number(button.dataset.index)];
+      if (item) {
+        closeCommandPalette();
+        item.action();
+      }
+    });
+  });
+}
+
+function openCommandPalette() {
+  commandPalette.classList.add('open');
+  commandPalette.setAttribute('aria-hidden', 'false');
+  commandInput.value = '';
+  commandCursor = 0;
+  renderCommandList();
+  requestAnimationFrame(() => commandInput.focus());
+}
+
+function closeCommandPalette() {
+  commandPalette.classList.remove('open');
+  commandPalette.setAttribute('aria-hidden', 'true');
+}
+
+openCommand.addEventListener('click', openCommandPalette);
+commandPalette.addEventListener('click', (event) => {
+  if (event.target === commandPalette) closeCommandPalette();
+});
+commandInput.addEventListener('input', () => {
+  commandCursor = 0;
+  renderCommandList();
+});
+commandInput.addEventListener('keydown', (event) => {
+  const items = filteredCommandItems();
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    commandCursor = Math.min(commandCursor + 1, Math.max(items.length - 1, 0));
+    renderCommandList();
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    commandCursor = Math.max(commandCursor - 1, 0);
+    renderCommandList();
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    const item = items[commandCursor];
+    if (item) {
+      closeCommandPalette();
+      item.action();
+    }
+  }
+});
+
+function textFor(value) {
+  if (typeof value === 'string') return value;
+  return value?.[currentLang] || value?.en || '';
+}
+
+function allInterestChildren() {
+  return researchInterests.flatMap((domain) => domain.children.map((child) => ({ domain, child })));
+}
+
+function activeInterestEntry() {
+  return allInterestChildren().find((entry) => entry.child.id === activeInterestId) || allInterestChildren()[0];
+}
+
+function renderInterestRail() {
+  interestRail.innerHTML = researchInterests.map((domain) => `
+    <section class="interest-domain">
+      <div class="interest-domain-head">
+        <strong>${textFor(domain.title)}</strong>
+        <span>${textFor(domain.label)}</span>
+      </div>
+      ${domain.children.map((child) => `
+        <button class="interest-child ${child.id === activeInterestId ? 'active' : ''}" type="button" data-interest="${child.id}">
+          ${textFor(child.title)}
+          <small>${textFor(child.label)}</small>
+        </button>
+      `).join('')}
+    </section>
+  `).join('');
+
+  interestRail.querySelectorAll('.interest-child').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeInterestId = button.dataset.interest;
+      renderResearchInterest();
+    });
+  });
+}
+
+function inferInterestIds(item) {
+  const hay = `${item.name || ''} ${item.title || ''} ${item.description || ''} ${item.summary || ''}`.toLowerCase();
+  const matches = [];
+  if (hay.includes('vpr') || hay.includes('visual place') || hay.includes('localization')) matches.push('vpr');
+  if (hay.includes('point') || hay.includes('cloud') || hay.includes('registration') || hay.includes('geometry')) matches.push('point-cloud-registration');
+  if (hay.includes('agent') || hay.includes('llm') || hay.includes('codex') || hay.includes('rag')) matches.push('agent');
+  if (hay.includes('education') || hay.includes('learning') || hay.includes('math') || hay.includes('数学') || hay.includes('classroom')) matches.push('ai4edu');
+  return matches;
+}
+
+function itemKey(item) {
+  return item.name || item.title;
+}
+
+function assignedInterestIds(item, kind) {
+  const map = kind === 'repo' ? researchConfig.repoAssignments : researchConfig.paperAssignments;
+  const key = itemKey(item);
+  if (Array.isArray(map[key])) return map[key];
+  if (Array.isArray(item.interests)) return item.interests;
+  return inferInterestIds(item);
+}
+
+function relatedRepos() {
+  return allRepos.filter((repo) => assignedInterestIds(repo, 'repo').includes(activeInterestId));
+}
+
+function relatedPapers() {
+  return currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(activeInterestId));
+}
+
+function renderRelatedList(container, items, emptyText, kind) {
+  if (!items.length) {
+    container.innerHTML = `<p class="muted">${emptyText}</p>`;
+    return;
+  }
+
+  container.innerHTML = items.slice(0, 4).map((item) => {
+    const title = item.name || item.title;
+    const url = item.html_url || item.link;
+    const detail = item.description || item.summary || item.language || item.venue || '';
+    const meta = kind === 'repo'
+      ? `${item.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${item.stargazers_count || 0}`
+      : `${item.venue || ''} · ${item.year || ''}`;
+    return `
+      <div class="related-item">
+        <button class="related-link" type="button" data-kind="${kind}" data-key="${title}">${title}</button>
+        <p class="muted">${detail}</p>
+        <p class="muted">${meta}</p>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.related-link').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.kind === 'repo') openRepoReadme(button.dataset.key);
+      else openPaperDetail(button.dataset.key);
+    });
+  });
+}
+
+function renderResearchInterest() {
+  const entry = activeInterestEntry();
+  if (!entry) {
+    interestRail.innerHTML = '';
+    interestPath.textContent = '';
+    interestTitle.textContent = '';
+    interestTag.textContent = '';
+    interestDescription.textContent = '';
+    interestProjects.innerHTML = `<p class="muted">${i18n[currentLang].no_related_projects}</p>`;
+    interestPapers.innerHTML = `<p class="muted">${i18n[currentLang].no_related_papers}</p>`;
+    return;
+  }
+  interestPath.textContent = `${textFor(entry.domain.title)} / ${textFor(entry.child.title)}`;
+  interestTitle.textContent = textFor(entry.child.title);
+  interestTag.textContent = textFor(entry.child.label);
+  interestDescription.textContent = textFor(entry.child.description);
+  interestCanvas.style.cursor = entry.child.animation === 'point-cloud'
+    ? pointCloudInteraction.dragging ? 'grabbing' : 'grab'
+    : 'default';
+  renderInterestRail();
+  renderRelatedList(interestProjects, relatedRepos(), i18n[currentLang].no_related_projects, 'repo');
+  renderRelatedList(interestPapers, relatedPapers(), i18n[currentLang].no_related_papers, 'paper');
+  drawInterestAnimation();
+}
+
+function applyTheme(theme) {
+  currentTheme = ['neon', 'warm', 'mono'].includes(theme) ? theme : 'neon';
+  document.documentElement.dataset.theme = currentTheme;
+  themeSelect.value = currentTheme;
+  localStorage.setItem('wcx12-theme', currentTheme);
+  drawRegistrationDemo();
+  renderRepoMap(filteredRepos);
+  drawInterestAnimation();
+}
+
+themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
+
+function openResearchManager() {
+  renderResearchManager();
+  researchManager.classList.add('open');
+  researchManager.setAttribute('aria-hidden', 'false');
+}
+
+function closeResearchManager() {
+  researchManager.classList.remove('open');
+  researchManager.setAttribute('aria-hidden', 'true');
+}
+
+function slugify(value) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `interest-${Date.now()}`;
+}
+
+function renderResearchManager() {
+  const entry = activeInterestEntry();
+  if (!entry) return;
+  managerActive.textContent = `${textFor(entry.domain.title)} / ${textFor(entry.child.title)}`;
+
+  const projectIds = new Set(relatedRepos().map((item) => itemKey(item)));
+  managerProjects.innerHTML = allRepos.map((repo) => `
+    <label class="manager-check">
+      <input type="checkbox" data-kind="repo" value="${repo.name}" ${projectIds.has(repo.name) ? 'checked' : ''} />
+      <span>${repo.name}</span>
+    </label>
+  `).join('');
+
+  const paperIds = new Set(relatedPapers().map((item) => itemKey(item)));
+  managerPapers.innerHTML = currentPublications().map((paper) => `
+    <label class="manager-check">
+      <input type="checkbox" data-kind="paper" value="${paper.title}" ${paperIds.has(paper.title) ? 'checked' : ''} />
+      <span>${paper.title}</span>
+    </label>
+  `).join('') || `<p class="muted">${i18n[currentLang].no_related_papers}</p>`;
+}
+
+function setAssignment(kind, key, interestId, checked) {
+  const map = kind === 'repo' ? researchConfig.repoAssignments : researchConfig.paperAssignments;
+  const current = new Set(map[key] || []);
+  if (checked) current.add(interestId);
+  else current.delete(interestId);
+  map[key] = Array.from(current);
+}
+
+function saveManagerAssignments() {
+  managerProjects.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    setAssignment('repo', input.value, activeInterestId, input.checked);
+  });
+  managerPapers.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    setAssignment('paper', input.value, activeInterestId, input.checked);
+  });
+  saveResearchConfig();
+  renderResearchInterest();
+  renderResearchManager();
+  managerActive.textContent = `${i18n[currentLang].manager_saved} ${managerActive.textContent}`;
+}
+
+function addResearchCategory() {
+  const domainTitle = managerDomain.value.trim();
+  const interestTitleValue = managerInterest.value.trim();
+  if (!domainTitle || !interestTitleValue) return;
+  const label = managerLabel.value.trim() || interestTitleValue;
+  const domainId = slugify(domainTitle);
+  const childId = `${domainId}-${slugify(interestTitleValue)}`;
+  let domain = researchInterests.find((item) => item.id === domainId || textFor(item.title).toLowerCase() === domainTitle.toLowerCase());
+  if (!domain) {
+    domain = {
+      id: domainId,
+      title: { en: domainTitle, zh: domainTitle },
+      label: { en: 'custom', zh: '自定义' },
+      children: []
+    };
+    researchInterests.push(domain);
+  }
+  domain.children.push({
+    id: childId,
+    title: { en: interestTitleValue, zh: interestTitleValue },
+    label: { en: label, zh: label },
+    animation: managerAnimation.value,
+    description: {
+      en: 'Custom research interest. Use the mapping panel to assign projects and papers.',
+      zh: '自定义研究兴趣。你可以在映射面板中分配项目和论文。'
+    }
+  });
+  activeInterestId = childId;
+  managerDomain.value = '';
+  managerInterest.value = '';
+  managerLabel.value = '';
+  saveResearchConfig();
+  renderResearchInterest();
+  renderResearchManager();
+}
+
+function deleteActiveResearchCategory() {
+  researchInterests.forEach((domain) => {
+    domain.children = domain.children.filter((child) => child.id !== activeInterestId);
+  });
+  researchInterests = researchInterests.filter((domain) => domain.children.length);
+  Object.values(researchConfig.repoAssignments).forEach((ids) => {
+    const index = ids.indexOf(activeInterestId);
+    if (index >= 0) ids.splice(index, 1);
+  });
+  Object.values(researchConfig.paperAssignments).forEach((ids) => {
+    const index = ids.indexOf(activeInterestId);
+    if (index >= 0) ids.splice(index, 1);
+  });
+  activeInterestId = allInterestChildren()[0]?.child.id || '';
+  saveResearchConfig();
+  renderResearchInterest();
+  renderResearchManager();
+}
+
+manageResearch.addEventListener('click', openResearchManager);
+managerClose.addEventListener('click', closeResearchManager);
+researchManager.addEventListener('click', (event) => {
+  if (event.target === researchManager) closeResearchManager();
+});
+managerSave.addEventListener('click', saveManagerAssignments);
+managerAdd.addEventListener('click', addResearchCategory);
+managerDelete.addEventListener('click', deleteActiveResearchCategory);
 
 chips.forEach((chip) => {
   chip.addEventListener('click', () => {
@@ -279,10 +1027,11 @@ chips.forEach((chip) => {
 
 function openModal(config) {
   modalTitle.textContent = config.title;
-  modalBody.textContent = config.body;
+  if (config.html) modalBody.innerHTML = config.html;
+  else modalBody.textContent = config.body || '';
   if (config.link) {
     modalLink.style.display = 'inline-flex';
-    modalLink.textContent = config.linkText;
+    modalLink.textContent = config.linkText || i18n[currentLang].open_external;
     modalLink.href = config.link;
   } else {
     modalLink.style.display = 'none';
@@ -334,6 +1083,201 @@ function applyRepoFilter() {
   renderRepos(filteredRepos);
 }
 
+function openRepoDetail(repoName) {
+  const repo = allRepos.find((item) => item.name === repoName);
+  if (!repo) return;
+  openRepoReadme(repo.name);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function safeMarkdownUrl(url) {
+  const value = String(url || '').trim();
+  if (/^(javascript|data):/i.test(value)) return '#';
+  return escapeHtml(value);
+}
+
+function renderInlineMarkdown(text) {
+  return escapeHtml(text)
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `<img src="${safeMarkdownUrl(url)}" alt="${escapeHtml(alt)}" loading="lazy" />`)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => `<a href="${safeMarkdownUrl(url)}" target="_blank" rel="noreferrer">${label}</a>`)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function markdownTableCells(line) {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim());
+}
+
+function isMarkdownTableSeparator(line) {
+  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function renderMarkdownTable(rows) {
+  const [head, ...body] = rows;
+  return `
+    <table>
+      <thead><tr>${head.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join('')}</tr></thead>
+      <tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>
+  `;
+}
+
+function markdownToHtml(markdown) {
+  const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+  const html = [];
+  let paragraph = [];
+  let listType = null;
+  let codeFence = null;
+  let codeLines = [];
+
+  const closeParagraph = () => {
+    if (!paragraph.length) return;
+    html.push(`<p>${paragraph.map(renderInlineMarkdown).join('<br />')}</p>`);
+    paragraph = [];
+  };
+
+  const closeList = () => {
+    if (!listType) return;
+    html.push(`</${listType}>`);
+    listType = null;
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (codeFence) {
+      if (trimmed.startsWith('```')) {
+        html.push(`<pre><code${codeFence === 'plain' ? '' : ` class="language-${escapeHtml(codeFence)}"`}>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+        codeFence = null;
+        codeLines = [];
+      } else {
+        codeLines.push(line);
+      }
+      return;
+    }
+
+    const fenceMatch = trimmed.match(/^```([A-Za-z0-9_-]*)/);
+    if (fenceMatch) {
+      closeParagraph();
+      closeList();
+      codeFence = fenceMatch[1] || 'plain';
+      codeLines = [];
+      return;
+    }
+
+    if (!trimmed) {
+      closeParagraph();
+      closeList();
+      return;
+    }
+
+    if (line.includes('|') && isMarkdownTableSeparator(lines[index + 1] || '')) {
+      closeParagraph();
+      closeList();
+      const rows = [markdownTableCells(line)];
+      let cursor = index + 2;
+      while (cursor < lines.length && lines[cursor].includes('|') && lines[cursor].trim()) {
+        rows.push(markdownTableCells(lines[cursor]));
+        lines[cursor] = '';
+        cursor += 1;
+      }
+      html.push(renderMarkdownTable(rows));
+      return;
+    }
+
+    if (isMarkdownTableSeparator(line)) return;
+
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      closeParagraph();
+      closeList();
+      const level = Math.min(heading[1].length + 1, 6);
+      html.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      return;
+    }
+
+    if (/^(-{3,}|\*{3,})$/.test(trimmed)) {
+      closeParagraph();
+      closeList();
+      html.push('<hr />');
+      return;
+    }
+
+    const unordered = line.match(/^\s*[-*+]\s+(.+)$/);
+    const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+    if (unordered || ordered) {
+      closeParagraph();
+      const nextType = ordered ? 'ol' : 'ul';
+      if (listType !== nextType) {
+        closeList();
+        listType = nextType;
+        html.push(`<${listType}>`);
+      }
+      html.push(`<li>${renderInlineMarkdown((unordered || ordered)[1])}</li>`);
+      return;
+    }
+
+    if (trimmed.startsWith('>')) {
+      closeParagraph();
+      closeList();
+      html.push(`<blockquote>${renderInlineMarkdown(trimmed.replace(/^>\s?/, ''))}</blockquote>`);
+      return;
+    }
+
+    closeList();
+    paragraph.push(line);
+  });
+
+  if (codeFence) {
+    html.push(`<pre><code${codeFence === 'plain' ? '' : ` class="language-${escapeHtml(codeFence)}"`}>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+  }
+  closeParagraph();
+  closeList();
+
+  return html.join('');
+}
+
+async function openRepoReadme(repoName) {
+  const repo = allRepos.find((item) => item.name === repoName);
+  if (!repo) return;
+  openModal({
+    title: repo.name,
+    html: `<p class="muted">${i18n[currentLang].readme_loading}</p>`,
+    linkText: i18n[currentLang].details_project_link_text,
+    link: repo.html_url
+  });
+
+  try {
+    const response = await fetch(repo.readme_url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const markdown = await response.text();
+    modalBody.innerHTML = `<div class="readme-box readme-content"><p class="muted">${repo.description || i18n[currentLang].no_desc}</p>${markdownToHtml(markdown)}</div>`;
+  } catch {
+    modalBody.innerHTML = `<div class="readme-box"><p class="muted">${repo.description || i18n[currentLang].no_desc}</p><p>${i18n[currentLang].readme_unavailable}</p></div>`;
+  }
+}
+
+function openPaperDetail(title) {
+  const paper = currentPublications().find((item) => item.title === title);
+  if (!paper) return;
+  openModal({
+    title: paper.title,
+    html: `<div class="readme-box"><p class="muted">${paper.venue || ''} · ${paper.year || ''}</p><p>${paper.summary || ''}</p></div>`,
+    linkText: i18n[currentLang].open_external,
+    link: paper.link
+  });
+}
+
 function renderRepos(repos, preserveScroll = false) {
   const beforeScroll = repoGrid.scrollTop;
   const items = sortedRepos(repos);
@@ -365,6 +1309,7 @@ function renderRepos(repos, preserveScroll = false) {
 
   if (!shown.length) {
     repoGrid.innerHTML = `<p class="muted">${i18n[currentLang].no_repos}</p>`;
+    renderRepoMap(items);
     return;
   }
 
@@ -388,23 +1333,425 @@ function renderRepos(repos, preserveScroll = false) {
   }
 
   document.querySelectorAll('.repo-detail').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const repo = allRepos.find((item) => item.name === btn.dataset.repo);
-      if (!repo) return;
-      openModal({
-        title: repo.name,
-        body: repo.description || i18n[currentLang].no_desc,
-        linkText: i18n[currentLang].details_project_link_text,
-        link: repo.html_url
-      });
-    });
+    btn.addEventListener('click', () => openRepoDetail(btn.dataset.repo));
   });
 
+  renderRepoMap(items);
   if (preserveScroll) repoGrid.scrollTop = beforeScroll;
 }
 
+function resizeDrawingCanvas(canvasElement, context) {
+  const rect = canvasElement.getBoundingClientRect();
+  const scale = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.floor(rect.width * scale));
+  const height = Math.max(1, Math.floor(rect.height * scale));
+  if (canvasElement.width !== width || canvasElement.height !== height) {
+    canvasElement.width = width;
+    canvasElement.height = height;
+  }
+  context.setTransform(scale, 0, 0, scale, 0, 0);
+  return { width: rect.width, height: rect.height };
+}
+
+function repoColor(language) {
+  const palette = {
+    JavaScript: '#00f5ff',
+    TypeScript: '#62a8ff',
+    Python: '#ffd166',
+    TeX: '#ff2e88',
+    HTML: '#9b5cff'
+  };
+  return palette[language] || '#8ee6a8';
+}
+
+function renderRepoMap(repos = filteredRepos) {
+  const { width, height } = resizeDrawingCanvas(repoMap, repoMapCtx);
+  repoMapCtx.clearRect(0, 0, width, height);
+
+  const items = sortedRepos(repos);
+  repoNodes = [];
+
+  repoMapCtx.strokeStyle = 'rgba(0, 245, 255, 0.12)';
+  repoMapCtx.lineWidth = 1;
+  for (let x = 40; x < width; x += 70) {
+    repoMapCtx.beginPath();
+    repoMapCtx.moveTo(x, 18);
+    repoMapCtx.lineTo(x, height - 18);
+    repoMapCtx.stroke();
+  }
+  for (let y = 35; y < height; y += 56) {
+    repoMapCtx.beginPath();
+    repoMapCtx.moveTo(18, y);
+    repoMapCtx.lineTo(width - 18, y);
+    repoMapCtx.stroke();
+  }
+
+  if (!items.length) {
+    repoMapCtx.fillStyle = 'rgba(232, 240, 255, 0.72)';
+    repoMapCtx.font = '14px JetBrains Mono, monospace';
+    repoMapCtx.fillText(i18n[currentLang].no_repos, 22, 42);
+    return;
+  }
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radiusX = Math.max(80, width * 0.38);
+  const radiusY = Math.max(56, height * 0.34);
+
+  items.forEach((repo, index) => {
+    const angle = (Math.PI * 2 * index) / items.length - Math.PI / 2;
+    const languageOffset = (repo.language || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 34;
+    const x = centerX + Math.cos(angle) * (radiusX - languageOffset);
+    const y = centerY + Math.sin(angle) * (radiusY + languageOffset * 0.45);
+    const size = 8 + Math.min(10, repo.stargazers_count * 3) + Math.min(6, repo.name.length / 7);
+    repoNodes.push({ repo, x, y, r: size, color: repoColor(repo.language) });
+  });
+
+  repoMapCtx.lineWidth = 1;
+  repoNodes.forEach((node, index) => {
+    const next = repoNodes[(index + 1) % repoNodes.length];
+    const sameLanguage = next && next.repo.language === node.repo.language;
+    repoMapCtx.strokeStyle = sameLanguage ? `${node.color}66` : 'rgba(155, 92, 255, 0.18)';
+    repoMapCtx.beginPath();
+    repoMapCtx.moveTo(node.x, node.y);
+    repoMapCtx.lineTo(next.x, next.y);
+    repoMapCtx.stroke();
+  });
+
+  repoNodes.forEach((node) => {
+    const active = hoveredRepo === node.repo.name;
+    repoMapCtx.beginPath();
+    repoMapCtx.arc(node.x, node.y, active ? node.r + 5 : node.r + 2, 0, Math.PI * 2);
+    repoMapCtx.fillStyle = active ? `${node.color}33` : 'rgba(0, 245, 255, 0.07)';
+    repoMapCtx.fill();
+
+    repoMapCtx.beginPath();
+    repoMapCtx.arc(node.x, node.y, active ? node.r : node.r * 0.72, 0, Math.PI * 2);
+    repoMapCtx.fillStyle = node.color;
+    repoMapCtx.fill();
+
+    if (active) {
+      repoMapCtx.fillStyle = 'rgba(232, 240, 255, 0.95)';
+      repoMapCtx.font = '12px JetBrains Mono, monospace';
+      repoMapCtx.fillText(node.repo.name, Math.min(node.x + 14, width - 180), Math.max(node.y - 12, 20));
+    }
+  });
+}
+
+function repoMapPointer(event) {
+  const rect = repoMap.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return { x, y };
+}
+
+repoMap.addEventListener('mousemove', (event) => {
+  const pointer = repoMapPointer(event);
+  const hit = repoNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
+  hoveredRepo = hit ? hit.repo.name : null;
+  repoMap.style.cursor = hit ? 'pointer' : 'default';
+  repoMapHint.textContent = hit
+    ? `${hit.repo.name} · ${hit.repo.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${hit.repo.stargazers_count}`
+    : i18n[currentLang].repo_map_hint;
+  renderRepoMap(filteredRepos);
+});
+
+repoMap.addEventListener('mouseleave', () => {
+  hoveredRepo = null;
+  repoMapHint.textContent = i18n[currentLang].repo_map_hint;
+  renderRepoMap(filteredRepos);
+});
+
+repoMap.addEventListener('click', (event) => {
+  const pointer = repoMapPointer(event);
+  const hit = repoNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
+  if (hit) openRepoDetail(hit.repo.name);
+});
+
+function themeColor(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function activeInterestAnimationType() {
+  return activeInterestEntry()?.child.animation;
+}
+
+function isPointCloudInterestActive() {
+  return activeInterestAnimationType() === 'point-cloud';
+}
+
+function drawInterestAnimation() {
+  const { width, height } = resizeDrawingCanvas(interestCanvas, interestCtx);
+  const entry = activeInterestEntry();
+  if (!entry) return;
+  const type = entry.child.animation;
+  const primary = themeColor('--cyan') || '#00f5ff';
+  const secondary = themeColor('--pink') || '#ff2e88';
+  const muted = themeColor('--muted') || '#9ca9cf';
+  const t = interestTick * 0.05;
+
+  interestCtx.clearRect(0, 0, width, height);
+  interestCtx.fillStyle = 'rgba(3, 7, 18, 0.46)';
+  interestCtx.fillRect(0, 0, width, height);
+  interestCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  interestCtx.lineWidth = 1;
+  for (let x = 24; x < width; x += 36) {
+    interestCtx.beginPath();
+    interestCtx.moveTo(x, 0);
+    interestCtx.lineTo(x, height);
+    interestCtx.stroke();
+  }
+  for (let y = 24; y < height; y += 36) {
+    interestCtx.beginPath();
+    interestCtx.moveTo(0, y);
+    interestCtx.lineTo(width, y);
+    interestCtx.stroke();
+  }
+
+  if (type === 'point-cloud') {
+    const cx = width * 0.5;
+    const cy = height * 0.52;
+    const scale = Math.min(width, height) * 0.8;
+    const pointerX = pointCloudInteraction.x * width;
+    const pointerY = pointCloudInteraction.y * height;
+    const autoScrub = 0.36 + Math.sin(t * 0.74) * 0.28;
+    pointCloudInteraction.targetScrub = pointCloudInteraction.dragging
+      ? pointCloudInteraction.targetScrub
+      : pointCloudInteraction.active
+        ? pointCloudInteraction.x
+        : autoScrub;
+    pointCloudInteraction.scrub += (pointCloudInteraction.targetScrub - pointCloudInteraction.scrub) * (pointCloudInteraction.dragging ? 0.72 : 0.18);
+    pointCloudInteraction.energy += ((pointCloudInteraction.active ? 1 : 0) - pointCloudInteraction.energy) * 0.16;
+    const progress = Math.max(0, Math.min(1, pointCloudInteraction.scrub));
+
+    registrationState.points.forEach((point, index) => {
+      const target = transformPoint(point, index, registrationParams());
+      if (!target.visible) return;
+      const sourceX = cx + point.x * scale;
+      const sourceY = cy + point.y * scale;
+      const targetX = cx + target.x * scale;
+      const targetY = cy + target.y * scale;
+      let x = sourceX + (targetX - sourceX) * progress;
+      let y = sourceY + (targetY - sourceY) * progress;
+      const pointerDistance = Math.hypot(pointerX - x, pointerY - y);
+      const influence = pointCloudInteraction.active
+        ? Math.max(0, 1 - pointerDistance / (scale * 0.52)) ** 1.35
+        : 0;
+      const orbit = Math.sin(t + index * 0.43) * influence * scale * 0.022;
+      x += (targetX - x) * influence * 0.92 + orbit;
+      y += (targetY - y) * influence * 0.92 - orbit;
+
+      interestCtx.beginPath();
+      interestCtx.arc(sourceX, sourceY, 2.1, 0, Math.PI * 2);
+      interestCtx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      interestCtx.fill();
+
+      interestCtx.beginPath();
+      interestCtx.arc(targetX, targetY, 2.8, 0, Math.PI * 2);
+      interestCtx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+      interestCtx.fill();
+
+      interestCtx.beginPath();
+      interestCtx.moveTo(x, y);
+      interestCtx.lineTo(targetX, targetY);
+      interestCtx.strokeStyle = `rgba(232, 240, 255, ${0.08 + influence * 0.34})`;
+      interestCtx.lineWidth = 0.8 + influence * 1.7;
+      interestCtx.stroke();
+
+      interestCtx.beginPath();
+      interestCtx.arc(x, y, 3.8 + influence * 6.4, 0, Math.PI * 2);
+      interestCtx.fillStyle = index % 2 ? primary : secondary;
+      interestCtx.fill();
+    });
+
+    if (pointCloudInteraction.energy > 0.02) {
+      const lens = interestCtx.createRadialGradient(pointerX, pointerY, 0, pointerX, pointerY, scale * 0.22);
+      lens.addColorStop(0, `rgba(255, 255, 255, ${0.2 * pointCloudInteraction.energy})`);
+      lens.addColorStop(0.58, `rgba(255, 255, 255, ${0.05 * pointCloudInteraction.energy})`);
+      lens.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      interestCtx.fillStyle = lens;
+      interestCtx.beginPath();
+      interestCtx.arc(pointerX, pointerY, scale * 0.22, 0, Math.PI * 2);
+      interestCtx.fill();
+
+      interestCtx.beginPath();
+      interestCtx.arc(pointerX, pointerY, scale * 0.16 + Math.sin(t * 1.5) * 5, 0, Math.PI * 2);
+      interestCtx.strokeStyle = `rgba(255, 255, 255, ${(pointCloudInteraction.dragging ? 0.72 : 0.38) * pointCloudInteraction.energy})`;
+      interestCtx.lineWidth = pointCloudInteraction.dragging ? 2.8 : 1.8;
+      interestCtx.stroke();
+
+      if (pointCloudInteraction.dragging) {
+        interestCtx.beginPath();
+        interestCtx.moveTo(pointerX, 16);
+        interestCtx.lineTo(pointerX, height - 16);
+        interestCtx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+        interestCtx.lineWidth = 1;
+        interestCtx.stroke();
+      }
+    }
+
+    const barWidth = Math.min(220, width * 0.46);
+    const barX = width - barWidth - 18;
+    const barY = height - 20;
+    interestCtx.lineCap = 'round';
+    interestCtx.lineWidth = 8;
+    interestCtx.beginPath();
+    interestCtx.moveTo(barX, barY);
+    interestCtx.lineTo(barX + barWidth, barY);
+    interestCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    interestCtx.stroke();
+    interestCtx.beginPath();
+    interestCtx.moveTo(barX, barY);
+    interestCtx.lineTo(barX + barWidth * progress, barY);
+    interestCtx.strokeStyle = secondary;
+    interestCtx.stroke();
+    interestCtx.beginPath();
+    interestCtx.arc(barX + barWidth * progress, barY, pointCloudInteraction.dragging ? 8 : 6, 0, Math.PI * 2);
+    interestCtx.fillStyle = primary;
+    interestCtx.fill();
+    interestCtx.strokeStyle = 'rgba(3, 7, 18, 0.8)';
+    interestCtx.lineWidth = 2;
+    interestCtx.stroke();
+    interestCtx.lineCap = 'butt';
+    interestCtx.lineWidth = 1;
+  } else if (type === 'vpr') {
+    const queryX = width * 0.17;
+    const queryY = height * 0.5;
+    interestCtx.strokeStyle = primary;
+    interestCtx.strokeRect(queryX - 42, queryY - 32, 84, 64);
+    interestCtx.fillStyle = primary;
+    interestCtx.font = '12px JetBrains Mono, monospace';
+    interestCtx.fillText('query', queryX - 22, queryY + 48);
+    const candidates = [0.24, 0.52, 0.78, 0.38, 0.64];
+    candidates.forEach((score, index) => {
+      const x = width * (0.42 + index * 0.11);
+      const y = height * (0.28 + (index % 2) * 0.32);
+      const pulse = 0.5 + 0.5 * Math.sin(t + index);
+      interestCtx.strokeStyle = index === 2 ? secondary : 'rgba(255,255,255,0.22)';
+      interestCtx.strokeRect(x - 34, y - 24, 68, 48);
+      interestCtx.beginPath();
+      interestCtx.moveTo(queryX + 44, queryY);
+      interestCtx.lineTo(x - 36, y);
+      interestCtx.strokeStyle = `rgba(255,255,255,${0.12 + score * 0.35})`;
+      interestCtx.stroke();
+      interestCtx.fillStyle = index === 2 ? secondary : primary;
+      interestCtx.fillRect(x - 30, y + 32, 60 * (score + pulse * 0.08), 5);
+    });
+  } else if (type === 'agent') {
+    const nodes = [
+      ['query', 0.14, 0.5],
+      ['plan', 0.34, 0.32],
+      ['tool', 0.56, 0.5],
+      ['eval', 0.76, 0.32],
+      ['answer', 0.88, 0.62]
+    ];
+    nodes.forEach((node, index) => {
+      const x = width * node[1];
+      const y = height * node[2];
+      if (index > 0) {
+        const prev = nodes[index - 1];
+        interestCtx.beginPath();
+        interestCtx.moveTo(width * prev[1], height * prev[2]);
+        interestCtx.lineTo(x, y);
+        interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
+        interestCtx.stroke();
+      }
+      const active = Math.floor(t * 1.4) % nodes.length === index;
+      interestCtx.beginPath();
+      interestCtx.arc(x, y, active ? 24 : 18, 0, Math.PI * 2);
+      interestCtx.fillStyle = active ? secondary : primary;
+      interestCtx.fill();
+      interestCtx.fillStyle = '#050505';
+      interestCtx.font = '11px JetBrains Mono, monospace';
+      interestCtx.textAlign = 'center';
+      interestCtx.fillText(node[0], x, y + 4);
+      interestCtx.textAlign = 'left';
+    });
+  } else {
+    const centerX = width * 0.5;
+    const centerY = height * 0.5;
+    const nodes = [
+      ['student', -0.28, -0.08],
+      ['practice', -0.06, -0.28],
+      ['feedback', 0.18, -0.04],
+      ['teacher', 0.02, 0.24],
+      ['profile', -0.2, 0.22]
+    ];
+    nodes.forEach((node, index) => {
+      const x = centerX + node[1] * width;
+      const y = centerY + node[2] * height;
+      interestCtx.beginPath();
+      interestCtx.moveTo(centerX, centerY);
+      interestCtx.lineTo(x, y);
+      interestCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+      interestCtx.stroke();
+      interestCtx.beginPath();
+      interestCtx.arc(x, y, 16 + Math.sin(t + index) * 3, 0, Math.PI * 2);
+      interestCtx.fillStyle = index % 2 ? primary : secondary;
+      interestCtx.fill();
+      interestCtx.fillStyle = muted;
+      interestCtx.font = '11px JetBrains Mono, monospace';
+      interestCtx.fillText(node[0], x + 20, y + 4);
+    });
+  }
+}
+
+function updatePointCloudPointer(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  pointCloudInteraction.x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  pointCloudInteraction.y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+  pointCloudInteraction.active = true;
+  pointCloudInteraction.targetScrub = pointCloudInteraction.x;
+  if (pointCloudInteraction.dragging) pointCloudInteraction.scrub = pointCloudInteraction.x;
+}
+
+interestCanvas.addEventListener('pointerenter', (event) => {
+  if (!isPointCloudInterestActive()) return;
+  updatePointCloudPointer(event);
+});
+
+interestCanvas.addEventListener('pointermove', (event) => {
+  if (!isPointCloudInterestActive()) return;
+  updatePointCloudPointer(event);
+});
+
+interestCanvas.addEventListener('pointerdown', (event) => {
+  if (!isPointCloudInterestActive()) return;
+  event.preventDefault();
+  pointCloudInteraction.dragging = true;
+  updatePointCloudPointer(event);
+  pointCloudInteraction.targetScrub = pointCloudInteraction.x;
+  interestCanvas.style.cursor = 'grabbing';
+  interestCanvas.setPointerCapture?.(event.pointerId);
+});
+
+interestCanvas.addEventListener('pointerup', (event) => {
+  if (!isPointCloudInterestActive()) return;
+  pointCloudInteraction.dragging = false;
+  updatePointCloudPointer(event);
+  interestCanvas.style.cursor = 'grab';
+  interestCanvas.releasePointerCapture?.(event.pointerId);
+});
+
+interestCanvas.addEventListener('pointercancel', () => {
+  pointCloudInteraction.dragging = false;
+  pointCloudInteraction.active = false;
+  if (isPointCloudInterestActive()) interestCanvas.style.cursor = 'grab';
+});
+
+interestCanvas.addEventListener('pointerleave', () => {
+  if (pointCloudInteraction.dragging) return;
+  pointCloudInteraction.active = false;
+  if (isPointCloudInterestActive()) interestCanvas.style.cursor = 'grab';
+});
+
 function currentPublications() {
-  return loadedPublications.length ? loadedPublications : fallbackPublications[currentLang];
+  const source = loadedPublications.length ? loadedPublications : [];
+  const byTitle = new Map();
+  [...staticPublications, ...source, ...fallbackPublications[currentLang]].forEach((item) => {
+    byTitle.set(item.title, item);
+  });
+  return Array.from(byTitle.values());
 }
 
 function renderPublications(preserveScroll = false) {
@@ -480,23 +1827,16 @@ function mapOrcidWorks(payload) {
         || summary['external-ids']?.['external-id']?.[0]?.['external-id-url']?.value
         || './publications.md';
 
-      return { title, venue, year, status, summary: summaryText, link };
+      return { title, venue, year, status, summary: summaryText, link, interests: inferInterestIds({ title, summary: summaryText, venue }) };
     })
     .filter(Boolean);
 }
 
 async function loadRepos() {
-  repoGrid.innerHTML = `<p class="muted">${i18n[currentLang].loading_repos}</p>`;
-  try {
-    const response = await fetch('https://api.github.com/users/wcx12/repos?sort=updated&per_page=100');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const repos = await response.json();
-    allRepos = repos.filter((repo) => !repo.fork);
-    filteredRepos = [...allRepos];
-    renderRepos(filteredRepos);
-  } catch {
-    repoGrid.innerHTML = `<p class="muted">${i18n[currentLang].load_fail}</p>`;
-  }
+  allRepos = [...localRepos];
+  filteredRepos = [...allRepos];
+  renderRepos(filteredRepos);
+  renderResearchInterest();
 }
 
 async function loadPublications() {
@@ -509,9 +1849,11 @@ async function loadPublications() {
     const payload = await response.json();
     loadedPublications = mapOrcidWorks(payload);
     renderPublications();
+    renderResearchInterest();
   } catch {
     loadedPublications = [];
     renderPublications();
+    renderResearchInterest();
     pubList.insertAdjacentHTML('afterbegin', `<p class="muted">${i18n[currentLang].pub_load_fail}</p>`);
   }
 }
@@ -578,6 +1920,158 @@ pubList.addEventListener('scroll', () => {
   renderPublications(true);
 });
 
+function seededRandom(seed) {
+  let value = seed % 2147483647;
+  if (value <= 0) value += 2147483646;
+  return () => {
+    value = (value * 16807) % 2147483647;
+    return (value - 1) / 2147483646;
+  };
+}
+
+function generateRegistrationPoints() {
+  const random = seededRandom(registrationState.seed);
+  registrationState.points = Array.from({ length: 42 }, (_, index) => {
+    const angle = index * 0.52;
+    const ring = 0.12 + (index % 9) * 0.035;
+    return {
+      x: Math.cos(angle) * ring + (random() - 0.5) * 0.06,
+      y: Math.sin(angle) * ring + (random() - 0.5) * 0.06,
+      keep: random()
+    };
+  });
+}
+
+function registrationParams() {
+  return {
+    noise: Number(noiseRange?.value ?? 12),
+    missing: Number(missingRange?.value ?? 18),
+    rotation: Number(rotationRange?.value ?? 34)
+  };
+}
+
+function updateRegistrationLabels() {
+  if (!noiseValue || !missingValue || !rotationValue) return;
+  const params = registrationParams();
+  noiseValue.textContent = String(params.noise);
+  missingValue.textContent = `${params.missing}%`;
+  rotationValue.textContent = `${params.rotation}°`;
+}
+
+function transformPoint(point, index, params) {
+  const angle = (params.rotation * Math.PI) / 180;
+  const random = seededRandom(registrationState.seed + index * 97);
+  const noise = params.noise / 360;
+  const nx = (random() - 0.5) * noise;
+  const ny = (random() - 0.5) * noise;
+  return {
+    x: point.x * Math.cos(angle) - point.y * Math.sin(angle) + 0.12 + nx,
+    y: point.x * Math.sin(angle) + point.y * Math.cos(angle) - 0.08 + ny,
+    visible: point.keep > params.missing / 100
+  };
+}
+
+function drawRegistrationDemo() {
+  if (!registrationCanvas || !regCtx) return;
+  const { width, height } = resizeDrawingCanvas(registrationCanvas, regCtx);
+  const params = registrationParams();
+  const progress = registrationState.progress;
+  const scale = Math.min(width, height) * 0.92;
+  const originX = width / 2;
+  const originY = height / 2;
+
+  regCtx.clearRect(0, 0, width, height);
+  regCtx.fillStyle = 'rgba(3, 7, 18, 0.45)';
+  regCtx.fillRect(0, 0, width, height);
+
+  regCtx.strokeStyle = 'rgba(0, 245, 255, 0.14)';
+  regCtx.lineWidth = 1;
+  for (let x = 28; x < width; x += 32) {
+    regCtx.beginPath();
+    regCtx.moveTo(x, 0);
+    regCtx.lineTo(x, height);
+    regCtx.stroke();
+  }
+  for (let y = 24; y < height; y += 32) {
+    regCtx.beginPath();
+    regCtx.moveTo(0, y);
+    regCtx.lineTo(width, y);
+    regCtx.stroke();
+  }
+
+  const toCanvas = (point) => ({
+    x: originX + point.x * scale,
+    y: originY + point.y * scale
+  });
+
+  registrationState.points.forEach((point, index) => {
+    const source = toCanvas(point);
+    const targetRaw = transformPoint(point, index, params);
+    if (!targetRaw.visible) return;
+    const aligned = {
+      x: targetRaw.x + (point.x - targetRaw.x) * progress,
+      y: targetRaw.y + (point.y - targetRaw.y) * progress
+    };
+    const target = toCanvas(aligned);
+
+    regCtx.strokeStyle = `rgba(232, 240, 255, ${0.08 + progress * 0.22})`;
+    regCtx.beginPath();
+    regCtx.moveTo(source.x, source.y);
+    regCtx.lineTo(target.x, target.y);
+    regCtx.stroke();
+
+    regCtx.beginPath();
+    regCtx.arc(source.x, source.y, 3.2, 0, Math.PI * 2);
+    regCtx.fillStyle = 'rgba(0, 245, 255, 0.88)';
+    regCtx.fill();
+
+    regCtx.beginPath();
+    regCtx.arc(target.x, target.y, 4.5, 0, Math.PI * 2);
+    regCtx.fillStyle = 'rgba(255, 46, 136, 0.9)';
+    regCtx.fill();
+  });
+
+  const quality = Math.max(0, 1 - params.noise / 72 - params.missing / 120);
+  if (labScore) labScore.textContent = (progress * Math.max(0.16, quality)).toFixed(2);
+}
+
+function runAlignmentDemo() {
+  if (!registrationCanvas || !regCtx) return;
+  cancelAnimationFrame(registrationState.animationFrame);
+  const start = performance.now();
+  const from = registrationState.progress;
+  const duration = 1100;
+
+  function frame(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    registrationState.progress = from + (1 - from) * eased;
+    drawRegistrationDemo();
+    if (t < 1) registrationState.animationFrame = requestAnimationFrame(frame);
+  }
+
+  registrationState.animationFrame = requestAnimationFrame(frame);
+}
+
+function resetRegistrationDemo() {
+  cancelAnimationFrame(registrationState.animationFrame);
+  registrationState.seed += 11;
+  registrationState.progress = 0;
+  generateRegistrationPoints();
+  updateRegistrationLabels();
+  drawRegistrationDemo();
+}
+
+[noiseRange, missingRange, rotationRange].filter(Boolean).forEach((input) => {
+  input.addEventListener('input', () => {
+    registrationState.progress = 0;
+    updateRegistrationLabels();
+    drawRegistrationDemo();
+  });
+});
+alignDemo?.addEventListener('click', runAlignmentDemo);
+resetDemo?.addEventListener('click', resetRegistrationDemo);
+
 let statusIndex = 0;
 let charIndex = 0;
 let deleting = false;
@@ -632,8 +2126,13 @@ function applyTranslations() {
 
   langToggle.textContent = i18n[currentLang].lang_btn;
   modalClose.textContent = i18n[currentLang].modal_close;
+  if (!hoveredRepo) repoMapHint.textContent = i18n[currentLang].repo_map_hint;
   renderRepos(filteredRepos);
   renderPublications();
+  renderResearchInterest();
+  updateRegistrationLabels();
+  drawRegistrationDemo();
+  if (commandPalette.classList.contains('open')) renderCommandList();
 }
 
 langToggle.addEventListener('click', () => {
@@ -642,7 +2141,25 @@ langToggle.addEventListener('click', () => {
   restartTypeLoop();
 });
 
+function isEditableTarget(target) {
+  const tag = target.tagName;
+  return target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
 document.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    if (commandPalette.classList.contains('open')) closeCommandPalette();
+    else openCommandPalette();
+    return;
+  }
+  if (event.key === 'Escape') {
+    if (commandPalette.classList.contains('open')) closeCommandPalette();
+    else if (researchManager.classList.contains('open')) closeResearchManager();
+    else if (modal.classList.contains('open')) closeModal();
+    return;
+  }
+  if (isEditableTarget(event.target)) return;
   if (event.key === 'p' || event.key === 'P') activateView('projects');
   if (event.key === 'r' || event.key === 'R') activateView('research');
   if (event.key === 'l' || event.key === 'L') langToggle.click();
@@ -651,7 +2168,6 @@ document.addEventListener('keydown', (event) => {
     activateView('projects');
     repoSearch.focus();
   }
-  if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
 });
 
 const canvas = document.getElementById('starfield');
@@ -685,10 +2201,29 @@ function drawStars() {
   requestAnimationFrame(drawStars);
 }
 
+function animateInterestCanvas() {
+  interestTick += 1;
+  if (document.getElementById('research')?.classList.contains('active')) drawInterestAnimation();
+  requestAnimationFrame(animateInterestCanvas);
+}
+
+generateRegistrationPoints();
+initCustomCursor();
+updateRegistrationLabels();
+applyTheme(currentTheme);
 applyTranslations();
 restartTypeLoop();
 loadRepos();
 loadPublications();
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  drawRegistrationDemo();
+  renderRepoMap(filteredRepos);
+  drawInterestAnimation();
+});
 resizeCanvas();
+drawRegistrationDemo();
+renderRepoMap(filteredRepos);
+renderResearchInterest();
 drawStars();
+animateInterestCanvas();

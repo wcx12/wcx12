@@ -1,5 +1,5 @@
 ﻿<p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&height=240&text=WCX12%20%7C%20Neon%20Full&fontAlign=50&fontAlignY=36&color=0:00F5FF,30:00D1FF,65:8A2BE2,100:FF2E88&fontColor=ffffff&desc=ML%20Researcher%20%7C%20Point%20Set%20Registration%20%7C%20Anomaly%20Detection&descAlignY=57&animation=twinkling" />
+  <img src="https://capsule-render.vercel.app/api?type=waving&height=240&text=wcx12&fontAlign=50&fontAlignY=36&color=0:00F5FF,30:00D1FF,65:8A2BE2,100:FF2E88&fontColor=ffffff&desc=ML%20Researcher%20%7C%20Point%20Set%20Registration%20%7C%20Anomaly%20Detection&descAlignY=57&animation=twinkling" />
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 <p align="center"><b>BIT Student · ML Researcher · Open Source Builder</b></p>
 
 <p align="center">
-  <a href="https://wcx12.github.io/wcx12/"><b>Open My Interactive Neon Website</b></a>
+  <a href="https://wcx12.github.io/wcx12/"><b>Open My Interactive Website</b></a>
 </p>
 
 ---
@@ -40,7 +40,7 @@
 
 ## Quick Notes
 ```text
-[Neon Lab Mode: ON]
+[wcx12 Profile: ON]
 - Researching robust geometric learning pipelines
 - Exploring anomaly signals in complex data
 - Building useful open-source tooling
@@ -49,4 +49,3 @@
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:FF2E88,50:8A2BE2,100:00F5FF" />
 </p>
-

@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>wcx12 | Neon Lab</title>
+  <title>wcx12</title>
   <meta name="description" content="wcx12 interactive profile website" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070914'/%3E%3Ctext x='32' y='42' font-size='26' text-anchor='middle' fill='%2300f5ff' font-family='Arial'%3EW%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -12,10 +13,21 @@
 </head>
 <body>
   <canvas id="starfield" aria-hidden="true"></canvas>
+  <div id="customCursor" class="custom-cursor" aria-hidden="true">
+    <span class="cursor-ring"></span>
+    <span class="cursor-dot"></span>
+    <span class="cursor-click"></span>
+  </div>
 
   <header class="topbar">
-    <div class="brand">WCX12 // NEON LAB</div>
+    <div class="brand">wcx12</div>
     <div class="top-actions">
+      <select id="themeSelect" class="theme-select" aria-label="Theme">
+        <option value="neon" data-i18n="theme_neon">Default</option>
+        <option value="warm" data-i18n="theme_warm">Warm Archive</option>
+        <option value="mono" data-i18n="theme_mono">Mono Lab</option>
+      </select>
+      <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
       <button id="langToggle" class="ghost-btn" type="button">中文</button>
       <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
     </div>
@@ -23,23 +35,25 @@
 
   <main>
     <section class="hero">
-      <p class="kicker" data-i18n="hero_kicker">Machine Learning Researcher</p>
-      <h1><span data-i18n="hero_hi">Hi, I am</span> <span class="neon">wcx12</span></h1>
-      <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget"></span></p>
-      <p class="subtitle" data-i18n="hero_subtitle_html">
-        Point Set Registration + Anomaly Detection.<br />
-        Building clean pipelines and practical open-source tools.
-      </p>
+      <div class="hero-copy">
+        <p class="kicker" data-i18n="hero_kicker">Machine Learning Researcher</p>
+        <h1><span data-i18n="hero_hi">Hi, I am</span> <span class="neon">wcx12</span></h1>
+        <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget"></span></p>
+        <p class="subtitle" data-i18n="hero_subtitle_html">
+          Point Set Registration + Anomaly Detection.<br />
+          Building clean pipelines and practical open-source tools.
+        </p>
 
-      <div class="hero-actions">
-        <a href="mailto:c2675668@gmail.com" class="btn btn-primary" data-i18n="btn_contact">Contact Me</a>
-        <button id="openProjects" type="button" class="btn btn-outline" data-i18n="btn_repos">Explore My Repos</button>
-      </div>
+        <div class="hero-actions">
+          <a href="mailto:c2675668@gmail.com" class="btn btn-primary" data-i18n="btn_contact">Contact Me</a>
+          <button id="openProjects" type="button" class="btn btn-outline" data-i18n="btn_repos">Explore My Repos</button>
+        </div>
 
-      <div class="quick-stats">
-        <article><span data-i18n="stat_focus">Focus Areas</span><strong>2</strong></article>
-        <article><span data-i18n="stat_grad">Graduation</span><strong>2026</strong></article>
-        <article><span data-i18n="stat_stack">Main Stack</span><strong>Python + ML</strong></article>
+        <div class="quick-stats">
+          <article><span data-i18n="stat_focus">Focus Areas</span><strong>2</strong></article>
+          <article><span data-i18n="stat_grad">Graduation</span><strong>2026</strong></article>
+          <article><span data-i18n="stat_stack">Main Stack</span><strong>Python + ML</strong></article>
+        </div>
       </div>
     </section>
 
@@ -48,7 +62,7 @@
         <span class="dot pink"></span>
         <span class="dot cyan"></span>
         <span class="dot violet"></span>
-        <p>neon-terminal</p>
+        <p>wcx12-console</p>
       </div>
 
       <p class="hint-row" data-i18n="hints">Shortcuts: P projects · R research · L language · / search repos</p>
@@ -70,13 +84,37 @@
       </div>
 
       <div class="view" id="research">
-        <h2 data-i18n="research_title">Research Focus</h2>
-        <ul>
-          <li data-i18n="research_1">Point set registration under noisy and incomplete observations</li>
-          <li data-i18n="research_2">Anomaly detection for complex and high-dimensional signals</li>
-          <li data-i18n="research_3">Robust ML pipelines and reproducible experiments</li>
-        </ul>
-        <button class="btn btn-outline detail-trigger" type="button" data-detail="research" data-i18n="view_details">View Details</button>
+        <div class="view-heading">
+          <div>
+            <h2 data-i18n="research_title">Research Interests</h2>
+            <p class="muted" data-i18n="research_intro">Choose a sub-interest to see related demos, projects, and papers.</p>
+          </div>
+          <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research">Manage Mapping</button>
+        </div>
+        <div class="research-workbench">
+          <aside class="interest-rail" id="interestRail" aria-label="research interests"></aside>
+          <section class="interest-detail">
+            <div class="interest-detail-head">
+              <div>
+                <span id="interestPath" class="panel-eyebrow"></span>
+                <h3 id="interestTitle"></h3>
+              </div>
+              <span id="interestTag" class="interest-tag"></span>
+            </div>
+            <p id="interestDescription" class="muted"></p>
+            <canvas id="interestCanvas" aria-label="research interest animation"></canvas>
+            <div class="interest-related">
+              <article>
+                <h4 data-i18n="related_projects">Related Projects</h4>
+                <div id="interestProjects" class="related-list"></div>
+              </article>
+              <article>
+                <h4 data-i18n="related_papers">Related Papers</h4>
+                <div id="interestPapers" class="related-list"></div>
+              </article>
+            </div>
+          </section>
+        </div>
       </div>
 
       <div class="view" id="projects">
@@ -100,6 +138,14 @@
             <option value="48">48</option>
           </select>
           <span id="repoCount" class="muted"></span>
+        </div>
+
+        <div class="repo-map-panel">
+          <div class="repo-map-head">
+            <span data-i18n="repo_map_title">Repo Constellation</span>
+            <span id="repoMapHint" class="muted" data-i18n="repo_map_hint">Hover nodes to inspect projects.</span>
+          </div>
+          <canvas id="repoMap" aria-label="repository constellation map"></canvas>
         </div>
 
         <div id="repoGrid" class="repo-grid"></div>
@@ -193,13 +239,66 @@
     <div class="modal-card">
       <button id="modalClose" class="modal-close" type="button" aria-label="Close">x</button>
       <h3 id="modalTitle"></h3>
-      <p id="modalBody"></p>
+      <div id="modalBody"></div>
       <a id="modalLink" class="btn btn-primary" href="#" target="_blank" rel="noreferrer">Open Link</a>
     </div>
   </div>
 
+  <div id="researchManager" class="modal" aria-hidden="true">
+    <div class="modal-card manager-card">
+      <button id="managerClose" class="modal-close" type="button" aria-label="Close">x</button>
+      <h3 data-i18n="manager_title">Research Mapping</h3>
+      <div class="manager-grid">
+        <section>
+          <h4 data-i18n="manager_add_title">Add Category</h4>
+          <label>
+            <span data-i18n="manager_domain">Domain</span>
+            <input id="managerDomain" type="text" placeholder="Computer Vision" />
+          </label>
+          <label>
+            <span data-i18n="manager_interest">Sub-interest</span>
+            <input id="managerInterest" type="text" placeholder="VPR" />
+          </label>
+          <label>
+            <span data-i18n="manager_label">Label</span>
+            <input id="managerLabel" type="text" placeholder="Visual Place Recognition" />
+          </label>
+          <label>
+            <span data-i18n="manager_animation">Animation</span>
+            <select id="managerAnimation">
+              <option value="point-cloud">Point Cloud</option>
+              <option value="vpr">VPR</option>
+              <option value="agent">Agent</option>
+              <option value="education">Education</option>
+            </select>
+          </label>
+          <button id="managerAdd" class="btn btn-primary" type="button" data-i18n="manager_add">Add</button>
+        </section>
+        <section>
+          <h4 data-i18n="manager_assign_title">Assign Current Category</h4>
+          <p id="managerActive" class="muted"></p>
+          <div class="manager-actions">
+            <button id="managerSave" class="btn btn-primary" type="button" data-i18n="manager_save">Save Mapping</button>
+            <button id="managerDelete" class="btn btn-outline" type="button" data-i18n="manager_delete">Delete Category</button>
+          </div>
+          <h5 data-i18n="manager_projects">Projects</h5>
+          <div id="managerProjects" class="manager-list"></div>
+          <h5 data-i18n="manager_papers">Papers</h5>
+          <div id="managerPapers" class="manager-list"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="commandPalette" class="command-palette" aria-hidden="true">
+    <div class="palette-card" role="dialog" aria-modal="true" aria-label="command palette">
+      <input id="commandInput" type="search" data-i18n-ph="command_placeholder" placeholder="Type a command or repository..." />
+      <div id="commandList" class="command-list"></div>
+    </div>
+  </div>
+
   <footer>
-    <p data-i18n="footer">© 2026 wcx12 · Neon Full Interactive Profile</p>
+    <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
   <script src="script.js"></script>
