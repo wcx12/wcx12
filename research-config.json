@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "interests": [
+    {
+      "id": "point-cloud",
+      "title": {
+        "en": "Point Cloud",
+        "zh": "点云"
+      },
+      "label": {
+        "en": "3D Geometry",
+        "zh": "三维几何"
+      },
+      "children": [
+        {
+          "id": "point-cloud-registration",
+          "title": {
+            "en": "Registration",
+            "zh": "配准"
+          },
+          "label": {
+            "en": "alignment",
+            "zh": "对齐"
+          },
+          "animation": "point-cloud",
+          "description": {
+            "en": "Robust point set registration under noisy, partial, and imperfect observations.",
+            "zh": "研究噪声、缺失与不完美观测条件下的稳健点集配准。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "computer-vision",
+      "title": {
+        "en": "Computer Vision",
+        "zh": "计算机视觉"
+      },
+      "label": {
+        "en": "visual matching",
+        "zh": "视觉匹配"
+      },
+      "children": [
+        {
+          "id": "vpr",
+          "title": {
+            "en": "VPR",
+            "zh": "VPR"
+          },
+          "label": {
+            "en": "Visual Place Recognition",
+            "zh": "视觉地点识别"
+          },
+          "animation": "vpr",
+          "description": {
+            "en": "Visual place recognition, retrieval, and localization-oriented benchmark work.",
+            "zh": "围绕视觉地点识别、检索与定位基准展开的研究。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "llm",
+      "title": {
+        "en": "Large Models",
+        "zh": "大模型"
+      },
+      "label": {
+        "en": "LLM systems",
+        "zh": "LLM 系统"
+      },
+      "children": [
+        {
+          "id": "agent",
+          "title": {
+            "en": "Agent",
+            "zh": "Agent"
+          },
+          "label": {
+            "en": "Agentic Systems",
+            "zh": "智能体系统"
+          },
+          "animation": "agent",
+          "description": {
+            "en": "Agentic workflows with planning, tool use, retrieval, and evaluation loops.",
+            "zh": "关注规划、工具调用、检索与评测闭环的大模型智能体工作流。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ai4edu",
+      "title": {
+        "en": "AI for Education",
+        "zh": "AI4教育"
+      },
+      "label": {
+        "en": "learning systems",
+        "zh": "学习系统"
+      },
+      "children": [
+        {
+          "id": "ai4edu",
+          "title": {
+            "en": "Learning Tools",
+            "zh": "学习工具"
+          },
+          "label": {
+            "en": "AI4Education",
+            "zh": "AI4教育"
+          },
+          "animation": "education",
+          "description": {
+            "en": "AI-assisted learning tools, practice generation, feedback, and knowledge tracing ideas.",
+            "zh": "面向学习工具、练习生成、反馈闭环与知识追踪的 AI4教育方向。"
+          }
+        }
+      ]
+    }
+  ],
+  "repoAssignments": {
+    "FusionTrack": [
+      "vpr",
+      "point-cloud-registration"
+    ],
+    "wcx12": [
+      "agent",
+      "ai4edu"
+    ],
+    "hlpp-crossword": [
+      "ai4edu"
+    ],
+    "codex-pet-battle": [
+      "agent"
+    ],
+    "shuxuepeiyou": [
+      "ai4edu"
+    ],
+    "tetrahedron-visualizer": [
+      "ai4edu",
+      "point-cloud-registration"
+    ],
+    "BIT-The-mathematical-foundation-of-big-Data": [
+      "ai4edu"
+    ]
+  },
+  "paperAssignments": {
+    "TF-VPR: A novel benchmark for training-free visual place recognition": [
+      "vpr"
+    ]
+  }
+}
