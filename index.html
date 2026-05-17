@@ -278,9 +278,17 @@
           <h4 data-i18n="manager_assign_title">Assign Current Category</h4>
           <p id="managerActive" class="muted"></p>
           <div class="manager-actions">
-            <button id="managerSave" class="btn btn-primary" type="button" data-i18n="manager_save">Save Mapping</button>
+            <button id="managerSave" class="btn btn-outline" type="button" data-i18n="manager_save">Apply Mapping</button>
             <button id="managerDelete" class="btn btn-outline" type="button" data-i18n="manager_delete">Delete Category</button>
           </div>
+          <label>
+            <span data-i18n="manager_token">GitHub token</span>
+            <input id="managerGitHubToken" type="password" autocomplete="off" placeholder="github_pat_..." />
+          </label>
+          <div class="manager-actions">
+            <button id="managerSaveRemote" class="btn btn-primary" type="button" data-i18n="manager_save_remote">Save to GitHub</button>
+          </div>
+          <p id="managerRemoteStatus" class="muted manager-status" data-i18n="manager_remote_hint">Token stays in this browser session.</p>
           <h5 data-i18n="manager_projects">Projects</h5>
           <div id="managerProjects" class="manager-list"></div>
           <h5 data-i18n="manager_papers">Papers</h5>
