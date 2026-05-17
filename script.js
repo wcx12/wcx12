@@ -42,6 +42,9 @@ const managerAnimation = document.getElementById('managerAnimation');
 const managerAdd = document.getElementById('managerAdd');
 const managerSave = document.getElementById('managerSave');
 const managerDelete = document.getElementById('managerDelete');
+const managerGitHubToken = document.getElementById('managerGitHubToken');
+const managerSaveRemote = document.getElementById('managerSaveRemote');
+const managerRemoteStatus = document.getElementById('managerRemoteStatus');
 const managerActive = document.getElementById('managerActive');
 const managerProjects = document.getElementById('managerProjects');
 const managerPapers = document.getElementById('managerPapers');
@@ -319,7 +322,12 @@ let researchInterests = [
 ];
 
 const CONFIG_KEY = 'wcx12-research-config';
+const CONFIG_PATH = 'research-config.json';
+const GITHUB_CONFIG_PATH = 'research-config.json';
+const GITHUB_REPOSITORY = 'wcx12/wcx12';
+const GITHUB_BRANCH = 'main';
 const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
+const GITHUB_TOKEN_KEY = 'wcx12-github-token';
 
 function detectOwnerTools() {
   const params = new URLSearchParams(window.location.search);
@@ -330,37 +338,70 @@ function detectOwnerTools() {
 
 const ownerToolsEnabled = detectOwnerTools();
 
+const defaultResearchInterests = JSON.parse(JSON.stringify(researchInterests));
+
 function defaultAssignments(kind) {
   const source = kind === 'repo' ? localRepos : staticPublications;
   return Object.fromEntries(source.map((item) => [item.name || item.title, item.interests || []]));
 }
 
+function defaultResearchConfig() {
+  return {
+    version: 1,
+    interests: JSON.parse(JSON.stringify(defaultResearchInterests)),
+    repoAssignments: defaultAssignments('repo'),
+    paperAssignments: defaultAssignments('paper')
+  };
+}
+
+function normalizeResearchConfig(config) {
+  const defaults = defaultResearchConfig();
+  return {
+    version: 1,
+    interests: Array.isArray(config?.interests) && config.interests.length ? config.interests : defaults.interests,
+    repoAssignments: { ...defaults.repoAssignments, ...(config?.repoAssignments || {}) },
+    paperAssignments: { ...defaults.paperAssignments, ...(config?.paperAssignments || {}) }
+  };
+}
+
 function loadResearchConfig() {
-  if (!ownerToolsEnabled) {
-    return {
-      interests: researchInterests,
-      repoAssignments: defaultAssignments('repo'),
-      paperAssignments: defaultAssignments('paper')
-    };
-  }
   try {
     const parsed = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    return {
-      interests: Array.isArray(parsed.interests) ? parsed.interests : researchInterests,
-      repoAssignments: parsed.repoAssignments || defaultAssignments('repo'),
-      paperAssignments: parsed.paperAssignments || defaultAssignments('paper')
-    };
+    if (ownerToolsEnabled && parsed.interests) return normalizeResearchConfig(parsed);
   } catch {
-    return {
-      interests: researchInterests,
-      repoAssignments: defaultAssignments('repo'),
-      paperAssignments: defaultAssignments('paper')
-    };
+    return defaultResearchConfig();
   }
+  return defaultResearchConfig();
 }
 
 let researchConfig = loadResearchConfig();
 researchInterests = researchConfig.interests;
+
+function applyResearchConfig(nextConfig) {
+  researchConfig = normalizeResearchConfig(nextConfig);
+  researchInterests = researchConfig.interests;
+  if (!activeInterestEntry()) activeInterestId = allInterestChildren()[0]?.child.id || '';
+}
+
+async function loadRemoteResearchConfig() {
+  try {
+    const response = await fetch(`${CONFIG_PATH}?v=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const remoteConfig = await response.json();
+    applyResearchConfig(remoteConfig);
+    if (ownerToolsEnabled) localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
+    renderResearchInterest();
+    renderRepos(filteredRepos);
+    renderPublications();
+    if (ownerToolsEnabled && managerRemoteStatus) {
+      managerRemoteStatus.textContent = i18n[currentLang].manager_remote_loaded;
+    }
+  } catch {
+    if (ownerToolsEnabled && managerRemoteStatus) {
+      managerRemoteStatus.textContent = i18n[currentLang].manager_remote_load_fail;
+    }
+  }
+}
 
 function saveResearchConfig() {
   if (!ownerToolsEnabled) return;
@@ -440,7 +481,16 @@ const i18n = {
     manager_animation: 'Animation',
     manager_add: 'Add',
     manager_assign_title: 'Assign Current Category',
-    manager_save: 'Save Mapping',
+    manager_save: 'Apply Mapping',
+    manager_token: 'GitHub token',
+    manager_save_remote: 'Save to GitHub',
+    manager_remote_hint: 'Token stays in this browser session.',
+    manager_remote_loaded: 'Remote config loaded.',
+    manager_remote_load_fail: 'Using local defaults. Remote config was not loaded.',
+    manager_remote_need_token: 'Paste a GitHub token with Contents read/write permission.',
+    manager_remote_saving: 'Saving to GitHub...',
+    manager_remote_saved: 'Saved to GitHub. Pages may take about a minute to rebuild.',
+    manager_remote_failed: 'GitHub save failed. Check token permission and try again.',
     manager_delete: 'Delete Category',
     manager_projects: 'Projects',
     manager_papers: 'Papers',
@@ -569,7 +619,16 @@ const i18n = {
     manager_animation: '动画',
     manager_add: '添加',
     manager_assign_title: '分配当前分类',
-    manager_save: '保存映射',
+    manager_save: '应用映射',
+    manager_token: 'GitHub token',
+    manager_save_remote: '保存到 GitHub',
+    manager_remote_hint: 'Token 只保存在当前浏览器会话中。',
+    manager_remote_loaded: '已加载远程配置。',
+    manager_remote_load_fail: '未加载远程配置，正在使用本地默认值。',
+    manager_remote_need_token: '请输入具有 Contents 读写权限的 GitHub token。',
+    manager_remote_saving: '正在保存到 GitHub...',
+    manager_remote_saved: '已保存到 GitHub，Pages 可能需要约一分钟重新构建。',
+    manager_remote_failed: '保存到 GitHub 失败，请检查 token 权限后重试。',
     manager_delete: '删除分类',
     manager_projects: '项目',
     manager_papers: '论文',
@@ -933,6 +992,7 @@ themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
 
 function openResearchManager() {
   if (!ownerToolsEnabled) return;
+  managerGitHubToken.value = sessionStorage.getItem(GITHUB_TOKEN_KEY) || '';
   renderResearchManager();
   researchManager.classList.add('open');
   researchManager.setAttribute('aria-hidden', 'false');
@@ -977,18 +1037,86 @@ function setAssignment(kind, key, interestId, checked) {
   map[key] = Array.from(current);
 }
 
-function saveManagerAssignments() {
-  if (!ownerToolsEnabled) return;
+function collectManagerAssignments() {
   managerProjects.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     setAssignment('repo', input.value, activeInterestId, input.checked);
   });
   managerPapers.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     setAssignment('paper', input.value, activeInterestId, input.checked);
   });
+  researchConfig.interests = researchInterests;
+}
+
+function saveManagerAssignments() {
+  if (!ownerToolsEnabled) return;
+  collectManagerAssignments();
   saveResearchConfig();
   renderResearchInterest();
   renderResearchManager();
   managerActive.textContent = `${i18n[currentLang].manager_saved} ${managerActive.textContent}`;
+}
+
+function toBase64Utf8(value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function githubHeaders(token) {
+  return {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+}
+
+async function saveResearchConfigToGitHub() {
+  if (!ownerToolsEnabled) return;
+  collectManagerAssignments();
+  saveResearchConfig();
+
+  const token = managerGitHubToken.value.trim() || sessionStorage.getItem(GITHUB_TOKEN_KEY) || '';
+  if (!token) {
+    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_need_token;
+    managerGitHubToken.focus();
+    return;
+  }
+
+  sessionStorage.setItem(GITHUB_TOKEN_KEY, token);
+  managerRemoteStatus.textContent = i18n[currentLang].manager_remote_saving;
+  managerSaveRemote.disabled = true;
+
+  try {
+    const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
+    const current = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}`, {
+      headers: githubHeaders(token)
+    });
+    if (!current.ok) throw new Error(`read ${current.status}`);
+    const currentFile = await current.json();
+    const body = {
+      message: 'Update research mapping config',
+      branch: GITHUB_BRANCH,
+      sha: currentFile.sha,
+      content: toBase64Utf8(`${JSON.stringify(researchConfig, null, 2)}\n`)
+    };
+    const response = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        ...githubHeaders(token),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) throw new Error(`write ${response.status}`);
+    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_saved;
+  } catch (error) {
+    managerRemoteStatus.textContent = `${i18n[currentLang].manager_remote_failed} (${error.message})`;
+  } finally {
+    managerSaveRemote.disabled = false;
+  }
 }
 
 function addResearchCategory() {
@@ -1055,6 +1183,7 @@ researchManager.addEventListener('click', (event) => {
   if (event.target === researchManager) closeResearchManager();
 });
 managerSave.addEventListener('click', saveManagerAssignments);
+managerSaveRemote.addEventListener('click', saveResearchConfigToGitHub);
 managerAdd.addEventListener('click', addResearchCategory);
 managerDelete.addEventListener('click', deleteActiveResearchCategory);
 
@@ -2469,6 +2598,7 @@ applyTranslations();
 restartTypeLoop();
 loadRepos();
 loadPublications();
+loadRemoteResearchConfig();
 window.addEventListener('resize', () => {
   resizeCanvas();
   drawRegistrationDemo();
