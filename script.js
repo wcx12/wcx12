@@ -490,6 +490,7 @@ const i18n = {
     manager_remote_need_token: 'Paste a GitHub token with Contents read/write permission.',
     manager_remote_saving: 'Saving to GitHub...',
     manager_remote_saved: 'Saved to GitHub. Pages may take about a minute to rebuild.',
+    manager_remote_unchanged: 'GitHub config is already up to date.',
     manager_remote_failed: 'GitHub save failed. Check token permission and try again.',
     manager_delete: 'Delete Category',
     manager_projects: 'Projects',
@@ -628,6 +629,7 @@ const i18n = {
     manager_remote_need_token: '请输入具有 Contents 读写权限的 GitHub token。',
     manager_remote_saving: '正在保存到 GitHub...',
     manager_remote_saved: '已保存到 GitHub，Pages 可能需要约一分钟重新构建。',
+    manager_remote_unchanged: 'GitHub 配置已是最新。',
     manager_remote_failed: '保存到 GitHub 失败，请检查 token 权限后重试。',
     manager_delete: '删除分类',
     manager_projects: '项目',
@@ -1073,6 +1075,75 @@ function githubHeaders(token) {
   };
 }
 
+async function readGitHubError(response) {
+  try {
+    const payload = await response.json();
+    return payload.message || response.statusText;
+  } catch {
+    return response.statusText;
+  }
+}
+
+async function fetchGitHubConfigFile(token) {
+  const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
+  const current = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, {
+    cache: 'no-store',
+    headers: githubHeaders(token)
+  });
+
+  if (!current.ok) {
+    const detail = await readGitHubError(current);
+    throw new Error(`read ${current.status}: ${detail}`);
+  }
+
+  return current.json();
+}
+
+async function writeGitHubConfigFile(token, sha) {
+  const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
+  const response = await fetch(apiUrl, {
+    method: 'PUT',
+    headers: {
+      ...githubHeaders(token),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: 'Update research mapping config',
+      branch: GITHUB_BRANCH,
+      sha,
+      content: toBase64Utf8(`${JSON.stringify(researchConfig, null, 2)}\n`)
+    })
+  });
+
+  if (!response.ok) {
+    const detail = await readGitHubError(response);
+    const error = new Error(`write ${response.status}: ${detail}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
+}
+
+async function updateResearchConfigOnGitHub(token) {
+  const currentFile = await fetchGitHubConfigFile(token);
+
+  try {
+    return await writeGitHubConfigFile(token, currentFile.sha);
+  } catch (error) {
+    if (error.status === 409) {
+      const latestFile = await fetchGitHubConfigFile(token);
+      return writeGitHubConfigFile(token, latestFile.sha);
+    }
+
+    if (error.status === 422 && error.message.toLowerCase().includes('content is unchanged')) {
+      return { unchanged: true };
+    }
+
+    throw error;
+  }
+}
+
 async function saveResearchConfigToGitHub() {
   if (!ownerToolsEnabled) return;
   collectManagerAssignments();
@@ -1090,28 +1161,10 @@ async function saveResearchConfigToGitHub() {
   managerSaveRemote.disabled = true;
 
   try {
-    const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
-    const current = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}`, {
-      headers: githubHeaders(token)
-    });
-    if (!current.ok) throw new Error(`read ${current.status}`);
-    const currentFile = await current.json();
-    const body = {
-      message: 'Update research mapping config',
-      branch: GITHUB_BRANCH,
-      sha: currentFile.sha,
-      content: toBase64Utf8(`${JSON.stringify(researchConfig, null, 2)}\n`)
-    };
-    const response = await fetch(apiUrl, {
-      method: 'PUT',
-      headers: {
-        ...githubHeaders(token),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-    if (!response.ok) throw new Error(`write ${response.status}`);
-    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_saved;
+    const result = await updateResearchConfigOnGitHub(token);
+    managerRemoteStatus.textContent = result.unchanged
+      ? i18n[currentLang].manager_remote_unchanged
+      : i18n[currentLang].manager_remote_saved;
   } catch (error) {
     managerRemoteStatus.textContent = `${i18n[currentLang].manager_remote_failed} (${error.message})`;
   } finally {
