@@ -120,6 +120,16 @@ const vprInteraction = {
   energy: 0
 };
 
+const agentInteraction = {
+  active: false,
+  dragging: false,
+  x: 0.54,
+  y: 0.44,
+  selected: 'plan',
+  pulse: 0,
+  runBoost: 0
+};
+
 const ORCID_ID = '0009-0005-6139-4327';
 
 const registrationState = {
@@ -1707,6 +1717,10 @@ function isVprInterestActive() {
   return activeInterestAnimationType() === 'vpr';
 }
 
+function isAgentInterestActive() {
+  return activeInterestAnimationType() === 'agent';
+}
+
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
 }
@@ -1750,6 +1764,52 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.lineTo(x, y + r);
   ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
+}
+
+function agentWorkflowNodes(width, height) {
+  const cardWidth = Math.max(58, Math.min(88, width * 0.15));
+  const cardHeight = width < 520 ? 32 : 38;
+  return [
+    { id: 'task', label: 'TASK', x: width * 0.13, y: height * 0.52, w: cardWidth, h: cardHeight },
+    { id: 'plan', label: 'PLAN', x: width * 0.32, y: height * 0.3, w: cardWidth, h: cardHeight },
+    { id: 'memory', label: 'MEMORY', x: width * 0.52, y: height * 0.22, w: cardWidth, h: cardHeight },
+    { id: 'tools', label: 'TOOLS', x: width * 0.55, y: height * 0.58, w: cardWidth, h: cardHeight },
+    { id: 'eval', label: 'EVAL', x: width * 0.74, y: height * 0.34, w: cardWidth, h: cardHeight },
+    { id: 'answer', label: 'ANSWER', x: width * 0.88, y: height * 0.64, w: cardWidth, h: cardHeight }
+  ];
+}
+
+function agentRouteFor(autonomy, verification) {
+  const route = ['task', 'plan'];
+  if (autonomy < 0.35) {
+    route.push('memory', 'eval');
+  } else if (autonomy > 0.68) {
+    route.push('tools', 'eval');
+  } else {
+    route.push('memory', 'tools', 'eval');
+  }
+  if (verification > 0.64) route.push('plan', 'tools', 'eval');
+  route.push('answer');
+  return route;
+}
+
+function agentCurve(a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.max(1, Math.hypot(dx, dy));
+  const bend = a.id === 'eval' && b.id === 'plan' ? -58 : a.id === 'memory' || b.id === 'memory' ? -16 : 10;
+  return {
+    x: (a.x + b.x) / 2 + (-dy / length) * bend,
+    y: (a.y + b.y) / 2 + (dx / length) * bend
+  };
+}
+
+function pointOnQuadratic(a, c, b, progress) {
+  const inv = 1 - progress;
+  return {
+    x: inv * inv * a.x + 2 * inv * progress * c.x + progress * progress * b.x,
+    y: inv * inv * a.y + 2 * inv * progress * c.y + progress * progress * b.y
+  };
 }
 
 function drawInterestAnimation() {
@@ -2034,35 +2094,175 @@ function drawInterestAnimation() {
     interestCtx.fillStyle = muted;
     interestCtx.fillText(best.id, scoreX + 12, scoreY + 32);
   } else if (type === 'agent') {
-    const nodes = [
-      ['query', 0.14, 0.5],
-      ['plan', 0.34, 0.32],
-      ['tool', 0.56, 0.5],
-      ['eval', 0.76, 0.32],
-      ['answer', 0.88, 0.62]
+    const nodes = agentWorkflowNodes(width, height);
+    const nodeMap = Object.fromEntries(nodes.map((node) => [node.id, node]));
+    const autoAutonomy = 0.52 + Math.sin(t * 0.62) * 0.22;
+    const autoVerification = 0.56 + Math.cos(t * 0.58) * 0.22;
+    const autonomy = clamp01(agentInteraction.active ? agentInteraction.x : autoAutonomy);
+    const verification = clamp01(agentInteraction.active ? 1 - agentInteraction.y : autoVerification);
+    const route = agentRouteFor(autonomy, verification);
+    const flowSpeed = 0.58 + autonomy * 0.52 + agentInteraction.runBoost * 0.9;
+    const flow = (t * flowSpeed) % Math.max(1, route.length - 1);
+    const activeEdgeIndex = Math.floor(flow);
+    const edgeProgress = flow - activeEdgeIndex;
+    const activeFrom = nodeMap[route[activeEdgeIndex]];
+    const activeTo = nodeMap[route[activeEdgeIndex + 1]];
+    const textColor = themeColor('--text') || '#f5f5f5';
+    const compactAgent = width < 440 || height < 210;
+    const selectedNode = nodeMap[agentInteraction.selected] || nodeMap.plan;
+    const allEdges = [
+      ['task', 'plan'],
+      ['plan', 'memory'],
+      ['plan', 'tools'],
+      ['memory', 'eval'],
+      ['tools', 'eval'],
+      ['eval', 'plan'],
+      ['eval', 'answer']
     ];
-    nodes.forEach((node, index) => {
-      const x = width * node[1];
-      const y = height * node[2];
-      if (index > 0) {
-        const prev = nodes[index - 1];
-        interestCtx.beginPath();
-        interestCtx.moveTo(width * prev[1], height * prev[2]);
-        interestCtx.lineTo(x, y);
-        interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
-        interestCtx.stroke();
-      }
-      const active = Math.floor(t * 1.4) % nodes.length === index;
+
+    agentInteraction.pulse *= 0.86;
+    agentInteraction.runBoost *= 0.88;
+
+    allEdges.forEach(([fromId, toId]) => {
+      const from = nodeMap[fromId];
+      const to = nodeMap[toId];
+      const control = agentCurve(from, to);
       interestCtx.beginPath();
-      interestCtx.arc(x, y, active ? 24 : 18, 0, Math.PI * 2);
-      interestCtx.fillStyle = active ? secondary : primary;
+      interestCtx.moveTo(from.x, from.y);
+      interestCtx.quadraticCurveTo(control.x, control.y, to.x, to.y);
+      interestCtx.strokeStyle = 'rgba(255,255,255,0.13)';
+      interestCtx.lineWidth = 1.2;
+      interestCtx.stroke();
+    });
+
+    route.slice(0, -1).forEach((fromId, index) => {
+      const from = nodeMap[fromId];
+      const to = nodeMap[route[index + 1]];
+      const control = agentCurve(from, to);
+      const live = index === activeEdgeIndex;
+      interestCtx.beginPath();
+      interestCtx.moveTo(from.x, from.y);
+      interestCtx.quadraticCurveTo(control.x, control.y, to.x, to.y);
+      interestCtx.strokeStyle = live ? secondary : `rgba(255,255,255,${0.16 + verification * 0.1})`;
+      interestCtx.lineWidth = live ? 3 : 1.7;
+      interestCtx.stroke();
+    });
+
+    if (activeFrom && activeTo) {
+      const control = agentCurve(activeFrom, activeTo);
+      const packet = pointOnQuadratic(activeFrom, control, activeTo, edgeProgress);
+      const packetRadius = 5 + agentInteraction.runBoost * 5;
+      interestCtx.beginPath();
+      interestCtx.arc(packet.x, packet.y, packetRadius + 11, 0, Math.PI * 2);
+      interestCtx.fillStyle = `rgba(255,255,255,${0.04 + verification * 0.04})`;
       interestCtx.fill();
-      interestCtx.fillStyle = '#050505';
-      interestCtx.font = '11px JetBrains Mono, monospace';
+      interestCtx.beginPath();
+      interestCtx.arc(packet.x, packet.y, packetRadius, 0, Math.PI * 2);
+      interestCtx.fillStyle = secondary;
+      interestCtx.fill();
+      interestCtx.strokeStyle = primary;
+      interestCtx.lineWidth = 1.5;
+      interestCtx.stroke();
+    }
+
+    if (!compactAgent) {
+      const toolPanelWidth = Math.min(152, width * 0.28);
+      const toolPanelX = Math.max(18, width * 0.5 - toolPanelWidth / 2);
+      const toolPanelY = Math.max(16, height - 72);
+      const toolScores = [
+        ['RAG', clamp01(0.24 + verification * 0.52)],
+        ['CODE', clamp01(0.2 + autonomy * 0.58)],
+        ['CHECK', clamp01(0.18 + verification * 0.68)]
+      ];
+      drawRoundedRect(interestCtx, toolPanelX, toolPanelY, toolPanelWidth, 54, 8);
+      interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
+      interestCtx.fill();
+      interestCtx.strokeStyle = 'rgba(255,255,255,0.16)';
+      interestCtx.stroke();
+      interestCtx.font = '10px JetBrains Mono, monospace';
+      toolScores.forEach(([label, value], index) => {
+        const y = toolPanelY + 15 + index * 13;
+        interestCtx.fillStyle = muted;
+        interestCtx.fillText(label, toolPanelX + 10, y + 3);
+        interestCtx.beginPath();
+        interestCtx.moveTo(toolPanelX + 58, y);
+        interestCtx.lineTo(toolPanelX + toolPanelWidth - 12, y);
+        interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
+        interestCtx.lineWidth = 4;
+        interestCtx.stroke();
+        interestCtx.beginPath();
+        interestCtx.moveTo(toolPanelX + 58, y);
+        interestCtx.lineTo(toolPanelX + 58 + (toolPanelWidth - 70) * value, y);
+        interestCtx.strokeStyle = index === 1 ? secondary : primary;
+        interestCtx.lineWidth = 4;
+        interestCtx.stroke();
+      });
+
+      const meterX = 16;
+      const meterY = 18;
+      const meterWidth = Math.min(142, width * 0.26);
+      const meters = [
+        ['AUTO', autonomy, primary],
+        ['VERIFY', verification, secondary]
+      ];
+      meters.forEach(([label, value, color], index) => {
+        const y = meterY + index * 31;
+        interestCtx.fillStyle = muted;
+        interestCtx.font = '10px JetBrains Mono, monospace';
+        interestCtx.fillText(label, meterX, y);
+        interestCtx.beginPath();
+        interestCtx.moveTo(meterX, y + 11);
+        interestCtx.lineTo(meterX + meterWidth, y + 11);
+        interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
+        interestCtx.lineWidth = 5;
+        interestCtx.stroke();
+        interestCtx.beginPath();
+        interestCtx.moveTo(meterX, y + 11);
+        interestCtx.lineTo(meterX + meterWidth * value, y + 11);
+        interestCtx.strokeStyle = color;
+        interestCtx.lineWidth = 5;
+        interestCtx.stroke();
+        interestCtx.fillStyle = textColor;
+        interestCtx.fillText(`${Math.round(value * 100)}%`, meterX + meterWidth + 8, y + 14);
+      });
+    }
+
+    nodes.forEach((node) => {
+      const isSelected = node.id === selectedNode.id;
+      const isLive = activeFrom?.id === node.id || activeTo?.id === node.id;
+      const pulse = isSelected ? agentInteraction.pulse : 0;
+      const x = node.x - node.w / 2;
+      const y = node.y - node.h / 2;
+      drawRoundedRect(interestCtx, x - pulse * 8, y - pulse * 5, node.w + pulse * 16, node.h + pulse * 10, 8);
+      interestCtx.fillStyle = isLive ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.62)';
+      interestCtx.fill();
+      interestCtx.strokeStyle = isSelected ? secondary : isLive ? primary : 'rgba(255,255,255,0.2)';
+      interestCtx.lineWidth = isSelected ? 2.4 : 1.2;
+      interestCtx.stroke();
+
+      interestCtx.fillStyle = isSelected ? secondary : isLive ? primary : textColor;
+      interestCtx.font = '10px JetBrains Mono, monospace';
       interestCtx.textAlign = 'center';
-      interestCtx.fillText(node[0], x, y + 4);
+      interestCtx.fillText(node.label, node.x, node.y + 3);
       interestCtx.textAlign = 'left';
     });
+
+    if (agentInteraction.active) {
+      const pointerX = agentInteraction.x * width;
+      const pointerY = agentInteraction.y * height;
+      interestCtx.beginPath();
+      interestCtx.arc(pointerX, pointerY, 18 + agentInteraction.pulse * 18, 0, Math.PI * 2);
+      interestCtx.strokeStyle = `rgba(255,255,255,${agentInteraction.dragging ? 0.52 : 0.28})`;
+      interestCtx.lineWidth = agentInteraction.dragging ? 2 : 1.2;
+      interestCtx.stroke();
+      interestCtx.beginPath();
+      interestCtx.moveTo(pointerX - 8, pointerY);
+      interestCtx.lineTo(pointerX + 8, pointerY);
+      interestCtx.moveTo(pointerX, pointerY - 8);
+      interestCtx.lineTo(pointerX, pointerY + 8);
+      interestCtx.strokeStyle = secondary;
+      interestCtx.stroke();
+    }
   } else {
     const centerX = width * 0.5;
     const centerY = height * 0.5;
@@ -2112,33 +2312,60 @@ function updateVprPointer(event) {
   }
 }
 
+function updateAgentPointer(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  agentInteraction.x = clamp01((event.clientX - rect.left) / rect.width);
+  agentInteraction.y = clamp01((event.clientY - rect.top) / rect.height);
+  agentInteraction.active = true;
+}
+
+function selectAgentNode(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const nearest = agentWorkflowNodes(rect.width, rect.height)
+    .map((node) => ({ ...node, distance: Math.hypot(node.x - x, node.y - y) }))
+    .sort((a, b) => a.distance - b.distance)[0];
+
+  if (nearest) agentInteraction.selected = nearest.id;
+  agentInteraction.pulse = 1;
+  agentInteraction.runBoost = 1;
+}
+
 function canvasCursorForActiveInterest() {
   if (isPointCloudInterestActive()) return pointCloudInteraction.dragging ? 'grabbing' : 'grab';
   if (isVprInterestActive()) return vprInteraction.dragging ? 'grabbing' : 'crosshair';
+  if (isAgentInterestActive()) return agentInteraction.dragging ? 'grabbing' : 'pointer';
   return 'default';
 }
 
 interestCanvas.addEventListener('pointerenter', (event) => {
   if (isPointCloudInterestActive()) updatePointCloudPointer(event);
   else if (isVprInterestActive()) updateVprPointer(event);
+  else if (isAgentInterestActive()) updateAgentPointer(event);
 });
 
 interestCanvas.addEventListener('pointermove', (event) => {
   if (isPointCloudInterestActive()) updatePointCloudPointer(event);
   else if (isVprInterestActive()) updateVprPointer(event);
+  else if (isAgentInterestActive()) updateAgentPointer(event);
 });
 
 interestCanvas.addEventListener('pointerdown', (event) => {
-  if (!isPointCloudInterestActive() && !isVprInterestActive()) return;
+  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive()) return;
   event.preventDefault();
   if (isPointCloudInterestActive()) {
     pointCloudInteraction.dragging = true;
     updatePointCloudPointer(event);
     pointCloudInteraction.targetScrub = pointCloudInteraction.x;
-  } else {
+  } else if (isVprInterestActive()) {
     vprInteraction.dragging = true;
     vprInteraction.selected = null;
     updateVprPointer(event);
+  } else {
+    agentInteraction.dragging = true;
+    updateAgentPointer(event);
+    selectAgentNode(event);
   }
   interestCanvas.style.cursor = 'grabbing';
   try {
@@ -2149,14 +2376,18 @@ interestCanvas.addEventListener('pointerdown', (event) => {
 });
 
 interestCanvas.addEventListener('pointerup', (event) => {
-  if (!isPointCloudInterestActive() && !isVprInterestActive()) return;
+  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive()) return;
   if (isPointCloudInterestActive()) {
     pointCloudInteraction.dragging = false;
     updatePointCloudPointer(event);
-  } else {
+  } else if (isVprInterestActive()) {
     updateVprPointer(event);
     vprInteraction.selected = bestVprCandidate()?.id || null;
     vprInteraction.dragging = false;
+  } else {
+    updateAgentPointer(event);
+    selectAgentNode(event);
+    agentInteraction.dragging = false;
   }
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
   try {
@@ -2171,13 +2402,16 @@ interestCanvas.addEventListener('pointercancel', () => {
   pointCloudInteraction.active = false;
   vprInteraction.dragging = false;
   vprInteraction.active = false;
+  agentInteraction.dragging = false;
+  agentInteraction.active = false;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
 interestCanvas.addEventListener('pointerleave', () => {
-  if (pointCloudInteraction.dragging || vprInteraction.dragging) return;
+  if (pointCloudInteraction.dragging || vprInteraction.dragging || agentInteraction.dragging) return;
   pointCloudInteraction.active = false;
   vprInteraction.active = false;
+  agentInteraction.active = false;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
