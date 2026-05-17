@@ -97,6 +97,26 @@ const pointCloudInteraction = {
   energy: 0
 };
 
+const vprPlaces = [
+  { id: 'DB-01', name: 'Gate', u: 0.08, condition: 0.16 },
+  { id: 'DB-07', name: 'Quad', u: 0.25, condition: 0.52 },
+  { id: 'DB-12', name: 'Bridge', u: 0.43, condition: 0.28 },
+  { id: 'DB-18', name: 'Road', u: 0.62, condition: 0.74 },
+  { id: 'DB-24', name: 'Corner', u: 0.8, condition: 0.38 },
+  { id: 'DB-31', name: 'Hall', u: 0.94, condition: 0.62 }
+];
+
+const vprInteraction = {
+  active: false,
+  dragging: false,
+  route: 0.34,
+  targetRoute: 0.34,
+  condition: 0.42,
+  targetCondition: 0.42,
+  selected: null,
+  energy: 0
+};
+
 const ORCID_ID = '0009-0005-6139-4327';
 
 const registrationState = {
@@ -299,6 +319,16 @@ let researchInterests = [
 ];
 
 const CONFIG_KEY = 'wcx12-research-config';
+const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
+
+function detectOwnerTools() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('ownerTools') === '1') localStorage.setItem(OWNER_TOOLS_KEY, 'enabled');
+  if (params.get('ownerTools') === '0') localStorage.removeItem(OWNER_TOOLS_KEY);
+  return localStorage.getItem(OWNER_TOOLS_KEY) === 'enabled';
+}
+
+const ownerToolsEnabled = detectOwnerTools();
 
 function defaultAssignments(kind) {
   const source = kind === 'repo' ? localRepos : staticPublications;
@@ -306,6 +336,13 @@ function defaultAssignments(kind) {
 }
 
 function loadResearchConfig() {
+  if (!ownerToolsEnabled) {
+    return {
+      interests: researchInterests,
+      repoAssignments: defaultAssignments('repo'),
+      paperAssignments: defaultAssignments('paper')
+    };
+  }
   try {
     const parsed = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
     return {
@@ -326,6 +363,7 @@ let researchConfig = loadResearchConfig();
 researchInterests = researchConfig.interests;
 
 function saveResearchConfig() {
+  if (!ownerToolsEnabled) return;
   researchConfig.interests = researchInterests;
   localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
 }
@@ -874,9 +912,7 @@ function renderResearchInterest() {
   interestTitle.textContent = textFor(entry.child.title);
   interestTag.textContent = textFor(entry.child.label);
   interestDescription.textContent = textFor(entry.child.description);
-  interestCanvas.style.cursor = entry.child.animation === 'point-cloud'
-    ? pointCloudInteraction.dragging ? 'grabbing' : 'grab'
-    : 'default';
+  interestCanvas.style.cursor = canvasCursorForActiveInterest();
   renderInterestRail();
   renderRelatedList(interestProjects, relatedRepos(), i18n[currentLang].no_related_projects, 'repo');
   renderRelatedList(interestPapers, relatedPapers(), i18n[currentLang].no_related_papers, 'paper');
@@ -896,6 +932,7 @@ function applyTheme(theme) {
 themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
 
 function openResearchManager() {
+  if (!ownerToolsEnabled) return;
   renderResearchManager();
   researchManager.classList.add('open');
   researchManager.setAttribute('aria-hidden', 'false');
@@ -941,6 +978,7 @@ function setAssignment(kind, key, interestId, checked) {
 }
 
 function saveManagerAssignments() {
+  if (!ownerToolsEnabled) return;
   managerProjects.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     setAssignment('repo', input.value, activeInterestId, input.checked);
   });
@@ -954,6 +992,7 @@ function saveManagerAssignments() {
 }
 
 function addResearchCategory() {
+  if (!ownerToolsEnabled) return;
   const domainTitle = managerDomain.value.trim();
   const interestTitleValue = managerInterest.value.trim();
   if (!domainTitle || !interestTitleValue) return;
@@ -990,6 +1029,7 @@ function addResearchCategory() {
 }
 
 function deleteActiveResearchCategory() {
+  if (!ownerToolsEnabled) return;
   researchInterests.forEach((domain) => {
     domain.children = domain.children.filter((child) => child.id !== activeInterestId);
   });
@@ -1008,6 +1048,7 @@ function deleteActiveResearchCategory() {
   renderResearchManager();
 }
 
+manageResearch.hidden = !ownerToolsEnabled;
 manageResearch.addEventListener('click', openResearchManager);
 managerClose.addEventListener('click', closeResearchManager);
 researchManager.addEventListener('click', (event) => {
@@ -1480,6 +1521,55 @@ function isPointCloudInterestActive() {
   return activeInterestAnimationType() === 'point-cloud';
 }
 
+function isVprInterestActive() {
+  return activeInterestAnimationType() === 'vpr';
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function routePoint(width, height, u) {
+  const left = width * 0.1;
+  const right = width * 0.9;
+  const x = left + (right - left) * u;
+  const y = height * (0.38 + Math.sin(u * Math.PI * 2.1 - 0.4) * 0.1 + Math.sin(u * Math.PI * 5.2) * 0.035);
+  return { x, y };
+}
+
+function vprCandidateScores() {
+  return vprPlaces
+    .map((place, index) => {
+      const spatial = Math.max(0, 1 - Math.abs(vprInteraction.route - place.u) / 0.32);
+      const appearance = Math.max(0, 1 - Math.abs(vprInteraction.condition - place.condition) / 0.82);
+      const ripple = 0.03 * Math.sin(interestTick * 0.08 + index * 1.7);
+      return {
+        ...place,
+        score: clamp01(spatial * 0.78 + appearance * 0.22 + ripple)
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+function bestVprCandidate() {
+  return vprCandidateScores()[0];
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
 function drawInterestAnimation() {
   const { width, height } = resizeDrawingCanvas(interestCanvas, interestCtx);
   const entry = activeInterestEntry();
@@ -1615,28 +1705,152 @@ function drawInterestAnimation() {
     interestCtx.lineCap = 'butt';
     interestCtx.lineWidth = 1;
   } else if (type === 'vpr') {
-    const queryX = width * 0.17;
-    const queryY = height * 0.5;
+    vprInteraction.route += (vprInteraction.targetRoute - vprInteraction.route) * (vprInteraction.dragging ? 0.55 : 0.14);
+    vprInteraction.condition += (vprInteraction.targetCondition - vprInteraction.condition) * (vprInteraction.dragging ? 0.55 : 0.12);
+    vprInteraction.energy += ((vprInteraction.active ? 1 : 0) - vprInteraction.energy) * 0.14;
+
+    const query = routePoint(width, height, vprInteraction.route);
+    const candidates = vprCandidateScores();
+    const best = candidates[0];
+    const selected = vprInteraction.selected || best.id;
+    const conditionTint = vprInteraction.condition;
+    const cardY = height * 0.68;
+    const cardGap = Math.max(7, width * 0.012);
+    const cardWidth = Math.min(86, (width - cardGap * 6) / 5.2);
+    const cardHeight = Math.max(44, height * 0.2);
+    const startX = Math.max(16, width * 0.5 - (cardWidth * 5 + cardGap * 4) / 2);
+
+    interestCtx.beginPath();
+    for (let step = 0; step <= 70; step += 1) {
+      const point = routePoint(width, height, step / 70);
+      if (step === 0) interestCtx.moveTo(point.x, point.y);
+      else interestCtx.lineTo(point.x, point.y);
+    }
+    interestCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+    interestCtx.lineWidth = 5;
+    interestCtx.stroke();
     interestCtx.strokeStyle = primary;
-    interestCtx.strokeRect(queryX - 42, queryY - 32, 84, 64);
-    interestCtx.fillStyle = primary;
-    interestCtx.font = '12px JetBrains Mono, monospace';
-    interestCtx.fillText('query', queryX - 22, queryY + 48);
-    const candidates = [0.24, 0.52, 0.78, 0.38, 0.64];
-    candidates.forEach((score, index) => {
-      const x = width * (0.42 + index * 0.11);
-      const y = height * (0.28 + (index % 2) * 0.32);
-      const pulse = 0.5 + 0.5 * Math.sin(t + index);
-      interestCtx.strokeStyle = index === 2 ? secondary : 'rgba(255,255,255,0.22)';
-      interestCtx.strokeRect(x - 34, y - 24, 68, 48);
+    interestCtx.lineWidth = 1.5;
+    interestCtx.stroke();
+
+    vprPlaces.forEach((place) => {
+      const point = routePoint(width, height, place.u);
+      const isBest = place.id === best.id;
+      const isSelected = place.id === selected;
+      const radius = isBest ? 9 + Math.sin(t * 2) * 1.5 : 5.5;
+
       interestCtx.beginPath();
-      interestCtx.moveTo(queryX + 44, queryY);
-      interestCtx.lineTo(x - 36, y);
-      interestCtx.strokeStyle = `rgba(255,255,255,${0.12 + score * 0.35})`;
+      interestCtx.arc(point.x, point.y, radius + 7, 0, Math.PI * 2);
+      interestCtx.fillStyle = isBest ? `rgba(255,255,255,${0.08 + best.score * 0.18})` : 'rgba(255,255,255,0.04)';
+      interestCtx.fill();
+      interestCtx.beginPath();
+      interestCtx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      interestCtx.fillStyle = isBest ? secondary : primary;
+      interestCtx.fill();
+      interestCtx.strokeStyle = isSelected ? '#ffffff' : 'rgba(255,255,255,0.24)';
+      interestCtx.lineWidth = isSelected ? 2 : 1;
       interestCtx.stroke();
-      interestCtx.fillStyle = index === 2 ? secondary : primary;
-      interestCtx.fillRect(x - 30, y + 32, 60 * (score + pulse * 0.08), 5);
+      interestCtx.fillStyle = muted;
+      interestCtx.font = '10px JetBrains Mono, monospace';
+      interestCtx.fillText(place.id, point.x - 16, point.y - 14);
     });
+
+    const bestPoint = routePoint(width, height, best.u);
+    interestCtx.beginPath();
+    interestCtx.moveTo(query.x, query.y);
+    interestCtx.quadraticCurveTo((query.x + bestPoint.x) / 2, Math.min(query.y, bestPoint.y) - height * 0.16, bestPoint.x, bestPoint.y);
+    interestCtx.strokeStyle = `rgba(255,255,255,${0.18 + best.score * 0.46})`;
+    interestCtx.lineWidth = 1.4 + best.score * 2.2;
+    interestCtx.stroke();
+
+    const frustum = 24 + vprInteraction.energy * 8;
+    interestCtx.save();
+    interestCtx.translate(query.x, query.y);
+    interestCtx.rotate((vprInteraction.condition - 0.5) * 0.34 + Math.sin(t) * 0.04);
+    interestCtx.beginPath();
+    interestCtx.moveTo(0, -8);
+    interestCtx.lineTo(frustum, -frustum * 0.62);
+    interestCtx.lineTo(frustum, frustum * 0.62);
+    interestCtx.closePath();
+    interestCtx.fillStyle = `rgba(255,255,255,${0.06 + vprInteraction.energy * 0.08})`;
+    interestCtx.strokeStyle = secondary;
+    interestCtx.lineWidth = vprInteraction.dragging ? 2.8 : 1.8;
+    interestCtx.fill();
+    interestCtx.stroke();
+    interestCtx.beginPath();
+    interestCtx.arc(0, 0, 8 + vprInteraction.energy * 4, 0, Math.PI * 2);
+    interestCtx.fillStyle = primary;
+    interestCtx.fill();
+    interestCtx.restore();
+
+    const queryPanelX = Math.max(16, query.x - 42);
+    const queryPanelY = Math.max(14, query.y - 64);
+    drawRoundedRect(interestCtx, queryPanelX, queryPanelY, 84, 42, 8);
+    interestCtx.fillStyle = `rgba(3, 7, 18, ${0.66 + conditionTint * 0.18})`;
+    interestCtx.fill();
+    interestCtx.strokeStyle = secondary;
+    interestCtx.stroke();
+    interestCtx.fillStyle = primary;
+    interestCtx.font = '11px JetBrains Mono, monospace';
+    interestCtx.fillText('QUERY', queryPanelX + 10, queryPanelY + 17);
+    interestCtx.fillStyle = muted;
+    interestCtx.fillText(conditionTint < 0.34 ? 'day' : conditionTint < 0.68 ? 'shift' : 'night', queryPanelX + 10, queryPanelY + 31);
+
+    candidates.slice(0, 5).forEach((candidate, index) => {
+      const x = startX + index * (cardWidth + cardGap);
+      const y = cardY;
+      const isTop = index === 0;
+      const isSelected = candidate.id === selected;
+      const shade = 18 + Math.round(candidate.condition * 72);
+
+      drawRoundedRect(interestCtx, x, y, cardWidth, cardHeight, 8);
+      interestCtx.fillStyle = `rgba(${shade}, ${shade}, ${shade + 26}, 0.72)`;
+      interestCtx.fill();
+      interestCtx.strokeStyle = isTop ? secondary : isSelected ? primary : 'rgba(255,255,255,0.18)';
+      interestCtx.lineWidth = isTop ? 2.2 : 1;
+      interestCtx.stroke();
+
+      interestCtx.beginPath();
+      interestCtx.moveTo(x + 8, y + cardHeight * 0.56);
+      interestCtx.lineTo(x + cardWidth * 0.38, y + cardHeight * 0.36);
+      interestCtx.lineTo(x + cardWidth * 0.65, y + cardHeight * 0.52);
+      interestCtx.lineTo(x + cardWidth - 8, y + cardHeight * 0.32);
+      interestCtx.strokeStyle = `rgba(255,255,255,${0.18 + candidate.score * 0.28})`;
+      interestCtx.lineWidth = 1.3;
+      interestCtx.stroke();
+
+      interestCtx.fillStyle = isTop ? secondary : primary;
+      interestCtx.font = '10px JetBrains Mono, monospace';
+      interestCtx.fillText(candidate.id, x + 8, y + 14);
+      interestCtx.fillStyle = muted;
+      interestCtx.fillText(candidate.name, x + 8, y + cardHeight - 18);
+
+      interestCtx.beginPath();
+      interestCtx.moveTo(x + 8, y + cardHeight - 8);
+      interestCtx.lineTo(x + cardWidth - 8, y + cardHeight - 8);
+      interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
+      interestCtx.lineWidth = 4;
+      interestCtx.stroke();
+      interestCtx.beginPath();
+      interestCtx.moveTo(x + 8, y + cardHeight - 8);
+      interestCtx.lineTo(x + 8 + (cardWidth - 16) * candidate.score, y + cardHeight - 8);
+      interestCtx.strokeStyle = isTop ? secondary : primary;
+      interestCtx.lineWidth = 4;
+      interestCtx.stroke();
+    });
+
+    const scoreX = width - 114;
+    const scoreY = 20;
+    drawRoundedRect(interestCtx, scoreX, scoreY, 94, 42, 10);
+    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = 'rgba(255,255,255,0.16)';
+    interestCtx.stroke();
+    interestCtx.fillStyle = secondary;
+    interestCtx.font = '12px JetBrains Mono, monospace';
+    interestCtx.fillText(`TOP ${Math.round(best.score * 100)}%`, scoreX + 12, scoreY + 18);
+    interestCtx.fillStyle = muted;
+    interestCtx.fillText(best.id, scoreX + 12, scoreY + 32);
   } else if (type === 'agent') {
     const nodes = [
       ['query', 0.14, 0.5],
@@ -1705,44 +1919,84 @@ function updatePointCloudPointer(event) {
   if (pointCloudInteraction.dragging) pointCloudInteraction.scrub = pointCloudInteraction.x;
 }
 
+function updateVprPointer(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  vprInteraction.targetRoute = clamp01((event.clientX - rect.left) / rect.width);
+  vprInteraction.targetCondition = clamp01((event.clientY - rect.top) / rect.height);
+  vprInteraction.active = true;
+  if (vprInteraction.dragging) {
+    vprInteraction.route = vprInteraction.targetRoute;
+    vprInteraction.condition = vprInteraction.targetCondition;
+  }
+}
+
+function canvasCursorForActiveInterest() {
+  if (isPointCloudInterestActive()) return pointCloudInteraction.dragging ? 'grabbing' : 'grab';
+  if (isVprInterestActive()) return vprInteraction.dragging ? 'grabbing' : 'crosshair';
+  return 'default';
+}
+
 interestCanvas.addEventListener('pointerenter', (event) => {
-  if (!isPointCloudInterestActive()) return;
-  updatePointCloudPointer(event);
+  if (isPointCloudInterestActive()) updatePointCloudPointer(event);
+  else if (isVprInterestActive()) updateVprPointer(event);
 });
 
 interestCanvas.addEventListener('pointermove', (event) => {
-  if (!isPointCloudInterestActive()) return;
-  updatePointCloudPointer(event);
+  if (isPointCloudInterestActive()) updatePointCloudPointer(event);
+  else if (isVprInterestActive()) updateVprPointer(event);
 });
 
 interestCanvas.addEventListener('pointerdown', (event) => {
-  if (!isPointCloudInterestActive()) return;
+  if (!isPointCloudInterestActive() && !isVprInterestActive()) return;
   event.preventDefault();
-  pointCloudInteraction.dragging = true;
-  updatePointCloudPointer(event);
-  pointCloudInteraction.targetScrub = pointCloudInteraction.x;
+  if (isPointCloudInterestActive()) {
+    pointCloudInteraction.dragging = true;
+    updatePointCloudPointer(event);
+    pointCloudInteraction.targetScrub = pointCloudInteraction.x;
+  } else {
+    vprInteraction.dragging = true;
+    vprInteraction.selected = null;
+    updateVprPointer(event);
+  }
   interestCanvas.style.cursor = 'grabbing';
-  interestCanvas.setPointerCapture?.(event.pointerId);
+  try {
+    interestCanvas.setPointerCapture?.(event.pointerId);
+  } catch {
+    // Synthetic pointer events used by browser tests may not own capture.
+  }
 });
 
 interestCanvas.addEventListener('pointerup', (event) => {
-  if (!isPointCloudInterestActive()) return;
-  pointCloudInteraction.dragging = false;
-  updatePointCloudPointer(event);
-  interestCanvas.style.cursor = 'grab';
-  interestCanvas.releasePointerCapture?.(event.pointerId);
+  if (!isPointCloudInterestActive() && !isVprInterestActive()) return;
+  if (isPointCloudInterestActive()) {
+    pointCloudInteraction.dragging = false;
+    updatePointCloudPointer(event);
+  } else {
+    updateVprPointer(event);
+    vprInteraction.selected = bestVprCandidate()?.id || null;
+    vprInteraction.dragging = false;
+  }
+  interestCanvas.style.cursor = canvasCursorForActiveInterest();
+  try {
+    interestCanvas.releasePointerCapture?.(event.pointerId);
+  } catch {
+    // Synthetic pointer events used by browser tests may not own capture.
+  }
 });
 
 interestCanvas.addEventListener('pointercancel', () => {
   pointCloudInteraction.dragging = false;
   pointCloudInteraction.active = false;
-  if (isPointCloudInterestActive()) interestCanvas.style.cursor = 'grab';
+  vprInteraction.dragging = false;
+  vprInteraction.active = false;
+  interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
 interestCanvas.addEventListener('pointerleave', () => {
-  if (pointCloudInteraction.dragging) return;
+  if (pointCloudInteraction.dragging || vprInteraction.dragging) return;
   pointCloudInteraction.active = false;
-  if (isPointCloudInterestActive()) interestCanvas.style.cursor = 'grab';
+  vprInteraction.active = false;
+  interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
 function currentPublications() {
