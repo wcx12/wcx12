@@ -135,6 +135,8 @@ const agentInteraction = {
     browser: false,
     eval: true
   },
+  hoverType: null,
+  hoverId: null,
   pulse: 0,
   runBoost: 0
 };
@@ -1777,60 +1779,63 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 
 const agentTasks = [
   {
-    title: 'Map repos',
+    title: 'Map research repos',
     compactTitle: 'MAP',
     prompt: 'Assign projects to research interests',
+    outcome: 'Mapping config ready',
     trace: {
-      plan: 'split mapping rules',
-      retrieve: 'read repo metadata',
-      tool: 'inspect README signals',
-      verify: 'check category consistency',
-      revise: 'repair uncertain mapping',
-      answer: 'save research-config.json'
+      plan: 'Goal parsed -> organize projects by research area',
+      retrieve: 'Sources retrieved -> repo metadata and README signals',
+      act: 'Analysis run -> compare project topics with category rules',
+      observe: 'Evidence checked -> ambiguous repositories flagged',
+      evaluate: 'Quality check -> mapping confidence updated',
+      revise: 'Revise -> repair uncertain mapping before saving'
     }
   },
   {
-    title: 'Read README',
+    title: 'Read project README',
     compactTitle: 'README',
     prompt: 'Summarize one project before opening it',
+    outcome: 'Traceable project summary',
     trace: {
-      plan: 'define summary targets',
-      retrieve: 'load README context',
-      tool: 'extract usage and scope',
-      verify: 'compare with repo topic',
-      revise: 'tighten project summary',
-      answer: 'present concise notes'
+      plan: 'Goal parsed -> summarize scope, usage, and relevance',
+      retrieve: 'Sources retrieved -> README sections loaded',
+      act: 'Analysis run -> extract purpose and implementation notes',
+      observe: 'Evidence checked -> summary compared with repo topic',
+      evaluate: 'Quality check -> missing context noted',
+      revise: 'Revise -> tighten summary with project evidence'
     }
   },
   {
-    title: 'Check result',
+    title: 'Verify page update',
     compactTitle: 'CHECK',
     prompt: 'Verify an experiment or page update',
+    outcome: 'Verified result report',
     trace: {
-      plan: 'choose validation path',
-      retrieve: 'collect latest state',
-      tool: 'run browser checks',
-      verify: 'detect mismatch',
-      revise: 'retry failing branch',
-      answer: 'report verified result'
+      plan: 'Goal parsed -> choose validation path',
+      retrieve: 'State collected -> latest page and config loaded',
+      act: 'Browser check -> inspect rendered interaction',
+      observe: 'Evidence checked -> mismatch or success detected',
+      evaluate: 'Quality check -> confidence and risk reported',
+      revise: 'Revise -> retry the failing branch'
     }
   }
 ];
 
 const agentTools = [
-  { id: 'memory', label: 'Memory', compact: 'MEM' },
-  { id: 'rag', label: 'RAG', compact: 'RAG' },
-  { id: 'code', label: 'Code', compact: 'CODE' },
-  { id: 'browser', label: 'Browser', compact: 'WEB' },
-  { id: 'eval', label: 'Eval', compact: 'EVAL' }
+  { id: 'memory', label: 'Memory', compact: 'MEM', detail: 'Past context', stage: 'retrieve' },
+  { id: 'rag', label: 'RAG', compact: 'RAG', detail: 'Grounded search', stage: 'retrieve' },
+  { id: 'code', label: 'Code', compact: 'CODE', detail: 'Run analysis', stage: 'act' },
+  { id: 'browser', label: 'Web', compact: 'WEB', detail: 'Web evidence', stage: 'observe' },
+  { id: 'eval', label: 'Eval', compact: 'EVAL', detail: 'Quality check', stage: 'evaluate' }
 ];
 
 const agentStages = [
-  { id: 'plan', label: 'Planner', compact: 'Plan' },
-  { id: 'retrieve', label: 'Memory/RAG', compact: 'RAG' },
-  { id: 'tool', label: 'Tool Calls', compact: 'Tool' },
-  { id: 'verify', label: 'Verifier', compact: 'Check' },
-  { id: 'answer', label: 'Final', compact: 'Final' }
+  { id: 'plan', label: 'Plan', compact: 'Plan', detail: 'Split the research goal into steps' },
+  { id: 'retrieve', label: 'Search', compact: 'Search', detail: 'Ground the answer in notes, repos, or papers' },
+  { id: 'act', label: 'Act', compact: 'Act', detail: 'Call tools such as code or browser checks' },
+  { id: 'observe', label: 'Check', compact: 'Check', detail: 'Read tool results and evidence' },
+  { id: 'evaluate', label: 'Eval', compact: 'Eval', detail: 'Score quality and trigger revision when needed' }
 ];
 
 function truncatedCanvasText(ctx, text, maxWidth) {
@@ -1854,78 +1859,130 @@ function agentRunnerLayout(width, height) {
     const stageW = Math.max(48, Math.min(60, (width - 30) / 5));
     return {
       compact,
+      hint: { x: 12, y: 10, text: 'Tap task, tool, or stage' },
       taskCards: agentTasks.map((task, index) => ({
         ...task,
         index,
         x: 12 + index * (taskW + 6),
-        y: 14,
+        y: 22,
         w: taskW,
         h: 24
       })),
       toolCards: agentTools.map((tool, index) => ({
         ...tool,
         x: 12 + index * (toolW + 5),
-        y: 44,
+        y: 54,
         w: toolW,
         h: 22
       })),
       stageCards: agentStages.map((stage, index) => ({
         ...stage,
         x: 12 + index * (stageW + 5),
-        y: 78,
+        y: 86,
         w: stageW,
         h: 26
       })),
-      trace: { x: 12, y: 116, w: width - 24, h: Math.max(34, height - 128) },
-      meter: { x: 12, y: 146, w: width - 24, h: 14 }
+      trace: { x: 12, y: 121, w: width - 24, h: Math.max(28, height - 151) },
+      outcome: { x: 12, y: height - 23, w: width - 24, h: 13 },
+      meter: { x: 12, y: height - 8, w: width - 24, h: 4 }
     };
   }
 
   const taskW = Math.min(160, width * 0.27);
   const workX = taskW + 34;
   const workW = width - workX - 16;
-  const toolW = Math.max(58, Math.min(72, (workW - 24) / 5));
+  const toolW = Math.max(62, Math.min(78, (workW - 24) / 5));
   const stageW = Math.max(68, Math.min(92, (workW - 34) / 5));
   return {
     compact,
+    hint: { x: 16, y: 16, text: 'Hover to inspect · Click to pin tools and tasks' },
     taskCards: agentTasks.map((task, index) => ({
       ...task,
       index,
       x: 16,
-      y: 18 + index * 42,
+      y: 34 + index * 40,
       w: taskW,
       h: 34
     })),
     toolCards: agentTools.map((tool, index) => ({
       ...tool,
       x: workX + index * (toolW + 6),
-      y: 18,
+      y: 36,
       w: toolW,
-      h: 24
+      h: 34
     })),
     stageCards: agentStages.map((stage, index) => ({
       ...stage,
       x: workX + index * (stageW + 7),
-      y: 65 + (index % 2) * 18,
+      y: 88 + (index % 2) * 16,
       w: stageW,
       h: 34
     })),
-    trace: { x: workX, y: height - 82, w: workW, h: 64 },
-    meter: { x: 16, y: height - 74, w: taskW, h: 56 }
+    trace: { x: workX, y: height - 83, w: workW, h: 54 },
+    outcome: { x: workX, y: height - 24, w: workW, h: 18 },
+    meter: { x: 16, y: height - 72, w: taskW, h: 54 }
   };
 }
 
 function agentTraceFor(task, verification) {
-  const tool = agentInteraction.selectedTool || 'rag';
+  const retrievalTool = agentInteraction.tools.rag ? 'rag' : agentInteraction.tools.memory ? 'memory' : null;
+  const actionTool = agentInteraction.tools[agentInteraction.selectedTool] && !['memory', 'rag', 'eval'].includes(agentInteraction.selectedTool)
+    ? agentInteraction.selectedTool
+    : agentInteraction.tools.code
+      ? 'code'
+      : agentInteraction.tools.browser
+        ? 'browser'
+        : null;
+  const observeTool = agentInteraction.tools.browser ? 'browser' : agentInteraction.tools.eval ? 'eval' : null;
   const trace = [
     { stage: 'plan', label: task.trace.plan },
-    { stage: 'retrieve', label: agentInteraction.tools.rag || agentInteraction.tools.memory ? task.trace.retrieve : 'use prompt-only context' },
-    { stage: 'tool', label: agentInteraction.tools[tool] ? task.trace.tool : `skip ${tool} call` },
-    { stage: 'verify', label: agentInteraction.tools.eval ? task.trace.verify : 'light confidence check' }
+    {
+      stage: 'retrieve',
+      toolId: retrievalTool,
+      label: retrievalTool ? task.trace.retrieve : 'Prompt-only context -> retrieval disabled'
+    },
+    {
+      stage: 'act',
+      toolId: actionTool,
+      label: actionTool ? task.trace.act : 'No external tool call -> reason from context only'
+    },
+    {
+      stage: 'observe',
+      toolId: observeTool,
+      label: observeTool ? task.trace.observe : 'Manual observation -> no browser or eval tool'
+    },
+    {
+      stage: 'evaluate',
+      toolId: agentInteraction.tools.eval ? 'eval' : null,
+      label: agentInteraction.tools.eval ? task.trace.evaluate : 'Light check -> eval disabled'
+    }
   ];
-  if (agentInteraction.tools.eval && verification > 0.58) trace.push({ stage: 'revise', label: task.trace.revise, retry: true });
-  trace.push({ stage: 'answer', label: task.trace.answer });
+  if (agentInteraction.tools.eval && verification > 0.58) {
+    trace.push({ stage: 'evaluate', toolId: 'eval', label: task.trace.revise, retry: true });
+  }
   return trace;
+}
+
+function agentOutcomeText(task, confidence) {
+  const level = confidence > 0.78 ? 'High' : confidence > 0.62 ? 'Medium' : 'Low';
+  return `Outcome: ${task.outcome} · Confidence ${level}`;
+}
+
+function agentInspectText(task, activeTrace, confidence) {
+  if (agentInteraction.hoverType === 'tool') {
+    const tool = agentTools.find((item) => item.id === agentInteraction.hoverId);
+    if (tool) return `${tool.label}: ${tool.detail} · ${agentInteraction.tools[tool.id] ? 'enabled' : 'disabled'}`;
+  }
+  if (agentInteraction.hoverType === 'stage') {
+    const stage = agentStages.find((item) => item.id === agentInteraction.hoverId);
+    if (stage) return `${stage.label}: ${stage.detail}`;
+  }
+  if (agentInteraction.hoverType === 'task') {
+    const hoveredTask = agentTasks[agentInteraction.hoverId];
+    if (hoveredTask) return `Task: ${hoveredTask.prompt}`;
+  }
+  if (activeTrace) return activeTrace.label;
+  return agentOutcomeText(task, confidence);
 }
 
 function agentHitRegion(event) {
@@ -2241,19 +2298,26 @@ function drawInterestAnimation() {
     const confidence = clamp01(0.42 + enabledRatio * 0.22 + verification * 0.2 + (agentInteraction.tools.eval ? 0.1 : -0.08));
     const textColor = themeColor('--text') || '#f5f5f5';
     const stageMap = Object.fromEntries(layout.stageCards.map((stage) => [stage.id, stage]));
+    const activeToolId = activeTrace?.toolId || null;
+    const inspectText = agentInspectText(task, activeTrace, confidence);
 
     agentInteraction.pulse *= 0.86;
     agentInteraction.runBoost *= 0.88;
 
+    interestCtx.fillStyle = muted;
+    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
+    fillTruncatedText(interestCtx, layout.hint.text, layout.hint.x, layout.hint.y, width - layout.hint.x * 2);
+
     layout.taskCards.forEach((card) => {
       const selected = card.index === agentInteraction.taskIndex;
+      const hovered = agentInteraction.hoverType === 'task' && agentInteraction.hoverId === card.index;
       drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
-      interestCtx.fillStyle = selected ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.54)';
+      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.54)';
       interestCtx.fill();
-      interestCtx.strokeStyle = selected ? secondary : 'rgba(255,255,255,0.16)';
-      interestCtx.lineWidth = selected ? 2 : 1;
+      interestCtx.strokeStyle = hovered ? primary : selected ? secondary : 'rgba(255,255,255,0.16)';
+      interestCtx.lineWidth = selected || hovered ? 2 : 1;
       interestCtx.stroke();
-      interestCtx.fillStyle = selected ? secondary : textColor;
+      interestCtx.fillStyle = hovered ? primary : selected ? secondary : textColor;
       interestCtx.font = '10px JetBrains Mono, monospace';
       fillTruncatedText(interestCtx, layout.compact ? card.compactTitle : card.title, card.x + 9, card.y + 14, card.w - 18);
       if (!layout.compact) {
@@ -2266,20 +2330,41 @@ function drawInterestAnimation() {
     layout.toolCards.forEach((tool) => {
       const enabled = agentInteraction.tools[tool.id];
       const selected = agentInteraction.selectedTool === tool.id;
+      const active = activeToolId === tool.id;
+      const hovered = agentInteraction.hoverType === 'tool' && agentInteraction.hoverId === tool.id;
       drawRoundedRect(interestCtx, tool.x, tool.y, tool.w, tool.h, 7);
-      interestCtx.fillStyle = enabled ? 'rgba(255,255,255,0.1)' : 'rgba(3, 7, 18, 0.48)';
+      interestCtx.fillStyle = active || hovered ? 'rgba(255,255,255,0.14)' : enabled ? 'rgba(255,255,255,0.1)' : 'rgba(3, 7, 18, 0.48)';
       interestCtx.fill();
-      interestCtx.strokeStyle = selected ? secondary : enabled ? primary : 'rgba(255,255,255,0.16)';
-      interestCtx.lineWidth = selected ? 2 : 1;
+      interestCtx.strokeStyle = active ? secondary : hovered ? primary : selected ? secondary : enabled ? primary : 'rgba(255,255,255,0.16)';
+      interestCtx.lineWidth = active || selected || hovered ? 2 : 1;
       interestCtx.stroke();
       interestCtx.beginPath();
-      interestCtx.arc(tool.x + 8, tool.y + tool.h / 2, 3.2, 0, Math.PI * 2);
-      interestCtx.fillStyle = enabled ? primary : 'rgba(255,255,255,0.18)';
+      interestCtx.arc(tool.x + 8, tool.y + (layout.compact ? tool.h / 2 : 10), 3.2, 0, Math.PI * 2);
+      interestCtx.fillStyle = enabled ? active ? secondary : primary : 'rgba(255,255,255,0.18)';
       interestCtx.fill();
       interestCtx.fillStyle = enabled ? textColor : muted;
       interestCtx.font = '9px JetBrains Mono, monospace';
-      fillTruncatedText(interestCtx, layout.compact ? tool.compact : tool.label, tool.x + 15, tool.y + tool.h / 2 + 3, tool.w - 18);
+      fillTruncatedText(interestCtx, layout.compact ? tool.compact : tool.label, tool.x + 15, tool.y + (layout.compact ? tool.h / 2 + 3 : 13), tool.w - 18);
+      if (!layout.compact) {
+        interestCtx.fillStyle = enabled ? muted : 'rgba(255,255,255,0.26)';
+        interestCtx.font = '8px JetBrains Mono, monospace';
+        fillTruncatedText(interestCtx, tool.detail, tool.x + 9, tool.y + 27, tool.w - 16);
+      }
     });
+
+    if (!layout.compact) {
+      layout.toolCards.forEach((tool) => {
+        const stage = stageMap[tool.stage];
+        if (!stage) return;
+        const active = activeToolId === tool.id || (agentInteraction.hoverType === 'tool' && agentInteraction.hoverId === tool.id);
+        interestCtx.beginPath();
+        interestCtx.moveTo(tool.x + tool.w / 2, tool.y + tool.h);
+        interestCtx.lineTo(stage.x + stage.w / 2, stage.y);
+        interestCtx.strokeStyle = active ? `rgba(255,255,255,0.42)` : 'rgba(255,255,255,0.08)';
+        interestCtx.lineWidth = active ? 1.6 : 0.8;
+        interestCtx.stroke();
+      });
+    }
 
     layout.stageCards.forEach((stage, index) => {
       if (index > 0) {
@@ -2296,24 +2381,37 @@ function drawInterestAnimation() {
     });
 
     layout.stageCards.forEach((stage) => {
-      const active = activeTrace?.stage === stage.id || (activeTrace?.stage === 'revise' && stage.id === 'verify');
+      const active = activeTrace?.stage === stage.id;
       const selected = agentInteraction.selectedStage === stage.id;
+      const hovered = agentInteraction.hoverType === 'stage' && agentInteraction.hoverId === stage.id;
       const pulse = active || selected ? agentInteraction.pulse : 0;
       drawRoundedRect(interestCtx, stage.x - pulse * 5, stage.y - pulse * 4, stage.w + pulse * 10, stage.h + pulse * 8, 8);
-      interestCtx.fillStyle = active ? 'rgba(255,255,255,0.13)' : 'rgba(3, 7, 18, 0.62)';
+      interestCtx.fillStyle = active || hovered ? 'rgba(255,255,255,0.13)' : 'rgba(3, 7, 18, 0.62)';
       interestCtx.fill();
-      interestCtx.strokeStyle = selected ? secondary : active ? primary : 'rgba(255,255,255,0.2)';
-      interestCtx.lineWidth = selected ? 2.4 : 1.2;
+      interestCtx.strokeStyle = selected ? secondary : active || hovered ? primary : 'rgba(255,255,255,0.2)';
+      interestCtx.lineWidth = selected || hovered ? 2.4 : 1.2;
       interestCtx.stroke();
-      interestCtx.fillStyle = active ? primary : textColor;
-      interestCtx.font = '10px JetBrains Mono, monospace';
+      interestCtx.beginPath();
+      interestCtx.arc(stage.x + 10, stage.y + 11, 6, 0, Math.PI * 2);
+      interestCtx.fillStyle = active ? secondary : 'rgba(255,255,255,0.14)';
+      interestCtx.fill();
+      interestCtx.fillStyle = active ? '#050505' : textColor;
+      interestCtx.font = '8px JetBrains Mono, monospace';
       interestCtx.textAlign = 'center';
-      interestCtx.fillText(layout.compact ? stage.compact : stage.label, stage.x + stage.w / 2, stage.y + stage.h / 2 + 3);
+      interestCtx.fillText(String(layout.stageCards.indexOf(stage) + 1), stage.x + 10, stage.y + 14);
       interestCtx.textAlign = 'left';
+      interestCtx.fillStyle = active || hovered ? primary : textColor;
+      interestCtx.font = '10px JetBrains Mono, monospace';
+      fillTruncatedText(interestCtx, layout.compact ? stage.compact : stage.label, stage.x + 20, stage.y + 14, stage.w - 24);
+      if (!layout.compact) {
+        interestCtx.fillStyle = muted;
+        interestCtx.font = '8px JetBrains Mono, monospace';
+        fillTruncatedText(interestCtx, stage.detail, stage.x + 9, stage.y + 27, stage.w - 16);
+      }
     });
 
-    if (activeTrace?.stage === 'revise') {
-      const from = stageMap.verify;
+    if (activeTrace?.retry) {
+      const from = stageMap.evaluate;
       const to = stageMap.plan;
       interestCtx.beginPath();
       interestCtx.moveTo(from.x + from.w * 0.5, from.y);
@@ -2329,9 +2427,11 @@ function drawInterestAnimation() {
     interestCtx.strokeStyle = 'rgba(255,255,255,0.16)';
     interestCtx.lineWidth = 1;
     interestCtx.stroke();
-    const visibleTrace = layout.compact ? trace.slice(Math.max(0, activeTraceIndex - 1), activeTraceIndex + 2) : trace.slice(0, 5);
+    const traceWindow = layout.compact ? 2 : 4;
+    const traceStart = Math.max(0, Math.min(activeTraceIndex - (layout.compact ? 1 : 2), Math.max(0, trace.length - traceWindow)));
+    const visibleTrace = trace.slice(traceStart, traceStart + traceWindow);
     visibleTrace.forEach((item, index) => {
-      const absoluteIndex = layout.compact ? Math.max(0, activeTraceIndex - 1) + index : index;
+      const absoluteIndex = traceStart + index;
       const active = absoluteIndex === activeTraceIndex;
       const y = layout.trace.y + 17 + index * (layout.compact ? 12 : 11);
       interestCtx.beginPath();
@@ -2343,6 +2443,17 @@ function drawInterestAnimation() {
       const status = active ? 'running' : absoluteIndex < activeTraceIndex ? 'done' : item.retry ? 'retry' : 'queued';
       fillTruncatedText(interestCtx, `${status}: ${item.label}`, layout.trace.x + 22, y, layout.trace.w - 32);
     });
+
+    const outcome = layout.outcome;
+    drawRoundedRect(interestCtx, outcome.x, outcome.y, outcome.w, outcome.h, 7);
+    interestCtx.fillStyle = 'rgba(255,255,255,0.07)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = activeTrace?.retry ? secondary : 'rgba(255,255,255,0.14)';
+    interestCtx.lineWidth = 1;
+    interestCtx.stroke();
+    interestCtx.fillStyle = activeTrace?.retry ? secondary : primary;
+    interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
+    fillTruncatedText(interestCtx, layout.compact ? agentOutcomeText(task, confidence) : inspectText, outcome.x + 8, outcome.y + (layout.compact ? 9 : 12), outcome.w - 16);
 
     const meter = layout.meter;
     drawRoundedRect(interestCtx, meter.x, meter.y, meter.w, meter.h, 8);
@@ -2455,6 +2566,9 @@ function updateAgentPointer(event) {
   agentInteraction.x = clamp01((event.clientX - rect.left) / rect.width);
   agentInteraction.y = clamp01((event.clientY - rect.top) / rect.height);
   agentInteraction.active = true;
+  const hit = agentHitRegion(event);
+  agentInteraction.hoverType = hit?.type || null;
+  agentInteraction.hoverId = hit?.type === 'task' ? hit.item.index : hit?.item.id || null;
 }
 
 function interactWithAgentRunner(event) {
@@ -2467,6 +2581,10 @@ function interactWithAgentRunner(event) {
     agentInteraction.tools[hit.item.id] = !agentInteraction.tools[hit.item.id];
   } else if (hit?.type === 'stage') {
     agentInteraction.selectedStage = hit.item.id;
+  } else {
+    agentInteraction.pulse = 0.35;
+    agentInteraction.runBoost = 0.24;
+    return;
   }
   agentInteraction.pulse = 1;
   agentInteraction.runBoost = 0.72;
@@ -2545,6 +2663,8 @@ interestCanvas.addEventListener('pointercancel', () => {
   vprInteraction.active = false;
   agentInteraction.dragging = false;
   agentInteraction.active = false;
+  agentInteraction.hoverType = null;
+  agentInteraction.hoverId = null;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
@@ -2553,6 +2673,8 @@ interestCanvas.addEventListener('pointerleave', () => {
   pointCloudInteraction.active = false;
   vprInteraction.active = false;
   agentInteraction.active = false;
+  agentInteraction.hoverType = null;
+  agentInteraction.hoverId = null;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
