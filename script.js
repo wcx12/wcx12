@@ -141,6 +141,20 @@ const agentInteraction = {
   runBoost: 0
 };
 
+const educationInteraction = {
+  active: false,
+  dragging: false,
+  x: 0.5,
+  y: 0.5,
+  selectedPath: 'learner',
+  selectedConcept: 'functions',
+  selectedSignal: 'hint',
+  hoverType: null,
+  hoverId: null,
+  pulse: 0,
+  masteryBoost: 0
+};
+
 const ORCID_ID = '0009-0005-6139-4327';
 
 const registrationState = {
@@ -1732,6 +1746,10 @@ function isAgentInterestActive() {
   return activeInterestAnimationType() === 'agent';
 }
 
+function isEducationInterestActive() {
+  return activeInterestAnimationType() === 'education';
+}
+
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
 }
@@ -2001,6 +2019,194 @@ function agentHitRegion(event) {
     && y >= item.y
     && y <= item.y + item.h
   ));
+}
+
+const educationPaths = [
+  {
+    id: 'learner',
+    label: 'Learner',
+    compact: 'Learner',
+    title: 'Learner profile',
+    detail: 'Diagnose mastery, confidence, engagement, and misconceptions.'
+  },
+  {
+    id: 'content',
+    label: 'Content',
+    compact: 'Content',
+    title: 'Targeted content',
+    detail: 'Generate hints, examples, quizzes, and challenge tasks from weak concepts.'
+  },
+  {
+    id: 'teacher',
+    label: 'Teacher',
+    compact: 'Teacher',
+    title: 'Teacher insight',
+    detail: 'Surface intervention opportunities and reduce feedback workload.'
+  },
+  {
+    id: 'evidence',
+    label: 'Evidence',
+    compact: 'Evidence',
+    title: 'Research evidence',
+    detail: 'Track retention, transfer, fairness, and learning efficiency.'
+  }
+];
+
+const educationConcepts = [
+  { id: 'algebra', label: 'Algebra', compact: 'Alg', mastery: 0.74, x: 0.16, y: 0.36 },
+  { id: 'functions', label: 'Functions', compact: 'Func', mastery: 0.42, x: 0.3, y: 0.22 },
+  { id: 'geometry', label: 'Geometry', compact: 'Geo', mastery: 0.62, x: 0.3, y: 0.52 },
+  { id: 'proof', label: 'Proof', compact: 'Proof', mastery: 0.36, x: 0.46, y: 0.38 },
+  { id: 'word', label: 'Word Prob.', compact: 'Word', mastery: 0.58, x: 0.16, y: 0.62 }
+];
+
+const educationSignals = [
+  { id: 'correct', label: 'Correct', compact: 'OK', detail: 'Mastery rises after independent success.' },
+  { id: 'hint', label: 'Hint used', compact: 'Hint', detail: 'Feedback targets a misconception before retry.' },
+  { id: 'incorrect', label: 'Incorrect', compact: 'Miss', detail: 'System lowers confidence and selects a scaffold.' }
+];
+
+const educationLoop = [
+  { id: 'diagnose', label: 'Diagnose', compact: 'Dx' },
+  { id: 'generate', label: 'Generate', compact: 'Gen' },
+  { id: 'practice', label: 'Practice', compact: 'Try' },
+  { id: 'feedback', label: 'Feedback', compact: 'Fb' },
+  { id: 'update', label: 'Update', compact: 'Up' },
+  { id: 'evaluate', label: 'Evaluate', compact: 'Eval' }
+];
+
+function educationPathForSelected() {
+  return educationPaths.find((path) => path.id === educationInteraction.selectedPath) || educationPaths[0];
+}
+
+function educationConceptForSelected() {
+  return educationConcepts.find((concept) => concept.id === educationInteraction.selectedConcept) || educationConcepts[1];
+}
+
+function educationSignalForSelected() {
+  return educationSignals.find((signal) => signal.id === educationInteraction.selectedSignal) || educationSignals[1];
+}
+
+function educationRunnerLayout(width, height) {
+  const compact = width < 440 || height < 220;
+  if (compact) {
+    const chipW = Math.max(60, (width - 42) / 4);
+    const conceptW = Math.max(42, (width - 36) / educationConcepts.length);
+    const signalW = Math.max(64, (width - 36) / 3);
+    return {
+      compact,
+      hint: { x: 12, y: 10, text: 'Tap to change path, concept, or feedback' },
+      pathCards: educationPaths.map((path, index) => ({
+        ...path,
+        x: 12 + index * (chipW + 6),
+        y: 22,
+        w: chipW,
+        h: 24
+      })),
+      conceptCards: educationConcepts.map((concept, index) => ({
+        ...concept,
+        x: 12 + index * (conceptW + 3),
+        y: 56,
+        w: conceptW,
+        h: 30
+      })),
+      learner: { x: 12, y: 96, w: width * 0.34, h: 48 },
+      practice: { x: width * 0.42, y: 96, w: width * 0.26, h: 48 },
+      insight: { x: width * 0.7, y: 96, w: width * 0.26 - 10, h: 48 },
+      signalCards: educationSignals.map((signal, index) => ({
+        ...signal,
+        x: 12 + index * (signalW + 6),
+        y: 151,
+        w: signalW,
+        h: 24
+      })),
+      loop: { x: 12, y: height - 18, w: width - 24, h: 10 }
+    };
+  }
+
+  const leftW = Math.min(160, width * 0.28);
+  const rightW = Math.min(172, width * 0.3);
+  const centerX = leftW + (width - leftW - rightW) * 0.48;
+  const centerY = height * 0.48;
+  const graphX = leftW + 24;
+  const graphW = Math.max(120, centerX - graphX + 38);
+  return {
+    compact,
+    hint: { x: 16, y: 16, text: 'Hover to inspect · Click to change path, concept, or feedback signal' },
+    pathCards: educationPaths.map((path, index) => ({
+      ...path,
+      x: 16,
+      y: 36 + index * 31,
+      w: leftW,
+      h: 25
+    })),
+    conceptCards: educationConcepts.map((concept) => ({
+      ...concept,
+      x: graphX + concept.x * graphW,
+      y: height * concept.y,
+      w: 72,
+      h: 28
+    })),
+    learner: { x: centerX - 46, y: centerY - 43, w: 92, h: 86 },
+    practice: { x: width - rightW - 16, y: 38, w: rightW, h: 78 },
+    insight: { x: width - rightW - 16, y: 128, w: rightW, h: 58 },
+    signalCards: educationSignals.map((signal, index) => ({
+      ...signal,
+      x: centerX - 112 + index * 76,
+      y: height - 65,
+      w: 70,
+      h: 24
+    })),
+    loop: { x: centerX - 138, y: height - 28, w: 276, h: 16 }
+  };
+}
+
+function educationHitRegion(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const layout = educationRunnerLayout(rect.width, rect.height);
+  const regions = [
+    ...layout.pathCards.map((item) => ({ type: 'path', item })),
+    ...layout.conceptCards.map((item) => ({ type: 'concept', item })),
+    ...layout.signalCards.map((item) => ({ type: 'signal', item })),
+    { type: 'learner', item: { id: 'learner', ...layout.learner } },
+    { type: 'practice', item: { id: 'practice', ...layout.practice } },
+    { type: 'insight', item: { id: 'insight', ...layout.insight } }
+  ];
+  return regions.find(({ item }) => (
+    x >= item.x
+    && x <= item.x + item.w
+    && y >= item.y
+    && y <= item.y + item.h
+  ));
+}
+
+function educationInspectText(path, concept, signal) {
+  if (educationInteraction.hoverType === 'path') {
+    const hovered = educationPaths.find((item) => item.id === educationInteraction.hoverId);
+    if (hovered) return `${hovered.title}: ${hovered.detail}`;
+  }
+  if (educationInteraction.hoverType === 'concept') {
+    const hovered = educationConcepts.find((item) => item.id === educationInteraction.hoverId);
+    if (hovered) return `${hovered.label}: mastery ${Math.round(hovered.mastery * 100)}%, targeted next.`;
+  }
+  if (educationInteraction.hoverType === 'signal') {
+    const hovered = educationSignals.find((item) => item.id === educationInteraction.hoverId);
+    if (hovered) return `${hovered.label}: ${hovered.detail}`;
+  }
+  if (educationInteraction.hoverType === 'practice') return `Practice: adaptive ${concept.label} task with hint and explanation.`;
+  if (educationInteraction.hoverType === 'insight') return 'Teacher insight: intervention, fairness, and learning efficiency signals.';
+  return `${path.title}: ${concept.label} -> ${signal.label} -> mastery update.`;
+}
+
+function educationMastery(concept) {
+  const responseShift = educationInteraction.selectedSignal === 'correct'
+    ? 0.12
+    : educationInteraction.selectedSignal === 'hint'
+      ? 0.06
+      : -0.04;
+  return clamp01(concept.mastery + responseShift + educationInteraction.masteryBoost * 0.04);
 }
 
 function drawInterestAnimation() {
@@ -2512,32 +2718,226 @@ function drawInterestAnimation() {
       interestCtx.strokeStyle = secondary;
       interestCtx.stroke();
     }
-  } else {
-    const centerX = width * 0.5;
-    const centerY = height * 0.5;
-    const nodes = [
-      ['student', -0.28, -0.08],
-      ['practice', -0.06, -0.28],
-      ['feedback', 0.18, -0.04],
-      ['teacher', 0.02, 0.24],
-      ['profile', -0.2, 0.22]
-    ];
-    nodes.forEach((node, index) => {
-      const x = centerX + node[1] * width;
-      const y = centerY + node[2] * height;
-      interestCtx.beginPath();
-      interestCtx.moveTo(centerX, centerY);
-      interestCtx.lineTo(x, y);
-      interestCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+  } else if (type === 'education') {
+    const layout = educationRunnerLayout(width, height);
+    const path = educationPathForSelected();
+    const concept = educationConceptForSelected();
+    const signal = educationSignalForSelected();
+    const mastery = educationMastery(concept);
+    const textColor = themeColor('--text') || '#f5f5f5';
+    const violet = themeColor('--violet') || '#9b5cff';
+    const flow = (t * 0.42) % educationLoop.length;
+    const activeLoopIndex = Math.floor(flow);
+    const activeLoop = educationLoop[activeLoopIndex];
+    const inspectText = educationInspectText(path, concept, signal);
+
+    educationInteraction.pulse *= 0.86;
+    educationInteraction.masteryBoost *= 0.9;
+
+    interestCtx.fillStyle = muted;
+    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
+    fillTruncatedText(interestCtx, layout.hint.text, layout.hint.x, layout.hint.y, width - layout.hint.x * 2);
+
+    layout.pathCards.forEach((card) => {
+      const selected = card.id === educationInteraction.selectedPath;
+      const hovered = educationInteraction.hoverType === 'path' && educationInteraction.hoverId === card.id;
+      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
+      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.52)';
+      interestCtx.fill();
+      interestCtx.strokeStyle = hovered ? primary : selected ? secondary : 'rgba(255,255,255,0.16)';
+      interestCtx.lineWidth = selected || hovered ? 2 : 1;
+      interestCtx.stroke();
+      interestCtx.fillStyle = hovered ? primary : selected ? secondary : textColor;
+      interestCtx.font = '10px JetBrains Mono, monospace';
+      fillTruncatedText(interestCtx, layout.compact ? card.compact : card.label, card.x + 9, card.y + 14, card.w - 18);
+      if (!layout.compact) {
+        interestCtx.fillStyle = muted;
+        interestCtx.font = '8px JetBrains Mono, monospace';
+        fillTruncatedText(interestCtx, card.title, card.x + 9, card.y + 22, card.w - 18);
+      }
+    });
+
+    if (!layout.compact) {
+      layout.conceptCards.forEach((from, index) => {
+        const to = layout.conceptCards[(index + 1) % layout.conceptCards.length];
+        interestCtx.beginPath();
+        interestCtx.moveTo(from.x + from.w / 2, from.y + from.h / 2);
+        interestCtx.lineTo(to.x + to.w / 2, to.y + to.h / 2);
+        interestCtx.strokeStyle = from.id === educationInteraction.selectedConcept || to.id === educationInteraction.selectedConcept
+          ? `rgba(255,255,255,0.26)`
+          : 'rgba(255,255,255,0.08)';
+        interestCtx.lineWidth = from.id === educationInteraction.selectedConcept || to.id === educationInteraction.selectedConcept ? 1.6 : 0.8;
+        interestCtx.stroke();
+      });
+    }
+
+    layout.conceptCards.forEach((card) => {
+      const selected = card.id === educationInteraction.selectedConcept;
+      const hovered = educationInteraction.hoverType === 'concept' && educationInteraction.hoverId === card.id;
+      const value = selected ? mastery : card.mastery;
+      const weak = value < 0.5;
+      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
+      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.6)';
+      interestCtx.fill();
+      interestCtx.strokeStyle = selected ? secondary : hovered ? primary : weak ? 'rgba(255,177,93,0.62)' : 'rgba(255,255,255,0.18)';
+      interestCtx.lineWidth = selected || hovered ? 2 : 1;
       interestCtx.stroke();
       interestCtx.beginPath();
-      interestCtx.arc(x, y, 16 + Math.sin(t + index) * 3, 0, Math.PI * 2);
-      interestCtx.fillStyle = index % 2 ? primary : secondary;
+      interestCtx.arc(card.x + 9, card.y + 11, 3.2 + (weak ? Math.sin(t * 1.4) * 0.8 : 0), 0, Math.PI * 2);
+      interestCtx.fillStyle = weak ? secondary : primary;
       interestCtx.fill();
-      interestCtx.fillStyle = muted;
-      interestCtx.font = '11px JetBrains Mono, monospace';
-      interestCtx.fillText(node[0], x + 20, y + 4);
+      interestCtx.fillStyle = textColor;
+      interestCtx.font = '9px JetBrains Mono, monospace';
+      fillTruncatedText(interestCtx, layout.compact ? card.compact : card.label, card.x + 16, card.y + 12, card.w - 22);
+      interestCtx.beginPath();
+      interestCtx.moveTo(card.x + 10, card.y + card.h - 7);
+      interestCtx.lineTo(card.x + card.w - 10, card.y + card.h - 7);
+      interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
+      interestCtx.lineWidth = 3;
+      interestCtx.stroke();
+      interestCtx.beginPath();
+      interestCtx.moveTo(card.x + 10, card.y + card.h - 7);
+      interestCtx.lineTo(card.x + 10 + (card.w - 20) * value, card.y + card.h - 7);
+      interestCtx.strokeStyle = value > 0.68 ? primary : value > 0.48 ? violet : secondary;
+      interestCtx.stroke();
     });
+
+    const learner = layout.learner;
+    drawRoundedRect(interestCtx, learner.x, learner.y, learner.w, learner.h, 12);
+    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = educationInteraction.hoverType === 'learner' ? primary : 'rgba(255,255,255,0.18)';
+    interestCtx.lineWidth = educationInteraction.hoverType === 'learner' ? 2 : 1;
+    interestCtx.stroke();
+    const learnerCx = learner.x + learner.w / 2;
+    const learnerCy = learner.y + (layout.compact ? 18 : 28);
+    interestCtx.beginPath();
+    interestCtx.arc(learnerCx, learnerCy, layout.compact ? 11 : 15, 0, Math.PI * 2);
+    interestCtx.fillStyle = primary;
+    interestCtx.fill();
+    interestCtx.strokeStyle = secondary;
+    interestCtx.stroke();
+    const rings = [
+      ['Mastery', mastery],
+      ['Confidence', signal.id === 'correct' ? 0.78 : signal.id === 'hint' ? 0.58 : 0.38],
+      ['Engage', path.id === 'learner' ? 0.72 : 0.62]
+    ];
+    rings.forEach(([label, value], index) => {
+      if (layout.compact && index > 1) return;
+      const y = learner.y + (layout.compact ? 38 : 51 + index * 10);
+      interestCtx.fillStyle = muted;
+      interestCtx.font = '8px JetBrains Mono, monospace';
+      interestCtx.fillText(layout.compact ? label.slice(0, 4) : label, learner.x + 8, y);
+      interestCtx.beginPath();
+      interestCtx.moveTo(learner.x + (layout.compact ? 42 : 76), y - 3);
+      interestCtx.lineTo(learner.x + learner.w - 8, y - 3);
+      interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
+      interestCtx.lineWidth = 3;
+      interestCtx.stroke();
+      interestCtx.beginPath();
+      interestCtx.moveTo(learner.x + (layout.compact ? 42 : 76), y - 3);
+      interestCtx.lineTo(learner.x + (layout.compact ? 42 : 76) + (learner.w - (layout.compact ? 50 : 84)) * value, y - 3);
+      interestCtx.strokeStyle = index === 0 ? primary : index === 1 ? secondary : violet;
+      interestCtx.stroke();
+    });
+
+    const selectedConceptCard = layout.conceptCards.find((item) => item.id === concept.id) || layout.conceptCards[1];
+    const practice = layout.practice;
+    interestCtx.beginPath();
+    interestCtx.moveTo(selectedConceptCard.x + selectedConceptCard.w, selectedConceptCard.y + selectedConceptCard.h / 2);
+    interestCtx.lineTo(practice.x, practice.y + practice.h / 2);
+    interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
+    interestCtx.lineWidth = 1.4;
+    interestCtx.stroke();
+
+    drawRoundedRect(interestCtx, practice.x, practice.y, practice.w, practice.h, 10);
+    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = educationInteraction.hoverType === 'practice' ? primary : secondary;
+    interestCtx.lineWidth = educationInteraction.hoverType === 'practice' ? 2 : 1.3;
+    interestCtx.stroke();
+    interestCtx.fillStyle = secondary;
+    interestCtx.font = '9px JetBrains Mono, monospace';
+    fillTruncatedText(interestCtx, layout.compact ? 'Practice' : 'Generated practice', practice.x + 9, practice.y + 14, practice.w - 18);
+    interestCtx.fillStyle = textColor;
+    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
+    fillTruncatedText(interestCtx, `${concept.label}: ${mastery < 0.55 ? 'scaffold' : 'challenge'}`, practice.x + 9, practice.y + 30, practice.w - 18);
+    if (!layout.compact) {
+      interestCtx.fillStyle = muted;
+      fillTruncatedText(interestCtx, 'Hint · example · next step', practice.x + 9, practice.y + 48, practice.w - 18);
+      interestCtx.fillStyle = primary;
+      fillTruncatedText(interestCtx, 'Difficulty adapts', practice.x + 9, practice.y + 64, practice.w - 18);
+    }
+
+    const insight = layout.insight;
+    drawRoundedRect(interestCtx, insight.x, insight.y, insight.w, insight.h, 10);
+    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.55)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = educationInteraction.hoverType === 'insight' || path.id === 'teacher' || path.id === 'evidence'
+      ? primary
+      : 'rgba(255,255,255,0.16)';
+    interestCtx.stroke();
+    interestCtx.fillStyle = primary;
+    interestCtx.font = '9px JetBrains Mono, monospace';
+    fillTruncatedText(interestCtx, path.id === 'teacher' ? 'Teacher insight' : path.id === 'evidence' ? 'Research metrics' : 'Learning evidence', insight.x + 9, insight.y + 14, insight.w - 18);
+    interestCtx.fillStyle = muted;
+    interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '8.5px JetBrains Mono, monospace';
+    const metric = path.id === 'evidence' ? 'Retention · fairness' : path.id === 'teacher' ? 'Intervention queued' : `Mastery +${Math.round((mastery - concept.mastery) * 100)}%`;
+    fillTruncatedText(interestCtx, metric, insight.x + 9, insight.y + 30, insight.w - 18);
+    if (!layout.compact) {
+      fillTruncatedText(interestCtx, 'Explainable next action', insight.x + 9, insight.y + 45, insight.w - 18);
+    }
+
+    layout.signalCards.forEach((card) => {
+      const selected = card.id === educationInteraction.selectedSignal;
+      const hovered = educationInteraction.hoverType === 'signal' && educationInteraction.hoverId === card.id;
+      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
+      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.52)';
+      interestCtx.fill();
+      interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.16)';
+      interestCtx.lineWidth = selected || hovered ? 2 : 1;
+      interestCtx.stroke();
+      interestCtx.fillStyle = selected ? secondary : textColor;
+      interestCtx.font = '9px JetBrains Mono, monospace';
+      fillTruncatedText(interestCtx, layout.compact ? card.compact : card.label, card.x + 8, card.y + 14, card.w - 16);
+    });
+
+    const loop = layout.loop;
+    educationLoop.forEach((step, index) => {
+      const x = loop.x + (loop.w / Math.max(1, educationLoop.length - 1)) * index;
+      const y = loop.y + loop.h / 2;
+      if (index > 0) {
+        const px = loop.x + (loop.w / Math.max(1, educationLoop.length - 1)) * (index - 1);
+        interestCtx.beginPath();
+        interestCtx.moveTo(px, y);
+        interestCtx.lineTo(x, y);
+        interestCtx.strokeStyle = index <= activeLoopIndex ? `rgba(255,255,255,0.34)` : 'rgba(255,255,255,0.12)';
+        interestCtx.lineWidth = 2;
+        interestCtx.stroke();
+      }
+      const active = index === activeLoopIndex;
+      interestCtx.beginPath();
+      interestCtx.arc(x, y, active ? 5.2 : 3.6, 0, Math.PI * 2);
+      interestCtx.fillStyle = active ? secondary : index < activeLoopIndex ? primary : 'rgba(255,255,255,0.22)';
+      interestCtx.fill();
+      if (!layout.compact || index % 2 === 0) {
+        interestCtx.fillStyle = active ? textColor : muted;
+        interestCtx.font = layout.compact ? '7.5px JetBrains Mono, monospace' : '8px JetBrains Mono, monospace';
+        interestCtx.textAlign = 'center';
+        interestCtx.fillText(layout.compact ? step.compact : step.label, x, y - 8);
+        interestCtx.textAlign = 'left';
+      }
+    });
+
+    if (educationInteraction.active) {
+      const pointerX = educationInteraction.x * width;
+      const pointerY = educationInteraction.y * height;
+      interestCtx.beginPath();
+      interestCtx.arc(pointerX, pointerY, 14 + educationInteraction.pulse * 15, 0, Math.PI * 2);
+      interestCtx.strokeStyle = `rgba(255,255,255,${educationInteraction.dragging ? 0.5 : 0.25})`;
+      interestCtx.lineWidth = educationInteraction.dragging ? 2 : 1.1;
+      interestCtx.stroke();
+    }
   }
 }
 
@@ -2590,10 +2990,44 @@ function interactWithAgentRunner(event) {
   agentInteraction.runBoost = 0.72;
 }
 
+function updateEducationPointer(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  educationInteraction.x = clamp01((event.clientX - rect.left) / rect.width);
+  educationInteraction.y = clamp01((event.clientY - rect.top) / rect.height);
+  educationInteraction.active = true;
+  const hit = educationHitRegion(event);
+  educationInteraction.hoverType = hit?.type || null;
+  educationInteraction.hoverId = hit?.item.id || null;
+}
+
+function interactWithEducationStudio(event) {
+  const hit = educationHitRegion(event);
+  if (hit?.type === 'path') {
+    educationInteraction.selectedPath = hit.item.id;
+  } else if (hit?.type === 'concept') {
+    educationInteraction.selectedConcept = hit.item.id;
+  } else if (hit?.type === 'signal') {
+    educationInteraction.selectedSignal = hit.item.id;
+  } else if (hit?.type === 'learner') {
+    educationInteraction.selectedPath = 'learner';
+  } else if (hit?.type === 'practice') {
+    educationInteraction.selectedPath = 'content';
+  } else if (hit?.type === 'insight') {
+    educationInteraction.selectedPath = educationInteraction.selectedPath === 'teacher' ? 'evidence' : 'teacher';
+  } else {
+    educationInteraction.pulse = 0.3;
+    educationInteraction.masteryBoost = 0.2;
+    return;
+  }
+  educationInteraction.pulse = 1;
+  educationInteraction.masteryBoost = 1;
+}
+
 function canvasCursorForActiveInterest() {
   if (isPointCloudInterestActive()) return pointCloudInteraction.dragging ? 'grabbing' : 'grab';
   if (isVprInterestActive()) return vprInteraction.dragging ? 'grabbing' : 'crosshair';
   if (isAgentInterestActive()) return agentInteraction.dragging ? 'grabbing' : 'pointer';
+  if (isEducationInterestActive()) return educationInteraction.dragging ? 'grabbing' : 'pointer';
   return 'default';
 }
 
@@ -2601,16 +3035,18 @@ interestCanvas.addEventListener('pointerenter', (event) => {
   if (isPointCloudInterestActive()) updatePointCloudPointer(event);
   else if (isVprInterestActive()) updateVprPointer(event);
   else if (isAgentInterestActive()) updateAgentPointer(event);
+  else if (isEducationInterestActive()) updateEducationPointer(event);
 });
 
 interestCanvas.addEventListener('pointermove', (event) => {
   if (isPointCloudInterestActive()) updatePointCloudPointer(event);
   else if (isVprInterestActive()) updateVprPointer(event);
   else if (isAgentInterestActive()) updateAgentPointer(event);
+  else if (isEducationInterestActive()) updateEducationPointer(event);
 });
 
 interestCanvas.addEventListener('pointerdown', (event) => {
-  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive()) return;
+  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive() && !isEducationInterestActive()) return;
   event.preventDefault();
   if (isPointCloudInterestActive()) {
     pointCloudInteraction.dragging = true;
@@ -2620,11 +3056,16 @@ interestCanvas.addEventListener('pointerdown', (event) => {
     vprInteraction.dragging = true;
     vprInteraction.selected = null;
     updateVprPointer(event);
-  } else {
+  } else if (isAgentInterestActive()) {
     agentInteraction.dragging = true;
     updateAgentPointer(event);
     agentInteraction.pulse = 0.8;
     agentInteraction.runBoost = 0.52;
+  } else {
+    educationInteraction.dragging = true;
+    updateEducationPointer(event);
+    educationInteraction.pulse = 0.8;
+    educationInteraction.masteryBoost = 0.6;
   }
   interestCanvas.style.cursor = 'grabbing';
   try {
@@ -2635,7 +3076,7 @@ interestCanvas.addEventListener('pointerdown', (event) => {
 });
 
 interestCanvas.addEventListener('pointerup', (event) => {
-  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive()) return;
+  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive() && !isEducationInterestActive()) return;
   if (isPointCloudInterestActive()) {
     pointCloudInteraction.dragging = false;
     updatePointCloudPointer(event);
@@ -2643,10 +3084,14 @@ interestCanvas.addEventListener('pointerup', (event) => {
     updateVprPointer(event);
     vprInteraction.selected = bestVprCandidate()?.id || null;
     vprInteraction.dragging = false;
-  } else {
+  } else if (isAgentInterestActive()) {
     updateAgentPointer(event);
     interactWithAgentRunner(event);
     agentInteraction.dragging = false;
+  } else {
+    updateEducationPointer(event);
+    interactWithEducationStudio(event);
+    educationInteraction.dragging = false;
   }
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
   try {
@@ -2665,16 +3110,23 @@ interestCanvas.addEventListener('pointercancel', () => {
   agentInteraction.active = false;
   agentInteraction.hoverType = null;
   agentInteraction.hoverId = null;
+  educationInteraction.dragging = false;
+  educationInteraction.active = false;
+  educationInteraction.hoverType = null;
+  educationInteraction.hoverId = null;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
 interestCanvas.addEventListener('pointerleave', () => {
-  if (pointCloudInteraction.dragging || vprInteraction.dragging || agentInteraction.dragging) return;
+  if (pointCloudInteraction.dragging || vprInteraction.dragging || agentInteraction.dragging || educationInteraction.dragging) return;
   pointCloudInteraction.active = false;
   vprInteraction.active = false;
   agentInteraction.active = false;
   agentInteraction.hoverType = null;
   agentInteraction.hoverId = null;
+  educationInteraction.active = false;
+  educationInteraction.hoverType = null;
+  educationInteraction.hoverId = null;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
