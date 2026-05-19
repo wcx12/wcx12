@@ -621,6 +621,12 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   background: rgba(0, 245, 255, 0.04);
 }
 
+.repo-card.highlight,
+.pub-card.highlight {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pink) 42%, transparent), 0 0 22px color-mix(in srgb, var(--pink) 20%, transparent);
+}
+
 .repo-card h3 { margin: 0 0 8px; font-size: 1rem; }
 
 .repo-meta {
@@ -632,6 +638,71 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 }
 
 .repo-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.repo-actions .btn {
+  min-width: 116px;
+  padding: 8px 11px;
+  font-size: 0.85rem;
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.46;
+  pointer-events: none;
+}
+
+.research-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+
+.research-badge {
+  border: 1px solid color-mix(in srgb, var(--cyan) 42%, transparent);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 8%, transparent);
+  font: 700 0.68rem "JetBrains Mono", monospace;
+  line-height: 1.2;
+}
+
+button.research-badge {
+  cursor: pointer;
+}
+
+button.research-badge:hover {
+  color: var(--text);
+  border-color: var(--pink);
+  background: color-mix(in srgb, var(--pink) 14%, transparent);
+}
+
+.research-badge.unmapped {
+  color: var(--muted);
+  border-color: color-mix(in srgb, var(--muted) 44%, transparent);
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+}
+
+.related-actions {
+  margin-top: 8px;
+}
+
+.mini-action {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--cyan) 7%, transparent);
+  font: 700 0.72rem "JetBrains Mono", monospace;
+  cursor: pointer;
+}
+
+.mini-action:hover {
+  border-color: var(--pink);
+  color: var(--cyan);
+}
 
 .pager {
   margin-top: 10px;
@@ -789,6 +860,27 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   padding-right: 6px;
 }
 
+.interest-section-tabs {
+  display: none;
+}
+
+.interest-section-tabs button {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 8px;
+  color: var(--muted);
+  background: var(--field-bg);
+  font: 700 0.74rem "JetBrains Mono", monospace;
+}
+
+.interest-section-tabs button.active,
+.interest-section-tabs button:hover {
+  color: var(--text);
+  border-color: var(--pink);
+  background: color-mix(in srgb, var(--pink) 14%, transparent);
+}
+
 .interest-tag {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -874,6 +966,23 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 .related-item p {
   margin: 4px 0 0;
   font-size: 0.86rem;
+}
+
+.project-overview {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--soft-bg);
+  margin-bottom: 12px;
+}
+
+.project-overview p {
+  margin: 7px 0 8px;
+}
+
+.project-overview .repo-meta {
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .timeline { display: grid; gap: 12px; }
@@ -1245,8 +1354,33 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
   }
 
   .interest-detail {
-    grid-template-rows: auto 4em 210px minmax(220px, 1fr);
-    overflow: auto;
+    grid-template-rows: auto minmax(3.6em, auto) auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .interest-section-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .interest-detail[data-panel="animation"] .interest-related,
+  .interest-detail[data-panel="projects"] #interestCanvas,
+  .interest-detail[data-panel="papers"] #interestCanvas,
+  .interest-detail[data-panel="projects"] .interest-paper-panel,
+  .interest-detail[data-panel="papers"] .interest-project-panel {
+    display: none;
+  }
+
+  .interest-detail[data-panel="animation"] #interestCanvas {
+    display: block;
+  }
+
+  .interest-detail[data-panel="projects"] .interest-related,
+  .interest-detail[data-panel="papers"] .interest-related {
+    display: grid;
+    grid-template-columns: 1fr;
+    min-height: 0;
   }
 
   .view-heading {
@@ -1254,7 +1388,8 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
   }
 
   #interestCanvas {
-    height: 210px;
+    height: 100%;
+    min-height: 0;
   }
 
   #repoMap {
