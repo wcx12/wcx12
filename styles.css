@@ -1245,7 +1245,7 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
   }
 
   .interest-detail {
-    grid-template-rows: auto 4em 170px minmax(220px, 1fr);
+    grid-template-rows: auto 4em 210px minmax(220px, 1fr);
     overflow: auto;
   }
 
@@ -1254,7 +1254,7 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
   }
 
   #interestCanvas {
-    height: 170px;
+    height: 210px;
   }
 
   #repoMap {
