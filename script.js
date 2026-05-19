@@ -2233,7 +2233,7 @@ function drawInterestAnimation() {
     const autonomy = clamp01(agentInteraction.active ? agentInteraction.x : 0.52 + Math.sin(t * 0.52) * 0.18);
     const verification = clamp01(agentInteraction.active ? 1 - agentInteraction.y : 0.58 + Math.cos(t * 0.48) * 0.18);
     const trace = agentTraceFor(task, verification);
-    const flowSpeed = 0.68 + autonomy * 0.45 + agentInteraction.runBoost * 0.7;
+    const flowSpeed = 0.42 + autonomy * 0.28 + agentInteraction.runBoost * 0.36;
     const flow = (t * flowSpeed) % trace.length;
     const activeTraceIndex = Math.floor(flow);
     const activeTrace = trace[activeTraceIndex] || trace[0];
@@ -2469,7 +2469,7 @@ function interactWithAgentRunner(event) {
     agentInteraction.selectedStage = hit.item.id;
   }
   agentInteraction.pulse = 1;
-  agentInteraction.runBoost = 1;
+  agentInteraction.runBoost = 0.72;
 }
 
 function canvasCursorForActiveInterest() {
@@ -2506,7 +2506,7 @@ interestCanvas.addEventListener('pointerdown', (event) => {
     agentInteraction.dragging = true;
     updateAgentPointer(event);
     agentInteraction.pulse = 0.8;
-    agentInteraction.runBoost = 0.8;
+    agentInteraction.runBoost = 0.52;
   }
   interestCanvas.style.cursor = 'grabbing';
   try {
