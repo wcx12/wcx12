@@ -71,6 +71,7 @@
         <button class="cmd active" data-view="about" data-i18n="tab_about">about</button>
         <button class="cmd" data-view="research" data-i18n="tab_research">research</button>
         <button class="cmd" data-view="projects" data-i18n="tab_projects">projects</button>
+        <button class="cmd" data-view="publications" data-i18n="tab_publications">publications</button>
         <button class="cmd" data-view="timeline" data-i18n="tab_timeline">timeline</button>
         <button class="cmd" data-view="skills" data-i18n="tab_skills">skills</button>
         <button class="cmd" data-view="resources" data-i18n="tab_resources">resources</button>
@@ -102,13 +103,18 @@
               <span id="interestTag" class="interest-tag"></span>
             </div>
             <p id="interestDescription" class="muted"></p>
+            <div class="interest-section-tabs" role="tablist" aria-label="Research detail sections">
+              <button class="active" type="button" data-interest-panel="animation" data-i18n="section_animation">Animation</button>
+              <button type="button" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
+              <button type="button" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
+            </div>
             <canvas id="interestCanvas" aria-label="research interest animation"></canvas>
             <div class="interest-related">
-              <article>
+              <article class="interest-project-panel">
                 <h4 data-i18n="related_projects">Related Projects</h4>
                 <div id="interestProjects" class="related-list"></div>
               </article>
-              <article>
+              <article class="interest-paper-panel">
                 <h4 data-i18n="related_papers">Related Papers</h4>
                 <div id="interestPapers" class="related-list"></div>
               </article>
@@ -156,6 +162,29 @@
         </div>
       </div>
 
+      <div class="view" id="publications">
+        <h2 data-i18n="pub_title">Publications</h2>
+        <p class="muted" data-i18n="pub_desc">Publication entries are shown below with status and links.</p>
+        <div class="pub-toolbar">
+          <select id="pubMode" aria-label="Publication list mode">
+            <option value="pagination" data-i18n="mode_pagination">Mode: Pagination</option>
+            <option value="infinite" data-i18n="mode_infinite">Mode: Infinite</option>
+          </select>
+          <select id="pubPageSize" aria-label="Publication items per page">
+            <option value="6">6</option>
+            <option value="12">12</option>
+            <option value="24">24</option>
+          </select>
+          <span id="pubCount" class="muted"></span>
+        </div>
+        <div id="pubList" class="pub-list"></div>
+        <div id="pubPager" class="pager">
+          <button id="pubPrev" class="btn btn-outline" type="button" data-i18n="page_prev">Prev</button>
+          <span id="pubPageInfo" class="muted"></span>
+          <button id="pubNext" class="btn btn-outline" type="button" data-i18n="page_next">Next</button>
+        </div>
+      </div>
+
       <div class="view" id="timeline">
         <h2 data-i18n="timeline_title">Timeline</h2>
         <div class="timeline">
@@ -191,28 +220,6 @@
       <div class="view" id="resources">
         <h2 data-i18n="res_title">Publications & Resume</h2>
         <div class="resource-grid">
-          <article class="resource-card span-2">
-            <h3 data-i18n="pub_title">Publications</h3>
-            <p data-i18n="pub_desc">Publication entries are shown below with status and links.</p>
-            <div class="pub-toolbar">
-              <select id="pubMode" aria-label="Publication list mode">
-                <option value="pagination" data-i18n="mode_pagination">Mode: Pagination</option>
-                <option value="infinite" data-i18n="mode_infinite">Mode: Infinite</option>
-              </select>
-              <select id="pubPageSize" aria-label="Publication items per page">
-                <option value="6">6</option>
-                <option value="12">12</option>
-                <option value="24">24</option>
-              </select>
-              <span id="pubCount" class="muted"></span>
-            </div>
-            <div id="pubList" class="pub-list"></div>
-            <div id="pubPager" class="pager">
-              <button id="pubPrev" class="btn btn-outline" type="button" data-i18n="page_prev">Prev</button>
-              <span id="pubPageInfo" class="muted"></span>
-              <button id="pubNext" class="btn btn-outline" type="button" data-i18n="page_next">Next</button>
-            </div>
-          </article>
           <article class="resource-card">
             <h3 data-i18n="cv_title">Resume</h3>
             <p data-i18n="cv_desc">Download my latest CV snapshot from this repository.</p>
