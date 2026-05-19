@@ -210,7 +210,7 @@ const localRepos = [
     updated_at: '2026-05-16T15:24:53Z',
     html_url: 'https://github.com/wcx12/FusionTrack',
     readme_url: 'https://raw.githubusercontent.com/wcx12/FusionTrack/main/README.md',
-    interests: ['vpr', 'point-cloud-registration']
+    interests: ['point-cloud-registration']
   },
   {
     name: 'wcx12',
@@ -220,7 +220,7 @@ const localRepos = [
     updated_at: '2026-05-16T15:56:07Z',
     html_url: 'https://github.com/wcx12/wcx12',
     readme_url: 'https://raw.githubusercontent.com/wcx12/wcx12/main/README.md',
-    interests: ['agent', 'ai4edu']
+    interests: []
   },
   {
     name: 'hlpp-crossword',
@@ -362,6 +362,7 @@ const CONFIG_PATH = 'research-config.json';
 const GITHUB_CONFIG_PATH = 'research-config.json';
 const GITHUB_REPOSITORY = 'wcx12/wcx12';
 const GITHUB_BRANCH = 'main';
+const GITHUB_OWNER = 'wcx12';
 const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
 const GITHUB_TOKEN_KEY = 'wcx12-github-token';
 
@@ -3405,7 +3406,33 @@ function mapOrcidWorks(payload) {
 }
 
 async function loadRepos() {
-  allRepos = [...localRepos];
+  const localByName = new Map(localRepos.map((repo) => [repo.name, repo]));
+  try {
+    const response = await fetch(`https://api.github.com/users/${GITHUB_OWNER}/repos?per_page=100&sort=updated`, {
+      headers: { Accept: 'application/vnd.github+json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const remoteRepos = await response.json();
+    const remoteNames = new Set(remoteRepos.map((repo) => repo.name));
+    allRepos = [
+      ...remoteRepos.map((repo) => {
+        const local = localByName.get(repo.name);
+        return {
+          name: repo.name,
+          description: repo.description || local?.description || '',
+          language: repo.language || local?.language || null,
+          stargazers_count: repo.stargazers_count ?? local?.stargazers_count ?? 0,
+          updated_at: repo.updated_at || local?.updated_at || '',
+          html_url: repo.html_url || local?.html_url || `https://github.com/${GITHUB_OWNER}/${repo.name}`,
+          readme_url: local?.readme_url || `https://raw.githubusercontent.com/${GITHUB_OWNER}/${repo.name}/${repo.default_branch || 'main'}/README.md`,
+          interests: local?.interests
+        };
+      }),
+      ...localRepos.filter((repo) => !remoteNames.has(repo.name))
+    ];
+  } catch {
+    allRepos = [...localRepos];
+  }
   filteredRepos = [...allRepos];
   renderRepos(filteredRepos);
   renderResearchInterest();
