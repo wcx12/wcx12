@@ -125,7 +125,16 @@ const agentInteraction = {
   dragging: false,
   x: 0.54,
   y: 0.44,
-  selected: 'plan',
+  taskIndex: 0,
+  selectedStage: 'plan',
+  selectedTool: 'rag',
+  tools: {
+    memory: true,
+    rag: true,
+    code: true,
+    browser: false,
+    eval: true
+  },
   pulse: 0,
   runBoost: 0
 };
@@ -1766,50 +1775,175 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function agentWorkflowNodes(width, height) {
-  const cardWidth = Math.max(58, Math.min(88, width * 0.15));
-  const cardHeight = width < 520 ? 32 : 38;
-  return [
-    { id: 'task', label: 'TASK', x: width * 0.13, y: height * 0.52, w: cardWidth, h: cardHeight },
-    { id: 'plan', label: 'PLAN', x: width * 0.32, y: height * 0.3, w: cardWidth, h: cardHeight },
-    { id: 'memory', label: 'MEMORY', x: width * 0.52, y: height * 0.22, w: cardWidth, h: cardHeight },
-    { id: 'tools', label: 'TOOLS', x: width * 0.55, y: height * 0.58, w: cardWidth, h: cardHeight },
-    { id: 'eval', label: 'EVAL', x: width * 0.74, y: height * 0.34, w: cardWidth, h: cardHeight },
-    { id: 'answer', label: 'ANSWER', x: width * 0.88, y: height * 0.64, w: cardWidth, h: cardHeight }
-  ];
-}
-
-function agentRouteFor(autonomy, verification) {
-  const route = ['task', 'plan'];
-  if (autonomy < 0.35) {
-    route.push('memory', 'eval');
-  } else if (autonomy > 0.68) {
-    route.push('tools', 'eval');
-  } else {
-    route.push('memory', 'tools', 'eval');
+const agentTasks = [
+  {
+    title: 'Map repos',
+    compactTitle: 'MAP',
+    prompt: 'Assign projects to research interests',
+    trace: {
+      plan: 'split mapping rules',
+      retrieve: 'read repo metadata',
+      tool: 'inspect README signals',
+      verify: 'check category consistency',
+      revise: 'repair uncertain mapping',
+      answer: 'save research-config.json'
+    }
+  },
+  {
+    title: 'Read README',
+    compactTitle: 'README',
+    prompt: 'Summarize one project before opening it',
+    trace: {
+      plan: 'define summary targets',
+      retrieve: 'load README context',
+      tool: 'extract usage and scope',
+      verify: 'compare with repo topic',
+      revise: 'tighten project summary',
+      answer: 'present concise notes'
+    }
+  },
+  {
+    title: 'Check result',
+    compactTitle: 'CHECK',
+    prompt: 'Verify an experiment or page update',
+    trace: {
+      plan: 'choose validation path',
+      retrieve: 'collect latest state',
+      tool: 'run browser checks',
+      verify: 'detect mismatch',
+      revise: 'retry failing branch',
+      answer: 'report verified result'
+    }
   }
-  if (verification > 0.64) route.push('plan', 'tools', 'eval');
-  route.push('answer');
-  return route;
+];
+
+const agentTools = [
+  { id: 'memory', label: 'Memory', compact: 'MEM' },
+  { id: 'rag', label: 'RAG', compact: 'RAG' },
+  { id: 'code', label: 'Code', compact: 'CODE' },
+  { id: 'browser', label: 'Browser', compact: 'WEB' },
+  { id: 'eval', label: 'Eval', compact: 'EVAL' }
+];
+
+const agentStages = [
+  { id: 'plan', label: 'Planner', compact: 'Plan' },
+  { id: 'retrieve', label: 'Memory/RAG', compact: 'RAG' },
+  { id: 'tool', label: 'Tool Calls', compact: 'Tool' },
+  { id: 'verify', label: 'Verifier', compact: 'Check' },
+  { id: 'answer', label: 'Final', compact: 'Final' }
+];
+
+function truncatedCanvasText(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let output = text;
+  while (output.length > 3 && ctx.measureText(`${output}...`).width > maxWidth) {
+    output = output.slice(0, -1);
+  }
+  return `${output}...`;
 }
 
-function agentCurve(a, b) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const length = Math.max(1, Math.hypot(dx, dy));
-  const bend = a.id === 'eval' && b.id === 'plan' ? -58 : a.id === 'memory' || b.id === 'memory' ? -16 : 10;
+function fillTruncatedText(ctx, text, x, y, maxWidth) {
+  ctx.fillText(truncatedCanvasText(ctx, text, maxWidth), x, y);
+}
+
+function agentRunnerLayout(width, height) {
+  const compact = width < 440 || height < 210;
+  if (compact) {
+    const taskW = Math.max(68, (width - 36) / 3);
+    const toolW = Math.max(42, Math.min(52, (width - 36) / 5));
+    const stageW = Math.max(48, Math.min(60, (width - 30) / 5));
+    return {
+      compact,
+      taskCards: agentTasks.map((task, index) => ({
+        ...task,
+        index,
+        x: 12 + index * (taskW + 6),
+        y: 14,
+        w: taskW,
+        h: 24
+      })),
+      toolCards: agentTools.map((tool, index) => ({
+        ...tool,
+        x: 12 + index * (toolW + 5),
+        y: 44,
+        w: toolW,
+        h: 22
+      })),
+      stageCards: agentStages.map((stage, index) => ({
+        ...stage,
+        x: 12 + index * (stageW + 5),
+        y: 78,
+        w: stageW,
+        h: 26
+      })),
+      trace: { x: 12, y: 116, w: width - 24, h: Math.max(34, height - 128) },
+      meter: { x: 12, y: 146, w: width - 24, h: 14 }
+    };
+  }
+
+  const taskW = Math.min(160, width * 0.27);
+  const workX = taskW + 34;
+  const workW = width - workX - 16;
+  const toolW = Math.max(58, Math.min(72, (workW - 24) / 5));
+  const stageW = Math.max(68, Math.min(92, (workW - 34) / 5));
   return {
-    x: (a.x + b.x) / 2 + (-dy / length) * bend,
-    y: (a.y + b.y) / 2 + (dx / length) * bend
+    compact,
+    taskCards: agentTasks.map((task, index) => ({
+      ...task,
+      index,
+      x: 16,
+      y: 18 + index * 42,
+      w: taskW,
+      h: 34
+    })),
+    toolCards: agentTools.map((tool, index) => ({
+      ...tool,
+      x: workX + index * (toolW + 6),
+      y: 18,
+      w: toolW,
+      h: 24
+    })),
+    stageCards: agentStages.map((stage, index) => ({
+      ...stage,
+      x: workX + index * (stageW + 7),
+      y: 65 + (index % 2) * 18,
+      w: stageW,
+      h: 34
+    })),
+    trace: { x: workX, y: height - 82, w: workW, h: 64 },
+    meter: { x: 16, y: height - 74, w: taskW, h: 56 }
   };
 }
 
-function pointOnQuadratic(a, c, b, progress) {
-  const inv = 1 - progress;
-  return {
-    x: inv * inv * a.x + 2 * inv * progress * c.x + progress * progress * b.x,
-    y: inv * inv * a.y + 2 * inv * progress * c.y + progress * progress * b.y
-  };
+function agentTraceFor(task, verification) {
+  const tool = agentInteraction.selectedTool || 'rag';
+  const trace = [
+    { stage: 'plan', label: task.trace.plan },
+    { stage: 'retrieve', label: agentInteraction.tools.rag || agentInteraction.tools.memory ? task.trace.retrieve : 'use prompt-only context' },
+    { stage: 'tool', label: agentInteraction.tools[tool] ? task.trace.tool : `skip ${tool} call` },
+    { stage: 'verify', label: agentInteraction.tools.eval ? task.trace.verify : 'light confidence check' }
+  ];
+  if (agentInteraction.tools.eval && verification > 0.58) trace.push({ stage: 'revise', label: task.trace.revise, retry: true });
+  trace.push({ stage: 'answer', label: task.trace.answer });
+  return trace;
+}
+
+function agentHitRegion(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const layout = agentRunnerLayout(rect.width, rect.height);
+  const regions = [
+    ...layout.taskCards.map((item) => ({ type: 'task', item })),
+    ...layout.toolCards.map((item) => ({ type: 'tool', item })),
+    ...layout.stageCards.map((item) => ({ type: 'stage', item }))
+  ];
+  return regions.find(({ item }) => (
+    x >= item.x
+    && x <= item.x + item.w
+    && y >= item.y
+    && y <= item.y + item.h
+  ));
 }
 
 function drawInterestAnimation() {
@@ -2094,158 +2228,162 @@ function drawInterestAnimation() {
     interestCtx.fillStyle = muted;
     interestCtx.fillText(best.id, scoreX + 12, scoreY + 32);
   } else if (type === 'agent') {
-    const nodes = agentWorkflowNodes(width, height);
-    const nodeMap = Object.fromEntries(nodes.map((node) => [node.id, node]));
-    const autoAutonomy = 0.52 + Math.sin(t * 0.62) * 0.22;
-    const autoVerification = 0.56 + Math.cos(t * 0.58) * 0.22;
-    const autonomy = clamp01(agentInteraction.active ? agentInteraction.x : autoAutonomy);
-    const verification = clamp01(agentInteraction.active ? 1 - agentInteraction.y : autoVerification);
-    const route = agentRouteFor(autonomy, verification);
-    const flowSpeed = 0.58 + autonomy * 0.52 + agentInteraction.runBoost * 0.9;
-    const flow = (t * flowSpeed) % Math.max(1, route.length - 1);
-    const activeEdgeIndex = Math.floor(flow);
-    const edgeProgress = flow - activeEdgeIndex;
-    const activeFrom = nodeMap[route[activeEdgeIndex]];
-    const activeTo = nodeMap[route[activeEdgeIndex + 1]];
+    const layout = agentRunnerLayout(width, height);
+    const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
+    const autonomy = clamp01(agentInteraction.active ? agentInteraction.x : 0.52 + Math.sin(t * 0.52) * 0.18);
+    const verification = clamp01(agentInteraction.active ? 1 - agentInteraction.y : 0.58 + Math.cos(t * 0.48) * 0.18);
+    const trace = agentTraceFor(task, verification);
+    const flowSpeed = 0.68 + autonomy * 0.45 + agentInteraction.runBoost * 0.7;
+    const flow = (t * flowSpeed) % trace.length;
+    const activeTraceIndex = Math.floor(flow);
+    const activeTrace = trace[activeTraceIndex] || trace[0];
+    const enabledRatio = agentTools.filter((tool) => agentInteraction.tools[tool.id]).length / agentTools.length;
+    const confidence = clamp01(0.42 + enabledRatio * 0.22 + verification * 0.2 + (agentInteraction.tools.eval ? 0.1 : -0.08));
     const textColor = themeColor('--text') || '#f5f5f5';
-    const compactAgent = width < 440 || height < 210;
-    const selectedNode = nodeMap[agentInteraction.selected] || nodeMap.plan;
-    const allEdges = [
-      ['task', 'plan'],
-      ['plan', 'memory'],
-      ['plan', 'tools'],
-      ['memory', 'eval'],
-      ['tools', 'eval'],
-      ['eval', 'plan'],
-      ['eval', 'answer']
-    ];
+    const stageMap = Object.fromEntries(layout.stageCards.map((stage) => [stage.id, stage]));
 
     agentInteraction.pulse *= 0.86;
     agentInteraction.runBoost *= 0.88;
 
-    allEdges.forEach(([fromId, toId]) => {
-      const from = nodeMap[fromId];
-      const to = nodeMap[toId];
-      const control = agentCurve(from, to);
-      interestCtx.beginPath();
-      interestCtx.moveTo(from.x, from.y);
-      interestCtx.quadraticCurveTo(control.x, control.y, to.x, to.y);
-      interestCtx.strokeStyle = 'rgba(255,255,255,0.13)';
-      interestCtx.lineWidth = 1.2;
+    layout.taskCards.forEach((card) => {
+      const selected = card.index === agentInteraction.taskIndex;
+      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
+      interestCtx.fillStyle = selected ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.54)';
+      interestCtx.fill();
+      interestCtx.strokeStyle = selected ? secondary : 'rgba(255,255,255,0.16)';
+      interestCtx.lineWidth = selected ? 2 : 1;
       interestCtx.stroke();
+      interestCtx.fillStyle = selected ? secondary : textColor;
+      interestCtx.font = '10px JetBrains Mono, monospace';
+      fillTruncatedText(interestCtx, layout.compact ? card.compactTitle : card.title, card.x + 9, card.y + 14, card.w - 18);
+      if (!layout.compact) {
+        interestCtx.fillStyle = muted;
+        interestCtx.font = '9px JetBrains Mono, monospace';
+        fillTruncatedText(interestCtx, card.prompt, card.x + 9, card.y + 27, card.w - 18);
+      }
     });
 
-    route.slice(0, -1).forEach((fromId, index) => {
-      const from = nodeMap[fromId];
-      const to = nodeMap[route[index + 1]];
-      const control = agentCurve(from, to);
-      const live = index === activeEdgeIndex;
-      interestCtx.beginPath();
-      interestCtx.moveTo(from.x, from.y);
-      interestCtx.quadraticCurveTo(control.x, control.y, to.x, to.y);
-      interestCtx.strokeStyle = live ? secondary : `rgba(255,255,255,${0.16 + verification * 0.1})`;
-      interestCtx.lineWidth = live ? 3 : 1.7;
+    layout.toolCards.forEach((tool) => {
+      const enabled = agentInteraction.tools[tool.id];
+      const selected = agentInteraction.selectedTool === tool.id;
+      drawRoundedRect(interestCtx, tool.x, tool.y, tool.w, tool.h, 7);
+      interestCtx.fillStyle = enabled ? 'rgba(255,255,255,0.1)' : 'rgba(3, 7, 18, 0.48)';
+      interestCtx.fill();
+      interestCtx.strokeStyle = selected ? secondary : enabled ? primary : 'rgba(255,255,255,0.16)';
+      interestCtx.lineWidth = selected ? 2 : 1;
       interestCtx.stroke();
+      interestCtx.beginPath();
+      interestCtx.arc(tool.x + 8, tool.y + tool.h / 2, 3.2, 0, Math.PI * 2);
+      interestCtx.fillStyle = enabled ? primary : 'rgba(255,255,255,0.18)';
+      interestCtx.fill();
+      interestCtx.fillStyle = enabled ? textColor : muted;
+      interestCtx.font = '9px JetBrains Mono, monospace';
+      fillTruncatedText(interestCtx, layout.compact ? tool.compact : tool.label, tool.x + 15, tool.y + tool.h / 2 + 3, tool.w - 18);
     });
 
-    if (activeFrom && activeTo) {
-      const control = agentCurve(activeFrom, activeTo);
-      const packet = pointOnQuadratic(activeFrom, control, activeTo, edgeProgress);
-      const packetRadius = 5 + agentInteraction.runBoost * 5;
-      interestCtx.beginPath();
-      interestCtx.arc(packet.x, packet.y, packetRadius + 11, 0, Math.PI * 2);
-      interestCtx.fillStyle = `rgba(255,255,255,${0.04 + verification * 0.04})`;
+    layout.stageCards.forEach((stage, index) => {
+      if (index > 0) {
+        const previous = layout.stageCards[index - 1];
+        const y1 = previous.y + previous.h / 2;
+        const y2 = stage.y + stage.h / 2;
+        interestCtx.beginPath();
+        interestCtx.moveTo(previous.x + previous.w, y1);
+        interestCtx.lineTo(stage.x, y2);
+        interestCtx.strokeStyle = activeTrace?.stage === stage.id ? secondary : 'rgba(255,255,255,0.18)';
+        interestCtx.lineWidth = activeTrace?.stage === stage.id ? 2.4 : 1.2;
+        interestCtx.stroke();
+      }
+    });
+
+    layout.stageCards.forEach((stage) => {
+      const active = activeTrace?.stage === stage.id || (activeTrace?.stage === 'revise' && stage.id === 'verify');
+      const selected = agentInteraction.selectedStage === stage.id;
+      const pulse = active || selected ? agentInteraction.pulse : 0;
+      drawRoundedRect(interestCtx, stage.x - pulse * 5, stage.y - pulse * 4, stage.w + pulse * 10, stage.h + pulse * 8, 8);
+      interestCtx.fillStyle = active ? 'rgba(255,255,255,0.13)' : 'rgba(3, 7, 18, 0.62)';
       interestCtx.fill();
+      interestCtx.strokeStyle = selected ? secondary : active ? primary : 'rgba(255,255,255,0.2)';
+      interestCtx.lineWidth = selected ? 2.4 : 1.2;
+      interestCtx.stroke();
+      interestCtx.fillStyle = active ? primary : textColor;
+      interestCtx.font = '10px JetBrains Mono, monospace';
+      interestCtx.textAlign = 'center';
+      interestCtx.fillText(layout.compact ? stage.compact : stage.label, stage.x + stage.w / 2, stage.y + stage.h / 2 + 3);
+      interestCtx.textAlign = 'left';
+    });
+
+    if (activeTrace?.stage === 'revise') {
+      const from = stageMap.verify;
+      const to = stageMap.plan;
       interestCtx.beginPath();
-      interestCtx.arc(packet.x, packet.y, packetRadius, 0, Math.PI * 2);
-      interestCtx.fillStyle = secondary;
-      interestCtx.fill();
-      interestCtx.strokeStyle = primary;
-      interestCtx.lineWidth = 1.5;
+      interestCtx.moveTo(from.x + from.w * 0.5, from.y);
+      interestCtx.quadraticCurveTo(width * 0.55, from.y - 34, to.x + to.w * 0.5, to.y);
+      interestCtx.strokeStyle = secondary;
+      interestCtx.lineWidth = 2.2;
       interestCtx.stroke();
     }
 
-    if (!compactAgent) {
-      const toolPanelWidth = Math.min(152, width * 0.28);
-      const toolPanelX = Math.max(18, width * 0.5 - toolPanelWidth / 2);
-      const toolPanelY = Math.max(16, height - 72);
-      const toolScores = [
-        ['RAG', clamp01(0.24 + verification * 0.52)],
-        ['CODE', clamp01(0.2 + autonomy * 0.58)],
-        ['CHECK', clamp01(0.18 + verification * 0.68)]
-      ];
-      drawRoundedRect(interestCtx, toolPanelX, toolPanelY, toolPanelWidth, 54, 8);
-      interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
+    drawRoundedRect(interestCtx, layout.trace.x, layout.trace.y, layout.trace.w, layout.trace.h, 8);
+    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = 'rgba(255,255,255,0.16)';
+    interestCtx.lineWidth = 1;
+    interestCtx.stroke();
+    const visibleTrace = layout.compact ? trace.slice(Math.max(0, activeTraceIndex - 1), activeTraceIndex + 2) : trace.slice(0, 5);
+    visibleTrace.forEach((item, index) => {
+      const absoluteIndex = layout.compact ? Math.max(0, activeTraceIndex - 1) + index : index;
+      const active = absoluteIndex === activeTraceIndex;
+      const y = layout.trace.y + 17 + index * (layout.compact ? 12 : 11);
+      interestCtx.beginPath();
+      interestCtx.arc(layout.trace.x + 12, y - 3, active ? 4.2 : 2.6, 0, Math.PI * 2);
+      interestCtx.fillStyle = active ? secondary : item.retry ? primary : 'rgba(255,255,255,0.32)';
       interestCtx.fill();
-      interestCtx.strokeStyle = 'rgba(255,255,255,0.16)';
-      interestCtx.stroke();
-      interestCtx.font = '10px JetBrains Mono, monospace';
-      toolScores.forEach(([label, value], index) => {
-        const y = toolPanelY + 15 + index * 13;
-        interestCtx.fillStyle = muted;
-        interestCtx.fillText(label, toolPanelX + 10, y + 3);
-        interestCtx.beginPath();
-        interestCtx.moveTo(toolPanelX + 58, y);
-        interestCtx.lineTo(toolPanelX + toolPanelWidth - 12, y);
-        interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
-        interestCtx.lineWidth = 4;
-        interestCtx.stroke();
-        interestCtx.beginPath();
-        interestCtx.moveTo(toolPanelX + 58, y);
-        interestCtx.lineTo(toolPanelX + 58 + (toolPanelWidth - 70) * value, y);
-        interestCtx.strokeStyle = index === 1 ? secondary : primary;
-        interestCtx.lineWidth = 4;
-        interestCtx.stroke();
-      });
+      interestCtx.fillStyle = active ? textColor : muted;
+      interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
+      const status = active ? 'running' : absoluteIndex < activeTraceIndex ? 'done' : item.retry ? 'retry' : 'queued';
+      fillTruncatedText(interestCtx, `${status}: ${item.label}`, layout.trace.x + 22, y, layout.trace.w - 32);
+    });
 
-      const meterX = 16;
-      const meterY = 18;
-      const meterWidth = Math.min(142, width * 0.26);
-      const meters = [
-        ['AUTO', autonomy, primary],
-        ['VERIFY', verification, secondary]
-      ];
-      meters.forEach(([label, value, color], index) => {
-        const y = meterY + index * 31;
+    const meter = layout.meter;
+    drawRoundedRect(interestCtx, meter.x, meter.y, meter.w, meter.h, 8);
+    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.42)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
+    interestCtx.stroke();
+    if (layout.compact) {
+      interestCtx.beginPath();
+      interestCtx.moveTo(meter.x + 8, meter.y + 7);
+      interestCtx.lineTo(meter.x + meter.w - 8, meter.y + 7);
+      interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
+      interestCtx.lineWidth = 4;
+      interestCtx.stroke();
+      interestCtx.beginPath();
+      interestCtx.moveTo(meter.x + 8, meter.y + 7);
+      interestCtx.lineTo(meter.x + 8 + (meter.w - 16) * confidence, meter.y + 7);
+      interestCtx.strokeStyle = primary;
+      interestCtx.stroke();
+    } else {
+      [
+        ['confidence', confidence, primary],
+        ['verification', verification, secondary]
+      ].forEach(([label, value, color], index) => {
+        const y = meter.y + 18 + index * 22;
         interestCtx.fillStyle = muted;
-        interestCtx.font = '10px JetBrains Mono, monospace';
-        interestCtx.fillText(label, meterX, y);
+        interestCtx.font = '9.5px JetBrains Mono, monospace';
+        interestCtx.fillText(label, meter.x + 10, y - 2);
         interestCtx.beginPath();
-        interestCtx.moveTo(meterX, y + 11);
-        interestCtx.lineTo(meterX + meterWidth, y + 11);
+        interestCtx.moveTo(meter.x + 82, y - 5);
+        interestCtx.lineTo(meter.x + meter.w - 12, y - 5);
         interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
         interestCtx.lineWidth = 5;
         interestCtx.stroke();
         interestCtx.beginPath();
-        interestCtx.moveTo(meterX, y + 11);
-        interestCtx.lineTo(meterX + meterWidth * value, y + 11);
+        interestCtx.moveTo(meter.x + 82, y - 5);
+        interestCtx.lineTo(meter.x + 82 + (meter.w - 94) * value, y - 5);
         interestCtx.strokeStyle = color;
-        interestCtx.lineWidth = 5;
         interestCtx.stroke();
-        interestCtx.fillStyle = textColor;
-        interestCtx.fillText(`${Math.round(value * 100)}%`, meterX + meterWidth + 8, y + 14);
       });
     }
-
-    nodes.forEach((node) => {
-      const isSelected = node.id === selectedNode.id;
-      const isLive = activeFrom?.id === node.id || activeTo?.id === node.id;
-      const pulse = isSelected ? agentInteraction.pulse : 0;
-      const x = node.x - node.w / 2;
-      const y = node.y - node.h / 2;
-      drawRoundedRect(interestCtx, x - pulse * 8, y - pulse * 5, node.w + pulse * 16, node.h + pulse * 10, 8);
-      interestCtx.fillStyle = isLive ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.62)';
-      interestCtx.fill();
-      interestCtx.strokeStyle = isSelected ? secondary : isLive ? primary : 'rgba(255,255,255,0.2)';
-      interestCtx.lineWidth = isSelected ? 2.4 : 1.2;
-      interestCtx.stroke();
-
-      interestCtx.fillStyle = isSelected ? secondary : isLive ? primary : textColor;
-      interestCtx.font = '10px JetBrains Mono, monospace';
-      interestCtx.textAlign = 'center';
-      interestCtx.fillText(node.label, node.x, node.y + 3);
-      interestCtx.textAlign = 'left';
-    });
 
     if (agentInteraction.active) {
       const pointerX = agentInteraction.x * width;
@@ -2319,15 +2457,17 @@ function updateAgentPointer(event) {
   agentInteraction.active = true;
 }
 
-function selectAgentNode(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  const nearest = agentWorkflowNodes(rect.width, rect.height)
-    .map((node) => ({ ...node, distance: Math.hypot(node.x - x, node.y - y) }))
-    .sort((a, b) => a.distance - b.distance)[0];
-
-  if (nearest) agentInteraction.selected = nearest.id;
+function interactWithAgentRunner(event) {
+  const hit = agentHitRegion(event);
+  if (hit?.type === 'task') {
+    agentInteraction.taskIndex = hit.item.index;
+    agentInteraction.selectedStage = 'plan';
+  } else if (hit?.type === 'tool') {
+    agentInteraction.selectedTool = hit.item.id;
+    agentInteraction.tools[hit.item.id] = !agentInteraction.tools[hit.item.id];
+  } else if (hit?.type === 'stage') {
+    agentInteraction.selectedStage = hit.item.id;
+  }
   agentInteraction.pulse = 1;
   agentInteraction.runBoost = 1;
 }
@@ -2365,7 +2505,8 @@ interestCanvas.addEventListener('pointerdown', (event) => {
   } else {
     agentInteraction.dragging = true;
     updateAgentPointer(event);
-    selectAgentNode(event);
+    agentInteraction.pulse = 0.8;
+    agentInteraction.runBoost = 0.8;
   }
   interestCanvas.style.cursor = 'grabbing';
   try {
@@ -2386,7 +2527,7 @@ interestCanvas.addEventListener('pointerup', (event) => {
     vprInteraction.dragging = false;
   } else {
     updateAgentPointer(event);
-    selectAgentNode(event);
+    interactWithAgentRunner(event);
     agentInteraction.dragging = false;
   }
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
