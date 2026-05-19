@@ -73,6 +73,8 @@ const interestPath = document.getElementById('interestPath');
 const interestTitle = document.getElementById('interestTitle');
 const interestTag = document.getElementById('interestTag');
 const interestDescription = document.getElementById('interestDescription');
+const interestDetail = document.querySelector('.interest-detail');
+const interestSectionTabs = document.querySelectorAll('[data-interest-panel]');
 const interestCanvas = document.getElementById('interestCanvas');
 const interestCtx = interestCanvas.getContext('2d');
 const interestProjects = document.getElementById('interestProjects');
@@ -86,7 +88,12 @@ let filteredRepos = [];
 let loadedPublications = [];
 let commandCursor = 0;
 let repoNodes = [];
+let repoMapFieldNodes = [];
 let hoveredRepo = null;
+let hoveredMapField = null;
+let highlightedRepo = null;
+let highlightedPaper = null;
+let activeInterestPanel = 'animation';
 let repoMapTick = 0;
 let activeInterestId = 'point-cloud-registration';
 let interestTick = 0;
@@ -492,6 +499,7 @@ const i18n = {
     tab_about: 'about',
     tab_research: 'research',
     tab_projects: 'projects',
+    tab_publications: 'publications',
     tab_timeline: 'timeline',
     tab_skills: 'skills',
     tab_resources: 'resources',
@@ -508,6 +516,11 @@ const i18n = {
     view_details: 'View Details',
     related_projects: 'Related Projects',
     related_papers: 'Related Papers',
+    section_animation: 'Animation',
+    section_projects: 'Projects',
+    section_papers: 'Papers',
+    show_in_projects: 'Show in Projects',
+    show_in_research: 'Show in Research',
     no_related_projects: 'No mapped project yet.',
     no_related_papers: 'No mapped paper yet.',
     manager_title: 'Research Mapping',
@@ -540,6 +553,8 @@ const i18n = {
     project_desc: 'All public repositories are listed below with quick jump links.',
     repo_map_title: 'Research Field Map',
     repo_map_hint: 'Hover projects to inspect their research mapping.',
+    unmapped_title: 'Unmapped',
+    unmapped_label: 'Needs category',
     repo_search_ph: 'Search repositories...',
     sort_updated: 'Sort: Updated',
     sort_stars: 'Sort: Stars',
@@ -558,7 +573,7 @@ const i18n = {
     timeline_2026: 'Graduation year and active applications for Master\'s / PhD opportunities.',
     skill_title: 'Skill Matrix',
     skill_hint: 'Click a skill chip to highlight what I use.',
-    res_title: 'Publications & Resume',
+    res_title: 'Resume & Files',
     pub_title: 'Publications',
     pub_desc: 'Publication entries are shown below with status and links.',
     pub_loading: 'Loading publications from ORCID...',
@@ -596,6 +611,9 @@ const i18n = {
     details_research_title: 'Research Details',
     details_research_body: 'Current work emphasizes robust geometric matching, anomaly signal understanding, and reproducible engineering pipelines.',
     details_project_link_text: 'Open Repository',
+    project_overview: 'Project Overview',
+    project_mapping: 'Research Mapping',
+    project_updated: 'Updated',
     modal_close: 'x',
     lang_btn: '中文',
     chip_loaded: 'Loaded: {tag} -> actively used in my current workflow.',
@@ -631,6 +649,7 @@ const i18n = {
     tab_about: '关于',
     tab_research: '研究',
     tab_projects: '项目',
+    tab_publications: '论文',
     tab_timeline: '时间线',
     tab_skills: '技能',
     tab_resources: '资源',
@@ -647,6 +666,11 @@ const i18n = {
     view_details: '查看详情',
     related_projects: '相关项目',
     related_papers: '相关论文',
+    section_animation: '动画',
+    section_projects: '项目',
+    section_papers: '论文',
+    show_in_projects: '在项目中显示',
+    show_in_research: '查看研究方向',
     no_related_projects: '暂未映射项目。',
     no_related_papers: '暂未映射论文。',
     manager_title: '研究映射',
@@ -679,6 +703,8 @@ const i18n = {
     project_desc: '这里列出全部公开仓库，可直接跳转到对应项目。',
     repo_map_title: '研究领域地图',
     repo_map_hint: '悬停项目查看研究方向映射。',
+    unmapped_title: '未映射',
+    unmapped_label: '需要分类',
     repo_search_ph: '搜索仓库...',
     sort_updated: '排序：最近更新',
     sort_stars: '排序：星标数',
@@ -697,7 +723,7 @@ const i18n = {
     timeline_2026: '毕业年份，同时积极申请硕士/博士机会。',
     skill_title: '技能矩阵',
     skill_hint: '点击技能标签可查看当前使用说明。',
-    res_title: '论文与简历',
+    res_title: '简历与文件',
     pub_title: '论文发表',
     pub_desc: '论文条目直接展示在页面中，包含状态和跳转链接。',
     pub_loading: '正在从 ORCID 加载论文...',
@@ -735,6 +761,9 @@ const i18n = {
     details_research_title: '研究详情',
     details_research_body: '当前重点在稳健几何匹配、异常信号理解，以及可复现的工程化流程。',
     details_project_link_text: '打开仓库',
+    project_overview: '项目概览',
+    project_mapping: '研究映射',
+    project_updated: '更新时间',
     modal_close: 'x',
     lang_btn: 'EN',
     chip_loaded: '已加载: {tag} -> 已纳入当前工作流。',
@@ -755,7 +784,8 @@ function activateView(viewId) {
   if (targetView) targetView.classList.add('active');
   if (viewId === 'projects') requestAnimationFrame(() => renderRepoMap(filteredRepos));
   if (viewId === 'research') requestAnimationFrame(renderResearchInterest);
-  if (targetView && ['projects', 'research'].includes(viewId)) {
+  if (viewId === 'publications') requestAnimationFrame(renderPublications);
+  if (targetView && ['projects', 'research', 'publications'].includes(viewId)) {
     requestAnimationFrame(() => targetView.closest('.console')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 }
@@ -956,6 +986,139 @@ function assignedInterestIds(item, kind) {
   return inferInterestIds(item);
 }
 
+function interestEntryById(interestId) {
+  return allInterestChildren().find((entry) => entry.child.id === interestId) || null;
+}
+
+function interestLabel(interestId) {
+  const entry = interestEntryById(interestId);
+  return entry ? textFor(entry.child.title) : interestId;
+}
+
+function primaryInterestId(item, kind) {
+  return assignedInterestIds(item, kind).find((id) => interestEntryById(id)) || null;
+}
+
+function researchBadgesHtml(item, kind) {
+  const ids = assignedInterestIds(item, kind).filter((id) => interestEntryById(id));
+  if (!ids.length) {
+    return `<span class="research-badge unmapped">${i18n[currentLang].unmapped_title}</span>`;
+  }
+  const sourceKey = escapeHtml(itemKey(item));
+  return ids.map((id) => `
+    <button class="research-badge" type="button" data-interest-jump="${id}" data-interest-source-kind="${kind}" data-interest-source-key="${sourceKey}">
+      ${interestLabel(id)}
+    </button>
+  `).join('');
+}
+
+function attachInterestJumpHandlers(root = document) {
+  root.querySelectorAll('[data-interest-jump]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const sourceKind = button.dataset.interestSourceKind;
+      const sourceKey = button.dataset.interestSourceKey;
+      const item = sourceKind === 'repo'
+        ? allRepos.find((repo) => repo.name === sourceKey)
+        : currentPublications().find((paper) => paper.title === sourceKey);
+      if (item) bindItemToInterestAnimation(item, sourceKind, button.dataset.interestJump);
+      jumpToResearchInterest(button.dataset.interestJump);
+    });
+  });
+}
+
+function setInterestPanel(panel) {
+  activeInterestPanel = ['animation', 'projects', 'papers'].includes(panel) ? panel : 'animation';
+  if (interestDetail) interestDetail.dataset.panel = activeInterestPanel;
+  interestSectionTabs.forEach((button) => {
+    button.classList.toggle('active', button.dataset.interestPanel === activeInterestPanel);
+  });
+}
+
+function bindItemToInterestAnimation(item, kind, interestId) {
+  if (!item) return;
+  const resolvedInterestId = interestId || primaryInterestId(item, kind);
+  if (!resolvedInterestId) return;
+  const name = item.name || item.title || '';
+  const description = item.description || item.summary || item.venue || '';
+  const hay = `${name} ${description}`.toLowerCase();
+  const hash = Math.abs(hashString(name));
+  if (resolvedInterestId === 'point-cloud-registration') {
+    pointCloudInteraction.active = true;
+    pointCloudInteraction.x = 0.25 + (hash % 50) / 100;
+    pointCloudInteraction.targetScrub = pointCloudInteraction.x;
+    pointCloudInteraction.energy = 1;
+  } else if (resolvedInterestId === 'vpr') {
+    vprInteraction.active = true;
+    vprInteraction.route = 0.12 + (hash % 76) / 100;
+    vprInteraction.condition = hay.includes('tf') || hay.includes('benchmark')
+      ? 0.72
+      : 0.18 + ((hash >> 3) % 64) / 100;
+    vprInteraction.targetRoute = vprInteraction.route;
+    vprInteraction.selected = bestVprCandidate()?.id || null;
+    vprInteraction.energy = 1;
+  } else if (resolvedInterestId === 'agent') {
+    agentInteraction.active = true;
+    agentInteraction.taskIndex = hay.includes('readme') || kind === 'paper' ? 1 : 0;
+    agentInteraction.selectedTool = hay.includes('rag') || hay.includes('retrieval') ? 'rag' : 'code';
+    agentInteraction.selectedStage = agentInteraction.selectedTool === 'rag' ? 'retrieve' : 'act';
+    agentInteraction.pulse = 1;
+    agentInteraction.runBoost = 0.75;
+  } else if (resolvedInterestId === 'ai4edu') {
+    educationInteraction.active = true;
+    educationInteraction.selectedPath = hay.includes('crossword') || hay.includes('content') ? 'content' : 'learner';
+    educationInteraction.selectedConcept = hay.includes('tetrahedron') || hay.includes('geometry') ? 'geometry' : 'functions';
+    educationInteraction.selectedSignal = 'hint';
+    educationInteraction.pulse = 1;
+    educationInteraction.masteryBoost = 1;
+  }
+}
+
+function bindRepoToInterestAnimation(repo, interestId) {
+  bindItemToInterestAnimation(repo, 'repo', interestId);
+}
+
+function jumpToResearchInterest(interestId, repoName = null) {
+  if (!interestEntryById(interestId)) return;
+  activeInterestId = interestId;
+  const repo = repoName ? allRepos.find((item) => item.name === repoName) : null;
+  if (repo) bindRepoToInterestAnimation(repo, interestId);
+  setInterestPanel('animation');
+  activateView('research');
+  renderResearchInterest();
+  requestAnimationFrame(() => interestCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+}
+
+function focusRepoInProjects(repoName) {
+  highlightedRepo = repoName;
+  repoSearch.value = '';
+  filteredRepos = [...allRepos];
+  const repoIndex = sortedRepos(filteredRepos).findIndex((repo) => repo.name === repoName);
+  repoState.page = repoIndex >= 0 ? Math.floor(repoIndex / repoState.pageSize) + 1 : 1;
+  repoState.infiniteCount = repoIndex >= 0 ? Math.max(repoState.pageSize, repoIndex + 1) : repoState.pageSize;
+  activateView('projects');
+  renderRepos(filteredRepos);
+  requestAnimationFrame(() => {
+    const card = Array.from(document.querySelectorAll('[data-repo]')).find((node) => node.dataset.repo === repoName);
+    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    repoMap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+function focusPaperInPublications(title) {
+  highlightedPaper = title;
+  const paperIndex = currentPublications().findIndex((paper) => paper.title === title);
+  pubState.page = paperIndex >= 0 ? Math.floor(paperIndex / pubState.pageSize) + 1 : 1;
+  pubState.infiniteCount = paperIndex >= 0 ? Math.max(pubState.pageSize, paperIndex + 1) : pubState.pageSize;
+  activateView('publications');
+  renderPublications();
+  requestAnimationFrame(() => {
+    const card = Array.from(document.querySelectorAll('[data-paper-card]')).find((node) => node.dataset.paperCard === title);
+    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
 function relatedRepos() {
   return allRepos.filter((repo) => assignedInterestIds(repo, 'repo').includes(activeInterestId));
 }
@@ -972,26 +1135,45 @@ function renderRelatedList(container, items, emptyText, kind) {
 
   container.innerHTML = items.slice(0, 4).map((item) => {
     const title = item.name || item.title;
-    const url = item.html_url || item.link;
     const detail = item.description || item.summary || item.language || item.venue || '';
     const meta = kind === 'repo'
       ? `${item.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${item.stargazers_count || 0}`
       : `${item.venue || ''} · ${item.year || ''}`;
+    const action = kind === 'repo'
+      ? `<button class="mini-action" type="button" data-show-project="${title}">${i18n[currentLang].show_in_projects}</button>`
+      : `<button class="mini-action" type="button" data-show-paper="${title}">${i18n[currentLang].tab_publications}</button>`;
     return `
       <div class="related-item">
         <button class="related-link" type="button" data-kind="${kind}" data-key="${title}">${title}</button>
+        <div class="research-badges">${researchBadgesHtml(item, kind)}</div>
         <p class="muted">${detail}</p>
         <p class="muted">${meta}</p>
+        <div class="related-actions">${action}</div>
       </div>
     `;
   }).join('');
 
   container.querySelectorAll('.related-link').forEach((button) => {
     button.addEventListener('click', () => {
-      if (button.dataset.kind === 'repo') openRepoReadme(button.dataset.key);
-      else openPaperDetail(button.dataset.key);
+      if (button.dataset.kind === 'repo') {
+        const repo = allRepos.find((item) => item.name === button.dataset.key);
+        bindRepoToInterestAnimation(repo, activeInterestId);
+        openRepoReadme(button.dataset.key);
+      }
+      else {
+        const paper = currentPublications().find((item) => item.title === button.dataset.key);
+        bindItemToInterestAnimation(paper, 'paper', activeInterestId);
+        openPaperDetail(button.dataset.key);
+      }
     });
   });
+  container.querySelectorAll('[data-show-project]').forEach((button) => {
+    button.addEventListener('click', () => focusRepoInProjects(button.dataset.showProject));
+  });
+  container.querySelectorAll('[data-show-paper]').forEach((button) => {
+    button.addEventListener('click', () => focusPaperInPublications(button.dataset.showPaper));
+  });
+  attachInterestJumpHandlers(container);
 }
 
 function renderResearchInterest() {
@@ -1011,6 +1193,7 @@ function renderResearchInterest() {
   interestTag.textContent = textFor(entry.child.label);
   interestDescription.textContent = textFor(entry.child.description);
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
+  setInterestPanel(activeInterestPanel);
   renderInterestRail();
   renderRelatedList(interestProjects, relatedRepos(), i18n[currentLang].no_related_projects, 'repo');
   renderRelatedList(interestPapers, relatedPapers(), i18n[currentLang].no_related_papers, 'paper');
@@ -1028,6 +1211,9 @@ function applyTheme(theme) {
 }
 
 themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
+interestSectionTabs.forEach((button) => {
+  button.addEventListener('click', () => setInterestPanel(button.dataset.interestPanel));
+});
 
 function openResearchManager() {
   if (!ownerToolsEnabled) return;
@@ -1510,21 +1696,34 @@ function markdownToHtml(markdown) {
 async function openRepoReadme(repoName) {
   const repo = allRepos.find((item) => item.name === repoName);
   if (!repo) return;
+  const overview = () => `
+    <div class="project-overview">
+      <span class="panel-eyebrow">${i18n[currentLang].project_overview}</span>
+      <p>${escapeHtml(repo.description || i18n[currentLang].no_desc)}</p>
+      <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
+      <div class="repo-meta">
+        <span>${i18n[currentLang].project_mapping}: ${escapeHtml(repoMappingLabel(repo))}</span>
+        <span>${i18n[currentLang].project_updated}: ${escapeHtml((repo.updated_at || '').slice(0, 10) || '-')}</span>
+      </div>
+    </div>
+  `;
   openModal({
     title: repo.name,
-    html: `<p class="muted">${i18n[currentLang].readme_loading}</p>`,
+    html: `${overview()}<p class="muted">${i18n[currentLang].readme_loading}</p>`,
     linkText: i18n[currentLang].details_project_link_text,
     link: repo.html_url
   });
+  attachInterestJumpHandlers(modalBody);
 
   try {
     const response = await fetch(repo.readme_url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const markdown = await response.text();
-    modalBody.innerHTML = `<div class="readme-box readme-content"><p class="muted">${repo.description || i18n[currentLang].no_desc}</p>${markdownToHtml(markdown)}</div>`;
+    modalBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown)}</div>`;
   } catch {
-    modalBody.innerHTML = `<div class="readme-box"><p class="muted">${repo.description || i18n[currentLang].no_desc}</p><p>${i18n[currentLang].readme_unavailable}</p></div>`;
+    modalBody.innerHTML = `${overview()}<div class="readme-box"><p>${i18n[currentLang].readme_unavailable}</p></div>`;
   }
+  attachInterestJumpHandlers(modalBody);
 }
 
 function openPaperDetail(title) {
@@ -1532,10 +1731,11 @@ function openPaperDetail(title) {
   if (!paper) return;
   openModal({
     title: paper.title,
-    html: `<div class="readme-box"><p class="muted">${paper.venue || ''} · ${paper.year || ''}</p><p>${paper.summary || ''}</p></div>`,
+    html: `<div class="readme-box"><p class="muted">${paper.venue || ''} · ${paper.year || ''}</p><div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${paper.summary || ''}</p></div>`,
     linkText: i18n[currentLang].open_external,
     link: paper.link
   });
+  attachInterestJumpHandlers(modalBody);
 }
 
 function renderRepos(repos, preserveScroll = false) {
@@ -1574,8 +1774,9 @@ function renderRepos(repos, preserveScroll = false) {
   }
 
   repoGrid.innerHTML = shown.map((repo) => `
-    <article class="repo-card" data-repo="${repo.name}">
+    <article class="repo-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-repo="${repo.name}">
       <h3><a href="${repo.html_url}" target="_blank" rel="noreferrer">${repo.name}</a></h3>
+      <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
       <p class="muted">${repo.description || i18n[currentLang].no_desc}</p>
       <div class="repo-meta">
         <span>${i18n[currentLang].star} ${repo.stargazers_count}</span>
@@ -1583,6 +1784,7 @@ function renderRepos(repos, preserveScroll = false) {
       </div>
       <div class="repo-actions">
         <button class="btn btn-outline repo-detail" type="button" data-repo="${repo.name}">${i18n[currentLang].view_details}</button>
+        <button class="btn btn-outline repo-research" type="button" data-repo="${repo.name}" ${primaryInterestId(repo, 'repo') ? '' : 'disabled'}>${i18n[currentLang].show_in_research}</button>
         <a class="btn btn-primary" href="${repo.html_url}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
       </div>
     </article>
@@ -1595,6 +1797,14 @@ function renderRepos(repos, preserveScroll = false) {
   document.querySelectorAll('.repo-detail').forEach((btn) => {
     btn.addEventListener('click', () => openRepoDetail(btn.dataset.repo));
   });
+  document.querySelectorAll('.repo-research').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const repo = allRepos.find((item) => item.name === btn.dataset.repo);
+      const interestId = repo ? primaryInterestId(repo, 'repo') : null;
+      if (interestId) jumpToResearchInterest(interestId, repo.name);
+    });
+  });
+  attachInterestJumpHandlers(repoGrid);
 
   renderRepoMap(items);
   if (preserveScroll) repoGrid.scrollTop = beforeScroll;
@@ -1722,6 +1932,7 @@ function renderRepoMap(repos = filteredRepos) {
 
   const items = sortedRepos(repos);
   repoNodes = [];
+  repoMapFieldNodes = [];
   const compact = width < 520;
   const primary = themeColor('--cyan') || '#00f5ff';
   const muted = themeColor('--muted') || '#9ca9cf';
@@ -1760,7 +1971,20 @@ function renderRepoMap(repos = filteredRepos) {
   }
 
   const anchors = researchMapAnchors(width, height);
-  const anchorById = new Map(anchors.map((anchor) => [anchor.id, anchor]));
+  const unmappedAnchor = {
+    id: 'unmapped',
+    x: compact ? width * 0.5 : width * 0.5,
+    y: compact ? height - 32 : height - 38,
+    r: compact ? 28 : 34,
+    color: themeColor('--muted') || '#9ca9cf',
+    mapTitle: i18n[currentLang].unmapped_title,
+    domainTitle: i18n[currentLang].unmapped_label,
+    index: anchors.length,
+    child: { id: 'unmapped' }
+  };
+  const mapAnchors = [...anchors, unmappedAnchor];
+  repoMapFieldNodes = mapAnchors;
+  const anchorById = new Map(mapAnchors.map((anchor) => [anchor.id, anchor]));
   const contexts = items.map((repo, index) => {
     const entries = repoInterestEntries(repo);
     return { repo, index, entries, key: repoMapGroupKey(entries) };
@@ -1771,11 +1995,13 @@ function renderRepoMap(repos = filteredRepos) {
     groups.get(context.key).push(context.index);
   });
 
-  anchors.forEach((anchor) => {
-    const active = hoveredRepo && contexts.some((context) => (
-      context.repo.name === hoveredRepo
-      && context.entries.some((entry) => entry.child.id === anchor.id)
-    ));
+  mapAnchors.forEach((anchor) => {
+    const active = hoveredMapField === anchor.id || (hoveredRepo && contexts.some((context) => (
+      context.repo.name === hoveredRepo && (
+        context.entries.some((entry) => entry.child.id === anchor.id)
+        || (anchor.id === 'unmapped' && !context.entries.length)
+      )
+    )));
     const pulse = 2 + (Math.sin(repoMapTick * 0.035 + anchor.index) + 1) * 2;
     repoMapCtx.beginPath();
     repoMapCtx.arc(anchor.x, anchor.y, anchor.r + pulse, 0, Math.PI * 2);
@@ -1793,7 +2019,9 @@ function renderRepoMap(repos = filteredRepos) {
   });
 
   contexts.forEach((context) => {
-    const anchorRefs = context.entries.map((entry) => anchorById.get(entry.child.id)).filter(Boolean);
+    const anchorRefs = context.entries.length
+      ? context.entries.map((entry) => anchorById.get(entry.child.id)).filter(Boolean)
+      : [unmappedAnchor];
     const group = groups.get(context.key) || [];
     const slot = Math.max(0, group.indexOf(context.index));
     const total = Math.max(1, group.length);
@@ -1825,7 +2053,7 @@ function renderRepoMap(repos = filteredRepos) {
   });
 
   repoNodes.forEach((node) => {
-    const active = hoveredRepo === node.repo.name;
+    const active = hoveredRepo === node.repo.name || highlightedRepo === node.repo.name;
     node.anchors.forEach((anchor) => {
       repoMapCtx.beginPath();
       repoMapCtx.moveTo(anchor.x, anchor.y);
@@ -1845,7 +2073,7 @@ function renderRepoMap(repos = filteredRepos) {
   });
 
   repoNodes.forEach((node) => {
-    const active = hoveredRepo === node.repo.name;
+    const active = hoveredRepo === node.repo.name || highlightedRepo === node.repo.name;
     const multi = node.anchors.length > 1;
     repoMapCtx.beginPath();
     repoMapCtx.arc(node.x, node.y, active ? node.r + 6 : node.r + 3, 0, Math.PI * 2);
@@ -1894,16 +2122,21 @@ function repoMapPointer(event) {
 repoMap.addEventListener('mousemove', (event) => {
   const pointer = repoMapPointer(event);
   const hit = repoNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
+  const fieldHit = hit ? null : repoMapFieldNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
   hoveredRepo = hit ? hit.repo.name : null;
-  repoMap.style.cursor = hit ? 'pointer' : 'default';
+  hoveredMapField = fieldHit ? fieldHit.id : null;
+  repoMap.style.cursor = hit || (fieldHit && fieldHit.id !== 'unmapped') ? 'pointer' : 'default';
   repoMapHint.textContent = hit
     ? `${hit.repo.name} · ${repoMappingLabel(hit.repo)} · ${hit.repo.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${hit.repo.stargazers_count}`
-    : i18n[currentLang].repo_map_hint;
+    : fieldHit
+      ? `${fieldHit.mapTitle} · ${fieldHit.domainTitle}`
+      : i18n[currentLang].repo_map_hint;
   renderRepoMap(filteredRepos);
 });
 
 repoMap.addEventListener('mouseleave', () => {
   hoveredRepo = null;
+  hoveredMapField = null;
   repoMapHint.textContent = i18n[currentLang].repo_map_hint;
   renderRepoMap(filteredRepos);
 });
@@ -1911,7 +2144,9 @@ repoMap.addEventListener('mouseleave', () => {
 repoMap.addEventListener('click', (event) => {
   const pointer = repoMapPointer(event);
   const hit = repoNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
+  const fieldHit = hit ? null : repoMapFieldNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
   if (hit) openRepoDetail(hit.repo.name);
+  else if (fieldHit && fieldHit.id !== 'unmapped') jumpToResearchInterest(fieldHit.id);
 });
 
 function themeColor(name) {
@@ -2398,7 +2633,10 @@ function educationMastery(concept) {
 }
 
 function drawInterestAnimation() {
+  const rect = interestCanvas.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return;
   const { width, height } = resizeDrawingCanvas(interestCanvas, interestCtx);
+  if (width < 2 || height < 2) return;
   const entry = activeInterestEntry();
   if (!entry) return;
   const type = entry.child.animation;
@@ -3361,22 +3599,47 @@ function renderPublications(preserveScroll = false) {
     return;
   }
 
-  pubList.innerHTML = shown.map((item) => `
-    <article class="pub-card">
+  pubList.innerHTML = shown.map((item) => {
+    const primaryId = primaryInterestId(item, 'paper');
+    return `
+    <article class="pub-card ${highlightedPaper === item.title ? 'highlight' : ''}" data-paper-card="${escapeHtml(item.title)}">
       <div class="pub-meta">
         <span>${item.venue}</span>
         <span>${item.year}</span>
         <span class="pub-status">${item.status}</span>
       </div>
       <h4>${item.title}</h4>
+      <div class="research-badges">${researchBadgesHtml(item, 'paper')}</div>
       <p class="muted">${item.summary}</p>
-      <a class="btn btn-outline" href="${item.link}" target="_blank" rel="noreferrer">${i18n[currentLang].pub_open}</a>
+      <div class="repo-actions">
+        <button class="btn btn-outline pub-detail" type="button" data-paper="${escapeHtml(item.title)}">${i18n[currentLang].view_details}</button>
+        <button class="btn btn-outline pub-research" type="button" data-paper="${escapeHtml(item.title)}" ${primaryId ? '' : 'disabled'}>${i18n[currentLang].show_in_research}</button>
+        <a class="btn btn-primary" href="${item.link}" target="_blank" rel="noreferrer">${i18n[currentLang].pub_open}</a>
+      </div>
     </article>
-  `).join('');
+  `;
+  }).join('');
 
   if (pubState.mode === 'infinite' && shown.length < total) {
     pubList.insertAdjacentHTML('beforeend', `<p class="muted">${i18n[currentLang].infinite_hint}</p>`);
   }
+  pubList.querySelectorAll('.pub-detail').forEach((button) => {
+    button.addEventListener('click', () => {
+      const paper = currentPublications().find((item) => item.title === button.dataset.paper);
+      if (paper) bindItemToInterestAnimation(paper, 'paper', primaryInterestId(paper, 'paper'));
+      openPaperDetail(button.dataset.paper);
+    });
+  });
+  pubList.querySelectorAll('.pub-research').forEach((button) => {
+    button.addEventListener('click', () => {
+      const paper = currentPublications().find((item) => item.title === button.dataset.paper);
+      const interestId = paper ? primaryInterestId(paper, 'paper') : null;
+      if (!interestId) return;
+      bindItemToInterestAnimation(paper, 'paper', interestId);
+      jumpToResearchInterest(interestId);
+    });
+  });
+  attachInterestJumpHandlers(pubList);
 
   if (preserveScroll) pubList.scrollTop = beforeScroll;
 }
