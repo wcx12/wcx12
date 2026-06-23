@@ -3,6 +3,7 @@ const commands = document.querySelectorAll('.cmd');
 const chips = document.querySelectorAll('.chip');
 const chipOutput = document.getElementById('chipOutput');
 const typeTarget = document.getElementById('typeTarget');
+const focusAreaCount = document.getElementById('focusAreaCount');
 const repoGrid = document.getElementById('repoGrid');
 const repoSearch = document.getElementById('repoSearch');
 const repoSort = document.getElementById('repoSort');
@@ -936,6 +937,12 @@ function allInterestChildren() {
   return researchInterests.flatMap((domain) => domain.children.map((child) => ({ domain, child })));
 }
 
+function updateHeroStats() {
+  if (!focusAreaCount) return;
+  const domainCount = researchInterests.filter((domain) => Array.isArray(domain.children) && domain.children.length).length;
+  focusAreaCount.textContent = String(domainCount);
+}
+
 function activeInterestEntry() {
   return allInterestChildren().find((entry) => entry.child.id === activeInterestId) || allInterestChildren()[0];
 }
@@ -1177,6 +1184,7 @@ function renderRelatedList(container, items, emptyText, kind) {
 }
 
 function renderResearchInterest() {
+  updateHeroStats();
   const entry = activeInterestEntry();
   if (!entry) {
     interestRail.innerHTML = '';
