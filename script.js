@@ -1806,7 +1806,9 @@ function renderRepos(repos, preserveScroll = false) {
     return;
   }
 
-  repoGrid.innerHTML = shown.map((repo) => `
+  repoGrid.innerHTML = shown.map((repo) => {
+    const repoInterestId = primaryInterestId(repo, 'repo');
+    return `
     <article class="repo-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-repo="${repo.name}">
       <h3><a href="${repo.html_url}" target="_blank" rel="noreferrer">${repo.name}</a></h3>
       <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
@@ -1817,11 +1819,12 @@ function renderRepos(repos, preserveScroll = false) {
       </div>
       <div class="repo-actions">
         <button class="btn btn-outline repo-detail" type="button" data-repo="${repo.name}">${i18n[currentLang].view_details}</button>
-        <button class="btn btn-outline repo-research" type="button" data-repo="${repo.name}" ${primaryInterestId(repo, 'repo') ? '' : 'disabled'}>${i18n[currentLang].show_in_research}</button>
+        ${repoInterestId ? `<button class="btn btn-outline repo-research" type="button" data-repo="${repo.name}">${i18n[currentLang].show_in_research}</button>` : ''}
         <a class="btn btn-primary" href="${repo.html_url}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
       </div>
     </article>
-  `).join('');
+  `;
+  }).join('');
 
   if (repoState.mode === 'infinite' && shown.length < total) {
     repoGrid.insertAdjacentHTML('beforeend', `<p class="muted">${i18n[currentLang].infinite_hint}</p>`);
