@@ -904,11 +904,8 @@ button.research-badge:hover {
   min-height: 0;
   border: 1px solid rgba(155, 92, 255, 0.28);
   border-radius: 12px;
-  background:
-    linear-gradient(rgba(0, 245, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 245, 255, 0.08) 1px, transparent 1px),
-    rgba(3, 7, 18, 0.72);
-  background-size: 32px 32px;
+  background: rgba(3, 7, 18, 0.72);
+  box-shadow: inset 0 0 42px rgba(0, 245, 255, 0.08);
 }
 
 .interest-related {
