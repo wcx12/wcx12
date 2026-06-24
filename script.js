@@ -175,7 +175,7 @@ const registrationState = {
 };
 
 function initCustomCursor() {
-  if (!customCursor || !window.matchMedia('(pointer: fine)').matches) return;
+  if (!customCursor || !window.matchMedia('(pointer: fine) and (min-width: 720px)').matches) return;
 
   const hoverSelector = 'a, button, select, input, textarea, [role="button"], .repo-card, .pub-card, #interestCanvas';
   const textSelector = 'input, textarea, [contenteditable="true"]';
@@ -3001,35 +3001,41 @@ function drawHumanAiCollab(width, height, t, primary, secondary, muted) {
 
 function robotTeacherLayout(width, height) {
   const compact = width < 460 || height < 220;
+  const feedbackY = height - (compact ? 38 : 42);
+  const boardY = compact ? 24 : 30;
+  const boardHeight = Math.max(
+    compact ? 82 : 112,
+    Math.min(compact ? height * 0.42 : height * 0.5, feedbackY - boardY - (compact ? 66 : 58))
+  );
   return {
     compact,
     robot: {
       id: 'robot',
-      x: compact ? width * 0.24 : width * 0.27,
-      y: compact ? height * 0.48 : height * 0.5,
-      w: compact ? 84 : 104,
-      h: compact ? 116 : 136
+      x: compact ? width * 0.25 : width * 0.28,
+      y: Math.min(compact ? height * 0.47 : height * 0.49, feedbackY - (compact ? 66 : 78)),
+      w: compact ? 88 : 112,
+      h: compact ? 118 : 140
     },
     student: {
       id: 'student',
       x: compact ? width * 0.1 : width * 0.12,
-      y: compact ? height * 0.66 : height * 0.68,
+      y: compact ? feedbackY - 50 : feedbackY - 66,
       w: compact ? 54 : 64,
       h: compact ? 72 : 84
     },
     board: {
       id: 'board',
       x: compact ? width * 0.43 : width * 0.44,
-      y: compact ? 26 : 30,
+      y: boardY,
       w: compact ? width * 0.52 : width * 0.5,
-      h: compact ? height * 0.48 : height * 0.56
+      h: boardHeight
     },
     feedbackButtons: educationSignals.map((signal, index) => ({
       ...signal,
       x: compact ? 14 + index * ((width - 38) / 3 + 5) : width * 0.18 + index * Math.min(118, width * 0.2),
-      y: height - (compact ? 36 : 40),
+      y: feedbackY,
       w: compact ? (width - 46) / 3 : 98,
-      h: compact ? 26 : 30
+      h: compact ? 28 : 30
     }))
   };
 }
@@ -3040,46 +3046,131 @@ function drawRobotTeacher(ctx, robot, primary, secondary, textColor, active) {
   const y = robot.y;
   const w = robot.w;
   const h = robot.h;
-  drawRoundedRect(ctx, x - w * 0.32, y - h * 0.43, w * 0.64, h * 0.38, 13);
-  ctx.fillStyle = 'rgba(3,7,18,0.62)';
+  const teacherSway = Math.sin(interestTick * 0.045) * 2.4;
+  const teacherLift = Math.sin(interestTick * 0.062) * 1.8;
+  const lean = active ? -0.08 : -0.045;
+  const headX = x + teacherSway;
+  const headY = y - h * 0.35 + teacherLift;
+  const bodyX = x - w * 0.04 + teacherSway * 0.25;
+  const bodyY = y - h * 0.04 + teacherLift * 0.35;
+  const raisedHand = {
+    x: x + w * 0.58 + teacherSway * 0.2,
+    y: y - h * 0.3 + teacherLift
+  };
+  const openHand = {
+    x: x - w * 0.42 + teacherSway * 0.15,
+    y: y + h * 0.08 + teacherLift * 0.4
+  };
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.ellipse(x + teacherSway * 0.2, y + h * 0.5, w * 0.34, h * 0.045, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(bodyX - w * 0.14, bodyY + h * 0.31);
+  ctx.quadraticCurveTo(bodyX - w * 0.22, bodyY + h * 0.43, bodyX - w * 0.34, bodyY + h * 0.48);
+  ctx.moveTo(bodyX + w * 0.13, bodyY + h * 0.31);
+  ctx.quadraticCurveTo(bodyX + w * 0.28, bodyY + h * 0.42, bodyX + w * 0.39, bodyY + h * 0.47);
+  ctx.strokeStyle = 'rgba(255,255,255,0.48)';
+  ctx.lineWidth = 2.4;
+  ctx.stroke();
+
+  drawRoundedRect(ctx, bodyX - w * 0.25, bodyY - h * 0.03, w * 0.52, h * 0.36, 13);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  drawRoundedRect(ctx, bodyX - w * 0.1, bodyY + h * 0.07, w * 0.2, h * 0.09, 6);
+  ctx.fillStyle = active ? secondary : primary;
+  ctx.fill();
+  ctx.fillStyle = '#031019';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AI', bodyX, bodyY + h * 0.135);
+
+  ctx.beginPath();
+  ctx.moveTo(bodyX + w * 0.2, bodyY + h * 0.07);
+  ctx.quadraticCurveTo(x + w * 0.38, y - h * 0.2, raisedHand.x, raisedHand.y);
+  ctx.strokeStyle = secondary;
+  ctx.lineWidth = active ? 4 : 3.2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(raisedHand.x, raisedHand.y, w * 0.045, 0, Math.PI * 2);
+  ctx.fillStyle = secondary;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(bodyX - w * 0.2, bodyY + h * 0.08);
+  ctx.quadraticCurveTo(x - w * 0.34, y + h * 0.02, openHand.x, openHand.y);
+  ctx.strokeStyle = primary;
+  ctx.lineWidth = active ? 3.8 : 3;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(openHand.x, openHand.y, w * 0.04, 0, Math.PI * 2);
+  ctx.fillStyle = primary;
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(headX, headY);
+  ctx.rotate(lean);
+  drawRoundedRect(ctx, -w * 0.32, -h * 0.17, w * 0.64, h * 0.36, 14);
+  ctx.fillStyle = 'rgba(3,7,18,0.66)';
   ctx.fill();
   ctx.strokeStyle = active ? secondary : primary;
   ctx.lineWidth = active ? 2.8 : 2;
   ctx.stroke();
+
   ctx.beginPath();
-  ctx.arc(x - w * 0.14, y - h * 0.24, w * 0.045, 0, Math.PI * 2);
-  ctx.arc(x + w * 0.14, y - h * 0.24, w * 0.045, 0, Math.PI * 2);
-  ctx.fillStyle = primary;
+  ctx.moveTo(-w * 0.04, -h * 0.18);
+  ctx.lineTo(w * 0.02, -h * 0.28);
+  ctx.strokeStyle = 'rgba(255,255,255,0.42)';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(w * 0.025, -h * 0.295, w * 0.026, 0, Math.PI * 2);
+  ctx.fillStyle = secondary;
   ctx.fill();
+
+  const blink = Math.sin(interestTick * 0.085) > 0.92;
+  ctx.strokeStyle = primary;
+  ctx.fillStyle = primary;
+  ctx.lineWidth = 1.8;
+  if (blink) {
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.16, -h * 0.035);
+    ctx.lineTo(-w * 0.08, -h * 0.035);
+    ctx.moveTo(w * 0.08, -h * 0.045);
+    ctx.lineTo(w * 0.16, -h * 0.045);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(-w * 0.13, -h * 0.04, w * 0.045, 0, Math.PI * 2);
+    ctx.arc(w * 0.13, -h * 0.055, w * 0.045, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.beginPath();
-  ctx.moveTo(x - w * 0.1, y - h * 0.13);
-  ctx.quadraticCurveTo(x, y - h * 0.08, x + w * 0.1, y - h * 0.13);
+  ctx.moveTo(-w * 0.11, h * 0.055);
+  ctx.quadraticCurveTo(w * 0.02, h * 0.12, w * 0.16, h * 0.035);
   ctx.strokeStyle = textColor;
   ctx.lineWidth = 1.5;
   ctx.stroke();
-  drawRoundedRect(ctx, x - w * 0.25, y - h * 0.02, w * 0.5, h * 0.36, 12);
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x + w * 0.22, y + h * 0.08);
-  ctx.lineTo(x + w * 0.58, y - h * 0.1);
-  ctx.strokeStyle = secondary;
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x - w * 0.18, y + h * 0.34);
-  ctx.lineTo(x - w * 0.26, y + h * 0.5);
-  ctx.moveTo(x + w * 0.18, y + h * 0.34);
-  ctx.lineTo(x + w * 0.26, y + h * 0.5);
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 2.4;
-  ctx.stroke();
-  ctx.fillStyle = primary;
-  ctx.font = '10px JetBrains Mono, monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('AI teacher', x, y + h * 0.64);
+  ctx.restore();
+
+  for (let i = 0; i < 3; i += 1) {
+    const px = raisedHand.x + 10 + i * 8;
+    const py = raisedHand.y - 8 + Math.sin(interestTick * 0.06 + i) * 4;
+    ctx.beginPath();
+    ctx.arc(px, py, 1.7, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 ? primary : secondary;
+    ctx.fill();
+  }
+
   ctx.textAlign = 'left';
   ctx.restore();
 }
@@ -3102,7 +3193,9 @@ function drawStudentFigure(ctx, student, primary, muted, active) {
   ctx.fillStyle = active ? primary : muted;
   ctx.font = '9px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('Student', x, y + student.h * 0.45);
+  if (student.h >= 80) {
+    ctx.fillText('Student', x, y + student.h * 0.45);
+  }
   ctx.textAlign = 'left';
   ctx.restore();
 }
@@ -3174,17 +3267,26 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
   interestCtx.fill();
 
   drawClassroomBoard(interestCtx, layout.board, concept, signal, mastery, primary, secondary, muted, textColor);
-  drawStudentFigure(interestCtx, layout.student, primary, muted, educationInteraction.hoverType === 'student');
-  drawRobotTeacher(interestCtx, layout.robot, primary, secondary, textColor, educationInteraction.pulse > 0.12 || educationInteraction.hoverType === 'robot');
 
-  const pointerStart = { x: layout.robot.x + layout.robot.w * 0.58, y: layout.robot.y - layout.robot.h * 0.1 };
+  const teacherSway = Math.sin(interestTick * 0.045) * 2.4;
+  const teacherLift = Math.sin(interestTick * 0.062) * 1.8;
+  const raisedHand = {
+    x: layout.robot.x + layout.robot.w * 0.58 + teacherSway * 0.2,
+    y: layout.robot.y - layout.robot.h * 0.3 + teacherLift
+  };
+  const pointerStart = raisedHand;
   const pointerEnd = { x: layout.board.x + 18, y: layout.board.y + 50 };
   interestCtx.beginPath();
   interestCtx.moveTo(pointerStart.x, pointerStart.y);
   interestCtx.lineTo(pointerEnd.x, pointerEnd.y);
   interestCtx.strokeStyle = secondary;
   interestCtx.lineWidth = 2.5;
+  interestCtx.setLineDash([5, 7]);
   interestCtx.stroke();
+  interestCtx.setLineDash([]);
+
+  drawStudentFigure(interestCtx, layout.student, primary, muted, educationInteraction.hoverType === 'student');
+  drawRobotTeacher(interestCtx, layout.robot, primary, secondary, textColor, educationInteraction.pulse > 0.12 || educationInteraction.hoverType === 'robot');
 
   if (signal.id === 'hint') {
     for (let i = 0; i < 5; i += 1) {
@@ -3230,17 +3332,11 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
     interestCtx.textAlign = 'left';
   });
 
-  if (!layout.compact) {
-    interestCtx.fillStyle = muted;
-    interestCtx.font = '10px JetBrains Mono, monospace';
-    fillTruncatedText(interestCtx, 'Student feedback changes the teacher explanation and next practice.', 16, height - 15, width - 32);
-  }
-
-  if (educationInteraction.active) {
+  if (educationInteraction.active && (educationInteraction.dragging || educationInteraction.pulse > 0.18)) {
     const pointerX = educationInteraction.x * width;
     const pointerY = educationInteraction.y * height;
     interestCtx.beginPath();
-    interestCtx.arc(pointerX, pointerY, 12 + educationInteraction.pulse * 10, 0, Math.PI * 2);
+    interestCtx.arc(pointerX, pointerY, 7 + educationInteraction.pulse * 8, 0, Math.PI * 2);
     interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
     interestCtx.lineWidth = 1.2;
     interestCtx.stroke();
