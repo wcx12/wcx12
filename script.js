@@ -2532,11 +2532,12 @@ function agentHitRegion(event) {
   const rect = interestCanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
-  const layout = agentWorkbenchLayout(rect.width, rect.height);
+  const layout = humanAiCollabLayout(rect.width, rect.height);
   const regions = [
     ...layout.taskCards.map((item) => ({ type: 'task', item })),
-    ...layout.evidenceSheets.map((item) => ({ type: 'evidence', item })),
-    { type: 'stamp', item: layout.stamp }
+    { type: 'human', item: layout.human },
+    { type: 'ai', item: { x: layout.ai.x - layout.ai.r, y: layout.ai.y - layout.ai.r, w: layout.ai.r * 2, h: layout.ai.r * 2, id: 'ai' } },
+    { type: 'output', item: layout.output }
   ];
   return regions.find(({ item }) => (
     x >= item.x
@@ -2690,11 +2691,12 @@ function educationHitRegion(event) {
   const rect = interestCanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
-  const layout = educationGardenLayout(rect.width, rect.height);
+  const layout = robotTeacherLayout(rect.width, rect.height);
   const regions = [
-    ...layout.plants.map((item) => ({ type: 'concept', item })),
-    ...layout.feedbackStones.map((item) => ({ type: 'signal', item })),
-    { type: 'insight', item: layout.signpost }
+    ...layout.feedbackButtons.map((item) => ({ type: 'signal', item })),
+    { type: 'robot', item: { x: layout.robot.x - layout.robot.w / 2, y: layout.robot.y - layout.robot.h / 2, w: layout.robot.w, h: layout.robot.h, id: 'robot' } },
+    { type: 'student', item: { x: layout.student.x - layout.student.w / 2, y: layout.student.y - layout.student.h / 2, w: layout.student.w, h: layout.student.h, id: 'student' } },
+    { type: 'board', item: layout.board }
   ];
   return regions.find(({ item }) => (
     x >= item.x
@@ -2729,6 +2731,520 @@ function educationMastery(concept) {
       ? 0.06
       : -0.04;
   return clamp01(concept.mastery + responseShift + educationInteraction.masteryBoost * 0.04);
+}
+
+const humanAiCollabScenarios = [
+  {
+    task: 'Research task',
+    shortTask: 'Task',
+    human: 'Human asks',
+    ai: 'AI works',
+    output: 'Result ready',
+    detail: 'Mapped research work'
+  },
+  {
+    task: 'Read project',
+    shortTask: 'Read',
+    human: 'Project question',
+    ai: 'AI summarizes',
+    output: 'Brief ready',
+    detail: 'Traceable summary'
+  },
+  {
+    task: 'Verify update',
+    shortTask: 'Check',
+    human: 'Need proof',
+    ai: 'AI checks page',
+    output: 'Verified',
+    detail: 'Evidence delivered'
+  }
+];
+
+function humanAiScenario() {
+  return humanAiCollabScenarios[agentInteraction.taskIndex % humanAiCollabScenarios.length] || humanAiCollabScenarios[0];
+}
+
+function humanAiCollabLayout(width, height) {
+  const compact = width < 460 || height < 220;
+  const centerY = height * (compact ? 0.5 : 0.54);
+  const buttonW = compact ? Math.max(74, (width - 46) / 3) : 118;
+  return {
+    compact,
+    taskCards: humanAiCollabScenarios.map((task, index) => ({
+      ...task,
+      index,
+      x: compact ? 14 + index * (buttonW + 7) : 18,
+      y: compact ? 14 : 24 + index * 38,
+      w: buttonW,
+      h: compact ? 28 : 30
+    })),
+    human: {
+      id: 'human',
+      x: compact ? width * 0.18 : width * 0.22,
+      y: centerY,
+      w: compact ? 82 : 104,
+      h: compact ? 112 : 132
+    },
+    ai: {
+      id: 'ai',
+      x: compact ? width * 0.5 : width * 0.51,
+      y: centerY - (compact ? 6 : 2),
+      r: compact ? 38 : 48
+    },
+    output: {
+      id: 'output',
+      x: compact ? width * 0.7 : width * 0.73,
+      y: centerY - (compact ? 48 : 54),
+      w: compact ? 104 : 138,
+      h: compact ? 94 : 112
+    }
+  };
+}
+
+function drawHumanFigure(ctx, figure, primary, secondary, muted, active) {
+  const headR = figure.w * 0.16;
+  const x = figure.x;
+  const y = figure.y;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.48)';
+  ctx.lineWidth = active ? 3 : 2.2;
+  ctx.beginPath();
+  ctx.arc(x, y - figure.h * 0.28, headR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y - figure.h * 0.12);
+  ctx.lineTo(x, y + figure.h * 0.24);
+  ctx.moveTo(x - figure.w * 0.22, y + figure.h * 0.02);
+  ctx.quadraticCurveTo(x + figure.w * 0.08, y - figure.h * 0.02, x + figure.w * 0.33, y - figure.h * 0.1);
+  ctx.moveTo(x, y + figure.h * 0.22);
+  ctx.lineTo(x - figure.w * 0.22, y + figure.h * 0.46);
+  ctx.moveTo(x, y + figure.h * 0.22);
+  ctx.lineTo(x + figure.w * 0.24, y + figure.h * 0.46);
+  ctx.stroke();
+  drawRoundedRect(ctx, x - figure.w * 0.45, y + figure.h * 0.49, figure.w * 0.9, 24, 8);
+  ctx.fillStyle = active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+  ctx.fill();
+  ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.14)';
+  ctx.stroke();
+  ctx.fillStyle = active ? primary : muted;
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Human', x, y + figure.h * 0.49 + 16);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+function drawAiAssistant(ctx, ai, primary, secondary, textColor, activePulse) {
+  ctx.save();
+  const rings = [1, 1.38, 1.75];
+  rings.forEach((scale, index) => {
+    ctx.beginPath();
+    ctx.arc(ai.x, ai.y, ai.r * scale + activePulse * (6 + index * 4), 0, Math.PI * 2);
+    ctx.strokeStyle = index === 0 ? primary : `rgba(255,255,255,${0.13 - index * 0.03})`;
+    ctx.lineWidth = index === 0 ? 2.4 : 1;
+    ctx.stroke();
+  });
+  const glow = ctx.createRadialGradient(ai.x, ai.y, 0, ai.x, ai.y, ai.r * 1.2);
+  glow.addColorStop(0, 'rgba(255,255,255,0.18)');
+  glow.addColorStop(0.56, 'rgba(0,245,255,0.12)');
+  glow.addColorStop(1, 'rgba(0,245,255,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(ai.x, ai.y, ai.r * 1.25, 0, Math.PI * 2);
+  ctx.fill();
+  drawRoundedRect(ctx, ai.x - ai.r * 0.58, ai.y - ai.r * 0.46, ai.r * 1.16, ai.r * 0.92, 12);
+  ctx.fillStyle = 'rgba(3,7,18,0.58)';
+  ctx.fill();
+  ctx.strokeStyle = secondary;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(ai.x - ai.r * 0.22, ai.y - ai.r * 0.08, ai.r * 0.08, 0, Math.PI * 2);
+  ctx.arc(ai.x + ai.r * 0.22, ai.y - ai.r * 0.08, ai.r * 0.08, 0, Math.PI * 2);
+  ctx.fillStyle = primary;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(ai.x - ai.r * 0.18, ai.y + ai.r * 0.16);
+  ctx.quadraticCurveTo(ai.x, ai.y + ai.r * 0.26, ai.x + ai.r * 0.18, ai.y + ai.r * 0.16);
+  ctx.strokeStyle = textColor;
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(ai.x, ai.y - ai.r * 0.46);
+  ctx.lineTo(ai.x, ai.y - ai.r * 0.72);
+  ctx.strokeStyle = secondary;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(ai.x, ai.y - ai.r * 0.8, ai.r * 0.08, 0, Math.PI * 2);
+  ctx.fillStyle = secondary;
+  ctx.fill();
+  ctx.fillStyle = primary;
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AI', ai.x, ai.y + ai.r * 0.82);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+function drawOutputArtifact(ctx, output, scenario, primary, secondary, muted, textColor, active) {
+  ctx.save();
+  drawRoundedRect(ctx, output.x, output.y, output.w, output.h, 12);
+  ctx.fillStyle = active ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.075)';
+  ctx.fill();
+  ctx.strokeStyle = active ? secondary : 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = active ? 2.4 : 1.2;
+  ctx.stroke();
+  ctx.fillStyle = secondary;
+  ctx.font = '10px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, scenario.output, output.x + 12, output.y + 20, output.w - 24);
+  ctx.strokeStyle = primary;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(output.x + 15, output.y + 38);
+  ctx.lineTo(output.x + 26, output.y + 49);
+  ctx.lineTo(output.x + 48, output.y + 29);
+  ctx.stroke();
+  ctx.fillStyle = textColor;
+  ctx.font = '9px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, scenario.detail, output.x + 12, output.y + 67, output.w - 24);
+  ctx.fillStyle = muted;
+  fillTruncatedText(ctx, 'Delivered by AI', output.x + 12, output.y + 84, output.w - 24);
+  ctx.restore();
+}
+
+function drawHumanAiCollab(width, height, t, primary, secondary, muted) {
+  const layout = humanAiCollabLayout(width, height);
+  const scenario = humanAiScenario();
+  const textColor = themeColor('--text') || '#f5f5f5';
+  const progress = (t * 0.28 + agentInteraction.runBoost * 0.52) % 1;
+  const activePulse = agentInteraction.pulse;
+  const phase = progress < 0.38 ? 'toAi' : progress < 0.72 ? 'thinking' : 'toDone';
+  const tokenProgress = phase === 'toAi'
+    ? progress / 0.38
+    : phase === 'thinking'
+      ? 1
+      : (progress - 0.72) / 0.28;
+
+  agentInteraction.pulse *= 0.86;
+  agentInteraction.runBoost *= 0.9;
+
+  const humanActive = phase === 'toAi' || agentInteraction.hoverType === 'human';
+  const outputActive = phase === 'toDone' || agentInteraction.hoverType === 'output';
+  const aiActive = phase === 'thinking' || agentInteraction.hoverType === 'ai';
+
+  layout.taskCards.forEach((card) => {
+    const selected = card.index === agentInteraction.taskIndex;
+    const hovered = agentInteraction.hoverType === 'task' && agentInteraction.hoverId === card.index;
+    drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 10);
+    interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.06)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.15)';
+    interestCtx.lineWidth = selected || hovered ? 2 : 1;
+    interestCtx.stroke();
+    interestCtx.fillStyle = selected ? secondary : textColor;
+    interestCtx.font = layout.compact ? '9px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
+    interestCtx.textAlign = 'center';
+    interestCtx.fillText(layout.compact ? card.shortTask : card.task, card.x + card.w / 2, card.y + card.h / 2 + 4);
+    interestCtx.textAlign = 'left';
+  });
+
+  drawHumanFigure(interestCtx, layout.human, primary, secondary, muted, humanActive);
+  drawAiAssistant(interestCtx, layout.ai, primary, secondary, textColor, aiActive ? activePulse + 0.35 : activePulse * 0.5);
+  drawOutputArtifact(interestCtx, layout.output, scenario, primary, secondary, muted, textColor, outputActive);
+
+  const from = { x: layout.human.x + layout.human.w * 0.33, y: layout.human.y - layout.human.h * 0.1 };
+  const mid = { x: layout.ai.x, y: layout.ai.y };
+  const to = { x: layout.output.x + layout.output.w * 0.15, y: layout.output.y + layout.output.h * 0.5 };
+  const flowStart = phase === 'toDone' ? mid : from;
+  const flowEnd = phase === 'toDone' ? to : mid;
+  const tokenX = flowStart.x + (flowEnd.x - flowStart.x) * tokenProgress;
+  const tokenY = flowStart.y + (flowEnd.y - flowStart.y) * tokenProgress + Math.sin(tokenProgress * Math.PI) * -20;
+
+  [[from, mid], [mid, to]].forEach(([a, b], index) => {
+    interestCtx.beginPath();
+    interestCtx.moveTo(a.x, a.y);
+    interestCtx.quadraticCurveTo((a.x + b.x) / 2, Math.min(a.y, b.y) - 26, b.x, b.y);
+    interestCtx.strokeStyle = index === 0 && phase === 'toAi' || index === 1 && phase === 'toDone'
+      ? `rgba(255,255,255,0.36)`
+      : 'rgba(255,255,255,0.12)';
+    interestCtx.lineWidth = index === 0 && phase === 'toAi' || index === 1 && phase === 'toDone' ? 2.2 : 1;
+    interestCtx.stroke();
+  });
+
+  drawRoundedRect(interestCtx, tokenX - 34, tokenY - 15, 68, 30, 9);
+  interestCtx.fillStyle = 'rgba(3,7,18,0.72)';
+  interestCtx.fill();
+  interestCtx.strokeStyle = phase === 'thinking' ? primary : secondary;
+  interestCtx.lineWidth = 2;
+  interestCtx.stroke();
+  interestCtx.fillStyle = textColor;
+  interestCtx.font = '9px JetBrains Mono, monospace';
+  interestCtx.textAlign = 'center';
+  interestCtx.fillText(phase === 'thinking' ? 'working' : scenario.shortTask, tokenX, tokenY + 3);
+  interestCtx.textAlign = 'left';
+
+  if (phase === 'thinking') {
+    for (let i = 0; i < 8; i += 1) {
+      const a = t * 0.9 + i * Math.PI / 4;
+      interestCtx.beginPath();
+      interestCtx.arc(layout.ai.x + Math.cos(a) * (layout.ai.r + 22), layout.ai.y + Math.sin(a) * (layout.ai.r + 18), 2.2, 0, Math.PI * 2);
+      interestCtx.fillStyle = i % 2 ? secondary : primary;
+      interestCtx.fill();
+    }
+  }
+
+  interestCtx.fillStyle = muted;
+  interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
+  fillTruncatedText(interestCtx, layout.compact ? 'Tap a task. AI helps. Result returns.' : `${scenario.human} -> ${scenario.ai} -> ${scenario.output}`, 16, height - 15, width - 32);
+}
+
+function robotTeacherLayout(width, height) {
+  const compact = width < 460 || height < 220;
+  return {
+    compact,
+    robot: {
+      id: 'robot',
+      x: compact ? width * 0.24 : width * 0.27,
+      y: compact ? height * 0.48 : height * 0.5,
+      w: compact ? 84 : 104,
+      h: compact ? 116 : 136
+    },
+    student: {
+      id: 'student',
+      x: compact ? width * 0.1 : width * 0.12,
+      y: compact ? height * 0.66 : height * 0.68,
+      w: compact ? 54 : 64,
+      h: compact ? 72 : 84
+    },
+    board: {
+      id: 'board',
+      x: compact ? width * 0.43 : width * 0.44,
+      y: compact ? 26 : 30,
+      w: compact ? width * 0.52 : width * 0.5,
+      h: compact ? height * 0.48 : height * 0.56
+    },
+    feedbackButtons: educationSignals.map((signal, index) => ({
+      ...signal,
+      x: compact ? 14 + index * ((width - 38) / 3 + 5) : width * 0.18 + index * Math.min(118, width * 0.2),
+      y: height - (compact ? 36 : 40),
+      w: compact ? (width - 46) / 3 : 98,
+      h: compact ? 26 : 30
+    }))
+  };
+}
+
+function drawRobotTeacher(ctx, robot, primary, secondary, textColor, active) {
+  ctx.save();
+  const x = robot.x;
+  const y = robot.y;
+  const w = robot.w;
+  const h = robot.h;
+  drawRoundedRect(ctx, x - w * 0.32, y - h * 0.43, w * 0.64, h * 0.38, 13);
+  ctx.fillStyle = 'rgba(3,7,18,0.62)';
+  ctx.fill();
+  ctx.strokeStyle = active ? secondary : primary;
+  ctx.lineWidth = active ? 2.8 : 2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x - w * 0.14, y - h * 0.24, w * 0.045, 0, Math.PI * 2);
+  ctx.arc(x + w * 0.14, y - h * 0.24, w * 0.045, 0, Math.PI * 2);
+  ctx.fillStyle = primary;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.1, y - h * 0.13);
+  ctx.quadraticCurveTo(x, y - h * 0.08, x + w * 0.1, y - h * 0.13);
+  ctx.strokeStyle = textColor;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  drawRoundedRect(ctx, x - w * 0.25, y - h * 0.02, w * 0.5, h * 0.36, 12);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.22, y + h * 0.08);
+  ctx.lineTo(x + w * 0.58, y - h * 0.1);
+  ctx.strokeStyle = secondary;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.18, y + h * 0.34);
+  ctx.lineTo(x - w * 0.26, y + h * 0.5);
+  ctx.moveTo(x + w * 0.18, y + h * 0.34);
+  ctx.lineTo(x + w * 0.26, y + h * 0.5);
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 2.4;
+  ctx.stroke();
+  ctx.fillStyle = primary;
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AI teacher', x, y + h * 0.64);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+function drawStudentFigure(ctx, student, primary, muted, active) {
+  const x = student.x;
+  const y = student.y;
+  ctx.save();
+  ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.42)';
+  ctx.lineWidth = active ? 2.8 : 2;
+  ctx.beginPath();
+  ctx.arc(x, y - student.h * 0.22, student.w * 0.16, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y - student.h * 0.05);
+  ctx.lineTo(x, y + student.h * 0.25);
+  ctx.moveTo(x - student.w * 0.18, y + student.h * 0.08);
+  ctx.lineTo(x + student.w * 0.2, y + student.h * 0.08);
+  ctx.stroke();
+  ctx.fillStyle = active ? primary : muted;
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Student', x, y + student.h * 0.45);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+function drawClassroomBoard(ctx, board, concept, signal, mastery, primary, secondary, muted, textColor) {
+  const title = signal.id === 'correct'
+    ? 'Next: challenge'
+    : signal.id === 'hint'
+      ? 'Hint: one step'
+      : 'Retry: simpler';
+  const line1 = signal.id === 'correct'
+    ? `${concept.label}: harder practice`
+    : signal.id === 'hint'
+      ? `${concept.label}: show key step`
+      : `${concept.label}: rebuild basics`;
+  const line2 = signal.id === 'correct'
+    ? 'Great. Move forward.'
+    : signal.id === 'hint'
+      ? 'Explain, then retry.'
+      : 'Slow down and scaffold.';
+  drawRoundedRect(ctx, board.x, board.y, board.w, board.h, 12);
+  ctx.fillStyle = 'rgba(3, 7, 18, 0.62)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = primary;
+  ctx.font = '12px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, title, board.x + 16, board.y + 24, board.w - 32);
+  ctx.fillStyle = textColor;
+  ctx.font = '10px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, line1, board.x + 16, board.y + 48, board.w - 32);
+  ctx.fillStyle = muted;
+  fillTruncatedText(ctx, line2, board.x + 16, board.y + 68, board.w - 32);
+  ctx.beginPath();
+  ctx.moveTo(board.x + 16, board.y + board.h - 30);
+  ctx.lineTo(board.x + board.w - 16, board.y + board.h - 30);
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(board.x + 16, board.y + board.h - 30);
+  ctx.lineTo(board.x + 16 + (board.w - 32) * mastery, board.y + board.h - 30);
+  ctx.strokeStyle = mastery > 0.68 ? primary : mastery > 0.48 ? secondary : 'rgba(255,255,255,0.55)';
+  ctx.stroke();
+  ctx.fillStyle = secondary;
+  ctx.font = '9px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, `Mastery ${Math.round(mastery * 100)}%`, board.x + 16, board.y + board.h - 12, board.w - 32);
+}
+
+function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) {
+  const layout = robotTeacherLayout(width, height);
+  const concept = educationConceptForSelected();
+  const signal = educationSignalForSelected();
+  const mastery = educationMastery(concept);
+  const textColor = themeColor('--text') || '#f5f5f5';
+
+  educationInteraction.pulse *= 0.86;
+  educationInteraction.masteryBoost *= 0.9;
+
+  const floorY = height - (layout.compact ? 48 : 54);
+  interestCtx.beginPath();
+  interestCtx.moveTo(0, floorY);
+  interestCtx.lineTo(width, floorY - 8);
+  interestCtx.lineTo(width, height);
+  interestCtx.lineTo(0, height);
+  interestCtx.closePath();
+  interestCtx.fillStyle = 'rgba(255,255,255,0.045)';
+  interestCtx.fill();
+
+  drawClassroomBoard(interestCtx, layout.board, concept, signal, mastery, primary, secondary, muted, textColor);
+  drawStudentFigure(interestCtx, layout.student, primary, muted, educationInteraction.hoverType === 'student');
+  drawRobotTeacher(interestCtx, layout.robot, primary, secondary, textColor, educationInteraction.pulse > 0.12 || educationInteraction.hoverType === 'robot');
+
+  const pointerStart = { x: layout.robot.x + layout.robot.w * 0.58, y: layout.robot.y - layout.robot.h * 0.1 };
+  const pointerEnd = { x: layout.board.x + 18, y: layout.board.y + 50 };
+  interestCtx.beginPath();
+  interestCtx.moveTo(pointerStart.x, pointerStart.y);
+  interestCtx.lineTo(pointerEnd.x, pointerEnd.y);
+  interestCtx.strokeStyle = secondary;
+  interestCtx.lineWidth = 2.5;
+  interestCtx.stroke();
+
+  if (signal.id === 'hint') {
+    for (let i = 0; i < 5; i += 1) {
+      const x = layout.board.x + 38 + i * 18;
+      const y = layout.board.y + 82 + Math.sin(t + i) * 3;
+      interestCtx.beginPath();
+      interestCtx.arc(x, y, 2.4, 0, Math.PI * 2);
+      interestCtx.fillStyle = primary;
+      interestCtx.fill();
+    }
+  } else if (signal.id === 'correct') {
+    interestCtx.beginPath();
+    interestCtx.moveTo(layout.student.x + 22, layout.student.y - 30);
+    interestCtx.lineTo(layout.student.x + 30, layout.student.y - 20);
+    interestCtx.lineTo(layout.student.x + 48, layout.student.y - 42);
+    interestCtx.strokeStyle = primary;
+    interestCtx.lineWidth = 3;
+    interestCtx.stroke();
+  } else {
+    drawRoundedRect(interestCtx, layout.student.x + 24, layout.student.y - 48, 58, 24, 8);
+    interestCtx.fillStyle = 'rgba(255,255,255,0.08)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = secondary;
+    interestCtx.stroke();
+    interestCtx.fillStyle = secondary;
+    interestCtx.font = '9px JetBrains Mono, monospace';
+    interestCtx.fillText('try 1 step', layout.student.x + 30, layout.student.y - 33);
+  }
+
+  layout.feedbackButtons.forEach((button) => {
+    const selected = button.id === educationInteraction.selectedSignal;
+    const hovered = educationInteraction.hoverType === 'signal' && educationInteraction.hoverId === button.id;
+    drawRoundedRect(interestCtx, button.x, button.y, button.w, button.h, 12);
+    interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.06)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.16)';
+    interestCtx.lineWidth = selected || hovered ? 2 : 1;
+    interestCtx.stroke();
+    interestCtx.fillStyle = selected ? secondary : textColor;
+    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
+    interestCtx.textAlign = 'center';
+    interestCtx.fillText(layout.compact ? button.compact : button.label, button.x + button.w / 2, button.y + button.h / 2 + 4);
+    interestCtx.textAlign = 'left';
+  });
+
+  if (!layout.compact) {
+    interestCtx.fillStyle = muted;
+    interestCtx.font = '10px JetBrains Mono, monospace';
+    fillTruncatedText(interestCtx, 'Student feedback changes the teacher explanation and next practice.', 16, height - 15, width - 32);
+  }
+
+  if (educationInteraction.active) {
+    const pointerX = educationInteraction.x * width;
+    const pointerY = educationInteraction.y * height;
+    interestCtx.beginPath();
+    interestCtx.arc(pointerX, pointerY, 12 + educationInteraction.pulse * 10, 0, Math.PI * 2);
+    interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
+    interestCtx.lineWidth = 1.2;
+    interestCtx.stroke();
+  }
 }
 
 function agentWorkbenchScenario() {
@@ -3431,7 +3947,7 @@ function drawInterestAnimation() {
     interestCtx.fillStyle = muted;
     interestCtx.fillText(best.id, scoreX + 12, scoreY + 32);
   } else if (type === 'agent') {
-    drawAgentWorkbench(width, height, t, primary, secondary, muted);
+    drawHumanAiCollab(width, height, t, primary, secondary, muted);
     return;
     const layout = agentRunnerLayout(width, height);
     const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
@@ -3661,7 +4177,7 @@ function drawInterestAnimation() {
       interestCtx.stroke();
     }
   } else if (type === 'education') {
-    drawEducationGarden(width, height, t, primary, secondary, muted);
+    drawRobotTeacherClassroom(width, height, t, primary, secondary, muted);
     return;
     const layout = educationRunnerLayout(width, height);
     const path = educationPathForSelected();
@@ -3920,11 +4436,15 @@ function interactWithAgentRunner(event) {
   if (hit?.type === 'task') {
     agentInteraction.taskIndex = hit.item.index;
     agentInteraction.selectedStage = 'plan';
-  } else if (hit?.type === 'evidence') {
-    agentInteraction.selectedStage = hit.item.id;
+  } else if (hit?.type === 'human') {
+    agentInteraction.selectedStage = 'request';
+    agentInteraction.selectedTool = 'memory';
+  } else if (hit?.type === 'ai') {
+    agentInteraction.selectedStage = 'work';
     agentInteraction.selectedTool = 'rag';
-  } else if (hit?.type === 'stamp') {
-    agentInteraction.selectedStage = 'result';
+  } else if (hit?.type === 'output') {
+    agentInteraction.selectedStage = 'deliver';
+    agentInteraction.selectedTool = 'eval';
   } else {
     agentInteraction.pulse = 0.35;
     agentInteraction.runBoost = 0.24;
@@ -3958,6 +4478,12 @@ function interactWithEducationStudio(event) {
     educationInteraction.selectedPath = 'content';
   } else if (hit?.type === 'insight') {
     educationInteraction.selectedPath = educationInteraction.selectedPath === 'teacher' ? 'evidence' : 'teacher';
+  } else if (hit?.type === 'robot' || hit?.type === 'board') {
+    educationInteraction.selectedSignal = 'hint';
+    educationInteraction.selectedPath = 'teacher';
+  } else if (hit?.type === 'student') {
+    educationInteraction.selectedSignal = 'incorrect';
+    educationInteraction.selectedPath = 'learner';
   } else {
     educationInteraction.pulse = 0.3;
     educationInteraction.masteryBoost = 0.2;
