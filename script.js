@@ -3001,43 +3001,115 @@ function drawHumanAiCollab(width, height, t, primary, secondary, muted) {
 
 function robotTeacherLayout(width, height) {
   const compact = width < 460 || height < 220;
-  const feedbackY = height - (compact ? 38 : 42);
-  const boardY = compact ? 24 : 30;
+  const feedbackY = height - (compact ? 40 : 44);
+  const feedbackGroupW = Math.min(compact ? width - 42 : 330, width - (compact ? 36 : 120));
+  const feedbackGap = compact ? 6 : 8;
+  const feedbackX = (width - feedbackGroupW) / 2;
+  const feedbackSegmentW = (feedbackGroupW - feedbackGap * 2) / 3;
+  const boardY = compact ? 28 : 30;
   const boardHeight = Math.max(
-    compact ? 82 : 112,
-    Math.min(compact ? height * 0.42 : height * 0.5, feedbackY - boardY - (compact ? 66 : 58))
+    compact ? 92 : 118,
+    Math.min(compact ? height * 0.42 : height * 0.5, feedbackY - boardY - (compact ? 70 : 62))
   );
   return {
     compact,
+    feedbackGroup: {
+      x: feedbackX,
+      y: feedbackY,
+      w: feedbackGroupW,
+      h: compact ? 30 : 32,
+      gap: feedbackGap
+    },
     robot: {
       id: 'robot',
-      x: compact ? width * 0.25 : width * 0.28,
-      y: Math.min(compact ? height * 0.47 : height * 0.49, feedbackY - (compact ? 66 : 78)),
-      w: compact ? 88 : 112,
-      h: compact ? 118 : 140
+      x: compact ? width * 0.3 : width * 0.28,
+      y: Math.min(compact ? height * 0.5 : height * 0.5, feedbackY - (compact ? 74 : 80)),
+      w: compact ? 96 : 122,
+      h: compact ? 126 : 148
     },
     student: {
       id: 'student',
-      x: compact ? width * 0.1 : width * 0.12,
-      y: compact ? feedbackY - 50 : feedbackY - 66,
-      w: compact ? 54 : 64,
-      h: compact ? 72 : 84
+      x: compact ? width * 0.13 : width * 0.15,
+      y: compact ? feedbackY - 66 : feedbackY - 70,
+      w: compact ? 78 : 92,
+      h: compact ? 86 : 94
     },
     board: {
       id: 'board',
-      x: compact ? width * 0.43 : width * 0.44,
+      x: compact ? width * 0.44 : width * 0.44,
       y: boardY,
       w: compact ? width * 0.52 : width * 0.5,
       h: boardHeight
     },
     feedbackButtons: educationSignals.map((signal, index) => ({
       ...signal,
-      x: compact ? 14 + index * ((width - 38) / 3 + 5) : width * 0.18 + index * Math.min(118, width * 0.2),
+      x: feedbackX + index * (feedbackSegmentW + feedbackGap),
       y: feedbackY,
-      w: compact ? (width - 46) / 3 : 98,
-      h: compact ? 28 : 30
+      w: feedbackSegmentW,
+      h: compact ? 30 : 32
     }))
   };
+}
+
+function drawEducationStageBackdrop(ctx, width, height, layout, primary, secondary) {
+  ctx.save();
+  const backdrop = ctx.createLinearGradient(0, 0, 0, height);
+  backdrop.addColorStop(0, 'rgba(5, 12, 28, 0.98)');
+  backdrop.addColorStop(0.56, 'rgba(4, 10, 22, 0.94)');
+  backdrop.addColorStop(1, 'rgba(6, 9, 18, 0.98)');
+  ctx.fillStyle = backdrop;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalAlpha = 0.1;
+  ctx.strokeStyle = primary;
+  ctx.lineWidth = 1;
+  const grid = layout.compact ? 48 : 44;
+  for (let x = -grid; x <= width + grid; x += grid) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 14, height);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.04;
+  for (let y = grid * 0.75; y <= height; y += grid) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y - 10);
+    ctx.stroke();
+  }
+
+  const floorY = height - (layout.compact ? 78 : 82);
+  ctx.globalAlpha = 1;
+  const floor = ctx.createLinearGradient(0, floorY, 0, height);
+  floor.addColorStop(0, 'rgba(255, 255, 255, 0.035)');
+  floor.addColorStop(1, 'rgba(255, 255, 255, 0.09)');
+  ctx.beginPath();
+  ctx.moveTo(0, floorY);
+  ctx.bezierCurveTo(width * 0.28, floorY + 22, width * 0.72, floorY - 16, width, floorY + 10);
+  ctx.lineTo(width, height);
+  ctx.lineTo(0, height);
+  ctx.closePath();
+  ctx.fillStyle = floor;
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i += 1) {
+    const y = floorY + 16 + i * 18;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.quadraticCurveTo(width * 0.5, y - 10, width, y + 3);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = secondary;
+  ctx.lineWidth = layout.compact ? 1.2 : 1.5;
+  ctx.beginPath();
+  ctx.moveTo(layout.robot.x - layout.robot.w * 0.42, floorY + 6);
+  ctx.quadraticCurveTo(layout.robot.x, floorY - 8, layout.robot.x + layout.robot.w * 0.52, floorY + 4);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawRobotTeacher(ctx, robot, primary, secondary, textColor, active) {
@@ -3175,6 +3247,77 @@ function drawRobotTeacher(ctx, robot, primary, secondary, textColor, active) {
   ctx.restore();
 }
 
+function drawStudentDesk(ctx, student, primary, secondary, muted, textColor, active) {
+  const x = student.x;
+  const y = student.y;
+  const w = student.w;
+  const h = student.h;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.ellipse(x, y + h * 0.5, w * 0.46, h * 0.08, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fill();
+
+  drawRoundedRect(ctx, x - w * 0.5, y + h * 0.1, w, h * 0.3, 12);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.16)';
+  ctx.lineWidth = active ? 1.8 : 1.2;
+  ctx.stroke();
+
+  drawRoundedRect(ctx, x - w * 0.18, y - h * 0.18, w * 0.36, h * 0.38, 14);
+  ctx.fillStyle = 'rgba(255,255,255,0.075)';
+  ctx.fill();
+  ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = active ? 2 : 1.4;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x, y - h * 0.32, w * 0.17, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.46)';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.08, y - h * 0.31);
+  ctx.lineTo(x - w * 0.02, y - h * 0.31);
+  ctx.moveTo(x + w * 0.06, y - h * 0.31);
+  ctx.lineTo(x + w * 0.12, y - h * 0.31);
+  ctx.strokeStyle = primary;
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  drawRoundedRect(ctx, x - w * 0.42, y + h * 0.02, w * 0.36, h * 0.2, 6);
+  ctx.fillStyle = 'rgba(3,7,18,0.78)';
+  ctx.fill();
+  ctx.strokeStyle = secondary;
+  ctx.lineWidth = 1.1;
+  ctx.stroke();
+  ctx.fillStyle = secondary;
+  ctx.font = `${Math.max(8, Math.round(w * 0.1))}px JetBrains Mono, monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('?', x - w * 0.24, y + h * 0.15);
+
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.16, y + h * 0.2);
+  ctx.lineTo(x + w * 0.34, y + h * 0.2);
+  ctx.strokeStyle = muted;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = active ? primary : muted;
+  ctx.font = '8.5px JetBrains Mono, monospace';
+  if (!student.compact && w > 86) {
+    ctx.fillText('Learner', x, y + h * 0.58);
+  }
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
 function drawStudentFigure(ctx, student, primary, muted, active) {
   const x = student.x;
   const y = student.y;
@@ -3201,6 +3344,7 @@ function drawStudentFigure(ctx, student, primary, muted, active) {
 }
 
 function drawClassroomBoard(ctx, board, concept, signal, mastery, primary, secondary, muted, textColor) {
+  const narrow = board.w < 230;
   const title = signal.id === 'correct'
     ? 'Next: challenge'
     : signal.id === 'hint'
@@ -3216,34 +3360,109 @@ function drawClassroomBoard(ctx, board, concept, signal, mastery, primary, secon
     : signal.id === 'hint'
       ? 'Explain, then retry.'
       : 'Slow down and scaffold.';
-  drawRoundedRect(ctx, board.x, board.y, board.w, board.h, 12);
-  ctx.fillStyle = 'rgba(3, 7, 18, 0.62)';
+  const displayTitle = narrow
+    ? (signal.id === 'correct' ? 'Challenge' : signal.id === 'hint' ? 'Hint step' : 'Retry')
+    : title;
+  const displayLine1 = narrow
+    ? (signal.id === 'correct'
+      ? `${concept.label}: harder`
+      : signal.id === 'hint'
+        ? `${concept.label}: key step`
+        : `${concept.label}: basics`)
+    : line1;
+  const displayLine2 = narrow
+    ? (signal.id === 'correct' ? 'Move forward.' : signal.id === 'hint' ? 'Explain, retry.' : 'Scaffold first.')
+    : line2;
+  drawRoundedRect(ctx, board.x, board.y, board.w, board.h, 16);
+  const boardFill = ctx.createLinearGradient(board.x, board.y, board.x + board.w, board.y + board.h);
+  boardFill.addColorStop(0, 'rgba(6, 16, 32, 0.84)');
+  boardFill.addColorStop(1, 'rgba(3, 7, 18, 0.72)');
+  ctx.fillStyle = boardFill;
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-  ctx.lineWidth = 1.5;
+  ctx.shadowColor = primary;
+  ctx.shadowBlur = 12;
+  ctx.strokeStyle = 'rgba(0,245,255,0.28)';
+  ctx.lineWidth = 1.4;
   ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.moveTo(board.x + 1.5, board.y + 16);
+  ctx.lineTo(board.x + 1.5, board.y + board.h - 16);
+  ctx.strokeStyle = secondary;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  const pad = narrow ? 14 : 18;
   ctx.fillStyle = primary;
-  ctx.font = '12px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, title, board.x + 16, board.y + 24, board.w - 32);
+  ctx.font = narrow ? '12.5px JetBrains Mono, monospace' : '14px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, displayTitle, board.x + pad, board.y + 28, board.w - pad * 2);
   ctx.fillStyle = textColor;
-  ctx.font = '10px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, line1, board.x + 16, board.y + 48, board.w - 32);
+  ctx.font = narrow ? '9.5px JetBrains Mono, monospace' : '10.5px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, displayLine1, board.x + pad, board.y + 56, board.w - pad * 2);
   ctx.fillStyle = muted;
-  fillTruncatedText(ctx, line2, board.x + 16, board.y + 68, board.w - 32);
+  fillTruncatedText(ctx, displayLine2, board.x + pad, board.y + 78, board.w - pad * 2);
+
+  ctx.globalAlpha = 0.45;
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i += 1) {
+    const y = board.y + 96 + i * 14;
+    if (y > board.y + board.h - 42) break;
+    ctx.beginPath();
+    ctx.moveTo(board.x + pad, y);
+    ctx.lineTo(board.x + board.w - pad, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
   ctx.beginPath();
-  ctx.moveTo(board.x + 16, board.y + board.h - 30);
-  ctx.lineTo(board.x + board.w - 16, board.y + board.h - 30);
+  ctx.moveTo(board.x + pad, board.y + board.h - 30);
+  ctx.lineTo(board.x + board.w - pad, board.y + board.h - 30);
   ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 7;
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(board.x + 16, board.y + board.h - 30);
-  ctx.lineTo(board.x + 16 + (board.w - 32) * mastery, board.y + board.h - 30);
+  ctx.moveTo(board.x + pad, board.y + board.h - 30);
+  ctx.lineTo(board.x + pad + (board.w - pad * 2) * mastery, board.y + board.h - 30);
   ctx.strokeStyle = mastery > 0.68 ? primary : mastery > 0.48 ? secondary : 'rgba(255,255,255,0.55)';
   ctx.stroke();
   ctx.fillStyle = secondary;
   ctx.font = '9px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, `Mastery ${Math.round(mastery * 100)}%`, board.x + 16, board.y + board.h - 12, board.w - 32);
+  fillTruncatedText(ctx, `Mastery ${Math.round(mastery * 100)}%`, board.x + pad, board.y + board.h - 12, board.w - pad * 2);
+}
+
+function drawEducationFeedbackSegment(ctx, button, selected, hovered, layout, primary, secondary, textColor) {
+  ctx.save();
+  const radius = layout.compact ? 13 : 15;
+  drawRoundedRect(ctx, button.x, button.y, button.w, button.h, radius);
+  ctx.fillStyle = selected
+    ? 'rgba(255, 44, 163, 0.18)'
+    : hovered
+      ? 'rgba(0, 245, 255, 0.12)'
+      : 'rgba(255,255,255,0.055)';
+  ctx.fill();
+  ctx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = selected || hovered ? 2 : 1;
+  ctx.stroke();
+  if (selected) {
+    ctx.shadowColor = secondary;
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  const dotR = layout.compact ? 2.2 : 2.6;
+  ctx.beginPath();
+  ctx.arc(button.x + 12, button.y + button.h / 2, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = selected ? secondary : primary;
+  ctx.fill();
+
+  ctx.fillStyle = selected ? secondary : textColor;
+  ctx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(layout.compact ? button.compact : button.label, button.x + button.w / 2 + 6, button.y + button.h / 2 + 4);
+  ctx.restore();
 }
 
 function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) {
@@ -3256,17 +3475,7 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
   educationInteraction.pulse *= 0.86;
   educationInteraction.masteryBoost *= 0.9;
 
-  const floorY = height - (layout.compact ? 48 : 54);
-  interestCtx.beginPath();
-  interestCtx.moveTo(0, floorY);
-  interestCtx.lineTo(width, floorY - 8);
-  interestCtx.lineTo(width, height);
-  interestCtx.lineTo(0, height);
-  interestCtx.closePath();
-  interestCtx.fillStyle = 'rgba(255,255,255,0.045)';
-  interestCtx.fill();
-
-  drawClassroomBoard(interestCtx, layout.board, concept, signal, mastery, primary, secondary, muted, textColor);
+  drawEducationStageBackdrop(interestCtx, width, height, layout, primary, secondary);
 
   const teacherSway = Math.sin(interestTick * 0.045) * 2.4;
   const teacherLift = Math.sin(interestTick * 0.062) * 1.8;
@@ -3275,29 +3484,22 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
     y: layout.robot.y - layout.robot.h * 0.3 + teacherLift
   };
   const pointerStart = raisedHand;
-  const pointerEnd = { x: layout.board.x + 18, y: layout.board.y + 50 };
+  const pointerEnd = { x: layout.board.x + 4, y: layout.board.y + layout.board.h * 0.52 };
   interestCtx.beginPath();
   interestCtx.moveTo(pointerStart.x, pointerStart.y);
-  interestCtx.lineTo(pointerEnd.x, pointerEnd.y);
+  interestCtx.quadraticCurveTo((pointerStart.x + pointerEnd.x) / 2, pointerStart.y - 20, pointerEnd.x, pointerEnd.y);
   interestCtx.strokeStyle = secondary;
   interestCtx.lineWidth = 2.5;
-  interestCtx.setLineDash([5, 7]);
+  interestCtx.lineCap = 'round';
+  interestCtx.setLineDash([2, 8]);
   interestCtx.stroke();
   interestCtx.setLineDash([]);
 
-  drawStudentFigure(interestCtx, layout.student, primary, muted, educationInteraction.hoverType === 'student');
+  drawClassroomBoard(interestCtx, layout.board, concept, signal, mastery, primary, secondary, muted, textColor);
+  drawStudentDesk(interestCtx, layout.student, primary, secondary, muted, textColor, educationInteraction.hoverType === 'student');
   drawRobotTeacher(interestCtx, layout.robot, primary, secondary, textColor, educationInteraction.pulse > 0.12 || educationInteraction.hoverType === 'robot');
 
-  if (signal.id === 'hint') {
-    for (let i = 0; i < 5; i += 1) {
-      const x = layout.board.x + 38 + i * 18;
-      const y = layout.board.y + 82 + Math.sin(t + i) * 3;
-      interestCtx.beginPath();
-      interestCtx.arc(x, y, 2.4, 0, Math.PI * 2);
-      interestCtx.fillStyle = primary;
-      interestCtx.fill();
-    }
-  } else if (signal.id === 'correct') {
+  if (signal.id === 'correct') {
     interestCtx.beginPath();
     interestCtx.moveTo(layout.student.x + 22, layout.student.y - 30);
     interestCtx.lineTo(layout.student.x + 30, layout.student.y - 20);
@@ -3305,7 +3507,7 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
     interestCtx.strokeStyle = primary;
     interestCtx.lineWidth = 3;
     interestCtx.stroke();
-  } else {
+  } else if (signal.id === 'incorrect') {
     drawRoundedRect(interestCtx, layout.student.x + 24, layout.student.y - 48, 58, 24, 8);
     interestCtx.fillStyle = 'rgba(255,255,255,0.08)';
     interestCtx.fill();
@@ -3316,20 +3518,17 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
     interestCtx.fillText('try 1 step', layout.student.x + 30, layout.student.y - 33);
   }
 
+  drawRoundedRect(interestCtx, layout.feedbackGroup.x - 5, layout.feedbackGroup.y - 5, layout.feedbackGroup.w + 10, layout.feedbackGroup.h + 10, 18);
+  interestCtx.fillStyle = 'rgba(3,7,18,0.38)';
+  interestCtx.fill();
+  interestCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+  interestCtx.lineWidth = 1;
+  interestCtx.stroke();
+
   layout.feedbackButtons.forEach((button) => {
     const selected = button.id === educationInteraction.selectedSignal;
     const hovered = educationInteraction.hoverType === 'signal' && educationInteraction.hoverId === button.id;
-    drawRoundedRect(interestCtx, button.x, button.y, button.w, button.h, 12);
-    interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.06)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.16)';
-    interestCtx.lineWidth = selected || hovered ? 2 : 1;
-    interestCtx.stroke();
-    interestCtx.fillStyle = selected ? secondary : textColor;
-    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
-    interestCtx.textAlign = 'center';
-    interestCtx.fillText(layout.compact ? button.compact : button.label, button.x + button.w / 2, button.y + button.h / 2 + 4);
-    interestCtx.textAlign = 'left';
+    drawEducationFeedbackSegment(interestCtx, button, selected, hovered, layout, primary, secondary, textColor);
   });
 
   if (educationInteraction.active && (educationInteraction.dragging || educationInteraction.pulse > 0.18)) {
