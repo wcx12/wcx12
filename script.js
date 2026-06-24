@@ -2332,6 +2332,39 @@ const agentTasks = [
   }
 ];
 
+const agentWorkbenchScenarios = [
+  {
+    verb: 'Classify',
+    result: 'Point Cloud / Registration',
+    stamp: 'MAPPED',
+    evidence: [
+      { id: 'readme', title: 'README.md', lines: ['registration pipeline', 'point cloud alignment'], x: 0.38, y: 0.38, r: -0.08 },
+      { id: 'repo', title: 'Repo topic', lines: ['geometry', 'tracking thesis'], x: 0.56, y: 0.31, r: 0.06 },
+      { id: 'label', title: 'Research label', lines: ['robust matching', '3D vision'], x: 0.74, y: 0.47, r: -0.04 }
+    ]
+  },
+  {
+    verb: 'Summarize',
+    result: 'Traceable project brief',
+    stamp: 'SUMMARY',
+    evidence: [
+      { id: 'purpose', title: 'Purpose', lines: ['what it builds', 'why it matters'], x: 0.38, y: 0.34, r: 0.05 },
+      { id: 'usage', title: 'Usage', lines: ['commands', 'workflow'], x: 0.56, y: 0.44, r: -0.06 },
+      { id: 'scope', title: 'Scope', lines: ['research fit', 'limits'], x: 0.75, y: 0.33, r: 0.04 }
+    ]
+  },
+  {
+    verb: 'Verify',
+    result: 'Page update verified',
+    stamp: 'CHECKED',
+    evidence: [
+      { id: 'site', title: 'Live page', lines: ['rendered view', 'theme state'], x: 0.38, y: 0.42, r: -0.05 },
+      { id: 'config', title: 'Config', lines: ['mapping json', 'category tree'], x: 0.56, y: 0.32, r: 0.04 },
+      { id: 'proof', title: 'Proof', lines: ['browser check', 'no console errors'], x: 0.75, y: 0.48, r: 0.08 }
+    ]
+  }
+];
+
 const agentTools = [
   { id: 'memory', label: 'Memory', compact: 'MEM', detail: 'Past context', stage: 'retrieve' },
   { id: 'rag', label: 'RAG', compact: 'RAG', detail: 'Grounded search', stage: 'retrieve' },
@@ -2499,11 +2532,11 @@ function agentHitRegion(event) {
   const rect = interestCanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
-  const layout = agentRunnerLayout(rect.width, rect.height);
+  const layout = agentWorkbenchLayout(rect.width, rect.height);
   const regions = [
     ...layout.taskCards.map((item) => ({ type: 'task', item })),
-    ...layout.toolCards.map((item) => ({ type: 'tool', item })),
-    ...layout.stageCards.map((item) => ({ type: 'stage', item }))
+    ...layout.evidenceSheets.map((item) => ({ type: 'evidence', item })),
+    { type: 'stamp', item: layout.stamp }
   ];
   return regions.find(({ item }) => (
     x >= item.x
@@ -2657,14 +2690,11 @@ function educationHitRegion(event) {
   const rect = interestCanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
-  const layout = educationRunnerLayout(rect.width, rect.height);
+  const layout = educationGardenLayout(rect.width, rect.height);
   const regions = [
-    ...layout.pathCards.map((item) => ({ type: 'path', item })),
-    ...layout.conceptCards.map((item) => ({ type: 'concept', item })),
-    ...layout.signalCards.map((item) => ({ type: 'signal', item })),
-    { type: 'learner', item: { id: 'learner', ...layout.learner } },
-    { type: 'practice', item: { id: 'practice', ...layout.practice } },
-    { type: 'insight', item: { id: 'insight', ...layout.insight } }
+    ...layout.plants.map((item) => ({ type: 'concept', item })),
+    ...layout.feedbackStones.map((item) => ({ type: 'signal', item })),
+    { type: 'insight', item: layout.signpost }
   ];
   return regions.find(({ item }) => (
     x >= item.x
@@ -2699,6 +2729,421 @@ function educationMastery(concept) {
       ? 0.06
       : -0.04;
   return clamp01(concept.mastery + responseShift + educationInteraction.masteryBoost * 0.04);
+}
+
+function agentWorkbenchScenario() {
+  return agentWorkbenchScenarios[agentInteraction.taskIndex % agentWorkbenchScenarios.length] || agentWorkbenchScenarios[0];
+}
+
+function agentWorkbenchLayout(width, height) {
+  const compact = width < 460 || height < 220;
+  const scenario = agentWorkbenchScenario();
+  const taskW = compact ? Math.max(70, (width - 38) / 3) : Math.min(138, width * 0.22);
+  const taskY = compact ? 14 : 24;
+  const paperW = compact ? Math.min(96, width * 0.25) : Math.min(124, width * 0.2);
+  const paperH = compact ? 58 : 76;
+  const desk = {
+    x: compact ? 10 : 22,
+    y: compact ? 48 : 58,
+    w: width - (compact ? 20 : 44),
+    h: height - (compact ? 76 : 88)
+  };
+  return {
+    compact,
+    desk,
+    taskCards: agentTasks.map((task, index) => ({
+      ...task,
+      index,
+      x: compact ? 12 + index * (taskW + 7) : 18,
+      y: compact ? taskY : 28 + index * 38,
+      w: taskW,
+      h: compact ? 24 : 30
+    })),
+    evidenceSheets: scenario.evidence.map((sheet) => ({
+      ...sheet,
+      x: desk.x + desk.w * sheet.x - paperW / 2,
+      y: desk.y + desk.h * sheet.y - paperH / 2,
+      w: paperW,
+      h: paperH
+    })),
+    lens: {
+      x: desk.x + desk.w * (agentInteraction.active ? agentInteraction.x : 0.46 + Math.sin(interestTick * 0.026) * 0.16),
+      y: desk.y + desk.h * (agentInteraction.active ? agentInteraction.y : 0.4 + Math.cos(interestTick * 0.022) * 0.11),
+      r: compact ? 22 : 30
+    },
+    stamp: {
+      id: 'stamp',
+      x: desk.x + desk.w * (compact ? 0.61 : 0.73),
+      y: desk.y + desk.h * (compact ? 0.72 : 0.69),
+      w: compact ? 102 : 132,
+      h: compact ? 34 : 42
+    },
+    result: {
+      x: desk.x + desk.w * (compact ? 0.5 : 0.66),
+      y: desk.y + desk.h * (compact ? 0.66 : 0.58),
+      w: compact ? 146 : 178,
+      h: compact ? 52 : 66
+    }
+  };
+}
+
+function drawRotatedSheet(ctx, sheet, options = {}) {
+  ctx.save();
+  ctx.translate(sheet.x + sheet.w / 2, sheet.y + sheet.h / 2);
+  ctx.rotate(sheet.r || 0);
+  drawRoundedRect(ctx, -sheet.w / 2, -sheet.h / 2, sheet.w, sheet.h, 8);
+  ctx.fillStyle = options.fill || 'rgba(255,255,255,0.1)';
+  ctx.fill();
+  ctx.strokeStyle = options.stroke || 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = options.lineWidth || 1;
+  ctx.stroke();
+  ctx.fillStyle = options.titleColor || options.textColor || '#f5f5f5';
+  ctx.font = options.titleFont || '10px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, sheet.title, -sheet.w / 2 + 10, -sheet.h / 2 + 17, sheet.w - 20);
+  ctx.fillStyle = options.lineColor || 'rgba(255,255,255,0.62)';
+  ctx.font = options.lineFont || '8.5px JetBrains Mono, monospace';
+  (sheet.lines || []).slice(0, 2).forEach((line, index) => {
+    fillTruncatedText(ctx, line, -sheet.w / 2 + 10, -sheet.h / 2 + 34 + index * 13, sheet.w - 20);
+  });
+  ctx.restore();
+}
+
+function drawAgentWorkbench(width, height, t, primary, secondary, muted) {
+  const layout = agentWorkbenchLayout(width, height);
+  const scenario = agentWorkbenchScenario();
+  const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
+  const textColor = themeColor('--text') || '#f5f5f5';
+  const desk = layout.desk;
+  const activeEvidenceIndex = Math.floor((t * (0.42 + agentInteraction.runBoost * 0.5)) % scenario.evidence.length);
+  const activeEvidence = layout.evidenceSheets[activeEvidenceIndex] || layout.evidenceSheets[0];
+
+  agentInteraction.pulse *= 0.86;
+  agentInteraction.runBoost *= 0.88;
+
+  interestCtx.save();
+  interestCtx.beginPath();
+  interestCtx.moveTo(desk.x + 16, desk.y + 6);
+  interestCtx.lineTo(desk.x + desk.w - 12, desk.y);
+  interestCtx.lineTo(desk.x + desk.w, desk.y + desk.h);
+  interestCtx.lineTo(desk.x, desk.y + desk.h - 2);
+  interestCtx.closePath();
+  interestCtx.fillStyle = 'rgba(255,255,255,0.045)';
+  interestCtx.fill();
+  interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
+  interestCtx.stroke();
+
+  const grainCount = layout.compact ? 5 : 8;
+  for (let i = 0; i < grainCount; i += 1) {
+    const y = desk.y + 22 + i * (desk.h - 40) / grainCount;
+    interestCtx.beginPath();
+    interestCtx.moveTo(desk.x + 18, y);
+    interestCtx.quadraticCurveTo(width * 0.52, y + Math.sin(t + i) * 4, desk.x + desk.w - 18, y + Math.cos(t + i) * 2);
+    interestCtx.strokeStyle = 'rgba(255,255,255,0.045)';
+    interestCtx.lineWidth = 1;
+    interestCtx.stroke();
+  }
+
+  layout.taskCards.forEach((card) => {
+    const selected = card.index === agentInteraction.taskIndex;
+    const hovered = agentInteraction.hoverType === 'task' && agentInteraction.hoverId === card.index;
+    drawRotatedSheet(interestCtx, {
+      ...card,
+      r: layout.compact ? 0 : -0.035 + card.index * 0.025,
+      title: layout.compact ? card.compactTitle : card.title,
+      lines: layout.compact ? [] : [card.prompt]
+    }, {
+      fill: selected || hovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.075)',
+      stroke: selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.16)',
+      lineWidth: selected || hovered ? 2 : 1,
+      titleColor: selected ? secondary : hovered ? primary : textColor,
+      lineColor: muted,
+      titleFont: layout.compact ? '9px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace'
+    });
+  });
+
+  layout.evidenceSheets.forEach((sheet, index) => {
+    const active = index === activeEvidenceIndex;
+    const hovered = agentInteraction.hoverType === 'evidence' && agentInteraction.hoverId === sheet.id;
+    const selected = agentInteraction.selectedStage === sheet.id;
+    drawRotatedSheet(interestCtx, sheet, {
+      fill: active || hovered || selected ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.085)',
+      stroke: selected ? secondary : active || hovered ? primary : 'rgba(255,255,255,0.17)',
+      lineWidth: active || hovered || selected ? 2 : 1,
+      titleColor: active || hovered ? primary : textColor,
+      lineColor: active ? textColor : muted
+    });
+
+    if (active || selected) {
+      const cx = sheet.x + sheet.w / 2;
+      const cy = sheet.y + sheet.h / 2;
+      interestCtx.beginPath();
+      interestCtx.arc(cx, cy, Math.max(sheet.w, sheet.h) * 0.48 + agentInteraction.pulse * 8, 0, Math.PI * 2);
+      interestCtx.strokeStyle = `rgba(255,255,255,${active ? 0.2 : 0.12})`;
+      interestCtx.lineWidth = 1.2;
+      interestCtx.stroke();
+    }
+  });
+
+  const lens = layout.lens;
+  const scanX = activeEvidence.x + activeEvidence.w / 2;
+  const scanY = activeEvidence.y + activeEvidence.h / 2;
+  interestCtx.beginPath();
+  interestCtx.arc(agentInteraction.active ? lens.x : scanX, agentInteraction.active ? lens.y : scanY, lens.r, 0, Math.PI * 2);
+  interestCtx.fillStyle = 'rgba(255,255,255,0.035)';
+  interestCtx.fill();
+  interestCtx.strokeStyle = primary;
+  interestCtx.lineWidth = 2.2;
+  interestCtx.stroke();
+  interestCtx.beginPath();
+  interestCtx.moveTo((agentInteraction.active ? lens.x : scanX) + lens.r * 0.62, (agentInteraction.active ? lens.y : scanY) + lens.r * 0.62);
+  interestCtx.lineTo((agentInteraction.active ? lens.x : scanX) + lens.r * 1.18, (agentInteraction.active ? lens.y : scanY) + lens.r * 1.18);
+  interestCtx.strokeStyle = secondary;
+  interestCtx.lineWidth = 4;
+  interestCtx.lineCap = 'round';
+  interestCtx.stroke();
+  interestCtx.lineCap = 'butt';
+
+  const result = layout.result;
+  drawRotatedSheet(interestCtx, {
+    ...result,
+    r: -0.035,
+    title: `${scenario.verb} result`,
+    lines: [scenario.result, task.outcome]
+  }, {
+    fill: 'rgba(255,255,255,0.11)',
+    stroke: agentInteraction.hoverType === 'stamp' ? secondary : 'rgba(255,255,255,0.22)',
+    lineWidth: agentInteraction.hoverType === 'stamp' ? 2 : 1,
+    titleColor: secondary,
+    lineColor: textColor,
+    titleFont: '10px JetBrains Mono, monospace'
+  });
+
+  const stamp = layout.stamp;
+  interestCtx.save();
+  interestCtx.translate(stamp.x + stamp.w / 2, stamp.y + stamp.h / 2);
+  interestCtx.rotate(-0.13);
+  drawRoundedRect(interestCtx, -stamp.w / 2, -stamp.h / 2, stamp.w, stamp.h, 7);
+  interestCtx.strokeStyle = secondary;
+  interestCtx.lineWidth = 2.4 + agentInteraction.pulse * 2.2;
+  interestCtx.stroke();
+  interestCtx.fillStyle = `rgba(255,255,255,${0.04 + agentInteraction.pulse * 0.04})`;
+  interestCtx.fill();
+  interestCtx.fillStyle = secondary;
+  interestCtx.font = layout.compact ? '13px JetBrains Mono, monospace' : '16px JetBrains Mono, monospace';
+  interestCtx.textAlign = 'center';
+  interestCtx.fillText(scenario.stamp, 0, 5);
+  interestCtx.textAlign = 'left';
+  interestCtx.restore();
+
+  interestCtx.fillStyle = muted;
+  interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
+  fillTruncatedText(interestCtx, layout.compact ? 'Tap a note. Scan evidence. Stamp a result.' : 'Research workbench: click a note, scan the evidence, then stamp the conclusion.', desk.x + 10, height - 14, desk.w - 20);
+  interestCtx.restore();
+}
+
+function educationGardenLayout(width, height) {
+  const compact = width < 460 || height < 220;
+  const soilY = height * (compact ? 0.72 : 0.76);
+  const plantArea = {
+    x: compact ? 20 : 36,
+    y: compact ? 42 : 44,
+    w: width - (compact ? 40 : 72),
+    h: soilY - (compact ? 46 : 52)
+  };
+  const visibleConcepts = educationConcepts.slice(0, compact ? 4 : educationConcepts.length);
+  return {
+    compact,
+    soilY,
+    plantArea,
+    plants: visibleConcepts.map((concept, index) => {
+      const gap = plantArea.w / Math.max(1, visibleConcepts.length - 1);
+      const x = plantArea.x + gap * index;
+      const selectedGrowth = concept.id === educationInteraction.selectedConcept ? educationMastery(concept) : concept.mastery;
+      const h = (compact ? 44 : 70) + selectedGrowth * (compact ? 34 : 54);
+      return {
+        ...concept,
+        x,
+        y: soilY - h,
+        w: compact ? 54 : 68,
+        h,
+        growth: selectedGrowth
+      };
+    }),
+    feedbackStones: educationSignals.map((signal, index) => ({
+      ...signal,
+      x: width * 0.16 + index * Math.min(106, width * 0.23),
+      y: height - (compact ? 34 : 38),
+      w: compact ? 74 : 92,
+      h: compact ? 24 : 28
+    })),
+    signpost: {
+      id: 'signpost',
+      x: width - (compact ? 128 : 178),
+      y: compact ? 18 : 30,
+      w: compact ? 112 : 154,
+      h: compact ? 48 : 58
+    }
+  };
+}
+
+function drawLeaf(ctx, x, y, size, angle, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(size * 0.55, -size * 0.55, size * 1.2, -size * 0.2, size * 1.35, 0);
+  ctx.bezierCurveTo(size * 0.82, size * 0.42, size * 0.28, size * 0.44, 0, 0);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawEducationGarden(width, height, t, primary, secondary, muted) {
+  const layout = educationGardenLayout(width, height);
+  const concept = educationConceptForSelected();
+  const signal = educationSignalForSelected();
+  const mastery = educationMastery(concept);
+  const textColor = themeColor('--text') || '#f5f5f5';
+  const violet = themeColor('--violet') || '#9b5cff';
+  const signalShift = signal.id === 'correct' ? 'grows stronger' : signal.id === 'hint' ? 'adds a guide light' : 'gets a simpler next step';
+
+  educationInteraction.pulse *= 0.86;
+  educationInteraction.masteryBoost *= 0.9;
+
+  const skyGlow = interestCtx.createRadialGradient(width * 0.25, height * 0.18, 0, width * 0.25, height * 0.18, width * 0.75);
+  skyGlow.addColorStop(0, 'rgba(255,255,255,0.08)');
+  skyGlow.addColorStop(1, 'rgba(255,255,255,0)');
+  interestCtx.fillStyle = skyGlow;
+  interestCtx.fillRect(0, 0, width, height);
+
+  interestCtx.beginPath();
+  interestCtx.moveTo(0, layout.soilY);
+  for (let x = 0; x <= width; x += 24) {
+    interestCtx.lineTo(x, layout.soilY + Math.sin(t + x * 0.03) * 3);
+  }
+  interestCtx.lineTo(width, height);
+  interestCtx.lineTo(0, height);
+  interestCtx.closePath();
+  interestCtx.fillStyle = 'rgba(255,255,255,0.055)';
+  interestCtx.fill();
+  interestCtx.strokeStyle = 'rgba(255,255,255,0.13)';
+  interestCtx.stroke();
+
+  for (let i = 0; i < 16; i += 1) {
+    const x = (i * 57 + interestTick * 0.2) % width;
+    const y = layout.soilY + 9 + (i % 4) * 12;
+    interestCtx.beginPath();
+    interestCtx.arc(x, y, 1.2, 0, Math.PI * 2);
+    interestCtx.fillStyle = i % 3 === 0 ? secondary : primary;
+    interestCtx.globalAlpha = 0.24;
+    interestCtx.fill();
+    interestCtx.globalAlpha = 1;
+  }
+
+  layout.plants.forEach((plant, index) => {
+    const selected = plant.id === educationInteraction.selectedConcept;
+    const hovered = educationInteraction.hoverType === 'concept' && educationInteraction.hoverId === plant.id;
+    const droop = selected && signal.id === 'incorrect' ? 0.22 : 0;
+    const sway = Math.sin(t * 1.2 + index) * (selected ? 3.2 : 1.6);
+    const baseX = plant.x;
+    const baseY = layout.soilY + 2;
+    const topX = baseX + sway + droop * 14;
+    const topY = baseY - plant.h * (0.72 + plant.growth * 0.18);
+    const stemColor = selected ? primary : 'rgba(255,255,255,0.52)';
+
+    interestCtx.beginPath();
+    interestCtx.moveTo(baseX, baseY);
+    interestCtx.quadraticCurveTo(baseX + sway * 0.7, (baseY + topY) / 2, topX, topY);
+    interestCtx.strokeStyle = stemColor;
+    interestCtx.lineWidth = selected || hovered ? 3.2 : 2;
+    interestCtx.stroke();
+
+    const leafColor = selected ? `rgba(255,255,255,${0.32 + plant.growth * 0.28})` : 'rgba(255,255,255,0.22)';
+    drawLeaf(interestCtx, baseX - 2, baseY - plant.h * 0.28, 11 + plant.growth * 8, -0.82, leafColor);
+    drawLeaf(interestCtx, baseX + 3, baseY - plant.h * 0.48, 10 + plant.growth * 7, 0.42, leafColor);
+    if (!layout.compact) drawLeaf(interestCtx, baseX - 1, baseY - plant.h * 0.63, 8 + plant.growth * 5, -0.58, leafColor);
+
+    const bloom = 7 + plant.growth * 13 + (selected ? educationInteraction.pulse * 7 : 0);
+    const petals = selected ? 7 : 5;
+    for (let p = 0; p < petals; p += 1) {
+      const a = (Math.PI * 2 / petals) * p + t * 0.12;
+      interestCtx.beginPath();
+      interestCtx.ellipse(topX + Math.cos(a) * bloom * 0.55, topY + Math.sin(a) * bloom * 0.42, bloom * 0.33, bloom * 0.18, a, 0, Math.PI * 2);
+      interestCtx.fillStyle = selected ? (p % 2 ? secondary : primary) : 'rgba(255,255,255,0.22)';
+      interestCtx.globalAlpha = selected ? 0.76 : 0.42;
+      interestCtx.fill();
+      interestCtx.globalAlpha = 1;
+    }
+    interestCtx.beginPath();
+    interestCtx.arc(topX, topY, bloom * 0.34, 0, Math.PI * 2);
+    interestCtx.fillStyle = selected ? textColor : 'rgba(255,255,255,0.38)';
+    interestCtx.fill();
+
+    if (selected && signal.id === 'hint') {
+      for (let i = 0; i < 5; i += 1) {
+        const a = t * 0.8 + i * 1.25;
+        interestCtx.beginPath();
+        interestCtx.arc(topX + Math.cos(a) * (bloom + 13), topY + Math.sin(a) * (bloom + 9), 2.2, 0, Math.PI * 2);
+        interestCtx.fillStyle = secondary;
+        interestCtx.fill();
+      }
+    }
+
+    interestCtx.fillStyle = selected || hovered ? textColor : muted;
+    interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
+    interestCtx.textAlign = 'center';
+    interestCtx.fillText(layout.compact ? plant.compact : plant.label, baseX, Math.min(height - 9, layout.soilY + 20));
+    interestCtx.textAlign = 'left';
+  });
+
+  layout.feedbackStones.forEach((stone) => {
+    const selected = stone.id === educationInteraction.selectedSignal;
+    const hovered = educationInteraction.hoverType === 'signal' && educationInteraction.hoverId === stone.id;
+    interestCtx.beginPath();
+    interestCtx.ellipse(stone.x + stone.w / 2, stone.y + stone.h / 2, stone.w / 2, stone.h / 2, -0.05, 0, Math.PI * 2);
+    interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.065)';
+    interestCtx.fill();
+    interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.15)';
+    interestCtx.lineWidth = selected || hovered ? 2 : 1;
+    interestCtx.stroke();
+    interestCtx.fillStyle = selected ? secondary : textColor;
+    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
+    interestCtx.textAlign = 'center';
+    interestCtx.fillText(layout.compact ? stone.compact : stone.label, stone.x + stone.w / 2, stone.y + stone.h / 2 + 3);
+    interestCtx.textAlign = 'left';
+  });
+
+  const sign = layout.signpost;
+  interestCtx.beginPath();
+  interestCtx.moveTo(sign.x + 16, sign.y + sign.h);
+  interestCtx.lineTo(sign.x + 16, layout.soilY - 4);
+  interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
+  interestCtx.lineWidth = 3;
+  interestCtx.stroke();
+  drawRoundedRect(interestCtx, sign.x, sign.y, sign.w, sign.h, 9);
+  interestCtx.fillStyle = 'rgba(3, 7, 18, 0.52)';
+  interestCtx.fill();
+  interestCtx.strokeStyle = educationInteraction.hoverType === 'insight' ? primary : 'rgba(255,255,255,0.18)';
+  interestCtx.stroke();
+  interestCtx.fillStyle = primary;
+  interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
+  fillTruncatedText(interestCtx, 'Next practice', sign.x + 10, sign.y + 16, sign.w - 20);
+  interestCtx.fillStyle = textColor;
+  interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
+  fillTruncatedText(interestCtx, `${concept.label}: ${signalShift}`, sign.x + 10, sign.y + 31, sign.w - 20);
+  interestCtx.fillStyle = mastery > 0.68 ? primary : mastery > 0.48 ? violet : secondary;
+  fillTruncatedText(interestCtx, `Mastery ${Math.round(mastery * 100)}%`, sign.x + 10, sign.y + 46, sign.w - 20);
+
+  if (educationInteraction.active) {
+    const pointerX = educationInteraction.x * width;
+    const pointerY = educationInteraction.y * height;
+    interestCtx.beginPath();
+    interestCtx.arc(pointerX, pointerY, 12 + educationInteraction.pulse * 14, 0, Math.PI * 2);
+    interestCtx.strokeStyle = `rgba(255,255,255,${educationInteraction.dragging ? 0.42 : 0.22})`;
+    interestCtx.lineWidth = educationInteraction.dragging ? 2 : 1.1;
+    interestCtx.stroke();
+  }
 }
 
 function drawInterestAnimation() {
@@ -2986,6 +3431,8 @@ function drawInterestAnimation() {
     interestCtx.fillStyle = muted;
     interestCtx.fillText(best.id, scoreX + 12, scoreY + 32);
   } else if (type === 'agent') {
+    drawAgentWorkbench(width, height, t, primary, secondary, muted);
+    return;
     const layout = agentRunnerLayout(width, height);
     const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
     const autonomy = clamp01(agentInteraction.active ? agentInteraction.x : 0.52 + Math.sin(t * 0.52) * 0.18);
@@ -3214,6 +3661,8 @@ function drawInterestAnimation() {
       interestCtx.stroke();
     }
   } else if (type === 'education') {
+    drawEducationGarden(width, height, t, primary, secondary, muted);
+    return;
     const layout = educationRunnerLayout(width, height);
     const path = educationPathForSelected();
     const concept = educationConceptForSelected();
@@ -3471,11 +3920,11 @@ function interactWithAgentRunner(event) {
   if (hit?.type === 'task') {
     agentInteraction.taskIndex = hit.item.index;
     agentInteraction.selectedStage = 'plan';
-  } else if (hit?.type === 'tool') {
-    agentInteraction.selectedTool = hit.item.id;
-    agentInteraction.tools[hit.item.id] = !agentInteraction.tools[hit.item.id];
-  } else if (hit?.type === 'stage') {
+  } else if (hit?.type === 'evidence') {
     agentInteraction.selectedStage = hit.item.id;
+    agentInteraction.selectedTool = 'rag';
+  } else if (hit?.type === 'stamp') {
+    agentInteraction.selectedStage = 'result';
   } else {
     agentInteraction.pulse = 0.35;
     agentInteraction.runBoost = 0.24;
