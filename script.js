@@ -3488,10 +3488,10 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
   interestCtx.beginPath();
   interestCtx.moveTo(pointerStart.x, pointerStart.y);
   interestCtx.quadraticCurveTo((pointerStart.x + pointerEnd.x) / 2, pointerStart.y - 20, pointerEnd.x, pointerEnd.y);
-  interestCtx.strokeStyle = secondary;
-  interestCtx.lineWidth = 2.5;
+  interestCtx.strokeStyle = layout.compact ? 'rgba(255, 44, 163, 0.26)' : secondary;
+  interestCtx.lineWidth = layout.compact ? 1.8 : 2.5;
   interestCtx.lineCap = 'round';
-  interestCtx.setLineDash([2, 8]);
+  interestCtx.setLineDash(layout.compact ? [] : [2, 8]);
   interestCtx.stroke();
   interestCtx.setLineDash([]);
 
