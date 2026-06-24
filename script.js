@@ -326,6 +326,16 @@ let researchInterests = [
           en: 'Visual place recognition, retrieval, and localization-oriented benchmark work.',
           zh: '围绕视觉地点识别、检索与定位基准展开的研究。'
         }
+      },
+      {
+        id: 'medical-image-analysis',
+        title: { en: 'Medical Image Analysis', zh: '医学影像分析' },
+        label: { en: 'active learning', zh: '主动学习' },
+        animation: 'medical-image',
+        description: {
+          en: 'Medical image classification, active learning, and sample-efficient visual model training.',
+          zh: '围绕医学影像分类、主动学习与样本高效视觉模型训练展开的研究。'
+        }
       }
     ]
   },
@@ -982,6 +992,11 @@ function renderInterestRail() {
 function inferInterestIds(item) {
   const hay = `${item.name || ''} ${item.title || ''} ${item.description || ''} ${item.summary || ''}`.toLowerCase();
   const matches = [];
+  const hasMedicalImageContext = hay.includes('medical image')
+    || hay.includes('medical imaging')
+    || (hay.includes('medical') && (hay.includes('image') || hay.includes('classification') || hay.includes('segmentation')));
+  const hasVisionActiveLearningTask = hay.includes('active learning')
+    && (hay.includes('image') || hay.includes('classification') || hay.includes('vision'));
   const ai4eduSignals = [
     'education',
     'educational',
@@ -1000,6 +1015,7 @@ function inferInterestIds(item) {
     '数学'
   ];
   if (hay.includes('vpr') || hay.includes('visual place') || hay.includes('localization')) matches.push('vpr');
+  if (hasMedicalImageContext || hasVisionActiveLearningTask) matches.push('medical-image-analysis');
   if (hay.includes('point') || hay.includes('cloud') || hay.includes('registration') || hay.includes('geometry')) matches.push('point-cloud-registration');
   if (hay.includes('agent') || hay.includes('llm') || hay.includes('codex') || hay.includes('rag')) matches.push('agent');
   if (ai4eduSignals.some((term) => hay.includes(term))) matches.push('ai4edu');
