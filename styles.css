@@ -109,7 +109,7 @@ html {
   display: none;
 }
 
-@media (pointer: fine) {
+@media (pointer: fine) and (min-width: 720px) {
   body.cursor-enabled,
   body.cursor-enabled * {
     cursor: none !important;
@@ -687,7 +687,12 @@ button.research-badge:hover {
 }
 
 .related-actions {
-  margin-top: 8px;
+  margin-top: 6px;
+}
+
+.related-actions .mini-action {
+  padding: 4px 8px;
+  line-height: 1.1;
 }
 
 .mini-action {
@@ -935,12 +940,13 @@ button.research-badge:hover {
   min-height: 0;
   overflow: auto;
   padding-right: 6px;
+  padding-bottom: 14px;
 }
 
 .related-item {
   border: 1px solid rgba(155, 92, 255, 0.22);
   border-radius: 10px;
-  padding: 9px;
+  padding: 8px 9px;
   background: rgba(3, 7, 18, 0.28);
 }
 
@@ -965,8 +971,9 @@ button.research-badge:hover {
 }
 
 .related-item p {
-  margin: 4px 0 0;
-  font-size: 0.86rem;
+  margin: 3px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 
 .project-overview {
