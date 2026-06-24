@@ -3234,13 +3234,15 @@ function drawRobotTeacher(ctx, robot, primary, secondary, textColor, active) {
   ctx.stroke();
   ctx.restore();
 
-  for (let i = 0; i < 3; i += 1) {
-    const px = raisedHand.x + 10 + i * 8;
-    const py = raisedHand.y - 8 + Math.sin(interestTick * 0.06 + i) * 4;
-    ctx.beginPath();
-    ctx.arc(px, py, 1.7, 0, Math.PI * 2);
-    ctx.fillStyle = i % 2 ? primary : secondary;
-    ctx.fill();
+  if (w > 100) {
+    for (let i = 0; i < 3; i += 1) {
+      const px = raisedHand.x + 10 + i * 8;
+      const py = raisedHand.y - 8 + Math.sin(interestTick * 0.06 + i) * 4;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.7, 0, Math.PI * 2);
+      ctx.fillStyle = i % 2 ? primary : secondary;
+      ctx.fill();
+    }
   }
 
   ctx.textAlign = 'left';
@@ -3485,15 +3487,17 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
   };
   const pointerStart = raisedHand;
   const pointerEnd = { x: layout.board.x + 4, y: layout.board.y + layout.board.h * 0.52 };
-  interestCtx.beginPath();
-  interestCtx.moveTo(pointerStart.x, pointerStart.y);
-  interestCtx.quadraticCurveTo((pointerStart.x + pointerEnd.x) / 2, pointerStart.y - 20, pointerEnd.x, pointerEnd.y);
-  interestCtx.strokeStyle = layout.compact ? 'rgba(255, 44, 163, 0.26)' : secondary;
-  interestCtx.lineWidth = layout.compact ? 1.8 : 2.5;
-  interestCtx.lineCap = 'round';
-  interestCtx.setLineDash(layout.compact ? [] : [2, 8]);
-  interestCtx.stroke();
-  interestCtx.setLineDash([]);
+  if (!layout.compact) {
+    interestCtx.beginPath();
+    interestCtx.moveTo(pointerStart.x, pointerStart.y);
+    interestCtx.quadraticCurveTo((pointerStart.x + pointerEnd.x) / 2, pointerStart.y - 20, pointerEnd.x, pointerEnd.y);
+    interestCtx.strokeStyle = secondary;
+    interestCtx.lineWidth = 2.5;
+    interestCtx.lineCap = 'round';
+    interestCtx.setLineDash([2, 8]);
+    interestCtx.stroke();
+    interestCtx.setLineDash([]);
+  }
 
   drawClassroomBoard(interestCtx, layout.board, concept, signal, mastery, primary, secondary, muted, textColor);
   drawStudentDesk(interestCtx, layout.student, primary, secondary, muted, textColor, educationInteraction.hoverType === 'student');
