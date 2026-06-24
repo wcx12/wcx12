@@ -556,6 +556,10 @@ const i18n = {
     repo_map_hint: 'Hover projects to inspect their research mapping.',
     unmapped_title: 'Unmapped',
     unmapped_label: 'Needs category',
+    fallback_profile_title: 'Profile',
+    fallback_profile_label: 'Homepage',
+    fallback_general_title: 'General',
+    fallback_general_label: 'Other projects',
     repo_search_ph: 'Search repositories...',
     sort_updated: 'Sort: Updated',
     sort_stars: 'Sort: Stars',
@@ -706,6 +710,10 @@ const i18n = {
     repo_map_hint: '悬停项目查看研究方向映射。',
     unmapped_title: '未映射',
     unmapped_label: '需要分类',
+    fallback_profile_title: '主页',
+    fallback_profile_label: '个人主页',
+    fallback_general_title: '通用',
+    fallback_general_label: '其它项目',
     repo_search_ph: '搜索仓库...',
     sort_updated: '排序：最近更新',
     sort_stars: '排序：星标数',
@@ -1006,10 +1014,27 @@ function primaryInterestId(item, kind) {
   return assignedInterestIds(item, kind).find((id) => interestEntryById(id)) || null;
 }
 
+function fallbackPublicCategory(item, kind) {
+  const key = String(itemKey(item) || '').toLowerCase();
+  const isProfile = kind === 'repo' && key === GITHUB_OWNER.toLowerCase();
+  return isProfile
+    ? {
+      title: i18n[currentLang].fallback_profile_title,
+      label: i18n[currentLang].fallback_profile_label,
+      className: 'profile'
+    }
+    : {
+      title: i18n[currentLang].fallback_general_title,
+      label: i18n[currentLang].fallback_general_label,
+      className: 'general'
+    };
+}
+
 function researchBadgesHtml(item, kind) {
   const ids = assignedInterestIds(item, kind).filter((id) => interestEntryById(id));
   if (!ids.length) {
-    return `<span class="research-badge unmapped">${i18n[currentLang].unmapped_title}</span>`;
+    const fallback = fallbackPublicCategory(item, kind);
+    return `<span class="research-badge fallback ${fallback.className}">${fallback.title}</span>`;
   }
   const sourceKey = escapeHtml(itemKey(item));
   return ids.map((id) => `
@@ -1885,7 +1910,7 @@ function repoInterestEntries(repo) {
 
 function repoMappingLabel(repo) {
   const entries = repoInterestEntries(repo);
-  if (!entries.length) return currentLang === 'zh' ? '未映射' : 'Unmapped';
+  if (!entries.length) return fallbackPublicCategory(repo, 'repo').title;
   return entries.map((entry) => textFor(entry.child.title)).join(' + ');
 }
 
@@ -1985,8 +2010,8 @@ function renderRepoMap(repos = filteredRepos) {
     y: compact ? height - 32 : height - 38,
     r: compact ? 28 : 34,
     color: themeColor('--muted') || '#9ca9cf',
-    mapTitle: i18n[currentLang].unmapped_title,
-    domainTitle: i18n[currentLang].unmapped_label,
+    mapTitle: i18n[currentLang].fallback_general_title,
+    domainTitle: i18n[currentLang].fallback_general_label,
     index: anchors.length,
     child: { id: 'unmapped' }
   };
