@@ -679,7 +679,8 @@ button.research-badge:hover {
   background: color-mix(in srgb, var(--pink) 14%, transparent);
 }
 
-.research-badge.unmapped {
+.research-badge.unmapped,
+.research-badge.fallback {
   color: var(--muted);
   border-color: color-mix(in srgb, var(--muted) 44%, transparent);
   background: color-mix(in srgb, var(--muted) 10%, transparent);
