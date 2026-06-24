@@ -982,10 +982,27 @@ function renderInterestRail() {
 function inferInterestIds(item) {
   const hay = `${item.name || ''} ${item.title || ''} ${item.description || ''} ${item.summary || ''}`.toLowerCase();
   const matches = [];
+  const ai4eduSignals = [
+    'education',
+    'educational',
+    'classroom',
+    'course',
+    'teaching',
+    'teacher',
+    'student',
+    'learning tool',
+    'learning tools',
+    'learning/game',
+    'practice generation',
+    'knowledge tracing',
+    'math',
+    'mathematics',
+    '数学'
+  ];
   if (hay.includes('vpr') || hay.includes('visual place') || hay.includes('localization')) matches.push('vpr');
   if (hay.includes('point') || hay.includes('cloud') || hay.includes('registration') || hay.includes('geometry')) matches.push('point-cloud-registration');
   if (hay.includes('agent') || hay.includes('llm') || hay.includes('codex') || hay.includes('rag')) matches.push('agent');
-  if (hay.includes('education') || hay.includes('learning') || hay.includes('math') || hay.includes('数学') || hay.includes('classroom')) matches.push('ai4edu');
+  if (ai4eduSignals.some((term) => hay.includes(term))) matches.push('ai4edu');
   return matches;
 }
 
