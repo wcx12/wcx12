@@ -376,7 +376,9 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   min-height: 220px;
   border: 1px solid color-mix(in srgb, var(--violet) 32%, transparent);
   border-radius: 12px;
-  background: rgba(3, 7, 18, 0.72);
+  background:
+    linear-gradient(180deg, rgba(4, 8, 20, 0.95), rgba(5, 10, 24, 0.86)),
+    rgba(3, 7, 18, 0.72);
 }
 
 .hero-preview-meta {
@@ -1674,6 +1676,21 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
 
   .span-2 {
     grid-column: span 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  #starfield {
+    opacity: 0.18;
   }
 }
 
