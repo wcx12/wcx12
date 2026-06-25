@@ -104,6 +104,16 @@ let repoMapTick = 0;
 let activeInterestId = 'point-cloud-registration';
 let interestTick = 0;
 let heroPreviewTick = 0;
+const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+const HERO_PREVIEW_FRAME_SKIP = 4;
+const STARFIELD_FRAME_SKIP = 3;
+const INTEREST_FRAME_SKIP = 2;
+const REPO_MAP_FRAME_SKIP = 6;
+let lastHeroPreviewFrame = 0;
+let lastStarfieldFrame = 0;
+let lastInterestFrame = 0;
+let lastRepoMapFrame = 0;
+let heroPreviewVisible = true;
 
 const pointCloudInteraction = {
   active: false,
@@ -1284,6 +1294,14 @@ function relatedPapers() {
   return currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(activeInterestId));
 }
 
+function isResearchViewActive() {
+  return document.getElementById('research')?.classList.contains('active');
+}
+
+function isProjectsViewActive() {
+  return document.getElementById('projects')?.classList.contains('active');
+}
+
 function renderRelatedList(container, items, emptyText, kind) {
   if (!items.length) {
     container.innerHTML = `<p class="muted">${emptyText}</p>`;
@@ -1402,6 +1420,54 @@ function renderHeroPreview() {
   drawHeroPreviewCanvas();
 }
 
+const heroPreviewScenes = {
+  'point-cloud': {
+    accent: 'geometry',
+    lines: [[0.18, 0.62, 0.42, 0.46], [0.42, 0.46, 0.68, 0.54], [0.68, 0.54, 0.82, 0.34]],
+    nodes: [[0.18, 0.62], [0.28, 0.46], [0.38, 0.64], [0.52, 0.42], [0.66, 0.58], [0.78, 0.4]],
+    panels: [[0.12, 0.2, 0.26, 0.28], [0.58, 0.28, 0.28, 0.34]]
+  },
+  vpr: {
+    accent: 'route',
+    lines: [[0.12, 0.7, 0.28, 0.52], [0.28, 0.52, 0.48, 0.6], [0.48, 0.6, 0.68, 0.38], [0.68, 0.38, 0.86, 0.5]],
+    nodes: [[0.12, 0.7], [0.28, 0.52], [0.48, 0.6], [0.68, 0.38], [0.86, 0.5]],
+    panels: [[0.1, 0.22, 0.2, 0.24], [0.4, 0.18, 0.2, 0.24], [0.7, 0.24, 0.2, 0.24]]
+  },
+  agent: {
+    accent: 'workflow',
+    lines: [[0.2, 0.52, 0.42, 0.42], [0.42, 0.42, 0.62, 0.52], [0.62, 0.52, 0.8, 0.36]],
+    nodes: [[0.2, 0.52], [0.42, 0.42], [0.62, 0.52], [0.8, 0.36]],
+    panels: [[0.1, 0.34, 0.22, 0.32], [0.38, 0.24, 0.22, 0.28], [0.68, 0.18, 0.22, 0.32]]
+  },
+  education: {
+    accent: 'teaching',
+    lines: [[0.2, 0.62, 0.48, 0.34], [0.48, 0.34, 0.74, 0.5]],
+    nodes: [[0.2, 0.62], [0.48, 0.34], [0.74, 0.5], [0.82, 0.66]],
+    panels: [[0.1, 0.18, 0.38, 0.28], [0.62, 0.28, 0.26, 0.34]]
+  },
+  'medical-image': {
+    accent: 'analysis',
+    lines: [[0.2, 0.32, 0.42, 0.42], [0.42, 0.42, 0.62, 0.36], [0.62, 0.36, 0.78, 0.56]],
+    nodes: [[0.2, 0.32], [0.42, 0.42], [0.62, 0.36], [0.78, 0.56]],
+    panels: [[0.12, 0.22, 0.2, 0.24], [0.34, 0.46, 0.2, 0.24], [0.58, 0.22, 0.2, 0.24]]
+  },
+  generic: {
+    accent: 'research',
+    lines: [[0.14, 0.58, 0.34, 0.42], [0.34, 0.42, 0.58, 0.52], [0.58, 0.52, 0.84, 0.34]],
+    nodes: [[0.14, 0.58], [0.34, 0.42], [0.58, 0.52], [0.84, 0.34]],
+    panels: [[0.12, 0.24, 0.24, 0.28], [0.62, 0.26, 0.26, 0.3]]
+  }
+};
+
+function heroThemeColors() {
+  return {
+    primary: themeColor('--cyan') || '#00f5ff',
+    secondary: themeColor('--pink') || '#ff2e88',
+    text: themeColor('--text') || '#f7fbff',
+    muted: themeColor('--muted') || '#9ca9cf'
+  };
+}
+
 function drawHeroPreviewCanvas() {
   if (!heroPreviewCanvas || !heroPreviewCtx) return;
   const rect = heroPreviewCanvas.getBoundingClientRect();
@@ -1410,219 +1476,89 @@ function drawHeroPreviewCanvas() {
   if (!entry) return;
   const { width, height } = resizeDrawingCanvas(heroPreviewCanvas, heroPreviewCtx);
   const ctx = heroPreviewCtx;
-  const primary = themeColor('--cyan') || '#00f5ff';
-  const secondary = themeColor('--pink') || '#ff2e88';
-  const text = themeColor('--text') || '#f7fbff';
-  const muted = themeColor('--muted') || '#9ca9cf';
-  const t = heroPreviewTick * 0.024;
-  const type = entry.child.animation || 'generic';
+  const colors = heroThemeColors();
+  const t = heroPreviewTick * 0.05;
+  const scene = heroPreviewScenes[entry.child.animation] || heroPreviewScenes.generic;
+  drawHeroScenePreview(ctx, width, height, t, scene, colors, entry);
+}
 
+function drawHeroScenePreview(ctx, width, height, t, scene, colors, entry) {
+  const { primary, secondary, text, muted } = colors;
   ctx.clearRect(0, 0, width, height);
-  const bg = ctx.createLinearGradient(0, 0, width, height);
-  bg.addColorStop(0, colorWithAlpha(primary, 0.16));
-  bg.addColorStop(0.52, 'rgba(6, 10, 26, 0.9)');
-  bg.addColorStop(1, colorWithAlpha(secondary, 0.12));
-  ctx.fillStyle = bg;
+  ctx.fillStyle = 'rgba(5, 9, 22, 0.96)';
   ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+
+  const pad = Math.max(18, Math.min(width, height) * 0.08);
+  drawRoundedRect(ctx, pad, pad, width - pad * 2, height - pad * 2, 18);
+  ctx.fillStyle = colorWithAlpha(primary, 0.055);
+  ctx.fill();
+  ctx.strokeStyle = colorWithAlpha(primary, 0.3);
   ctx.lineWidth = 1;
-  for (let x = 26; x < width; x += 44) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-    ctx.stroke();
-  }
-
-  if (type === 'point-cloud') {
-    drawHeroPointPreview(ctx, width, height, t, primary, secondary);
-  } else if (type === 'vpr') {
-    drawHeroVprPreview(ctx, width, height, t, primary, secondary, muted);
-  } else if (type === 'agent') {
-    drawHeroAgentPreview(ctx, width, height, t, primary, secondary, text);
-  } else if (type === 'education') {
-    drawHeroEducationPreview(ctx, width, height, t, primary, secondary, text);
-  } else if (type === 'medical-image') {
-    drawHeroMedicalPreview(ctx, width, height, t, primary, secondary);
-  } else {
-    drawHeroGenericPreview(ctx, width, height, t, primary, secondary);
-  }
-}
-
-function drawHeroPointPreview(ctx, width, height, t, primary, secondary) {
-  const cx = width * 0.5;
-  const cy = height * 0.5;
-  const scale = Math.min(width, height) * 0.34;
-  const progress = 0.5 + Math.sin(t) * 0.32;
-  for (let i = 0; i < 36; i += 1) {
-    const angle = i * 1.73;
-    const radius = scale * (0.26 + ((i * 17) % 64) / 100);
-    const sx = cx + Math.cos(angle) * radius - scale * 0.24;
-    const sy = cy + Math.sin(angle * 0.9) * radius * 0.74;
-    const tx = cx + Math.cos(angle + 0.42) * radius * 0.92 + scale * 0.24;
-    const ty = cy + Math.sin(angle * 0.9 + 0.42) * radius * 0.7;
-    const x = sx + (tx - sx) * progress;
-    const y = sy + (ty - sy) * progress;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(tx, ty);
-    ctx.strokeStyle = colorWithAlpha(primary, 0.18);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y, i % 5 === 0 ? 3.1 : 2.2, 0, Math.PI * 2);
-    ctx.fillStyle = i % 5 === 0 ? secondary : primary;
-    ctx.fill();
-  }
-}
-
-function drawHeroVprPreview(ctx, width, height, t, primary, secondary, muted) {
-  const horizon = height * 0.56;
-  ctx.strokeStyle = colorWithAlpha(primary, 0.55);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 0; i <= 7; i += 1) {
-    const x = width * (0.08 + i * 0.12);
-    const y = horizon + Math.sin(t + i * 0.8) * 18;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
   ctx.stroke();
-  for (let i = 0; i < 5; i += 1) {
-    const x = width * (0.1 + i * 0.18);
-    const y = height * 0.2 + (i % 2) * 14;
-    const active = i === Math.floor((t * 0.55) % 5);
-    drawRoundedRect(ctx, x, y, width * 0.13, height * 0.18, 8);
-    ctx.fillStyle = active ? colorWithAlpha(secondary, 0.26) : 'rgba(255,255,255,0.08)';
+
+  const innerX = pad + 14;
+  const innerY = pad + 14;
+  const innerW = width - (pad + 14) * 2;
+  const innerH = height - (pad + 14) * 2;
+  const tick = reducedMotionQuery.matches ? 0.5 : (0.5 + Math.sin(t) * 0.5);
+
+  scene.panels.forEach((panel, index) => {
+    const [px, py, pw, ph] = panel;
+    const x = innerX + px * innerW;
+    const y = innerY + py * innerH;
+    const w = pw * innerW;
+    const h = ph * innerH;
+    drawRoundedRect(ctx, x, y, w, h, 10);
+    ctx.fillStyle = colorWithAlpha(index % 2 ? secondary : primary, 0.11);
     ctx.fill();
-    ctx.strokeStyle = active ? secondary : colorWithAlpha(muted, 0.36);
+    ctx.strokeStyle = colorWithAlpha(index % 2 ? secondary : primary, 0.34);
     ctx.stroke();
-    ctx.fillStyle = colorWithAlpha(primary, active ? 0.7 : 0.34);
-    ctx.fillRect(x + 10, y + 12, width * 0.13 - 20, 3);
-    ctx.fillRect(x + 10, y + height * 0.12, width * 0.09, 3);
+    ctx.fillStyle = colorWithAlpha(text, 0.18);
+    ctx.fillRect(x + 12, y + 14, Math.max(16, w * 0.54), 3);
+    ctx.fillRect(x + 12, y + 27, Math.max(12, w * 0.34), 3);
+  });
+
+  ctx.lineWidth = 2;
+  scene.lines.forEach(([x1, y1, x2, y2]) => {
+    ctx.beginPath();
+    ctx.moveTo(innerX + x1 * innerW, innerY + y1 * innerH);
+    ctx.lineTo(innerX + x2 * innerW, innerY + y2 * innerH);
+    ctx.strokeStyle = colorWithAlpha(primary, 0.34);
+    ctx.stroke();
+  });
+
+  scene.nodes.forEach(([nx, ny], index) => {
+    const x = innerX + nx * innerW;
+    const y = innerY + ny * innerH;
+    const active = index === Math.floor(tick * Math.max(1, scene.nodes.length - 1));
+    ctx.beginPath();
+    ctx.arc(x, y, active ? 7 : 4.4, 0, Math.PI * 2);
+    ctx.fillStyle = active ? secondary : primary;
+    ctx.fill();
+    ctx.strokeStyle = active ? colorWithAlpha(secondary, 0.36) : colorWithAlpha(primary, 0.24);
+    ctx.lineWidth = active ? 8 : 4;
+    ctx.stroke();
+  });
+
+  const progressIndex = Math.min(scene.lines.length - 1, Math.floor(tick * scene.lines.length));
+  const progress = scene.lines[progressIndex] || scene.lines[0];
+  if (progress) {
+    const phase = (tick * scene.lines.length) % 1;
+    const x = innerX + (progress[0] + (progress[2] - progress[0]) * phase) * innerW;
+    const y = innerY + (progress[1] + (progress[3] - progress[1]) * phase) * innerH;
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, Math.PI * 2);
+    ctx.fillStyle = colorWithAlpha(secondary, 0.86);
+    ctx.fill();
   }
-  ctx.fillStyle = colorWithAlpha(secondary, 0.92);
-  ctx.beginPath();
-  ctx.arc(width * (0.16 + ((Math.sin(t * 0.7) + 1) / 2) * 0.68), horizon, 7, 0, Math.PI * 2);
-  ctx.fill();
-}
 
-function drawHeroAgentPreview(ctx, width, height, t, primary, secondary, text) {
-  const deskY = height * 0.68;
-  ctx.fillStyle = 'rgba(255,255,255,0.1)';
-  drawRoundedRect(ctx, width * 0.13, deskY, width * 0.74, 18, 8);
-  ctx.fill();
-
-  const humanX = width * 0.24;
+  ctx.font = '700 11px "JetBrains Mono", monospace';
+  ctx.fillStyle = colorWithAlpha(muted, 0.86);
+  fillTruncatedText(ctx, scene.accent.toUpperCase(), innerX, height - pad - 14, innerW * 0.38);
+  ctx.textAlign = 'right';
   ctx.fillStyle = colorWithAlpha(text, 0.9);
-  ctx.beginPath();
-  ctx.arc(humanX, height * 0.42, 18, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = colorWithAlpha(primary, 0.7);
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(humanX - 12, height * 0.52);
-  ctx.quadraticCurveTo(humanX + 22, height * 0.58, width * 0.48, height * 0.54 + Math.sin(t) * 7);
-  ctx.stroke();
-
-  for (let i = 0; i < 3; i += 1) {
-    const x = width * (0.49 + i * 0.11);
-    const y = height * (0.32 + i * 0.04);
-    drawRoundedRect(ctx, x, y, width * 0.12, height * 0.18, 8);
-    ctx.fillStyle = colorWithAlpha(i === 1 ? secondary : primary, 0.2 + i * 0.04);
-    ctx.fill();
-    ctx.strokeStyle = colorWithAlpha(i === 1 ? secondary : primary, 0.55);
-    ctx.stroke();
-    ctx.fillStyle = colorWithAlpha(text, 0.62);
-    ctx.fillRect(x + 12, y + 16, width * 0.07, 3);
-    ctx.fillRect(x + 12, y + 29, width * 0.05, 3);
-  }
-
-  ctx.strokeStyle = colorWithAlpha(secondary, 0.78);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(width * 0.48, height * 0.54);
-  ctx.bezierCurveTo(width * 0.55, height * 0.44 + Math.sin(t) * 8, width * 0.68, height * 0.5, width * 0.76, height * 0.4);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(width * 0.78, height * 0.38, 10 + Math.sin(t * 1.4) * 2, 0, Math.PI * 2);
-  ctx.fillStyle = colorWithAlpha(secondary, 0.72);
-  ctx.fill();
-}
-
-function drawHeroEducationPreview(ctx, width, height, t, primary, secondary, text) {
-  drawRoundedRect(ctx, width * 0.1, height * 0.16, width * 0.52, height * 0.34, 10);
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.fill();
-  ctx.strokeStyle = colorWithAlpha(primary, 0.58);
-  ctx.stroke();
-  ctx.fillStyle = colorWithAlpha(primary, 0.68);
-  ctx.fillRect(width * 0.16, height * 0.27, width * 0.18 + Math.sin(t) * 12, 4);
-  ctx.fillRect(width * 0.16, height * 0.36, width * 0.28, 4);
-
-  const robotX = width * 0.72;
-  const robotY = height * 0.36;
-  drawRoundedRect(ctx, robotX - 34, robotY - 28, 68, 56, 16);
-  ctx.fillStyle = colorWithAlpha(text, 0.92);
-  ctx.fill();
-  ctx.strokeStyle = colorWithAlpha(secondary, 0.8);
-  ctx.stroke();
-  ctx.fillStyle = colorWithAlpha(primary, 0.9);
-  ctx.beginPath();
-  ctx.arc(robotX - 13, robotY - 4, 5, 0, Math.PI * 2);
-  ctx.arc(robotX + 13, robotY - 4, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = colorWithAlpha(secondary, 0.78);
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(robotX - 34, robotY + 12);
-  ctx.quadraticCurveTo(width * 0.55, height * 0.44 + Math.sin(t) * 8, width * 0.45, height * 0.35);
-  ctx.stroke();
-
-  ctx.fillStyle = colorWithAlpha(secondary, 0.2);
-  drawRoundedRect(ctx, width * 0.22, height * 0.68, width * 0.28, 22, 8);
-  ctx.fill();
-  ctx.fillStyle = colorWithAlpha(primary, 0.88);
-  ctx.beginPath();
-  ctx.arc(width * 0.18, height * 0.66, 14, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawHeroMedicalPreview(ctx, width, height, t, primary, secondary) {
-  const cell = Math.min(width, height) * 0.18;
-  const startX = width * 0.22;
-  const startY = height * 0.18;
-  for (let row = 0; row < 2; row += 1) {
-    for (let col = 0; col < 3; col += 1) {
-      const x = startX + col * (cell + 12);
-      const y = startY + row * (cell + 12);
-      const active = (row * 3 + col) === Math.floor((t * 0.6) % 6);
-      drawRoundedRect(ctx, x, y, cell, cell, 9);
-      ctx.fillStyle = active ? colorWithAlpha(secondary, 0.26) : 'rgba(255,255,255,0.08)';
-      ctx.fill();
-      ctx.strokeStyle = active ? secondary : colorWithAlpha(primary, 0.34);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(x + cell * 0.52, y + cell * 0.48, cell * (0.2 + ((row + col) % 2) * 0.08), 0, Math.PI * 2);
-      ctx.strokeStyle = colorWithAlpha(primary, active ? 0.82 : 0.38);
-      ctx.stroke();
-    }
-  }
-}
-
-function drawHeroGenericPreview(ctx, width, height, t, primary, secondary) {
-  ctx.strokeStyle = colorWithAlpha(primary, 0.78);
-  ctx.lineWidth = 2.4;
-  ctx.beginPath();
-  for (let i = 0; i <= 80; i += 1) {
-    const x = (i / 80) * width;
-    const y = height * 0.5 + Math.sin(i * 0.24 + t) * height * 0.14;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  ctx.fillStyle = colorWithAlpha(secondary, 0.78);
-  ctx.beginPath();
-  ctx.arc(width * 0.68, height * 0.5 + Math.sin(t + 16) * height * 0.14, 9, 0, Math.PI * 2);
-  ctx.fill();
+  fillTruncatedText(ctx, textFor(entry.child.title), innerX + innerW, height - pad - 14, innerW * 0.52);
+  ctx.textAlign = 'left';
 }
 
 function renderResearchInterest() {
@@ -1651,7 +1587,7 @@ function renderResearchInterest() {
   renderRelatedList(interestPapers, relatedPapers(), i18n[currentLang].no_related_papers, 'paper');
   renderResearchShowcase();
   renderHeroPreview();
-  drawInterestAnimation();
+  if (isResearchViewActive()) drawInterestAnimation();
 }
 
 function applyTheme(theme) {
@@ -1660,8 +1596,8 @@ function applyTheme(theme) {
   themeSelect.value = currentTheme;
   localStorage.setItem('wcx12-theme', currentTheme);
   drawRegistrationDemo();
-  renderRepoMap(filteredRepos);
-  drawInterestAnimation();
+  if (isProjectsViewActive()) renderRepoMap(filteredRepos);
+  if (isResearchViewActive()) drawInterestAnimation();
   drawHeroPreviewCanvas();
 }
 
@@ -2271,7 +2207,7 @@ function renderRepos(repos, preserveScroll = false) {
 
   if (!shown.length) {
     repoGrid.innerHTML = `<p class="muted">${i18n[currentLang].no_repos}</p>`;
-    renderRepoMap(items);
+    if (isProjectsViewActive()) renderRepoMap(items);
     return;
   }
 
@@ -2293,7 +2229,7 @@ function renderRepos(repos, preserveScroll = false) {
   });
   attachInterestJumpHandlers(repoGrid);
 
-  renderRepoMap(items);
+  if (isProjectsViewActive()) renderRepoMap(items);
   if (preserveScroll) repoGrid.scrollTop = beforeScroll;
 }
 
@@ -5800,7 +5736,7 @@ let stars = [];
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  stars = Array.from({ length: Math.min(140, Math.floor(window.innerWidth / 10)) }, () => ({
+  stars = Array.from({ length: Math.min(72, Math.floor(window.innerWidth / 18)) }, () => ({
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
     z: Math.random() * 1.5 + 0.4,
@@ -5808,7 +5744,38 @@ function resizeCanvas() {
   }));
 }
 
-function drawStars() {
+function shouldRunMotion() {
+  return !reducedMotionQuery.matches && document.visibilityState !== 'hidden';
+}
+
+function shouldAnimateHeroPreview(timestamp) {
+  return shouldRunMotion()
+    && heroPreviewVisible
+    && timestamp - lastHeroPreviewFrame >= HERO_PREVIEW_FRAME_SKIP * 16;
+}
+
+function shouldAnimateInterest(timestamp) {
+  return shouldRunMotion()
+    && document.getElementById('research')?.classList.contains('active')
+    && timestamp - lastInterestFrame >= INTEREST_FRAME_SKIP * 16;
+}
+
+function shouldAnimateRepoMap(timestamp) {
+  return shouldRunMotion()
+    && document.getElementById('projects')?.classList.contains('active')
+    && timestamp - lastRepoMapFrame >= REPO_MAP_FRAME_SKIP * 16;
+}
+
+function drawStars(timestamp = 0) {
+  if (!shouldRunMotion()) {
+    requestAnimationFrame(drawStars);
+    return;
+  }
+  if (timestamp - lastStarfieldFrame < STARFIELD_FRAME_SKIP * 16) {
+    requestAnimationFrame(drawStars);
+    return;
+  }
+  lastStarfieldFrame = timestamp;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const s of stars) {
     s.y += s.z;
@@ -5824,17 +5791,26 @@ function drawStars() {
   requestAnimationFrame(drawStars);
 }
 
-function animateInterestCanvas() {
-  interestTick += 1;
-  heroPreviewTick += 1;
-  if (document.getElementById('research')?.classList.contains('active')) drawInterestAnimation();
-  drawHeroPreviewCanvas();
+function animateInterestCanvas(timestamp = 0) {
+  if (shouldAnimateInterest(timestamp)) {
+    interestTick += 1;
+    lastInterestFrame = timestamp;
+    drawInterestAnimation();
+  }
+  if (shouldAnimateHeroPreview(timestamp)) {
+    heroPreviewTick += 1;
+    lastHeroPreviewFrame = timestamp;
+    drawHeroPreviewCanvas();
+  }
   requestAnimationFrame(animateInterestCanvas);
 }
 
-function animateRepoMap() {
-  repoMapTick += 1;
-  if (document.getElementById('projects')?.classList.contains('active')) renderRepoMap(filteredRepos);
+function animateRepoMap(timestamp = 0) {
+  if (shouldAnimateRepoMap(timestamp)) {
+    repoMapTick += 1;
+    lastRepoMapFrame = timestamp;
+    renderRepoMap(filteredRepos);
+  }
   requestAnimationFrame(animateRepoMap);
 }
 
@@ -5847,16 +5823,35 @@ restartTypeLoop();
 loadRepos();
 loadPublications();
 loadRemoteResearchConfig();
+if ('IntersectionObserver' in window && heroPreviewCanvas) {
+  const heroPreviewObserver = new IntersectionObserver(([entry]) => {
+    heroPreviewVisible = Boolean(entry?.isIntersecting);
+    if (heroPreviewVisible) drawHeroPreviewCanvas();
+  }, { threshold: 0.08 });
+  heroPreviewObserver.observe(heroPreviewCanvas);
+}
+reducedMotionQuery.addEventListener?.('change', () => {
+  drawHeroPreviewCanvas();
+  if (isResearchViewActive()) drawInterestAnimation();
+  if (isProjectsViewActive()) renderRepoMap(filteredRepos);
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    lastHeroPreviewFrame = 0;
+    lastStarfieldFrame = 0;
+    lastInterestFrame = 0;
+    lastRepoMapFrame = 0;
+  }
+});
 window.addEventListener('resize', () => {
   resizeCanvas();
   drawRegistrationDemo();
-  renderRepoMap(filteredRepos);
-  drawInterestAnimation();
+  if (isProjectsViewActive()) renderRepoMap(filteredRepos);
+  if (isResearchViewActive()) drawInterestAnimation();
   drawHeroPreviewCanvas();
 });
 resizeCanvas();
 drawRegistrationDemo();
-renderRepoMap(filteredRepos);
 renderResearchInterest();
 drawStars();
 animateInterestCanvas();
