@@ -52,6 +52,11 @@ const managerPapers = document.getElementById('managerPapers');
 const commandPalette = document.getElementById('commandPalette');
 const commandInput = document.getElementById('commandInput');
 const commandList = document.getElementById('commandList');
+const heroPreviewCanvas = document.getElementById('heroPreviewCanvas');
+const heroPreviewCtx = heroPreviewCanvas?.getContext('2d');
+const heroPreviewStatus = document.getElementById('heroPreviewStatus');
+const heroPreviewMeta = document.getElementById('heroPreviewMeta');
+const researchShowcase = document.getElementById('researchShowcase');
 
 const registrationCanvas = document.getElementById('registrationCanvas');
 const regCtx = registrationCanvas?.getContext('2d');
@@ -98,6 +103,7 @@ let activeInterestPanel = 'animation';
 let repoMapTick = 0;
 let activeInterestId = 'point-cloud-registration';
 let interestTick = 0;
+let heroPreviewTick = 0;
 
 const pointCloudInteraction = {
   active: false,
@@ -392,8 +398,13 @@ function detectOwnerTools() {
 }
 
 const ownerToolsEnabled = detectOwnerTools();
+const RESEARCH_CONFIG_VERSION = 2;
 
 const defaultResearchInterests = JSON.parse(JSON.stringify(researchInterests));
+
+function cloneConfigValue(value) {
+  return JSON.parse(JSON.stringify(value));
+}
 
 function defaultAssignments(kind) {
   const source = kind === 'repo' ? localRepos : staticPublications;
@@ -402,18 +413,38 @@ function defaultAssignments(kind) {
 
 function defaultResearchConfig() {
   return {
-    version: 1,
-    interests: JSON.parse(JSON.stringify(defaultResearchInterests)),
+    version: RESEARCH_CONFIG_VERSION,
+    interests: cloneConfigValue(defaultResearchInterests),
     repoAssignments: defaultAssignments('repo'),
     paperAssignments: defaultAssignments('paper')
   };
 }
 
+function mergeDefaultResearchInterests(incomingInterests, defaultInterests) {
+  const merged = cloneConfigValue(Array.isArray(incomingInterests) && incomingInterests.length ? incomingInterests : defaultInterests);
+  defaultInterests.forEach((defaultDomain) => {
+    let domain = merged.find((item) => item.id === defaultDomain.id);
+    if (!domain) {
+      merged.push(cloneConfigValue(defaultDomain));
+      return;
+    }
+    if (!Array.isArray(domain.children)) domain.children = [];
+    defaultDomain.children.forEach((defaultChild) => {
+      if (!domain.children.some((child) => child.id === defaultChild.id)) {
+        domain.children.push(cloneConfigValue(defaultChild));
+      }
+    });
+  });
+  return merged;
+}
+
 function normalizeResearchConfig(config) {
   const defaults = defaultResearchConfig();
+  const incomingInterests = Array.isArray(config?.interests) && config.interests.length ? config.interests : defaults.interests;
+  const shouldBackfillDefaults = !config?.version || Number(config.version) < RESEARCH_CONFIG_VERSION;
   return {
-    version: 1,
-    interests: Array.isArray(config?.interests) && config.interests.length ? config.interests : defaults.interests,
+    version: RESEARCH_CONFIG_VERSION,
+    interests: shouldBackfillDefaults ? mergeDefaultResearchInterests(incomingInterests, defaults.interests) : incomingInterests,
     repoAssignments: { ...defaults.repoAssignments, ...(config?.repoAssignments || {}) },
     paperAssignments: { ...defaults.paperAssignments, ...(config?.paperAssignments || {}) }
   };
@@ -492,6 +523,16 @@ const i18n = {
     hero_hi: 'Hi, I am',
     hero_status: 'Status',
     hero_subtitle_html: 'Point Set Registration + Anomaly Detection.<br />Building clean pipelines and practical open-source tools.',
+    hero_preview_label: 'Research Preview',
+    hero_preview_live: 'live',
+    hero_preview_hint: 'Click to open this research lane.',
+    featured_research_label: 'Featured Research',
+    featured_research_hint: 'Fast entry points into the demo gallery.',
+    preview_projects: 'Projects',
+    preview_papers: 'Papers',
+    explore_research: 'Explore',
+    repo_preview_title: 'Repository Preview',
+    repo_preview_readme: 'Read README',
     btn_command: 'Command',
     btn_contact: 'Contact Me',
     btn_repos: 'Explore My Repos',
@@ -613,6 +654,9 @@ const i18n = {
     command_palette: 'Command palette',
     command_toggle_lang: 'Toggle language',
     command_search_repos: 'Search repositories',
+    command_search_research: 'Search research',
+    command_search_papers: 'Search publications',
+    command_theme: 'Cycle theme',
     command_alignment: 'Run point-set demo',
     command_github: 'Open GitHub profile',
     command_orcid: 'Open ORCID record',
@@ -646,6 +690,16 @@ const i18n = {
     hero_hi: '你好，我是',
     hero_status: '状态',
     hero_subtitle_html: '点集配准 + 异常检测。<br />专注于可复现、可落地的机器学习工程。',
+    hero_preview_label: '研究预览',
+    hero_preview_live: '实时',
+    hero_preview_hint: '点击进入这个研究方向。',
+    featured_research_label: '精选研究方向',
+    featured_research_hint: '快速进入对应动画、项目与论文。',
+    preview_projects: '项目',
+    preview_papers: '论文',
+    explore_research: '进入研究',
+    repo_preview_title: '仓库预览',
+    repo_preview_readme: '查看 README',
     btn_command: '命令',
     btn_contact: '联系我',
     btn_repos: '查看我的仓库',
@@ -767,6 +821,9 @@ const i18n = {
     command_palette: '命令面板',
     command_toggle_lang: '切换语言',
     command_search_repos: '搜索仓库',
+    command_search_research: '搜索研究方向',
+    command_search_papers: '搜索论文',
+    command_theme: '切换主题',
     command_alignment: '运行点集配准演示',
     command_github: '打开 GitHub 主页',
     command_orcid: '打开 ORCID 记录',
@@ -834,6 +891,27 @@ function commandItems() {
       }
     },
     {
+      title: i18n[currentLang].command_search_research,
+      detail: i18n[currentLang].featured_research_label,
+      type: i18n[currentLang].command_search,
+      action: () => activateView('research')
+    },
+    {
+      title: i18n[currentLang].command_search_papers,
+      detail: i18n[currentLang].tab_publications,
+      type: i18n[currentLang].command_search,
+      action: () => activateView('publications')
+    },
+    {
+      title: i18n[currentLang].command_theme,
+      detail: currentTheme,
+      type: i18n[currentLang].command_run,
+      action: () => {
+        const order = ['neon', 'warm', 'mono'];
+        applyTheme(order[(order.indexOf(currentTheme) + 1) % order.length]);
+      }
+    },
+    {
       title: i18n[currentLang].command_toggle_lang,
       detail: i18n[currentLang].lang_btn,
       type: i18n[currentLang].command_run,
@@ -853,6 +931,20 @@ function commandItems() {
     }
   ];
 
+  const researchItems = allInterestChildren().map(({ domain, child }) => ({
+    title: textFor(child.title),
+    detail: `${textFor(domain.title)} / ${textFor(child.label)}`,
+    type: i18n[currentLang].tab_research,
+    action: () => jumpToResearchInterest(child.id)
+  }));
+
+  const paperItems = currentPublications().map((paper) => ({
+    title: paper.title,
+    detail: `${paper.venue || ''} ${paper.year || ''}`.trim() || i18n[currentLang].tab_publications,
+    type: i18n[currentLang].tab_publications,
+    action: () => openPaperDetail(paper.title)
+  }));
+
   const repoItems = allRepos.map((repo) => ({
     title: repo.name,
     detail: repo.description || i18n[currentLang].no_desc,
@@ -860,7 +952,7 @@ function commandItems() {
     action: () => openRepoDetail(repo.name)
   }));
 
-  return [...utilityItems, ...viewItems, ...repoItems];
+  return [...utilityItems, ...viewItems, ...researchItems, ...paperItems, ...repoItems];
 }
 
 function filteredCommandItems() {
@@ -882,8 +974,8 @@ function renderCommandList() {
 
   commandList.innerHTML = items.map((item, index) => `
     <button class="command-item ${index === commandCursor ? 'active' : ''}" type="button" data-index="${index}">
-      <span><strong>${item.title}</strong><span>${item.detail}</span></span>
-      <span class="command-shortcut">${item.type}</span>
+      <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
+      <span class="command-shortcut">${escapeHtml(item.type)}</span>
     </button>
   `).join('');
 
@@ -1241,6 +1333,298 @@ function renderRelatedList(container, items, emptyText, kind) {
   attachInterestJumpHandlers(container);
 }
 
+function interestMetrics(interestId) {
+  return {
+    projects: allRepos.filter((repo) => assignedInterestIds(repo, 'repo').includes(interestId)).length,
+    papers: currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(interestId)).length
+  };
+}
+
+function heroPreviewEntry() {
+  const entries = allInterestChildren();
+  if (!entries.length) return null;
+  return interestEntryById(activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
+}
+
+function renderResearchShowcase() {
+  if (!researchShowcase) return;
+  const entries = allInterestChildren();
+  if (!entries.length) {
+    researchShowcase.innerHTML = '';
+    return;
+  }
+
+  researchShowcase.innerHTML = entries.map(({ domain, child }, index) => {
+    const metrics = interestMetrics(child.id);
+    const activeClass = child.id === activeInterestId ? 'active' : '';
+    return `
+      <button class="research-showcase-card ${activeClass}" type="button" data-showcase-interest="${escapeHtml(child.id)}" style="--delay:${index}">
+        <span class="panel-eyebrow">${escapeHtml(textFor(domain.title))}</span>
+        <strong>${escapeHtml(textFor(child.title))}</strong>
+        <span class="showcase-label">${escapeHtml(textFor(child.label))}</span>
+        <span class="showcase-desc">${escapeHtml(textFor(child.description))}</span>
+        <span class="showcase-metrics">
+          <span>${metrics.projects} ${i18n[currentLang].preview_projects}</span>
+          <span>${metrics.papers} ${i18n[currentLang].preview_papers}</span>
+        </span>
+      </button>
+    `;
+  }).join('');
+
+  researchShowcase.querySelectorAll('[data-showcase-interest]').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeInterestId = button.dataset.showcaseInterest;
+      setInterestPanel('animation');
+      renderResearchInterest();
+      requestAnimationFrame(() => interestCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    });
+  });
+}
+
+function renderHeroPreview() {
+  const entry = heroPreviewEntry();
+  if (!entry || !heroPreviewMeta) return;
+  const metrics = interestMetrics(entry.child.id);
+  if (heroPreviewStatus) heroPreviewStatus.textContent = i18n[currentLang].hero_preview_live;
+  heroPreviewMeta.innerHTML = `
+    <button class="hero-preview-title" type="button" data-hero-interest="${escapeHtml(entry.child.id)}">
+      <span>${escapeHtml(textFor(entry.domain.title))}</span>
+      <strong>${escapeHtml(textFor(entry.child.title))}</strong>
+    </button>
+    <p>${escapeHtml(textFor(entry.child.description))}</p>
+    <div class="hero-preview-pills">
+      <span>${metrics.projects} ${i18n[currentLang].preview_projects}</span>
+      <span>${metrics.papers} ${i18n[currentLang].preview_papers}</span>
+      <span>${i18n[currentLang].hero_preview_hint}</span>
+    </div>
+  `;
+  heroPreviewMeta.querySelector('[data-hero-interest]')?.addEventListener('click', () => jumpToResearchInterest(entry.child.id));
+  drawHeroPreviewCanvas();
+}
+
+function drawHeroPreviewCanvas() {
+  if (!heroPreviewCanvas || !heroPreviewCtx) return;
+  const rect = heroPreviewCanvas.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return;
+  const entry = heroPreviewEntry();
+  if (!entry) return;
+  const { width, height } = resizeDrawingCanvas(heroPreviewCanvas, heroPreviewCtx);
+  const ctx = heroPreviewCtx;
+  const primary = themeColor('--cyan') || '#00f5ff';
+  const secondary = themeColor('--pink') || '#ff2e88';
+  const text = themeColor('--text') || '#f7fbff';
+  const muted = themeColor('--muted') || '#9ca9cf';
+  const t = heroPreviewTick * 0.024;
+  const type = entry.child.animation || 'generic';
+
+  ctx.clearRect(0, 0, width, height);
+  const bg = ctx.createLinearGradient(0, 0, width, height);
+  bg.addColorStop(0, colorWithAlpha(primary, 0.16));
+  bg.addColorStop(0.52, 'rgba(6, 10, 26, 0.9)');
+  bg.addColorStop(1, colorWithAlpha(secondary, 0.12));
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  for (let x = 26; x < width; x += 44) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+
+  if (type === 'point-cloud') {
+    drawHeroPointPreview(ctx, width, height, t, primary, secondary);
+  } else if (type === 'vpr') {
+    drawHeroVprPreview(ctx, width, height, t, primary, secondary, muted);
+  } else if (type === 'agent') {
+    drawHeroAgentPreview(ctx, width, height, t, primary, secondary, text);
+  } else if (type === 'education') {
+    drawHeroEducationPreview(ctx, width, height, t, primary, secondary, text);
+  } else if (type === 'medical-image') {
+    drawHeroMedicalPreview(ctx, width, height, t, primary, secondary);
+  } else {
+    drawHeroGenericPreview(ctx, width, height, t, primary, secondary);
+  }
+}
+
+function drawHeroPointPreview(ctx, width, height, t, primary, secondary) {
+  const cx = width * 0.5;
+  const cy = height * 0.5;
+  const scale = Math.min(width, height) * 0.34;
+  const progress = 0.5 + Math.sin(t) * 0.32;
+  for (let i = 0; i < 36; i += 1) {
+    const angle = i * 1.73;
+    const radius = scale * (0.26 + ((i * 17) % 64) / 100);
+    const sx = cx + Math.cos(angle) * radius - scale * 0.24;
+    const sy = cy + Math.sin(angle * 0.9) * radius * 0.74;
+    const tx = cx + Math.cos(angle + 0.42) * radius * 0.92 + scale * 0.24;
+    const ty = cy + Math.sin(angle * 0.9 + 0.42) * radius * 0.7;
+    const x = sx + (tx - sx) * progress;
+    const y = sy + (ty - sy) * progress;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(tx, ty);
+    ctx.strokeStyle = colorWithAlpha(primary, 0.18);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, i % 5 === 0 ? 3.1 : 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = i % 5 === 0 ? secondary : primary;
+    ctx.fill();
+  }
+}
+
+function drawHeroVprPreview(ctx, width, height, t, primary, secondary, muted) {
+  const horizon = height * 0.56;
+  ctx.strokeStyle = colorWithAlpha(primary, 0.55);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= 7; i += 1) {
+    const x = width * (0.08 + i * 0.12);
+    const y = horizon + Math.sin(t + i * 0.8) * 18;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  for (let i = 0; i < 5; i += 1) {
+    const x = width * (0.1 + i * 0.18);
+    const y = height * 0.2 + (i % 2) * 14;
+    const active = i === Math.floor((t * 0.55) % 5);
+    drawRoundedRect(ctx, x, y, width * 0.13, height * 0.18, 8);
+    ctx.fillStyle = active ? colorWithAlpha(secondary, 0.26) : 'rgba(255,255,255,0.08)';
+    ctx.fill();
+    ctx.strokeStyle = active ? secondary : colorWithAlpha(muted, 0.36);
+    ctx.stroke();
+    ctx.fillStyle = colorWithAlpha(primary, active ? 0.7 : 0.34);
+    ctx.fillRect(x + 10, y + 12, width * 0.13 - 20, 3);
+    ctx.fillRect(x + 10, y + height * 0.12, width * 0.09, 3);
+  }
+  ctx.fillStyle = colorWithAlpha(secondary, 0.92);
+  ctx.beginPath();
+  ctx.arc(width * (0.16 + ((Math.sin(t * 0.7) + 1) / 2) * 0.68), horizon, 7, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawHeroAgentPreview(ctx, width, height, t, primary, secondary, text) {
+  const deskY = height * 0.68;
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  drawRoundedRect(ctx, width * 0.13, deskY, width * 0.74, 18, 8);
+  ctx.fill();
+
+  const humanX = width * 0.24;
+  ctx.fillStyle = colorWithAlpha(text, 0.9);
+  ctx.beginPath();
+  ctx.arc(humanX, height * 0.42, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = colorWithAlpha(primary, 0.7);
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(humanX - 12, height * 0.52);
+  ctx.quadraticCurveTo(humanX + 22, height * 0.58, width * 0.48, height * 0.54 + Math.sin(t) * 7);
+  ctx.stroke();
+
+  for (let i = 0; i < 3; i += 1) {
+    const x = width * (0.49 + i * 0.11);
+    const y = height * (0.32 + i * 0.04);
+    drawRoundedRect(ctx, x, y, width * 0.12, height * 0.18, 8);
+    ctx.fillStyle = colorWithAlpha(i === 1 ? secondary : primary, 0.2 + i * 0.04);
+    ctx.fill();
+    ctx.strokeStyle = colorWithAlpha(i === 1 ? secondary : primary, 0.55);
+    ctx.stroke();
+    ctx.fillStyle = colorWithAlpha(text, 0.62);
+    ctx.fillRect(x + 12, y + 16, width * 0.07, 3);
+    ctx.fillRect(x + 12, y + 29, width * 0.05, 3);
+  }
+
+  ctx.strokeStyle = colorWithAlpha(secondary, 0.78);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(width * 0.48, height * 0.54);
+  ctx.bezierCurveTo(width * 0.55, height * 0.44 + Math.sin(t) * 8, width * 0.68, height * 0.5, width * 0.76, height * 0.4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(width * 0.78, height * 0.38, 10 + Math.sin(t * 1.4) * 2, 0, Math.PI * 2);
+  ctx.fillStyle = colorWithAlpha(secondary, 0.72);
+  ctx.fill();
+}
+
+function drawHeroEducationPreview(ctx, width, height, t, primary, secondary, text) {
+  drawRoundedRect(ctx, width * 0.1, height * 0.16, width * 0.52, height * 0.34, 10);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = colorWithAlpha(primary, 0.58);
+  ctx.stroke();
+  ctx.fillStyle = colorWithAlpha(primary, 0.68);
+  ctx.fillRect(width * 0.16, height * 0.27, width * 0.18 + Math.sin(t) * 12, 4);
+  ctx.fillRect(width * 0.16, height * 0.36, width * 0.28, 4);
+
+  const robotX = width * 0.72;
+  const robotY = height * 0.36;
+  drawRoundedRect(ctx, robotX - 34, robotY - 28, 68, 56, 16);
+  ctx.fillStyle = colorWithAlpha(text, 0.92);
+  ctx.fill();
+  ctx.strokeStyle = colorWithAlpha(secondary, 0.8);
+  ctx.stroke();
+  ctx.fillStyle = colorWithAlpha(primary, 0.9);
+  ctx.beginPath();
+  ctx.arc(robotX - 13, robotY - 4, 5, 0, Math.PI * 2);
+  ctx.arc(robotX + 13, robotY - 4, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = colorWithAlpha(secondary, 0.78);
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(robotX - 34, robotY + 12);
+  ctx.quadraticCurveTo(width * 0.55, height * 0.44 + Math.sin(t) * 8, width * 0.45, height * 0.35);
+  ctx.stroke();
+
+  ctx.fillStyle = colorWithAlpha(secondary, 0.2);
+  drawRoundedRect(ctx, width * 0.22, height * 0.68, width * 0.28, 22, 8);
+  ctx.fill();
+  ctx.fillStyle = colorWithAlpha(primary, 0.88);
+  ctx.beginPath();
+  ctx.arc(width * 0.18, height * 0.66, 14, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawHeroMedicalPreview(ctx, width, height, t, primary, secondary) {
+  const cell = Math.min(width, height) * 0.18;
+  const startX = width * 0.22;
+  const startY = height * 0.18;
+  for (let row = 0; row < 2; row += 1) {
+    for (let col = 0; col < 3; col += 1) {
+      const x = startX + col * (cell + 12);
+      const y = startY + row * (cell + 12);
+      const active = (row * 3 + col) === Math.floor((t * 0.6) % 6);
+      drawRoundedRect(ctx, x, y, cell, cell, 9);
+      ctx.fillStyle = active ? colorWithAlpha(secondary, 0.26) : 'rgba(255,255,255,0.08)';
+      ctx.fill();
+      ctx.strokeStyle = active ? secondary : colorWithAlpha(primary, 0.34);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x + cell * 0.52, y + cell * 0.48, cell * (0.2 + ((row + col) % 2) * 0.08), 0, Math.PI * 2);
+      ctx.strokeStyle = colorWithAlpha(primary, active ? 0.82 : 0.38);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawHeroGenericPreview(ctx, width, height, t, primary, secondary) {
+  ctx.strokeStyle = colorWithAlpha(primary, 0.78);
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  for (let i = 0; i <= 80; i += 1) {
+    const x = (i / 80) * width;
+    const y = height * 0.5 + Math.sin(i * 0.24 + t) * height * 0.14;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = colorWithAlpha(secondary, 0.78);
+  ctx.beginPath();
+  ctx.arc(width * 0.68, height * 0.5 + Math.sin(t + 16) * height * 0.14, 9, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function renderResearchInterest() {
   updateHeroStats();
   const entry = activeInterestEntry();
@@ -1252,6 +1636,8 @@ function renderResearchInterest() {
     interestDescription.textContent = '';
     interestProjects.innerHTML = `<p class="muted">${i18n[currentLang].no_related_projects}</p>`;
     interestPapers.innerHTML = `<p class="muted">${i18n[currentLang].no_related_papers}</p>`;
+    renderResearchShowcase();
+    renderHeroPreview();
     return;
   }
   interestPath.textContent = `${textFor(entry.domain.title)} / ${textFor(entry.child.title)}`;
@@ -1263,6 +1649,8 @@ function renderResearchInterest() {
   renderInterestRail();
   renderRelatedList(interestProjects, relatedRepos(), i18n[currentLang].no_related_projects, 'repo');
   renderRelatedList(interestPapers, relatedPapers(), i18n[currentLang].no_related_papers, 'paper');
+  renderResearchShowcase();
+  renderHeroPreview();
   drawInterestAnimation();
 }
 
@@ -1274,6 +1662,7 @@ function applyTheme(theme) {
   drawRegistrationDemo();
   renderRepoMap(filteredRepos);
   drawInterestAnimation();
+  drawHeroPreviewCanvas();
 }
 
 themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
@@ -1804,6 +2193,53 @@ function openPaperDetail(title) {
   attachInterestJumpHandlers(modalBody);
 }
 
+function repoUpdatedDate(repo) {
+  if (!repo.updated_at) return '-';
+  return new Date(repo.updated_at).toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+function renderRepoPreviewCard(repo) {
+  const repoInterestId = primaryInterestId(repo, 'repo');
+  const mappingLabel = repoMappingLabel(repo);
+  const accent = repoColor(repo.language);
+  const safeName = escapeHtml(repo.name);
+  const desc = escapeHtml(repo.description || i18n[currentLang].no_desc);
+  return `
+    <article class="repo-card repo-preview-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-repo="${safeName}" style="--repo-accent:${accent}">
+      <div class="repo-preview-top">
+        <div>
+          <span class="panel-eyebrow">${i18n[currentLang].repo_preview_title}</span>
+          <h3><a href="${repo.html_url}" target="_blank" rel="noreferrer">${safeName}</a></h3>
+        </div>
+        <div class="repo-preview-visual" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <p class="muted repo-preview-desc">${desc}</p>
+      <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
+      <div class="repo-preview-facts">
+        <span>${i18n[currentLang].project_mapping}</span>
+        <strong>${escapeHtml(mappingLabel)}</strong>
+        <span>${i18n[currentLang].project_updated}</span>
+        <strong>${escapeHtml(repoUpdatedDate(repo))}</strong>
+      </div>
+      <div class="repo-meta">
+        <span>${i18n[currentLang].star} ${repo.stargazers_count}</span>
+        <span>${escapeHtml(repo.language || i18n[currentLang].mixed)}</span>
+      </div>
+      <div class="repo-actions">
+        <button class="btn btn-outline repo-detail" type="button" data-repo="${safeName}">${i18n[currentLang].repo_preview_readme}</button>
+        ${repoInterestId ? `<button class="btn btn-outline repo-research" type="button" data-repo="${safeName}">${i18n[currentLang].show_in_research}</button>` : ''}
+        <a class="btn btn-primary" href="${repo.html_url}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
+      </div>
+    </article>
+  `;
+}
+
 function renderRepos(repos, preserveScroll = false) {
   const beforeScroll = repoGrid.scrollTop;
   const items = sortedRepos(repos);
@@ -1839,25 +2275,7 @@ function renderRepos(repos, preserveScroll = false) {
     return;
   }
 
-  repoGrid.innerHTML = shown.map((repo) => {
-    const repoInterestId = primaryInterestId(repo, 'repo');
-    return `
-    <article class="repo-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-repo="${repo.name}">
-      <h3><a href="${repo.html_url}" target="_blank" rel="noreferrer">${repo.name}</a></h3>
-      <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
-      <p class="muted">${repo.description || i18n[currentLang].no_desc}</p>
-      <div class="repo-meta">
-        <span>${i18n[currentLang].star} ${repo.stargazers_count}</span>
-        <span>${repo.language || i18n[currentLang].mixed}</span>
-      </div>
-      <div class="repo-actions">
-        <button class="btn btn-outline repo-detail" type="button" data-repo="${repo.name}">${i18n[currentLang].view_details}</button>
-        ${repoInterestId ? `<button class="btn btn-outline repo-research" type="button" data-repo="${repo.name}">${i18n[currentLang].show_in_research}</button>` : ''}
-        <a class="btn btn-primary" href="${repo.html_url}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
-      </div>
-    </article>
-  `;
-  }).join('');
+  repoGrid.innerHTML = shown.map((repo) => renderRepoPreviewCard(repo)).join('');
 
   if (repoState.mode === 'infinite' && shown.length < total) {
     repoGrid.insertAdjacentHTML('beforeend', `<p class="muted">${i18n[currentLang].infinite_hint}</p>`);
@@ -5408,7 +5826,9 @@ function drawStars() {
 
 function animateInterestCanvas() {
   interestTick += 1;
+  heroPreviewTick += 1;
   if (document.getElementById('research')?.classList.contains('active')) drawInterestAnimation();
+  drawHeroPreviewCanvas();
   requestAnimationFrame(animateInterestCanvas);
 }
 
@@ -5432,6 +5852,7 @@ window.addEventListener('resize', () => {
   drawRegistrationDemo();
   renderRepoMap(filteredRepos);
   drawInterestAnimation();
+  drawHeroPreviewCanvas();
 });
 resizeCanvas();
 drawRegistrationDemo();
