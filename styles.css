@@ -109,6 +109,31 @@ html {
   display: none;
 }
 
+.theme-transition {
+  --theme-x: 50%;
+  --theme-y: 24px;
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at var(--theme-x) var(--theme-y),
+      color-mix(in srgb, var(--cyan) 32%, transparent) 0 10%,
+      color-mix(in srgb, var(--pink) 18%, transparent) 18%,
+      transparent 48%);
+}
+
+.theme-transition.run {
+  animation: themeSweep 420ms ease-out both;
+}
+
+@keyframes themeSweep {
+  0% { opacity: 0; transform: scale(0.82); }
+  34% { opacity: 0.58; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
 @media (pointer: fine) and (min-width: 720px) {
   body.cursor-enabled,
   body.cursor-enabled * {
@@ -722,9 +747,69 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 .modal-card,
 .manager-list,
 .readme-box,
+.readme-drawer-body,
+.command-preview,
 .command-list {
   scrollbar-color: var(--cyan) var(--scroll-track);
   scrollbar-width: thin;
+}
+
+.interactive-card {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.interactive-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at var(--pointer-x) var(--pointer-y),
+      color-mix(in srgb, var(--cyan) 18%, transparent) 0 18%,
+      transparent 46%);
+  transition: opacity 180ms ease;
+}
+
+.interactive-card:hover,
+.interactive-card.is-pressed {
+  border-color: color-mix(in srgb, var(--cyan) 58%, transparent);
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.22),
+    0 0 24px color-mix(in srgb, var(--cyan) 12%, transparent);
+}
+
+.interactive-card:hover {
+  transform: translateY(-3px);
+}
+
+.interactive-card:hover::before,
+.interactive-card.is-pressed::before {
+  opacity: 1;
+}
+
+.interactive-card:active,
+.interactive-card.is-pressed {
+  transform: translateY(-1px) scale(0.992);
+}
+
+.interactive-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.motion-card {
+  will-change: transform, opacity;
 }
 
 .repo-card {
@@ -1448,6 +1533,79 @@ button.research-badge:hover {
   cursor: pointer;
 }
 
+.readme-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  justify-content: flex-end;
+  background: rgba(4, 6, 14, 0.62);
+  backdrop-filter: blur(8px);
+  padding: 14px;
+}
+
+.readme-drawer.open {
+  display: flex;
+}
+
+.readme-drawer-card {
+  width: min(760px, 100%);
+  height: min(100%, 920px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  border: 1px solid rgba(0, 245, 255, 0.28);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cyan) 8%, transparent), transparent 36%),
+    #0e1330;
+  box-shadow: -24px 0 70px rgba(0, 0, 0, 0.44), 0 0 30px color-mix(in srgb, var(--cyan) 12%, transparent);
+  padding: 18px;
+  transform: translateX(22px);
+  opacity: 0;
+  animation: drawerEnter 240ms ease-out forwards;
+}
+
+@keyframes drawerEnter {
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.readme-drawer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.readme-drawer-head h3 {
+  margin: 4px 34px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.readme-drawer .modal-close {
+  position: static;
+  flex: 0 0 auto;
+}
+
+.readme-drawer-body {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 8px;
+}
+
+.readme-drawer-body .readme-box {
+  max-height: none;
+  overflow: visible;
+}
+
+.readme-drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
 .command-palette {
   position: fixed;
   inset: 0;
@@ -1463,7 +1621,13 @@ button.research-badge:hover {
 .command-palette.open { display: flex; }
 
 .palette-card {
-  width: min(680px, 100%);
+  width: min(920px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.72fr);
+  grid-template-areas:
+    "input input"
+    "list preview";
+  gap: 10px;
   border: 1px solid rgba(0, 245, 255, 0.28);
   border-radius: 16px;
   background: rgba(10, 14, 34, 0.96);
@@ -1472,6 +1636,7 @@ button.research-badge:hover {
 }
 
 #commandInput {
+  grid-area: input;
   width: 100%;
   border: 1px solid rgba(0, 245, 255, 0.28);
   border-radius: 12px;
@@ -1487,11 +1652,51 @@ button.research-badge:hover {
 }
 
 .command-list {
+  grid-area: list;
   display: grid;
   gap: 8px;
-  margin-top: 10px;
   max-height: min(52vh, 420px);
   overflow: auto;
+}
+
+.command-preview {
+  grid-area: preview;
+  min-height: 0;
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at 85% 12%, color-mix(in srgb, var(--pink) 12%, transparent), transparent 32%),
+    rgba(255, 255, 255, 0.045);
+}
+
+.command-preview h3 {
+  margin: 7px 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.command-preview p {
+  margin: 8px 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.command-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.command-preview-tags span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.045);
+  font: 700 0.7rem "JetBrains Mono", monospace;
 }
 
 .command-item {
@@ -1506,10 +1711,12 @@ button.research-badge:hover {
   text-align: left;
   padding: 10px 12px;
   cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
 .command-item:hover,
 .command-item.active {
+  transform: translateX(2px);
   border-color: var(--cyan);
   box-shadow: 0 0 18px rgba(0, 245, 255, 0.2);
 }
@@ -1682,6 +1889,30 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
 
   .pub-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .palette-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "input"
+      "list"
+      "preview";
+    max-height: calc(100vh - 112px);
+    overflow: auto;
+  }
+
+  .command-list,
+  .command-preview {
+    max-height: 30vh;
+  }
+
+  .readme-drawer {
+    padding: 10px;
+  }
+
+  .readme-drawer-card {
+    width: 100%;
+    height: calc(100dvh - 20px);
   }
 
   .span-2 {
