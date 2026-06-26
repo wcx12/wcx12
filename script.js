@@ -52,6 +52,14 @@ const managerPapers = document.getElementById('managerPapers');
 const commandPalette = document.getElementById('commandPalette');
 const commandInput = document.getElementById('commandInput');
 const commandList = document.getElementById('commandList');
+const commandPreview = document.getElementById('commandPreview');
+const themeTransition = document.getElementById('themeTransition');
+const readmeDrawer = document.getElementById('readmeDrawer');
+const readmeDrawerTitle = document.getElementById('readmeDrawerTitle');
+const readmeDrawerKicker = document.getElementById('readmeDrawerKicker');
+const readmeDrawerBody = document.getElementById('readmeDrawerBody');
+const readmeDrawerLink = document.getElementById('readmeDrawerLink');
+const readmeDrawerClose = document.getElementById('readmeDrawerClose');
 const heroPreviewCanvas = document.getElementById('heroPreviewCanvas');
 const heroPreviewCtx = heroPreviewCanvas?.getContext('2d');
 const heroPreviewStatus = document.getElementById('heroPreviewStatus');
@@ -102,6 +110,7 @@ let highlightedPaper = null;
 let activeInterestPanel = 'animation';
 let repoMapTick = 0;
 let activeInterestId = 'point-cloud-registration';
+let previewInterestId = null;
 let interestTick = 0;
 let heroPreviewTick = 0;
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -887,6 +896,8 @@ function commandItems() {
     title: btn.textContent,
     detail: i18n[currentLang].command_jump,
     type: i18n[currentLang].command_palette,
+    kind: 'view',
+    viewId: btn.dataset.view,
     action: () => activateView(btn.dataset.view)
   }));
 
@@ -895,6 +906,7 @@ function commandItems() {
       title: i18n[currentLang].command_search_repos,
       detail: '/',
       type: i18n[currentLang].command_search,
+      kind: 'utility',
       action: () => {
         activateView('projects');
         repoSearch.focus();
@@ -904,18 +916,21 @@ function commandItems() {
       title: i18n[currentLang].command_search_research,
       detail: i18n[currentLang].featured_research_label,
       type: i18n[currentLang].command_search,
+      kind: 'utility',
       action: () => activateView('research')
     },
     {
       title: i18n[currentLang].command_search_papers,
       detail: i18n[currentLang].tab_publications,
       type: i18n[currentLang].command_search,
+      kind: 'utility',
       action: () => activateView('publications')
     },
     {
       title: i18n[currentLang].command_theme,
       detail: currentTheme,
       type: i18n[currentLang].command_run,
+      kind: 'theme',
       action: () => {
         const order = ['neon', 'warm', 'mono'];
         applyTheme(order[(order.indexOf(currentTheme) + 1) % order.length]);
@@ -925,18 +940,21 @@ function commandItems() {
       title: i18n[currentLang].command_toggle_lang,
       detail: i18n[currentLang].lang_btn,
       type: i18n[currentLang].command_run,
+      kind: 'utility',
       action: () => langToggle.click()
     },
     {
       title: i18n[currentLang].command_github,
       detail: 'github.com/wcx12',
       type: i18n[currentLang].command_open,
+      kind: 'external',
       action: () => window.open('https://github.com/wcx12', '_blank', 'noreferrer')
     },
     {
       title: i18n[currentLang].command_orcid,
       detail: ORCID_ID,
       type: i18n[currentLang].command_open,
+      kind: 'external',
       action: () => window.open(`https://orcid.org/${ORCID_ID}`, '_blank', 'noreferrer')
     }
   ];
@@ -945,6 +963,8 @@ function commandItems() {
     title: textFor(child.title),
     detail: `${textFor(domain.title)} / ${textFor(child.label)}`,
     type: i18n[currentLang].tab_research,
+    kind: 'research',
+    interestId: child.id,
     action: () => jumpToResearchInterest(child.id)
   }));
 
@@ -952,6 +972,8 @@ function commandItems() {
     title: paper.title,
     detail: `${paper.venue || ''} ${paper.year || ''}`.trim() || i18n[currentLang].tab_publications,
     type: i18n[currentLang].tab_publications,
+    kind: 'paper',
+    paperTitle: paper.title,
     action: () => openPaperDetail(paper.title)
   }));
 
@@ -959,6 +981,8 @@ function commandItems() {
     title: repo.name,
     detail: repo.description || i18n[currentLang].no_desc,
     type: i18n[currentLang].command_repo,
+    kind: 'repo',
+    repoName: repo.name,
     action: () => openRepoDetail(repo.name)
   }));
 
@@ -974,11 +998,65 @@ function filteredCommandItems() {
     .slice(0, 12);
 }
 
+function renderCommandPreview(item) {
+  if (!commandPreview) return;
+  if (!item) {
+    commandPreview.innerHTML = `<p>${escapeHtml(i18n[currentLang].command_empty)}</p>`;
+    return;
+  }
+
+  let title = item.title;
+  let detail = item.detail;
+  const tags = [item.type];
+  if (item.kind === 'research') {
+    const entry = interestEntryById(item.interestId);
+    if (entry) {
+      title = `${textFor(entry.domain.title)} / ${textFor(entry.child.title)}`;
+      detail = textFor(entry.child.description);
+      tags.push(textFor(entry.child.label));
+      tags.push(`${interestMetrics(entry.child.id).projects} ${i18n[currentLang].preview_projects}`);
+      tags.push(`${interestMetrics(entry.child.id).papers} ${i18n[currentLang].preview_papers}`);
+    }
+  } else if (item.kind === 'repo') {
+    const repo = allRepos.find((entry) => entry.name === item.repoName);
+    if (repo) {
+      detail = repo.description || i18n[currentLang].no_desc;
+      tags.push(repoMappingLabel(repo));
+      tags.push(repo.language || i18n[currentLang].mixed);
+      tags.push(`${i18n[currentLang].star} ${repo.stargazers_count || 0}`);
+    }
+  } else if (item.kind === 'paper') {
+    const paper = currentPublications().find((entry) => entry.title === item.paperTitle);
+    if (paper) {
+      detail = paper.summary || item.detail;
+      tags.push(paper.venue || i18n[currentLang].tab_publications);
+      tags.push(String(paper.year || ''));
+      const paperInterest = primaryInterestId(paper, 'paper');
+      if (paperInterest) tags.push(interestLabel(paperInterest));
+    }
+  } else if (item.kind === 'theme') {
+    tags.push(currentTheme);
+    detail = currentLang === 'zh'
+      ? '切换当前页面色调，并保留你的选择。'
+      : 'Switch the page color tone and keep the selection.';
+  }
+
+  commandPreview.innerHTML = `
+    <span class="panel-eyebrow">${escapeHtml(item.type)}</span>
+    <h3>${escapeHtml(title)}</h3>
+    <p>${escapeHtml(detail || '')}</p>
+    <div class="command-preview-tags">
+      ${tags.filter(Boolean).slice(0, 5).map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}
+    </div>
+  `;
+}
+
 function renderCommandList() {
   const items = filteredCommandItems();
   commandCursor = Math.min(commandCursor, Math.max(items.length - 1, 0));
   if (!items.length) {
     commandList.innerHTML = `<p class="muted">${i18n[currentLang].command_empty}</p>`;
+    renderCommandPreview(null);
     return;
   }
 
@@ -1002,6 +1080,7 @@ function renderCommandList() {
       }
     });
   });
+  renderCommandPreview(items[commandCursor]);
 }
 
 function openCommandPalette() {
@@ -1358,10 +1437,59 @@ function interestMetrics(interestId) {
   };
 }
 
+function snapshotMotionCards(container) {
+  if (!container) return new Map();
+  return new Map(Array.from(container.querySelectorAll('[data-motion-card]')).map((node) => [
+    node.dataset.motionKey || node.dataset.repo || node.dataset.paperCard || node.dataset.showcaseInterest || '',
+    node.getBoundingClientRect()
+  ]));
+}
+
+function animateGridTransition(container, previousCards = new Map()) {
+  if (!container || reducedMotionQuery.matches) return;
+  const cards = Array.from(container.querySelectorAll('[data-motion-card]'));
+  cards.forEach((card, index) => {
+    const key = card.dataset.motionKey || card.dataset.repo || card.dataset.paperCard || card.dataset.showcaseInterest || '';
+    const next = card.getBoundingClientRect();
+    const previous = previousCards.get(key);
+    const dx = previous ? previous.left - next.left : 0;
+    const dy = previous ? previous.top - next.top : 8;
+    card.style.transition = 'none';
+    card.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+    card.style.opacity = previous ? '0.78' : '0';
+    requestAnimationFrame(() => {
+      card.style.transition = `transform 220ms ease ${Math.min(index, 8) * 18}ms, opacity 180ms ease ${Math.min(index, 8) * 18}ms`;
+      card.style.transform = '';
+      card.style.opacity = '';
+    });
+  });
+}
+
+function attachInteractiveCards(root = document) {
+  root.querySelectorAll('.interactive-card').forEach((card) => {
+    if (card.dataset.interactiveBound === 'true') return;
+    card.dataset.interactiveBound = 'true';
+    card.addEventListener('pointermove', (event) => {
+      const rect = card.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 100;
+      const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * 100;
+      card.style.setProperty('--pointer-x', `${x.toFixed(1)}%`);
+      card.style.setProperty('--pointer-y', `${y.toFixed(1)}%`);
+    }, { passive: true });
+    card.addEventListener('pointerdown', () => card.classList.add('is-pressed'));
+    card.addEventListener('pointerup', () => card.classList.remove('is-pressed'));
+    card.addEventListener('pointerleave', () => {
+      card.classList.remove('is-pressed');
+      card.style.setProperty('--pointer-x', '50%');
+      card.style.setProperty('--pointer-y', '50%');
+    });
+  });
+}
+
 function heroPreviewEntry() {
   const entries = allInterestChildren();
   if (!entries.length) return null;
-  return interestEntryById(activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
+  return interestEntryById(previewInterestId || activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
 }
 
 function renderResearchShowcase() {
@@ -1376,7 +1504,7 @@ function renderResearchShowcase() {
     const metrics = interestMetrics(child.id);
     const activeClass = child.id === activeInterestId ? 'active' : '';
     return `
-      <button class="research-showcase-card ${activeClass}" type="button" data-showcase-interest="${escapeHtml(child.id)}" style="--delay:${index}">
+      <button class="research-showcase-card interactive-card motion-card ${activeClass}" type="button" data-motion-card data-motion-key="research-${escapeHtml(child.id)}" data-showcase-interest="${escapeHtml(child.id)}" style="--delay:${index}">
         <span class="panel-eyebrow">${escapeHtml(textFor(domain.title))}</span>
         <strong>${escapeHtml(textFor(child.title))}</strong>
         <span class="showcase-label">${escapeHtml(textFor(child.label))}</span>
@@ -1390,13 +1518,28 @@ function renderResearchShowcase() {
   }).join('');
 
   researchShowcase.querySelectorAll('[data-showcase-interest]').forEach((button) => {
+    button.addEventListener('mouseenter', () => {
+      previewInterestId = button.dataset.showcaseInterest;
+      renderHeroPreview();
+    });
+    button.addEventListener('focus', () => {
+      previewInterestId = button.dataset.showcaseInterest;
+      renderHeroPreview();
+    });
     button.addEventListener('click', () => {
       activeInterestId = button.dataset.showcaseInterest;
+      previewInterestId = null;
       setInterestPanel('animation');
       renderResearchInterest();
       requestAnimationFrame(() => interestCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     });
   });
+  researchShowcase.onmouseleave = () => {
+    previewInterestId = null;
+    renderHeroPreview();
+  };
+  attachInteractiveCards(researchShowcase);
+  animateGridTransition(researchShowcase);
 }
 
 function renderHeroPreview() {
@@ -1590,18 +1733,32 @@ function renderResearchInterest() {
   if (isResearchViewActive()) drawInterestAnimation();
 }
 
-function applyTheme(theme) {
+function runThemeTransition(source = themeSelect) {
+  if (!themeTransition || reducedMotionQuery.matches) return;
+  const rect = source?.getBoundingClientRect?.();
+  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+  const y = rect ? rect.top + rect.height / 2 : 24;
+  themeTransition.style.setProperty('--theme-x', `${x}px`);
+  themeTransition.style.setProperty('--theme-y', `${y}px`);
+  themeTransition.classList.remove('run');
+  void themeTransition.offsetWidth;
+  themeTransition.classList.add('run');
+}
+
+function applyTheme(theme, options = {}) {
+  const { animate = true, source = themeSelect } = options;
   currentTheme = ['neon', 'warm', 'mono'].includes(theme) ? theme : 'neon';
   document.documentElement.dataset.theme = currentTheme;
   themeSelect.value = currentTheme;
   localStorage.setItem('wcx12-theme', currentTheme);
+  if (animate) runThemeTransition(source);
   drawRegistrationDemo();
   if (isProjectsViewActive()) renderRepoMap(filteredRepos);
   if (isResearchViewActive()) drawInterestAnimation();
   drawHeroPreviewCanvas();
 }
 
-themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
+themeSelect.addEventListener('change', () => applyTheme(themeSelect.value, { source: themeSelect }));
 interestSectionTabs.forEach((button) => {
   button.addEventListener('click', () => setInterestPanel(button.dataset.interestPanel));
 });
@@ -1942,6 +2099,41 @@ function safeMarkdownUrl(url) {
   return escapeHtml(value);
 }
 
+function sanitizeMarkdownHtml(rawHtml) {
+  const template = document.createElement('template');
+  template.innerHTML = String(rawHtml || '');
+  const allowedTags = new Set(['A', 'B', 'BR', 'CODE', 'EM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'I', 'IMG', 'P', 'SPAN', 'STRONG', 'SUB', 'SUP']);
+  const allowedAttrs = new Set(['align', 'alt', 'height', 'href', 'src', 'target', 'title', 'width', 'rel', 'loading']);
+  template.content.querySelectorAll('*').forEach((node) => {
+    if (!allowedTags.has(node.tagName)) {
+      node.replaceWith(document.createTextNode(node.textContent || ''));
+      return;
+    }
+    Array.from(node.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      if (name.startsWith('on') || !allowedAttrs.has(name)) {
+        node.removeAttribute(attr.name);
+        return;
+      }
+      if ((name === 'href' || name === 'src') && /^(javascript|data):/i.test(attr.value.trim())) {
+        node.removeAttribute(attr.name);
+      }
+    });
+    if (node.tagName === 'A') {
+      node.setAttribute('target', '_blank');
+      node.setAttribute('rel', 'noreferrer');
+    }
+    if (node.tagName === 'IMG') {
+      node.setAttribute('loading', 'lazy');
+    }
+  });
+  return template.innerHTML;
+}
+
+function isMarkdownHtmlLine(line) {
+  return /^<\/?(a|b|br|code|em|h[1-6]|hr|i|img|p|span|strong|sub|sup)\b/i.test(line);
+}
+
 function renderInlineMarkdown(text) {
   return escapeHtml(text)
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `<img src="${safeMarkdownUrl(url)}" alt="${escapeHtml(alt)}" loading="lazy" />`)
@@ -2015,6 +2207,13 @@ function markdownToHtml(markdown) {
     if (!trimmed) {
       closeParagraph();
       closeList();
+      return;
+    }
+
+    if (isMarkdownHtmlLine(trimmed)) {
+      closeParagraph();
+      closeList();
+      html.push(sanitizeMarkdownHtml(trimmed));
       return;
     }
 
@@ -2098,24 +2297,42 @@ async function openRepoReadme(repoName) {
       </div>
     </div>
   `;
-  openModal({
-    title: repo.name,
-    html: `${overview()}<p class="muted">${i18n[currentLang].readme_loading}</p>`,
-    linkText: i18n[currentLang].details_project_link_text,
-    link: repo.html_url
-  });
-  attachInterestJumpHandlers(modalBody);
+  openReadmeDrawer(repo, `${overview()}<p class="muted">${i18n[currentLang].readme_loading}</p>`);
+  attachInterestJumpHandlers(readmeDrawerBody);
 
   try {
     const response = await fetch(repo.readme_url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const markdown = await response.text();
-    modalBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown)}</div>`;
+    readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown)}</div>`;
   } catch {
-    modalBody.innerHTML = `${overview()}<div class="readme-box"><p>${i18n[currentLang].readme_unavailable}</p></div>`;
+    readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box"><p>${i18n[currentLang].readme_unavailable}</p></div>`;
   }
-  attachInterestJumpHandlers(modalBody);
+  attachInterestJumpHandlers(readmeDrawerBody);
+  attachInteractiveCards(readmeDrawerBody);
 }
+
+function openReadmeDrawer(repo, html) {
+  if (!readmeDrawer || !repo) return;
+  readmeDrawerKicker.textContent = i18n[currentLang].repo_preview_title;
+  readmeDrawerTitle.textContent = repo.name;
+  readmeDrawerBody.innerHTML = html || '';
+  readmeDrawerLink.href = repo.html_url;
+  readmeDrawerLink.textContent = i18n[currentLang].details_project_link_text;
+  readmeDrawer.classList.add('open');
+  readmeDrawer.setAttribute('aria-hidden', 'false');
+}
+
+function closeReadmeDrawer() {
+  if (!readmeDrawer) return;
+  readmeDrawer.classList.remove('open');
+  readmeDrawer.setAttribute('aria-hidden', 'true');
+}
+
+readmeDrawerClose?.addEventListener('click', closeReadmeDrawer);
+readmeDrawer?.addEventListener('click', (event) => {
+  if (event.target === readmeDrawer) closeReadmeDrawer();
+});
 
 function openPaperDetail(title) {
   const paper = currentPublications().find((item) => item.title === title);
@@ -2145,7 +2362,7 @@ function renderRepoPreviewCard(repo) {
   const safeName = escapeHtml(repo.name);
   const desc = escapeHtml(repo.description || i18n[currentLang].no_desc);
   return `
-    <article class="repo-card repo-preview-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-repo="${safeName}" style="--repo-accent:${accent}">
+    <article class="repo-card repo-preview-card interactive-card motion-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-motion-card data-motion-key="repo-${safeName}" data-repo="${safeName}" style="--repo-accent:${accent}">
       <div class="repo-preview-top">
         <div>
           <span class="panel-eyebrow">${i18n[currentLang].repo_preview_title}</span>
@@ -2178,6 +2395,7 @@ function renderRepoPreviewCard(repo) {
 
 function renderRepos(repos, preserveScroll = false) {
   const beforeScroll = repoGrid.scrollTop;
+  const previousCards = snapshotMotionCards(repoGrid);
   const items = sortedRepos(repos);
   const total = items.length;
   let shown = [];
@@ -2228,6 +2446,8 @@ function renderRepos(repos, preserveScroll = false) {
     });
   });
   attachInterestJumpHandlers(repoGrid);
+  attachInteractiveCards(repoGrid);
+  animateGridTransition(repoGrid, previousCards);
 
   if (isProjectsViewActive()) renderRepoMap(items);
   if (preserveScroll) repoGrid.scrollTop = beforeScroll;
@@ -5264,6 +5484,7 @@ function currentPublications() {
 
 function renderPublications(preserveScroll = false) {
   const beforeScroll = pubList.scrollTop;
+  const previousCards = snapshotMotionCards(pubList);
   const items = currentPublications();
   const total = items.length;
   let shown = [];
@@ -5299,7 +5520,7 @@ function renderPublications(preserveScroll = false) {
   pubList.innerHTML = shown.map((item) => {
     const primaryId = primaryInterestId(item, 'paper');
     return `
-    <article class="pub-card ${highlightedPaper === item.title ? 'highlight' : ''}" data-paper-card="${escapeHtml(item.title)}">
+    <article class="pub-card interactive-card motion-card ${highlightedPaper === item.title ? 'highlight' : ''}" data-motion-card data-motion-key="paper-${escapeHtml(item.title)}" data-paper-card="${escapeHtml(item.title)}">
       <div class="pub-meta">
         <span>${item.venue}</span>
         <span>${item.year}</span>
@@ -5337,6 +5558,8 @@ function renderPublications(preserveScroll = false) {
     });
   });
   attachInterestJumpHandlers(pubList);
+  attachInteractiveCards(pubList);
+  animateGridTransition(pubList, previousCards);
 
   if (preserveScroll) pubList.scrollTop = beforeScroll;
 }
@@ -5714,6 +5937,7 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.key === 'Escape') {
     if (commandPalette.classList.contains('open')) closeCommandPalette();
+    else if (readmeDrawer?.classList.contains('open')) closeReadmeDrawer();
     else if (researchManager.classList.contains('open')) closeResearchManager();
     else if (modal.classList.contains('open')) closeModal();
     return;
@@ -5817,7 +6041,7 @@ function animateRepoMap(timestamp = 0) {
 generateRegistrationPoints();
 initCustomCursor();
 updateRegistrationLabels();
-applyTheme(currentTheme);
+applyTheme(currentTheme, { animate: false });
 applyTranslations();
 restartTypeLoop();
 loadRepos();
