@@ -1,0 +1,19 @@
+[
+  {
+    "title": "Building a Research Writing System for My Homepage",
+    "description": "A short note on turning this personal homepage into a maintainable research and technical writing space.",
+    "date": "2026-07-10",
+    "category": "Engineering",
+    "tags": [
+      "personal-site",
+      "static-site",
+      "research-workflow"
+    ],
+    "research": [
+      "agent",
+      "ai4edu"
+    ],
+    "url": "./posts/building-a-research-writing-system/",
+    "text": "This writing space is designed to sit beside the interactive profile page rather than replace it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and better support for code, equations, tags, RSS, and search. The workflow should stay simple: Create a new post Copy npm run new:post &quot;Visual Place Recognit..."
+  }
+]

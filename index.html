@@ -82,6 +82,7 @@
         <button class="cmd" data-view="research" data-i18n="tab_research">research</button>
         <button class="cmd" data-view="projects" data-i18n="tab_projects">projects</button>
         <button class="cmd" data-view="publications" data-i18n="tab_publications">publications</button>
+        <button class="cmd" data-view="writing" data-i18n="tab_writing">writing</button>
         <button class="cmd" data-view="timeline" data-i18n="tab_timeline">timeline</button>
         <button class="cmd" data-view="skills" data-i18n="tab_skills">skills</button>
         <button class="cmd" data-view="resources" data-i18n="tab_resources">resources</button>
@@ -124,6 +125,7 @@
               <button class="active" type="button" data-interest-panel="animation" data-i18n="section_animation">Animation</button>
               <button type="button" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
               <button type="button" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
+              <button type="button" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
             </div>
             <canvas id="interestCanvas" aria-label="research interest animation"></canvas>
             <div class="interest-related">
@@ -134,6 +136,10 @@
               <article class="interest-paper-panel">
                 <h4 data-i18n="related_papers">Related Papers</h4>
                 <div id="interestPapers" class="related-list"></div>
+              </article>
+              <article class="interest-writing-panel">
+                <h4 data-i18n="related_writing">Related Writing</h4>
+                <div id="interestPosts" class="related-list"></div>
               </article>
             </div>
           </section>
@@ -200,6 +206,28 @@
           <span id="pubPageInfo" class="muted"></span>
           <button id="pubNext" class="btn btn-outline" type="button" data-i18n="page_next">Next</button>
         </div>
+      </div>
+
+      <div class="view" id="writing">
+        <div class="view-heading">
+          <div>
+            <h2 data-i18n="writing_title">Writing</h2>
+            <p class="muted" data-i18n="writing_desc">Technical notes and research logs generated from Markdown.</p>
+          </div>
+          <a class="btn btn-outline" href="./blog/" data-i18n="writing_open">Open Blog</a>
+        </div>
+        <div class="writing-toolbar">
+          <input id="writingSearch" type="search" data-i18n-ph="writing_search_ph" placeholder="Search writing..." />
+          <span id="writingCount" class="muted"></span>
+        </div>
+        <section class="writing-featured" aria-label="featured writing">
+          <div class="featured-research-head">
+            <span class="panel-eyebrow" data-i18n="writing_featured">Featured Notes</span>
+            <span class="muted" data-i18n="writing_hint">Full articles open as static blog pages.</span>
+          </div>
+          <div id="writingFeatured" class="writing-grid"></div>
+        </section>
+        <div id="writingList" class="writing-list"></div>
       </div>
 
       <div class="view" id="timeline">

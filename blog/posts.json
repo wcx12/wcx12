@@ -1,0 +1,23 @@
+[
+  {
+    "title": "Building a Research Writing System for My Homepage",
+    "slug": "building-a-research-writing-system",
+    "description": "A short note on turning this personal homepage into a maintainable research and technical writing space.",
+    "date": "2026-07-10",
+    "updated": "2026-07-10",
+    "category": "Engineering",
+    "tags": [
+      "personal-site",
+      "static-site",
+      "research-workflow"
+    ],
+    "research": [
+      "agent",
+      "ai4edu"
+    ],
+    "series": "Homepage Lab",
+    "featured": true,
+    "readingMinutes": 1,
+    "url": "blog/posts/building-a-research-writing-system/"
+  }
+]

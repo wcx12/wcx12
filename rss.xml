@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>wcx12 Writing</title>
+    <link>https://wcx12.github.io/wcx12/blog/</link>
+    <description>Technical notes, research logs, and engineering write-ups by wcx12.</description>
+    <language>en</language>
+    <lastBuildDate>Fri, 10 Jul 2026 00:00:00 GMT</lastBuildDate>
+
+    <item>
+      <title>Building a Research Writing System for My Homepage</title>
+      <link>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</link>
+      <guid>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</guid>
+      <pubDate>Fri, 10 Jul 2026 00:00:00 GMT</pubDate>
+      <description>A short note on turning this personal homepage into a maintainable research and technical writing space.</description>
+    </item>
+  
+  </channel>
+</rss>

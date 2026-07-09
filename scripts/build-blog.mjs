@@ -1,0 +1,600 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import MarkdownIt from 'markdown-it';
+import markdownItFootnote from 'markdown-it-footnote';
+import markdownItKatex from 'markdown-it-katex';
+import hljs from 'highlight.js/lib/core';
+import bash from 'highlight.js/lib/languages/bash';
+import css from 'highlight.js/lib/languages/css';
+import diff from 'highlight.js/lib/languages/diff';
+import javascript from 'highlight.js/lib/languages/javascript';
+import json from 'highlight.js/lib/languages/json';
+import markdown from 'highlight.js/lib/languages/markdown';
+import powershell from 'highlight.js/lib/languages/powershell';
+import python from 'highlight.js/lib/languages/python';
+import sql from 'highlight.js/lib/languages/sql';
+import typescript from 'highlight.js/lib/languages/typescript';
+import xml from 'highlight.js/lib/languages/xml';
+import yaml from 'highlight.js/lib/languages/yaml';
+import {
+  SITE,
+  excerptText,
+  formatDate,
+  loadPosts,
+  slugify,
+  summarizeDiagnostics
+} from './blog-content.mjs';
+
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const outputDir = path.join(rootDir, 'blog');
+const sourceAssetsDir = path.join(rootDir, 'blog-src', 'assets');
+const outputAssetsDir = path.join(outputDir, 'assets');
+
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('diff', diff);
+hljs.registerLanguage('html', xml);
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('js', javascript);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('markdown', markdown);
+hljs.registerLanguage('md', markdown);
+hljs.registerLanguage('powershell', powershell);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('py', python);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('ts', typescript);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('yaml', yaml);
+hljs.registerLanguage('yml', yaml);
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeXml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function stripHtml(html) {
+  return String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function parseFenceInfo(info = '') {
+  const raw = String(info || '').trim();
+  if (!raw) return { lang: 'text', label: 'text' };
+  const [first] = raw.split(/\s+/);
+  const lang = first || 'text';
+  const titleMatch = raw.match(/(?:title|file|filename)=["']([^"']+)["']/);
+  return {
+    lang,
+    label: titleMatch?.[1] || lang
+  };
+}
+
+function renderCodeFence(code, info) {
+  const { lang, label } = parseFenceInfo(info);
+  const normalizedLang = hljs.getLanguage(lang) ? lang : 'plaintext';
+  const highlighted = normalizedLang === 'plaintext'
+    ? escapeHtml(code)
+    : hljs.highlight(code, { language: normalizedLang, ignoreIllegals: true }).value;
+  return `<div class="code-frame"><div class="code-head"><span>${escapeHtml(label)}</span><button class="code-copy" type="button">Copy</button></div><pre><code class="hljs language-${escapeHtml(normalizedLang)}">${highlighted}</code></pre></div>`;
+}
+
+function postUrl(post) {
+  return `blog/posts/${post.slug}/`;
+}
+
+function absoluteUrl(relativePath = '') {
+  return `${SITE.url}/${relativePath.replace(/^\/+/, '')}`;
+}
+
+function createPageContext(filePath) {
+  const pageDir = path.dirname(filePath);
+  return {
+    link(target) {
+      const absoluteTarget = path.join(rootDir, target);
+      let relative = path.relative(pageDir, absoluteTarget).replace(/\\/g, '/');
+      if (!relative) return './';
+      relative = relative.replace(/\/index\.html$/, '/');
+      if (relative === 'index.html') return './';
+      return relative;
+    }
+  };
+}
+
+function tagHref(ctx, tag) {
+  return ctx.link(`blog/tags/${slugify(tag)}/index.html`);
+}
+
+function postHref(ctx, post) {
+  return ctx.link(`${postUrl(post)}index.html`);
+}
+
+function cardHtml(ctx, post) {
+  const tags = post.tags.slice(0, 4).map((tag) => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join('');
+  return `
+    <a class="blog-card" href="${postHref(ctx, post)}">
+      <div class="blog-card-meta">
+        <span>${escapeHtml(formatDate(post.date))}</span>
+        <span>${escapeHtml(post.category)}</span>
+        <span>${post.readingMinutes} min</span>
+      </div>
+      <h3>${escapeHtml(post.title)}</h3>
+      <p>${escapeHtml(post.description)}</p>
+      <div class="blog-tag-row">${tags}</div>
+    </a>
+  `;
+}
+
+function topicCounts(posts, key) {
+  const counts = new Map();
+  posts.forEach((post) => {
+    const values = key === 'tags' ? post.tags : [post.category];
+    values.filter(Boolean).forEach((value) => counts.set(value, (counts.get(value) || 0) + 1));
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function renderTags(ctx, tags) {
+  return tags.map((tag) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)}</a>`).join('');
+}
+
+function renderShell({ filePath, title, description, body, extraHead = '', jsonLd = '' }) {
+  const ctx = createPageContext(filePath);
+  const pageTitle = title === SITE.title ? title : `${title} | ${SITE.title}`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(pageTitle)}</title>
+  <meta name="description" content="${escapeHtml(description || SITE.description)}" />
+  <meta name="author" content="${escapeHtml(SITE.author)}" />
+  <meta property="og:title" content="${escapeHtml(pageTitle)}" />
+  <meta property="og:description" content="${escapeHtml(description || SITE.description)}" />
+  <meta property="og:type" content="website" />
+  <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${ctx.link('rss.xml')}" />
+  <link rel="stylesheet" href="${ctx.link('styles.css')}" />
+  <link rel="stylesheet" href="${ctx.link('blog/assets/blog.css')}" />
+  ${extraHead}
+  ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
+</head>
+<body class="blog-body">
+  <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
+  <header class="blog-topbar">
+    <a class="blog-brand" href="${ctx.link('index.html')}">wcx12</a>
+    <nav class="blog-nav" aria-label="Blog navigation">
+      <a href="${ctx.link('index.html')}">Home</a>
+      <a href="${ctx.link('blog/index.html')}">Writing</a>
+      <a href="${ctx.link('blog/archive/index.html')}">Archive</a>
+      <a href="${ctx.link('rss.xml')}">RSS</a>
+      <select id="blogThemeSelect" aria-label="Theme">
+        <option value="neon">Default</option>
+        <option value="warm">Warm Archive</option>
+        <option value="mono">Mono Lab</option>
+      </select>
+    </nav>
+  </header>
+  <main class="blog-shell">
+${body}
+  </main>
+  <script type="module" src="${ctx.link('blog/assets/blog.js')}"></script>
+</body>
+</html>
+`;
+}
+
+function createMarkdownRenderer() {
+  const md = new MarkdownIt({
+    html: false,
+    linkify: true,
+    typographer: true
+  })
+    .use(markdownItFootnote)
+    .use(markdownItKatex, { throwOnError: false, errorColor: '#ff6f59' });
+
+  md.renderer.rules.fence = (tokens, idx) => renderCodeFence(tokens[idx].content, tokens[idx].info);
+  md.renderer.rules.code_block = (tokens, idx) => renderCodeFence(tokens[idx].content, 'text');
+
+  const defaultLinkOpen = md.renderer.rules.link_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+  md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+    const href = tokens[idx].attrGet('href') || '';
+    if (/^https?:\/\//i.test(href)) {
+      tokens[idx].attrSet('target', '_blank');
+      tokens[idx].attrSet('rel', 'noreferrer');
+    }
+    return defaultLinkOpen(tokens, idx, options, env, self);
+  };
+
+  const defaultHeadingOpen = md.renderer.rules.heading_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+  md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
+    const level = Number(tokens[idx].tag.slice(1));
+    const title = tokens[idx + 1]?.content || '';
+    const baseSlug = slugify(title);
+    const count = env.headingCounts.get(baseSlug) || 0;
+    env.headingCounts.set(baseSlug, count + 1);
+    const id = count ? `${baseSlug}-${count + 1}` : baseSlug;
+    tokens[idx].attrSet('id', id);
+    if (level >= 2 && level <= 3) env.toc.push({ level, id, title });
+    return defaultHeadingOpen(tokens, idx, options, env, self);
+  };
+
+  return {
+    render(markdown) {
+      const env = { toc: [], headingCounts: new Map() };
+      const html = md.render(markdown, env);
+      return { html, toc: env.toc };
+    }
+  };
+}
+
+function tocHtml(toc) {
+  if (!toc.length) return '<p class="muted">No sections.</p>';
+  return `<ol>${toc.map((item) => `<li><a href="#${escapeHtml(item.id)}">${escapeHtml(item.title)}</a></li>`).join('')}</ol>`;
+}
+
+function postJsonLd(post) {
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.description,
+    datePublished: post.date,
+    dateModified: post.updated,
+    author: { '@type': 'Person', name: SITE.author },
+    mainEntityOfPage: absoluteUrl(postUrl(post)),
+    keywords: post.tags
+  });
+}
+
+async function writePage(relativeFile, html) {
+  const filePath = path.join(rootDir, relativeFile);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, html);
+}
+
+async function copyAssets() {
+  await fs.mkdir(outputAssetsDir, { recursive: true });
+  const entries = await fs.readdir(sourceAssetsDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      await fs.copyFile(path.join(sourceAssetsDir, entry.name), path.join(outputAssetsDir, entry.name));
+    }
+  }
+  const katexCss = path.join(rootDir, 'node_modules', 'katex', 'dist', 'katex.min.css');
+  await fs.copyFile(katexCss, path.join(outputAssetsDir, 'katex.min.css')).catch(() => {});
+}
+
+async function renderIndex(posts) {
+  const filePath = path.join(outputDir, 'index.html');
+  const ctx = createPageContext(filePath);
+  const featured = posts.filter((post) => post.featured).slice(0, 3);
+  const recent = posts.slice(0, 6);
+  const tagLinks = topicCounts(posts, 'tags')
+    .slice(0, 14)
+    .map(([tag, count]) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)} (${count})</a>`)
+    .join('');
+
+  const body = `
+    <section class="blog-hero">
+      <p class="blog-kicker">Research Writing</p>
+      <h1>Technical notes, research logs, and engineering write-ups.</h1>
+      <p>This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, RSS, and research-topic links.</p>
+      <div class="blog-hero-actions">
+        <a class="btn btn-primary" href="#recent-writing">Read latest</a>
+        <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}">Browse archive</a>
+      </div>
+      <div class="blog-stat-grid">
+        <article class="blog-stat"><span>Published</span><strong>${posts.length}</strong></article>
+        <article class="blog-stat"><span>Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
+        <article class="blog-stat"><span>RSS</span><strong>Ready</strong></article>
+      </div>
+    </section>
+
+    <section class="blog-section blog-search" aria-label="Search writing">
+      <div class="blog-section-head">
+        <div>
+          <p class="blog-section-label">Search</p>
+          <h2>Find notes by topic, tag, or summary</h2>
+        </div>
+      </div>
+      <input id="blogSearch" type="search" placeholder="Search writing..." autocomplete="off" />
+      <div id="blogSearchResults" class="blog-search-results" aria-live="polite"></div>
+    </section>
+
+    ${featured.length ? `<section class="blog-section">
+      <div class="blog-section-head">
+        <div>
+          <p class="blog-section-label">Featured</p>
+          <h2>Start here</h2>
+        </div>
+      </div>
+      <div class="blog-grid">${featured.map((post) => cardHtml(ctx, post)).join('')}</div>
+    </section>` : ''}
+
+    <section class="blog-section">
+      <div class="blog-section-head">
+        <div>
+          <p class="blog-section-label">Topics</p>
+          <h2>Browse by tag</h2>
+        </div>
+      </div>
+      <div class="blog-topic-grid">${tagLinks || '<p class="muted">No tags yet.</p>'}</div>
+    </section>
+
+    <section id="recent-writing" class="blog-section">
+      <div class="blog-section-head">
+        <div>
+          <p class="blog-section-label">Recent</p>
+          <h2>Latest writing</h2>
+        </div>
+        <a class="blog-tag" href="${ctx.link('blog/archive/index.html')}">Archive</a>
+      </div>
+      <div class="blog-grid">${recent.map((post) => cardHtml(ctx, post)).join('')}</div>
+    </section>
+  `;
+
+  await writePage('blog/index.html', renderShell({
+    filePath,
+    title: SITE.title,
+    description: SITE.description,
+    body
+  }));
+}
+
+function relatedPostsFor(post, posts) {
+  const tagSet = new Set(post.tags);
+  const researchSet = new Set(post.research);
+  return posts
+    .filter((candidate) => candidate.slug !== post.slug)
+    .map((candidate) => {
+      const tagScore = candidate.tags.filter((tag) => tagSet.has(tag)).length;
+      const researchScore = candidate.research.filter((id) => researchSet.has(id)).length * 2;
+      return { candidate, score: tagScore + researchScore };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || b.candidate.date.localeCompare(a.candidate.date))
+    .slice(0, 3)
+    .map((item) => item.candidate);
+}
+
+async function renderPost(post, posts, renderer) {
+  const relativeFile = `blog/posts/${post.slug}/index.html`;
+  const filePath = path.join(rootDir, relativeFile);
+  const ctx = createPageContext(filePath);
+  const { html, toc } = renderer.render(post.content);
+  const index = posts.findIndex((item) => item.slug === post.slug);
+  const newer = index > 0 ? posts[index - 1] : null;
+  const older = index < posts.length - 1 ? posts[index + 1] : null;
+  const related = relatedPostsFor(post, posts);
+  const tagRow = renderTags(ctx, post.tags);
+  const mathCss = post.math ? `<link rel="stylesheet" href="${ctx.link('blog/assets/katex.min.css')}" />` : '';
+
+  const body = `
+    <div class="blog-post-layout">
+      <article class="blog-post-card">
+        <header class="blog-post-header">
+          <p class="blog-kicker">${escapeHtml(post.category)}</p>
+          <h1 class="blog-post-title">${escapeHtml(post.title)}</h1>
+          <div class="blog-meta">
+            <span>${escapeHtml(formatDate(post.date))}</span>
+            <span>Updated ${escapeHtml(formatDate(post.updated))}</span>
+            <span>${post.readingMinutes} min read</span>
+            ${post.series ? `<span>${escapeHtml(post.series)}</span>` : ''}
+          </div>
+          <p class="blog-post-subtitle">${escapeHtml(post.description)}</p>
+          <div class="blog-tag-row">${tagRow}</div>
+        </header>
+        <div class="blog-content">
+${html}
+        </div>
+        <footer class="blog-post-footer">
+          ${related.length ? `<section>
+            <p class="blog-section-label">Related</p>
+            <div class="blog-grid">${related.map((item) => cardHtml(ctx, item)).join('')}</div>
+          </section>` : ''}
+          <nav class="blog-prev-next" aria-label="Post navigation">
+            ${newer ? `<a href="${postHref(ctx, newer)}"><span>Newer</span>${escapeHtml(newer.title)}</a>` : '<span></span>'}
+            ${older ? `<a href="${postHref(ctx, older)}"><span>Older</span>${escapeHtml(older.title)}</a>` : '<span></span>'}
+          </nav>
+        </footer>
+      </article>
+      <aside class="blog-toc">
+        <h2>Contents</h2>
+        ${post.toc ? tocHtml(toc) : '<p class="muted">Contents disabled.</p>'}
+      </aside>
+    </div>
+  `;
+
+  await writePage(relativeFile, renderShell({
+    filePath,
+    title: post.title,
+    description: post.description,
+    body,
+    extraHead: mathCss,
+    jsonLd: postJsonLd(post)
+  }));
+
+  post.renderedText = stripHtml(html);
+}
+
+async function renderArchive(posts) {
+  const filePath = path.join(outputDir, 'archive', 'index.html');
+  const ctx = createPageContext(filePath);
+  const years = new Map();
+  posts.forEach((post) => {
+    const year = post.date.slice(0, 4);
+    if (!years.has(year)) years.set(year, []);
+    years.get(year).push(post);
+  });
+
+  const body = `
+    <section class="blog-hero">
+      <p class="blog-kicker">Archive</p>
+      <h1>All writing</h1>
+      <p>A chronological index of technical notes and research logs.</p>
+    </section>
+    ${[...years.entries()].map(([year, items]) => `
+      <section class="blog-section">
+        <div class="blog-section-head"><div><p class="blog-section-label">${year}</p><h2>${items.length} post${items.length > 1 ? 's' : ''}</h2></div></div>
+        <ul class="blog-archive-list">
+          ${items.map((post) => `<li><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a> <span class="muted">- ${escapeHtml(formatDate(post.date))} - ${escapeHtml(post.category)}</span></li>`).join('')}
+        </ul>
+      </section>
+    `).join('')}
+  `;
+
+  await writePage('blog/archive/index.html', renderShell({
+    filePath,
+    title: 'Writing Archive',
+    description: 'All technical writing by wcx12.',
+    body
+  }));
+}
+
+async function renderTagPages(posts) {
+  const tags = topicCounts(posts, 'tags').map(([tag]) => tag);
+  for (const tag of tags) {
+    const filePath = path.join(outputDir, 'tags', slugify(tag), 'index.html');
+    const ctx = createPageContext(filePath);
+    const tagged = posts.filter((post) => post.tags.includes(tag));
+    const body = `
+      <section class="blog-hero">
+        <p class="blog-kicker">Tag</p>
+        <h1>${escapeHtml(tag)}</h1>
+        <p>${tagged.length} related note${tagged.length > 1 ? 's' : ''} in this topic.</p>
+        <div class="blog-hero-actions"><a class="btn btn-outline" href="${ctx.link('blog/index.html')}">Back to writing</a></div>
+      </section>
+      <section class="blog-section">
+        <div class="blog-grid">${tagged.map((post) => cardHtml(ctx, post)).join('')}</div>
+      </section>
+    `;
+    await writePage(`blog/tags/${slugify(tag)}/index.html`, renderShell({
+      filePath,
+      title: `Tag: ${tag}`,
+      description: `Writing tagged ${tag}.`,
+      body
+    }));
+  }
+}
+
+async function renderJsonFeeds(posts) {
+  const publicPosts = posts.map((post) => ({
+    title: post.title,
+    slug: post.slug,
+    description: post.description,
+    date: post.date,
+    updated: post.updated,
+    category: post.category,
+    tags: post.tags,
+    research: post.research,
+    series: post.series,
+    featured: post.featured,
+    readingMinutes: post.readingMinutes,
+    url: postUrl(post)
+  }));
+  const searchIndex = posts.map((post) => ({
+    title: post.title,
+    description: post.description,
+    date: post.date,
+    category: post.category,
+    tags: post.tags,
+    research: post.research,
+    url: `./posts/${post.slug}/`,
+    text: excerptText(post.renderedText || post.content, 420)
+  }));
+
+  await writePage('blog/posts.json', `${JSON.stringify(publicPosts, null, 2)}\n`);
+  await writePage('blog/search.json', `${JSON.stringify(searchIndex, null, 2)}\n`);
+}
+
+async function renderRss(posts) {
+  const latestPostDate = posts
+    .map((post) => post.updated || post.date)
+    .sort()
+    .at(-1);
+  const lastBuildDate = latestPostDate
+    ? new Date(`${latestPostDate}T00:00:00Z`).toUTCString()
+    : new Date(0).toUTCString();
+  const items = posts.slice(0, 20).map((post) => `
+    <item>
+      <title>${escapeXml(post.title)}</title>
+      <link>${escapeXml(absoluteUrl(postUrl(post)))}</link>
+      <guid>${escapeXml(absoluteUrl(postUrl(post)))}</guid>
+      <pubDate>${new Date(`${post.date}T00:00:00Z`).toUTCString()}</pubDate>
+      <description>${escapeXml(post.description)}</description>
+    </item>
+  `).join('');
+
+  const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>${escapeXml(SITE.title)}</title>
+    <link>${escapeXml(absoluteUrl('blog/'))}</link>
+    <description>${escapeXml(SITE.description)}</description>
+    <language>en</language>
+    <lastBuildDate>${lastBuildDate}</lastBuildDate>
+${items}
+  </channel>
+</rss>
+`;
+  await fs.writeFile(path.join(rootDir, 'rss.xml'), rss);
+}
+
+async function renderSitemap(posts) {
+  const urls = [
+    '',
+    'blog/',
+    'blog/archive/',
+    ...posts.map((post) => postUrl(post)),
+    ...topicCounts(posts, 'tags').map(([tag]) => `blog/tags/${slugify(tag)}/`)
+  ];
+  const body = urls.map((url) => `  <url><loc>${escapeXml(absoluteUrl(url))}</loc></url>`).join('\n');
+  await fs.writeFile(path.join(rootDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>
+`);
+}
+
+async function main() {
+  const { posts, diagnostics } = await loadPosts(rootDir);
+  const { errors, warnings } = summarizeDiagnostics(diagnostics);
+  warnings.forEach((warning) => console.warn(`warning: ${warning}`));
+  if (errors.length) {
+    errors.forEach((error) => console.error(`error: ${error}`));
+    process.exit(1);
+  }
+
+  await fs.rm(outputDir, { recursive: true, force: true });
+  await fs.mkdir(outputDir, { recursive: true });
+  await copyAssets();
+
+  const renderer = createMarkdownRenderer();
+  for (const post of posts) {
+    await renderPost(post, posts, renderer);
+  }
+  await renderIndex(posts);
+  await renderArchive(posts);
+  await renderTagPages(posts);
+  await renderJsonFeeds(posts);
+  await renderRss(posts);
+  await renderSitemap(posts);
+
+  console.log(`Built ${posts.length} blog post(s).`);
+}
+
+await main();

@@ -37,6 +37,18 @@
 ## Resources
 - Publications: [publications.md](./publications.md)
 - Resume: [resume.md](./resume.md)
+- Writing: [blog/](./blog/)
+
+## Technical Blog Workflow
+Posts live in [`content/posts`](./content/posts) as Markdown with front matter. Drafts should keep `draft: true`; published posts use `draft: false`.
+
+```bash
+npm run new:post "Post Title"
+npm run validate
+npm run build:blog
+```
+
+Generated public pages are written to [`blog/`](./blog), with RSS at [`rss.xml`](./rss.xml) and sitemap at [`sitemap.xml`](./sitemap.xml). The `Build blog` GitHub Action rebuilds and commits generated blog output after content changes.
 
 ## Quick Notes
 ```text

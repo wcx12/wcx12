@@ -23,6 +23,10 @@ const pubPager = document.getElementById('pubPager');
 const pubPrev = document.getElementById('pubPrev');
 const pubNext = document.getElementById('pubNext');
 const pubPageInfo = document.getElementById('pubPageInfo');
+const writingSearch = document.getElementById('writingSearch');
+const writingCount = document.getElementById('writingCount');
+const writingFeatured = document.getElementById('writingFeatured');
+const writingList = document.getElementById('writingList');
 
 const themeSelect = document.getElementById('themeSelect');
 const langToggle = document.getElementById('langToggle');
@@ -93,6 +97,7 @@ const interestCanvas = document.getElementById('interestCanvas');
 const interestCtx = interestCanvas.getContext('2d');
 const interestProjects = document.getElementById('interestProjects');
 const interestPapers = document.getElementById('interestPapers');
+const interestPosts = document.getElementById('interestPosts');
 const customCursor = document.getElementById('customCursor');
 
 let currentLang = 'en';
@@ -100,6 +105,8 @@ let currentTheme = localStorage.getItem('wcx12-theme') || 'neon';
 let allRepos = [];
 let filteredRepos = [];
 let loadedPublications = [];
+let blogPosts = [];
+let filteredBlogPosts = [];
 let commandCursor = 0;
 let repoNodes = [];
 let repoMapFieldNodes = [];
@@ -571,6 +578,7 @@ const i18n = {
     tab_research: 'research',
     tab_projects: 'projects',
     tab_publications: 'publications',
+    tab_writing: 'writing',
     tab_timeline: 'timeline',
     tab_skills: 'skills',
     tab_resources: 'resources',
@@ -587,13 +595,16 @@ const i18n = {
     view_details: 'View Details',
     related_projects: 'Related Projects',
     related_papers: 'Related Papers',
+    related_writing: 'Related Writing',
     section_animation: 'Animation',
     section_projects: 'Projects',
     section_papers: 'Papers',
+    section_writing: 'Writing',
     show_in_projects: 'Show in Projects',
     show_in_research: 'Show in Research',
     no_related_projects: 'No mapped project yet.',
     no_related_papers: 'No mapped paper yet.',
+    no_related_writing: 'No related note yet.',
     manager_title: 'Research Mapping',
     manager_add_title: 'Add Category',
     manager_domain: 'Domain',
@@ -657,6 +668,17 @@ const i18n = {
     pub_open: 'Open Publication List',
     pub_file_title: 'Raw Publication File',
     pub_file_desc: 'Open source markdown list.',
+    writing_title: 'Writing',
+    writing_desc: 'Technical notes and research logs generated from Markdown.',
+    writing_open: 'Open Blog',
+    writing_featured: 'Featured Notes',
+    writing_hint: 'Full articles open as static blog pages.',
+    writing_search_ph: 'Search writing...',
+    writing_count: 'Showing {shown}/{total} notes',
+    writing_empty: 'No writing notes found yet.',
+    writing_loading: 'Loading writing index...',
+    writing_read: 'Read Note',
+    writing_minutes: '{minutes} min read',
     cv_title: 'Resume',
     cv_desc: 'Download my latest CV snapshot from this repository.',
     cv_download: 'Download Resume',
@@ -675,6 +697,7 @@ const i18n = {
     command_search_repos: 'Search repositories',
     command_search_research: 'Search research',
     command_search_papers: 'Search publications',
+    command_search_writing: 'Search writing',
     command_theme: 'Cycle theme',
     command_alignment: 'Run point-set demo',
     command_github: 'Open GitHub profile',
@@ -738,6 +761,7 @@ const i18n = {
     tab_research: '研究',
     tab_projects: '项目',
     tab_publications: '论文',
+    tab_writing: '博客',
     tab_timeline: '时间线',
     tab_skills: '技能',
     tab_resources: '资源',
@@ -754,13 +778,16 @@ const i18n = {
     view_details: '查看详情',
     related_projects: '相关项目',
     related_papers: '相关论文',
+    related_writing: '相关文章',
     section_animation: '动画',
     section_projects: '项目',
     section_papers: '论文',
+    section_writing: '文章',
     show_in_projects: '在项目中显示',
     show_in_research: '查看研究方向',
     no_related_projects: '暂未映射项目。',
     no_related_papers: '暂未映射论文。',
+    no_related_writing: '暂未关联文章。',
     manager_title: '研究映射',
     manager_add_title: '添加分类',
     manager_domain: '一级领域',
@@ -824,6 +851,17 @@ const i18n = {
     pub_open: '打开论文列表文件',
     pub_file_title: '原始论文文件',
     pub_file_desc: '查看仓库中的 markdown 列表。',
+    writing_title: '技术博客',
+    writing_desc: '从 Markdown 自动生成的技术笔记和研究日志。',
+    writing_open: '打开博客',
+    writing_featured: '精选文章',
+    writing_hint: '完整文章会打开静态博客页面。',
+    writing_search_ph: '搜索文章...',
+    writing_count: '显示 {shown}/{total} 篇文章',
+    writing_empty: '暂未找到文章。',
+    writing_loading: '正在加载文章索引...',
+    writing_read: '阅读文章',
+    writing_minutes: '{minutes} 分钟阅读',
     cv_title: '简历',
     cv_desc: '从当前仓库下载最新简历快照。',
     cv_download: '下载简历',
@@ -842,6 +880,7 @@ const i18n = {
     command_search_repos: '搜索仓库',
     command_search_research: '搜索研究方向',
     command_search_papers: '搜索论文',
+    command_search_writing: '搜索博客文章',
     command_theme: '切换主题',
     command_alignment: '运行点集配准演示',
     command_github: '打开 GitHub 主页',
@@ -880,7 +919,8 @@ function activateView(viewId) {
   if (viewId === 'projects') requestAnimationFrame(() => renderRepoMap(filteredRepos));
   if (viewId === 'research') requestAnimationFrame(renderResearchInterest);
   if (viewId === 'publications') requestAnimationFrame(renderPublications);
-  if (targetView && ['projects', 'research', 'publications'].includes(viewId)) {
+  if (viewId === 'writing') requestAnimationFrame(renderWriting);
+  if (targetView && ['projects', 'research', 'publications', 'writing'].includes(viewId)) {
     requestAnimationFrame(() => targetView.closest('.console')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 }
@@ -925,6 +965,16 @@ function commandItems() {
       type: i18n[currentLang].command_search,
       kind: 'utility',
       action: () => activateView('publications')
+    },
+    {
+      title: i18n[currentLang].command_search_writing,
+      detail: i18n[currentLang].tab_writing,
+      type: i18n[currentLang].command_search,
+      kind: 'utility',
+      action: () => {
+        activateView('writing');
+        writingSearch?.focus();
+      }
     },
     {
       title: i18n[currentLang].command_theme,
@@ -977,6 +1027,17 @@ function commandItems() {
     action: () => openPaperDetail(paper.title)
   }));
 
+  const postItems = blogPosts.map((post) => ({
+    title: post.title,
+    detail: `${post.category || ''} ${post.date || ''}`.trim() || i18n[currentLang].tab_writing,
+    type: i18n[currentLang].tab_writing,
+    kind: 'post',
+    postSlug: post.slug,
+    action: () => {
+      window.location.href = postHref(post);
+    }
+  }));
+
   const repoItems = allRepos.map((repo) => ({
     title: repo.name,
     detail: repo.description || i18n[currentLang].no_desc,
@@ -986,7 +1047,7 @@ function commandItems() {
     action: () => openRepoDetail(repo.name)
   }));
 
-  return [...utilityItems, ...viewItems, ...researchItems, ...paperItems, ...repoItems];
+  return [...utilityItems, ...viewItems, ...researchItems, ...paperItems, ...postItems, ...repoItems];
 }
 
 function filteredCommandItems() {
@@ -1016,6 +1077,7 @@ function renderCommandPreview(item) {
       tags.push(textFor(entry.child.label));
       tags.push(`${interestMetrics(entry.child.id).projects} ${i18n[currentLang].preview_projects}`);
       tags.push(`${interestMetrics(entry.child.id).papers} ${i18n[currentLang].preview_papers}`);
+      tags.push(`${interestMetrics(entry.child.id).posts} ${i18n[currentLang].tab_writing}`);
     }
   } else if (item.kind === 'repo') {
     const repo = allRepos.find((entry) => entry.name === item.repoName);
@@ -1033,6 +1095,14 @@ function renderCommandPreview(item) {
       tags.push(String(paper.year || ''));
       const paperInterest = primaryInterestId(paper, 'paper');
       if (paperInterest) tags.push(interestLabel(paperInterest));
+    }
+  } else if (item.kind === 'post') {
+    const post = blogPosts.find((entry) => entry.slug === item.postSlug);
+    if (post) {
+      detail = post.description || item.detail;
+      tags.push(post.category || i18n[currentLang].tab_writing);
+      tags.push(postReadTime(post));
+      (post.tags || []).slice(0, 2).forEach((tag) => tags.push(tag));
     }
   } else if (item.kind === 'theme') {
     tags.push(currentTheme);
@@ -1208,6 +1278,7 @@ function itemKey(item) {
 }
 
 function assignedInterestIds(item, kind) {
+  if (kind === 'post') return Array.isArray(item.research) ? item.research : inferInterestIds(item);
   const map = kind === 'repo' ? researchConfig.repoAssignments : researchConfig.paperAssignments;
   const key = itemKey(item);
   if (Array.isArray(map[key])) return map[key];
@@ -1267,7 +1338,9 @@ function attachInterestJumpHandlers(root = document) {
       const sourceKey = button.dataset.interestSourceKey;
       const item = sourceKind === 'repo'
         ? allRepos.find((repo) => repo.name === sourceKey)
-        : currentPublications().find((paper) => paper.title === sourceKey);
+        : sourceKind === 'post'
+          ? blogPosts.find((post) => post.title === sourceKey)
+          : currentPublications().find((paper) => paper.title === sourceKey);
       if (item) bindItemToInterestAnimation(item, sourceKind, button.dataset.interestJump);
       jumpToResearchInterest(button.dataset.interestJump);
     });
@@ -1275,7 +1348,7 @@ function attachInterestJumpHandlers(root = document) {
 }
 
 function setInterestPanel(panel) {
-  activeInterestPanel = ['animation', 'projects', 'papers'].includes(panel) ? panel : 'animation';
+  activeInterestPanel = ['animation', 'projects', 'papers', 'writing'].includes(panel) ? panel : 'animation';
   if (interestDetail) interestDetail.dataset.panel = activeInterestPanel;
   interestSectionTabs.forEach((button) => {
     button.classList.toggle('active', button.dataset.interestPanel === activeInterestPanel);
@@ -1373,6 +1446,82 @@ function relatedPapers() {
   return currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(activeInterestId));
 }
 
+function relatedPosts() {
+  return blogPosts.filter((post) => assignedInterestIds(post, 'post').includes(activeInterestId));
+}
+
+function postHref(post) {
+  const url = String(post.url || '').replace(/^\.?\//, '');
+  return url ? `./${url}` : './blog/';
+}
+
+function postDate(post) {
+  if (!post.date) return '';
+  return new Date(`${post.date}T00:00:00`).toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+function postReadTime(post) {
+  return i18n[currentLang].writing_minutes.replace('{minutes}', String(post.readingMinutes || 1));
+}
+
+function renderWritingCard(post, compact = false) {
+  const title = escapeHtml(post.title || i18n[currentLang].writing_title);
+  const description = escapeHtml(post.description || '');
+  const tags = (post.tags || []).slice(0, compact ? 2 : 4)
+    .map((tag) => `<span class="research-badge">${escapeHtml(tag)}</span>`)
+    .join('');
+  return `
+    <article class="writing-card interactive-card motion-card" data-motion-card data-motion-key="post-${escapeHtml(post.slug || title)}">
+      <div class="writing-card-meta">
+        <span>${escapeHtml(postDate(post))}</span>
+        <span>${escapeHtml(post.category || '')}</span>
+        <span>${escapeHtml(postReadTime(post))}</span>
+      </div>
+      <h3><a href="${postHref(post)}">${title}</a></h3>
+      <p class="muted">${description}</p>
+      <div class="research-badges">${researchBadgesHtml(post, 'post')}${tags}</div>
+      <div class="related-actions">
+        <a class="mini-action" href="${postHref(post)}">${i18n[currentLang].writing_read}</a>
+      </div>
+    </article>
+  `;
+}
+
+function applyWritingFilter() {
+  const query = (writingSearch?.value || '').trim().toLowerCase();
+  filteredBlogPosts = blogPosts.filter((post) => {
+    const haystack = `${post.title || ''} ${post.description || ''} ${post.category || ''} ${(post.tags || []).join(' ')} ${(post.research || []).join(' ')}`.toLowerCase();
+    return haystack.includes(query);
+  });
+  renderWriting();
+}
+
+function renderWriting() {
+  if (!writingList || !writingFeatured || !writingCount) return;
+  const posts = filteredBlogPosts.length || (writingSearch?.value || '').trim() ? filteredBlogPosts : blogPosts;
+  const featured = posts.filter((post) => post.featured).slice(0, 3);
+  const featuredSlugs = new Set(featured.map((post) => post.slug));
+  const listPosts = posts.filter((post) => !featuredSlugs.has(post.slug));
+  writingCount.textContent = i18n[currentLang].writing_count
+    .replace('{shown}', String(posts.length))
+    .replace('{total}', String(blogPosts.length));
+
+  writingFeatured.innerHTML = featured.length
+    ? featured.map((post) => renderWritingCard(post, true)).join('')
+    : `<p class="muted">${i18n[currentLang].writing_empty}</p>`;
+
+  writingList.innerHTML = listPosts.map((post) => renderWritingCard(post)).join('');
+
+  attachInterestJumpHandlers(writingList);
+  attachInterestJumpHandlers(writingFeatured);
+  attachInteractiveCards(writingList);
+  attachInteractiveCards(writingFeatured);
+}
+
 function isResearchViewActive() {
   return document.getElementById('research')?.classList.contains('active');
 }
@@ -1392,10 +1541,14 @@ function renderRelatedList(container, items, emptyText, kind) {
     const detail = item.description || item.summary || item.language || item.venue || '';
     const meta = kind === 'repo'
       ? `${item.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${item.stargazers_count || 0}`
-      : `${item.venue || ''} · ${item.year || ''}`;
+      : kind === 'post'
+        ? `${item.category || i18n[currentLang].tab_writing} · ${postReadTime(item)}`
+        : `${item.venue || ''} · ${item.year || ''}`;
     const action = kind === 'repo'
       ? `<button class="mini-action" type="button" data-show-project="${title}">${i18n[currentLang].show_in_projects}</button>`
-      : `<button class="mini-action" type="button" data-show-paper="${title}">${i18n[currentLang].tab_publications}</button>`;
+      : kind === 'post'
+        ? `<a class="mini-action" href="${postHref(item)}">${i18n[currentLang].writing_read}</a>`
+        : `<button class="mini-action" type="button" data-show-paper="${title}">${i18n[currentLang].tab_publications}</button>`;
     return `
       <div class="related-item">
         <button class="related-link" type="button" data-kind="${kind}" data-key="${title}">${title}</button>
@@ -1413,6 +1566,10 @@ function renderRelatedList(container, items, emptyText, kind) {
         const repo = allRepos.find((item) => item.name === button.dataset.key);
         bindRepoToInterestAnimation(repo, activeInterestId);
         openRepoReadme(button.dataset.key);
+      }
+      else if (button.dataset.kind === 'post') {
+        const post = blogPosts.find((item) => item.title === button.dataset.key);
+        if (post) window.location.href = postHref(post);
       }
       else {
         const paper = currentPublications().find((item) => item.title === button.dataset.key);
@@ -1433,7 +1590,8 @@ function renderRelatedList(container, items, emptyText, kind) {
 function interestMetrics(interestId) {
   return {
     projects: allRepos.filter((repo) => assignedInterestIds(repo, 'repo').includes(interestId)).length,
-    papers: currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(interestId)).length
+    papers: currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(interestId)).length,
+    posts: blogPosts.filter((post) => assignedInterestIds(post, 'post').includes(interestId)).length
   };
 }
 
@@ -1715,6 +1873,7 @@ function renderResearchInterest() {
     interestDescription.textContent = '';
     interestProjects.innerHTML = `<p class="muted">${i18n[currentLang].no_related_projects}</p>`;
     interestPapers.innerHTML = `<p class="muted">${i18n[currentLang].no_related_papers}</p>`;
+    if (interestPosts) interestPosts.innerHTML = `<p class="muted">${i18n[currentLang].no_related_writing}</p>`;
     renderResearchShowcase();
     renderHeroPreview();
     return;
@@ -1728,6 +1887,7 @@ function renderResearchInterest() {
   renderInterestRail();
   renderRelatedList(interestProjects, relatedRepos(), i18n[currentLang].no_related_projects, 'repo');
   renderRelatedList(interestPapers, relatedPapers(), i18n[currentLang].no_related_papers, 'paper');
+  if (interestPosts) renderRelatedList(interestPosts, relatedPosts(), i18n[currentLang].no_related_writing, 'post');
   renderResearchShowcase();
   renderHeroPreview();
   if (isResearchViewActive()) drawInterestAnimation();
@@ -5640,7 +5800,24 @@ async function loadPublications() {
   }
 }
 
+async function loadBlogPosts() {
+  if (writingList) writingList.innerHTML = `<p class="muted">${i18n[currentLang].writing_loading}</p>`;
+  try {
+    const response = await fetch(`./blog/posts.json?v=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const posts = await response.json();
+    blogPosts = Array.isArray(posts) ? posts : [];
+  } catch {
+    blogPosts = [];
+  }
+  filteredBlogPosts = [...blogPosts];
+  renderWriting();
+  renderResearchInterest();
+  if (commandPalette.classList.contains('open')) renderCommandList();
+}
+
 repoSearch.addEventListener('input', applyRepoFilter);
+writingSearch?.addEventListener('input', applyWritingFilter);
 repoSort.addEventListener('change', () => renderRepos(filteredRepos));
 repoMode.addEventListener('change', () => {
   repoState.mode = repoMode.value;
@@ -5911,6 +6088,7 @@ function applyTranslations() {
   if (!hoveredRepo) repoMapHint.textContent = i18n[currentLang].repo_map_hint;
   renderRepos(filteredRepos);
   renderPublications();
+  renderWriting();
   renderResearchInterest();
   updateRegistrationLabels();
   drawRegistrationDemo();
@@ -6046,6 +6224,7 @@ applyTranslations();
 restartTypeLoop();
 loadRepos();
 loadPublications();
+loadBlogPosts();
 loadRemoteResearchConfig();
 if ('IntersectionObserver' in window && heroPreviewCanvas) {
   const heroPreviewObserver = new IntersectionObserver(([entry]) => {

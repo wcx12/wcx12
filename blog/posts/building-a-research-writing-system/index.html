@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Building a Research Writing System for My Homepage | wcx12 Writing</title>
+  <meta name="description" content="A short note on turning this personal homepage into a maintainable research and technical writing space." />
+  <meta name="author" content="wcx12" />
+  <meta property="og:title" content="Building a Research Writing System for My Homepage | wcx12 Writing" />
+  <meta property="og:description" content="A short note on turning this personal homepage into a maintainable research and technical writing space." />
+  <meta property="og:type" content="website" />
+  <link rel="alternate" type="application/rss+xml" title="wcx12 Writing" href="../../../rss.xml" />
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../assets/blog.css" />
+  
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Building a Research Writing System for My Homepage","description":"A short note on turning this personal homepage into a maintainable research and technical writing space.","datePublished":"2026-07-10","dateModified":"2026-07-10","author":{"@type":"Person","name":"wcx12"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/","keywords":["personal-site","static-site","research-workflow"]}</script>
+</head>
+<body class="blog-body">
+  <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
+  <header class="blog-topbar">
+    <a class="blog-brand" href="../../../">wcx12</a>
+    <nav class="blog-nav" aria-label="Blog navigation">
+      <a href="../../../">Home</a>
+      <a href="../../">Writing</a>
+      <a href="../../archive/">Archive</a>
+      <a href="../../../rss.xml">RSS</a>
+      <select id="blogThemeSelect" aria-label="Theme">
+        <option value="neon">Default</option>
+        <option value="warm">Warm Archive</option>
+        <option value="mono">Mono Lab</option>
+      </select>
+    </nav>
+  </header>
+  <main class="blog-shell">
+
+    <div class="blog-post-layout">
+      <article class="blog-post-card">
+        <header class="blog-post-header">
+          <p class="blog-kicker">Engineering</p>
+          <h1 class="blog-post-title">Building a Research Writing System for My Homepage</h1>
+          <div class="blog-meta">
+            <span>Jul 10, 2026</span>
+            <span>Updated Jul 10, 2026</span>
+            <span>1 min read</span>
+            <span>Homepage Lab</span>
+          </div>
+          <p class="blog-post-subtitle">A short note on turning this personal homepage into a maintainable research and technical writing space.</p>
+          <div class="blog-tag-row"><a class="blog-tag" href="../../tags/personal-site/">personal-site</a><a class="blog-tag" href="../../tags/static-site/">static-site</a><a class="blog-tag" href="../../tags/research-workflow/">research-workflow</a></div>
+        </header>
+        <div class="blog-content">
+<p>This writing space is designed to sit beside the interactive profile page rather than replace it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and better support for code, equations, tags, RSS, and search.</p>
+<p>The workflow should stay simple:</p>
+<div class="code-frame"><div class="code-head"><span>Create a new post</span><button class="code-copy" type="button">Copy</button></div><pre><code class="hljs language-powershell">npm run new:post <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
+</code></pre></div><p>Each post is a Markdown file with front matter. The metadata controls where the post appears, which research lanes it is connected to, whether math is enabled, and whether the article is still a draft.</p>
+<div class="code-frame"><div class="code-head"><span>Post metadata</span><button class="code-copy" type="button">Copy</button></div><pre><code class="hljs language-yaml"><span class="hljs-attr">title:</span> <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
+<span class="hljs-attr">slug:</span> <span class="hljs-string">&quot;visual-place-recognition-notes&quot;</span>
+<span class="hljs-attr">date:</span> <span class="hljs-string">&quot;2026-07-10&quot;</span>
+<span class="hljs-attr">updated:</span> <span class="hljs-string">&quot;2026-07-10&quot;</span>
+<span class="hljs-attr">category:</span> <span class="hljs-string">&quot;Computer Vision&quot;</span>
+<span class="hljs-attr">tags:</span> [<span class="hljs-string">&quot;vpr&quot;</span>, <span class="hljs-string">&quot;retrieval&quot;</span>, <span class="hljs-string">&quot;benchmark&quot;</span>]
+<span class="hljs-attr">research:</span> [<span class="hljs-string">&quot;vpr&quot;</span>]
+<span class="hljs-attr">draft:</span> <span class="hljs-literal">false</span>
+<span class="hljs-attr">math:</span> <span class="hljs-literal">true</span>
+<span class="hljs-attr">toc:</span> <span class="hljs-literal">true</span>
+</code></pre></div><p>The important part is that the writing system remains repository-native. The source of truth is still plain Markdown in GitHub, while the public site receives generated static pages that are fast, searchable, and easy to share.</p>
+<h2 id="what-this-enables">What this enables</h2>
+<ul>
+<li>Research notes can be connected to point cloud registration, VPR, medical image analysis, agents, or AI for education.</li>
+<li>Code-heavy posts can use syntax highlighting and copy buttons.</li>
+<li>Longer posts can expose a table of contents without making short notes feel heavy.</li>
+<li>RSS and sitemap output make the writing section easier to follow and index.</li>
+</ul>
+<p>This first note is intentionally small. It exists as a working example of the content model and will be replaced naturally as more technical posts are added.</p>
+
+        </div>
+        <footer class="blog-post-footer">
+          
+          <nav class="blog-prev-next" aria-label="Post navigation">
+            <span></span>
+            <span></span>
+          </nav>
+        </footer>
+      </article>
+      <aside class="blog-toc">
+        <h2>Contents</h2>
+        <ol><li><a href="#what-this-enables">What this enables</a></li></ol>
+      </aside>
+    </div>
+  
+  </main>
+  <script type="module" src="../../assets/blog.js"></script>
+</body>
+</html>
