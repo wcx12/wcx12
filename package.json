@@ -5,16 +5,18 @@
   "type": "module",
   "scripts": {
     "new:post": "node scripts/new-post.mjs",
-    "validate": "node scripts/validate-content.mjs",
+    "test:content": "node --test scripts/blog-content.test.mjs",
+    "validate": "node scripts/validate-content.mjs && npm run test:content",
     "build:blog": "node scripts/build-blog.mjs",
     "build": "npm run build:blog"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
+    "katex": "^0.16.47",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
     "markdown-it-footnote": "^4.0.0",
-    "markdown-it-katex": "^2.0.3",
+    "markdown-it-katex": "npm:@vscode/markdown-it-katex@1.1.2",
     "highlight.js": "^11.11.1"
   }
 }

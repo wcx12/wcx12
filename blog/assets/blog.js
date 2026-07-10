@@ -37,6 +37,7 @@ const blogI18n = {
     section_recent_label: 'Recent',
     section_recent_title: 'Latest writing',
     section_related_label: 'Related',
+    section_related_title: 'Related writing',
     search_placeholder: 'Search writing...',
     search_no_results: 'No matching notes yet.',
     topics_empty: 'No tags yet.',
@@ -45,6 +46,8 @@ const blogI18n = {
     archive_desc: 'A chronological index of technical notes and research logs.',
     tag_kicker: 'Tag',
     tag_in_topic: 'in this topic.',
+    tag_results_label: 'Results',
+    tag_results_title: 'Writing tagged',
     back_to_writing: 'Back to writing',
     toc_title: 'Contents',
     toc_empty: 'No sections.',
@@ -101,6 +104,7 @@ const blogI18n = {
     section_recent_label: '最近',
     section_recent_title: '最新文章',
     section_related_label: '相关',
+    section_related_title: '相关文章',
     search_placeholder: '搜索文章...',
     search_no_results: '暂时没有匹配的笔记。',
     topics_empty: '还没有标签。',
@@ -109,6 +113,8 @@ const blogI18n = {
     archive_desc: '按时间顺序整理技术笔记和研究日志。',
     tag_kicker: '标签',
     tag_in_topic: '属于这个主题。',
+    tag_results_label: '结果',
+    tag_results_title: '标签文章',
     back_to_writing: '返回博客',
     toc_title: '目录',
     toc_empty: '暂无小节。',
@@ -151,6 +157,11 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = next;
   localStorage.setItem(THEME_KEY, next);
   if (themeSelect) themeSelect.value = next;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', {
+    neon: '#070914',
+    warm: '#160d08',
+    mono: '#050505'
+  }[next]);
 }
 
 applyTheme(localStorage.getItem(THEME_KEY) || 'neon');
@@ -175,11 +186,17 @@ function minuteLabel(minutes, long = false) {
 function applyLanguage(lang = currentLang) {
   currentLang = normalizeLang(lang);
   localStorage.setItem(LANG_KEY, currentLang);
-  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+  const uiLang = currentLang === 'zh' ? 'zh-CN' : 'en';
+  const contentLang = document.documentElement.dataset.contentLang || 'en';
+  document.documentElement.dataset.uiLang = currentLang;
+  document.documentElement.lang = contentLang === 'zh' ? 'zh-CN' : contentLang;
 
   document.querySelectorAll('[data-blog-i18n]').forEach((node) => {
     const value = t(node.dataset.blogI18n);
-    if (value) node.textContent = value;
+    if (value) {
+      node.textContent = value;
+      node.setAttribute('lang', uiLang);
+    }
   });
   document.querySelectorAll('[data-blog-i18n-title]').forEach((node) => {
     const value = t(node.dataset.blogI18nTitle);
@@ -195,23 +212,29 @@ function applyLanguage(lang = currentLang) {
   });
   document.querySelectorAll('[data-blog-date]').forEach((node) => {
     node.textContent = formatBlogDate(node.dataset.blogDate);
+    node.setAttribute('lang', uiLang);
   });
   document.querySelectorAll('[data-blog-updated]').forEach((node) => {
     node.textContent = `${t('post_updated')} ${formatBlogDate(node.dataset.blogUpdated)}`;
+    node.setAttribute('lang', uiLang);
   });
   document.querySelectorAll('[data-blog-minutes]').forEach((node) => {
     node.textContent = minuteLabel(node.dataset.blogMinutes);
+    node.setAttribute('lang', uiLang);
   });
   document.querySelectorAll('[data-blog-minutes-long]').forEach((node) => {
     node.textContent = minuteLabel(node.dataset.blogMinutesLong, true);
+    node.setAttribute('lang', uiLang);
   });
   document.querySelectorAll('[data-blog-count-label]').forEach((node) => {
     const count = Number(node.dataset.blogCountLabel) || 0;
     node.textContent = currentLang === 'zh' ? '篇文章' : (count === 1 ? 'post' : 'posts');
+    node.setAttribute('lang', uiLang);
   });
   document.querySelectorAll('[data-blog-note-label]').forEach((node) => {
     const count = Number(node.dataset.blogNoteLabel) || 0;
     node.textContent = currentLang === 'zh' ? '篇相关文章' : (count === 1 ? 'related note' : 'related notes');
+    node.setAttribute('lang', uiLang);
   });
   document.querySelectorAll('.code-copy').forEach((button) => {
     if (![t('code_copied'), t('code_select')].includes(button.textContent)) {

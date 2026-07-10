@@ -126,8 +126,8 @@ let previewInterestId = null;
 let interestTick = 0;
 let heroPreviewTick = 0;
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-const HERO_PREVIEW_FRAME_SKIP = 4;
-const STARFIELD_FRAME_SKIP = 3;
+const HERO_PREVIEW_FRAME_SKIP = 6;
+const STARFIELD_FRAME_SKIP = 6;
 const INTEREST_FRAME_SKIP = 2;
 const REPO_MAP_FRAME_SKIP = 6;
 let lastHeroPreviewFrame = 0;
@@ -135,6 +135,8 @@ let lastStarfieldFrame = 0;
 let lastInterestFrame = 0;
 let lastRepoMapFrame = 0;
 let heroPreviewVisible = true;
+let motionTimer = null;
+let motionFrame = null;
 
 const pointCloudInteraction = {
   active: false,
@@ -572,6 +574,8 @@ async function loadRemoteResearchConfig() {
     if (ownerToolsEnabled && managerRemoteStatus) {
       managerRemoteStatus.textContent = i18n[currentLang].manager_remote_load_fail;
     }
+  } finally {
+    applyLocationRoute({ scroll: false, finalize: true });
   }
 }
 
@@ -979,23 +983,111 @@ const i18n = {
   }
 };
 
-function activateView(viewId) {
-  commands.forEach((c) => c.classList.remove('active'));
+const VALID_VIEW_IDS = new Set(Array.from(views, (view) => view.id));
+let lastHandledRouteUrl = '';
+
+function currentRouteUrl() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function routeStateFromLocation() {
+  const raw = window.location.hash.replace(/^#\/?/, '');
+  if (!raw) return { viewId: 'about', interestId: null, valid: true };
+  const [rawView, rawInterest] = raw.split('/');
+  let viewId = 'about';
+  let interestId = null;
+  let valid = true;
+  try {
+    const decodedView = decodeURIComponent(rawView || '');
+    if (VALID_VIEW_IDS.has(decodedView)) viewId = decodedView;
+    else valid = false;
+    if (viewId === 'research' && rawInterest) interestId = decodeURIComponent(rawInterest);
+  } catch {
+    return { viewId: 'about', interestId: null, valid: false };
+  }
+  return { viewId, interestId, valid };
+}
+
+function routeUrl(viewId) {
+  const url = new URL(window.location.href);
+  url.hash = viewId === 'about'
+    ? ''
+    : viewId === 'research' && activeInterestId
+      ? `research/${encodeURIComponent(activeInterestId)}`
+      : encodeURIComponent(viewId);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function updateRoute(viewId, historyMode = 'push') {
+  if (!['push', 'replace'].includes(historyMode)) return;
+  const nextUrl = routeUrl(viewId);
+  const currentUrl = currentRouteUrl();
+  if (nextUrl === currentUrl) return;
+  window.history[`${historyMode}State`]({ viewId, interestId: viewId === 'research' ? activeInterestId : null }, '', nextUrl);
+  lastHandledRouteUrl = nextUrl;
+}
+
+function updateViewDocumentTitle(viewId) {
+  if (viewId === 'about') {
+    document.title = currentLang === 'zh'
+      ? 'wcx12 | 机器学习研究与工程'
+      : 'wcx12 | Machine Learning Research & Engineering';
+    return;
+  }
+  const label = i18n[currentLang][`tab_${viewId}`] || viewId;
+  const interest = viewId === 'research' ? interestLabel(activeInterestId) : '';
+  document.title = `${interest || label} | wcx12`;
+}
+
+function activateView(viewId, options = {}) {
+  const { historyMode = 'push', scroll = true } = options;
+  const resolvedViewId = VALID_VIEW_IDS.has(viewId) ? viewId : 'about';
+  commands.forEach((command) => {
+    const active = command.dataset.view === resolvedViewId;
+    command.classList.toggle('active', active);
+    if (active) command.setAttribute('aria-current', 'page');
+    else command.removeAttribute('aria-current');
+  });
   views.forEach((v) => v.classList.remove('active'));
-  const targetCmd = document.querySelector(`.cmd[data-view="${viewId}"]`);
-  const targetView = document.getElementById(viewId);
-  if (targetCmd) targetCmd.classList.add('active');
+  const targetView = document.getElementById(resolvedViewId);
   if (targetView) targetView.classList.add('active');
-  if (viewId === 'projects') requestAnimationFrame(() => renderRepoMap(filteredRepos));
-  if (viewId === 'research') requestAnimationFrame(renderResearchInterest);
-  if (viewId === 'publications') requestAnimationFrame(renderPublications);
-  if (viewId === 'writing') requestAnimationFrame(renderWriting);
-  if (targetView && ['projects', 'research', 'publications', 'writing'].includes(viewId)) {
+  if (resolvedViewId === 'projects') requestAnimationFrame(() => renderRepoMap(filteredRepos));
+  if (resolvedViewId === 'research') requestAnimationFrame(renderResearchInterest);
+  if (resolvedViewId === 'publications') requestAnimationFrame(renderPublications);
+  if (resolvedViewId === 'writing') requestAnimationFrame(renderWriting);
+  if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
     requestAnimationFrame(() => targetView.closest('.console')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+  updateViewDocumentTitle(resolvedViewId);
+  updateRoute(resolvedViewId, historyMode);
+  scheduleMotionLoop({ immediate: true });
+}
+
+function applyLocationRoute(options = {}) {
+  const { scroll = false, finalize = false } = options;
+  const route = routeStateFromLocation();
+  if (route.viewId === 'research' && route.interestId && interestEntryById(route.interestId)) {
+    activeInterestId = route.interestId;
+  }
+  activateView(route.viewId, { historyMode: 'none', scroll });
+  if (finalize) {
+    if (!route.valid) updateRoute('about', 'replace');
+    else if (route.viewId === 'research' && route.interestId && !interestEntryById(route.interestId)) {
+      updateRoute('research', 'replace');
+    }
   }
 }
 
+function handleLocationNavigation() {
+  const routeUrlValue = currentRouteUrl();
+  if (routeUrlValue === lastHandledRouteUrl) return;
+  lastHandledRouteUrl = routeUrlValue;
+  applyLocationRoute({ scroll: false, finalize: true });
+}
+
 commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view)));
+window.addEventListener('popstate', handleLocationNavigation);
+window.addEventListener('hashchange', handleLocationNavigation);
 openProjects.addEventListener('click', () => {
   activateView('projects');
   repoSearch.focus();
@@ -1306,6 +1398,8 @@ function renderInterestRail() {
     button.addEventListener('click', () => {
       activeInterestId = button.dataset.interest;
       renderResearchInterest();
+      updateViewDocumentTitle('research');
+      updateRoute('research', 'push');
     });
   });
 }
@@ -1768,6 +1862,8 @@ function renderResearchShowcase() {
       previewInterestId = null;
       setInterestPanel('animation');
       renderResearchInterest();
+      updateViewDocumentTitle('research');
+      updateRoute('research', 'push');
       requestAnimationFrame(() => interestCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     });
   });
@@ -1991,6 +2087,11 @@ function applyTheme(theme, options = {}) {
   document.documentElement.dataset.theme = currentTheme;
   themeSelect.value = currentTheme;
   localStorage.setItem('wcx12-theme', currentTheme);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', {
+    neon: '#070914',
+    warm: '#160d08',
+    mono: '#050505'
+  }[currentTheme]);
   if (animate) runThemeTransition(source);
   drawRegistrationDemo();
   if (isProjectsViewActive()) renderRepoMap(filteredRepos);
@@ -2079,6 +2180,8 @@ function saveManagerAssignments() {
   saveResearchConfig();
   renderResearchInterest();
   renderResearchManager();
+  updateViewDocumentTitle('research');
+  updateRoute('research', 'replace');
   managerActive.textContent = `${i18n[currentLang].manager_saved} ${managerActive.textContent}`;
 }
 
@@ -2231,6 +2334,8 @@ function addResearchCategory() {
   saveResearchConfig();
   renderResearchInterest();
   renderResearchManager();
+  updateViewDocumentTitle('research');
+  updateRoute('research', 'replace');
 }
 
 function deleteActiveResearchCategory() {
@@ -2251,6 +2356,8 @@ function deleteActiveResearchCategory() {
   saveResearchConfig();
   renderResearchInterest();
   renderResearchManager();
+  updateViewDocumentTitle('research');
+  updateRoute('research', 'replace');
 }
 
 manageResearch.hidden = !ownerToolsEnabled;
@@ -6531,6 +6638,11 @@ function drawRegistrationDemo() {
 function runAlignmentDemo() {
   if (!registrationCanvas || !regCtx) return;
   cancelAnimationFrame(registrationState.animationFrame);
+  if (reducedMotionQuery.matches) {
+    registrationState.progress = 1;
+    drawRegistrationDemo();
+    return;
+  }
   const start = performance.now();
   const from = registrationState.progress;
   const duration = 1100;
@@ -6572,6 +6684,10 @@ let typeTimer = null;
 
 function typeLoop() {
   const statuses = i18n[currentLang].statuses;
+  if (reducedMotionQuery.matches || document.hidden) {
+    typeTarget.textContent = statuses[statusIndex % statuses.length];
+    return;
+  }
   const current = statuses[statusIndex % statuses.length];
   if (!deleting) {
     charIndex += 1;
@@ -6597,6 +6713,10 @@ function restartTypeLoop() {
   statusIndex = 0;
   charIndex = 0;
   deleting = false;
+  if (reducedMotionQuery.matches || document.hidden) {
+    typeTarget.textContent = i18n[currentLang].statuses[0];
+    return;
+  }
   typeTarget.textContent = '';
   typeLoop();
 }
@@ -6626,6 +6746,7 @@ function applyTranslations() {
   renderResearchInterest();
   updateRegistrationLabels();
   drawRegistrationDemo();
+  updateViewDocumentTitle(document.querySelector('.view.active')?.id || 'about');
   if (commandPalette.classList.contains('open')) renderCommandList();
 }
 
@@ -6703,15 +6824,8 @@ function shouldAnimateRepoMap(timestamp) {
     && timestamp - lastRepoMapFrame >= REPO_MAP_FRAME_SKIP * 16;
 }
 
-function drawStars(timestamp = 0) {
-  if (!shouldRunMotion()) {
-    requestAnimationFrame(drawStars);
-    return;
-  }
-  if (timestamp - lastStarfieldFrame < STARFIELD_FRAME_SKIP * 16) {
-    requestAnimationFrame(drawStars);
-    return;
-  }
+function drawStarfieldFrame(timestamp = 0) {
+  if (timestamp - lastStarfieldFrame < STARFIELD_FRAME_SKIP * 16) return;
   lastStarfieldFrame = timestamp;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const s of stars) {
@@ -6725,10 +6839,44 @@ function drawStars(timestamp = 0) {
     ctx.fillStyle = s.z > 1.3 ? 'rgba(0, 245, 255, 0.95)' : 'rgba(155, 92, 255, 0.7)';
     ctx.fill();
   }
-  requestAnimationFrame(drawStars);
 }
 
-function animateInterestCanvas(timestamp = 0) {
+function motionCadence() {
+  if (isResearchViewActive()) return 33;
+  if (isProjectsViewActive()) return 100;
+  return heroPreviewVisible ? 100 : 140;
+}
+
+function stopMotionLoop() {
+  if (motionTimer !== null) window.clearTimeout(motionTimer);
+  if (motionFrame !== null) cancelAnimationFrame(motionFrame);
+  motionTimer = null;
+  motionFrame = null;
+}
+
+function scheduleMotionLoop(options = {}) {
+  const { immediate = false } = options;
+  if (!shouldRunMotion()) {
+    stopMotionLoop();
+    return;
+  }
+  if (immediate && motionTimer !== null) {
+    window.clearTimeout(motionTimer);
+    motionTimer = null;
+  }
+  if (motionTimer !== null || motionFrame !== null) return;
+  const requestFrame = () => {
+    motionTimer = null;
+    motionFrame = requestAnimationFrame(runMotionFrame);
+  };
+  if (immediate) requestFrame();
+  else motionTimer = window.setTimeout(requestFrame, motionCadence());
+}
+
+function runMotionFrame(timestamp = 0) {
+  motionFrame = null;
+  if (!shouldRunMotion()) return;
+  drawStarfieldFrame(timestamp);
   if (shouldAnimateInterest(timestamp)) {
     interestTick += 1;
     lastInterestFrame = timestamp;
@@ -6739,16 +6887,12 @@ function animateInterestCanvas(timestamp = 0) {
     lastHeroPreviewFrame = timestamp;
     drawHeroPreviewCanvas();
   }
-  requestAnimationFrame(animateInterestCanvas);
-}
-
-function animateRepoMap(timestamp = 0) {
   if (shouldAnimateRepoMap(timestamp)) {
     repoMapTick += 1;
     lastRepoMapFrame = timestamp;
     renderRepoMap(filteredRepos);
   }
-  requestAnimationFrame(animateRepoMap);
+  scheduleMotionLoop();
 }
 
 generateRegistrationPoints();
@@ -6756,6 +6900,8 @@ initCustomCursor();
 updateRegistrationLabels();
 applyTheme(currentTheme, { animate: false });
 applyTranslations();
+applyLocationRoute({ scroll: Boolean(window.location.hash) });
+lastHandledRouteUrl = currentRouteUrl();
 restartTypeLoop();
 loadRepos();
 loadPublications();
@@ -6765,20 +6911,29 @@ if ('IntersectionObserver' in window && heroPreviewCanvas) {
   const heroPreviewObserver = new IntersectionObserver(([entry]) => {
     heroPreviewVisible = Boolean(entry?.isIntersecting);
     if (heroPreviewVisible) drawHeroPreviewCanvas();
+    scheduleMotionLoop({ immediate: heroPreviewVisible });
   }, { threshold: 0.08 });
   heroPreviewObserver.observe(heroPreviewCanvas);
 }
 reducedMotionQuery.addEventListener?.('change', () => {
+  restartTypeLoop();
   drawHeroPreviewCanvas();
   if (isResearchViewActive()) drawInterestAnimation();
   if (isProjectsViewActive()) renderRepoMap(filteredRepos);
+  if (reducedMotionQuery.matches) stopMotionLoop();
+  else scheduleMotionLoop({ immediate: true });
 });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
+  if (document.hidden) {
+    clearTimeout(typeTimer);
+    stopMotionLoop();
+  } else {
     lastHeroPreviewFrame = 0;
     lastStarfieldFrame = 0;
     lastInterestFrame = 0;
     lastRepoMapFrame = 0;
+    restartTypeLoop();
+    scheduleMotionLoop({ immediate: true });
   }
 });
 window.addEventListener('resize', () => {
@@ -6791,6 +6946,4 @@ window.addEventListener('resize', () => {
 resizeCanvas();
 drawRegistrationDemo();
 renderResearchInterest();
-drawStars();
-animateInterestCanvas();
-animateRepoMap();
+scheduleMotionLoop({ immediate: true });

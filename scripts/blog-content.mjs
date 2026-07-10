@@ -1,6 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import matter from 'gray-matter';
+import MarkdownIt from 'markdown-it';
+
+const validationMarkdown = new MarkdownIt({ html: false });
 
 export const SITE = {
   title: 'Research Fieldnotes',
@@ -108,6 +111,7 @@ function validatePost(post, seenSlugs) {
     if (data.draft) warnings.push('draft description is empty');
     else errors.push('published posts must include a description');
   }
+  if (!['en', 'zh'].includes(data.lang)) errors.push('lang must be "en" or "zh"');
 
   if (data.slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug)) {
     errors.push('slug must use lowercase letters, numbers, and hyphens');
@@ -140,6 +144,12 @@ function validatePost(post, seenSlugs) {
   });
 
   if (!post.content.trim()) errors.push('post body is empty');
+  const hasLevelOneHeading = validationMarkdown
+    .parse(post.content, {})
+    .some((token) => token.type === 'heading_open' && token.tag === 'h1');
+  if (hasLevelOneHeading) {
+    errors.push('post body must start at heading level 2; the template already provides the h1');
+  }
   if (/!\[\s*]\([^)]+\)/.test(post.content)) warnings.push('image without alt text');
   if (post.content.includes('\t')) warnings.push('contains tab characters');
 
@@ -163,7 +173,8 @@ export async function loadPosts(rootDir, options = {}) {
       draft: Boolean(parsed.data.draft),
       featured: Boolean(parsed.data.featured),
       math: Boolean(parsed.data.math),
-      toc: parsed.data.toc !== false
+      toc: parsed.data.toc !== false,
+      lang: String(parsed.data.lang || SITE.lang).toLowerCase()
     };
     const post = {
       sourcePath: file,
@@ -187,6 +198,7 @@ export async function loadPosts(rootDir, options = {}) {
         series: data.series || '',
         featured: data.featured,
         math: data.math,
+        lang: data.lang,
         toc: data.toc !== false,
         readingMinutes: estimateReadingMinutes(parsed.content)
       });

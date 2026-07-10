@@ -1,0 +1,5 @@
+# Project-site copy. Host-wide crawler policy must also exist at https://wcx12.github.io/robots.txt.
+User-agent: *
+Allow: /
+
+Sitemap: https://wcx12.github.io/wcx12/sitemap.xml

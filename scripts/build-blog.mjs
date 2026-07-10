@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import MarkdownIt from 'markdown-it';
 import markdownItFootnote from 'markdown-it-footnote';
-import markdownItKatex from 'markdown-it-katex';
+import markdownItKatexModule from 'markdown-it-katex';
 import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
 import css from 'highlight.js/lib/languages/css';
@@ -30,6 +30,10 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const outputDir = path.join(rootDir, 'blog');
 const sourceAssetsDir = path.join(rootDir, 'blog-src', 'assets');
 const outputAssetsDir = path.join(outputDir, 'assets');
+const markdownItKatex = typeof markdownItKatexModule === 'function'
+  ? markdownItKatexModule
+  : markdownItKatexModule.default;
+if (typeof markdownItKatex !== 'function') throw new TypeError('markdown-it-katex did not expose a plugin function');
 
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('css', css);
@@ -99,6 +103,12 @@ function postUrl(post) {
 
 function absoluteUrl(relativePath = '') {
   return `${SITE.url}/${relativePath.replace(/^\/+/, '')}`;
+}
+
+function canonicalUrlForFile(filePath) {
+  let relative = path.relative(rootDir, filePath).replace(/\\/g, '/');
+  relative = relative.replace(/index\.html$/, '');
+  return absoluteUrl(relative);
 }
 
 function createPageContext(filePath) {
@@ -173,28 +183,68 @@ function renderTags(ctx, tags) {
   return tags.map((tag) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)}</a>`).join('');
 }
 
-function renderShell({ filePath, title, description, body, extraHead = '', jsonLd = '' }) {
+function renderShell({ filePath, title, description, body, extraHead = '', jsonLd = '', pageType = 'website', schemaType = 'WebPage', publishedTime = '', modifiedTime = '', contentLang = SITE.lang }) {
   const ctx = createPageContext(filePath);
   const pageTitle = title === SITE.title ? title : `${title} | ${SITE.title}`;
+  const pageDescription = description || SITE.description;
+  const canonicalUrl = canonicalUrlForFile(filePath);
+  const socialImage = absoluteUrl('assets/og-home.png');
+  const metadata = jsonLd || JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': schemaType,
+    name: pageTitle,
+    description: pageDescription,
+    url: canonicalUrl,
+    inLanguage: contentLang,
+    author: {
+      '@type': 'Person',
+      '@id': absoluteUrl('#person'),
+      name: SITE.author,
+      url: absoluteUrl()
+    }
+  });
+  const safeMetadata = String(metadata).replace(/</g, '\\u003c');
+  const articleMetadata = [
+    publishedTime ? `<meta property="article:published_time" content="${escapeHtml(publishedTime)}" />` : '',
+    modifiedTime ? `<meta property="article:modified_time" content="${escapeHtml(modifiedTime)}" />` : ''
+  ].filter(Boolean).map((tag) => `  ${tag}`).join('\n');
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(contentLang)}" data-content-lang="${escapeHtml(contentLang)}" data-ui-lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(pageTitle)}</title>
-  <meta name="description" content="${escapeHtml(description || SITE.description)}" />
+  <meta name="description" content="${escapeHtml(pageDescription)}" />
   <meta name="author" content="${escapeHtml(SITE.author)}" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="theme-color" content="#070914" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
+  <link rel="icon" type="image/svg+xml" href="${ctx.link('favicon.svg')}" />
   <meta property="og:title" content="${escapeHtml(pageTitle)}" />
-  <meta property="og:description" content="${escapeHtml(description || SITE.description)}" />
-  <meta property="og:type" content="website" />
-  <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${ctx.link('rss.xml')}" />
+  <meta property="og:description" content="${escapeHtml(pageDescription)}" />
+  <meta property="og:type" content="${escapeHtml(pageType)}" />
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
+  <meta property="og:site_name" content="${escapeHtml(SITE.title)}" />
+  <meta property="og:locale" content="${contentLang === 'zh' ? 'zh_CN' : 'en_US'}" />
+  <meta property="og:image" content="${escapeHtml(socialImage)}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="wcx12 research portfolio and fieldnotes" />
+${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
+  <meta name="twitter:description" content="${escapeHtml(pageDescription)}" />
+  <meta name="twitter:image" content="${escapeHtml(socialImage)}" />
+  <meta name="twitter:image:alt" content="wcx12 research portfolio and fieldnotes" />
+  <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${escapeHtml(absoluteUrl('rss.xml'))}" />
+  <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="${ctx.link('styles.css')}" />
   <link rel="stylesheet" href="${ctx.link('blog/assets/blog.css')}" />
   ${extraHead}
-  ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
+  <script type="application/ld+json">${safeMetadata}</script>
 </head>
 <body class="blog-body">
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
@@ -271,6 +321,7 @@ function tocHtml(toc) {
 }
 
 function postJsonLd(post) {
+  const url = absoluteUrl(postUrl(post));
   return JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -278,8 +329,11 @@ function postJsonLd(post) {
     description: post.description,
     datePublished: post.date,
     dateModified: post.updated,
-    author: { '@type': 'Person', name: SITE.author },
-    mainEntityOfPage: absoluteUrl(postUrl(post)),
+    inLanguage: post.lang,
+    url,
+    image: absoluteUrl('assets/og-home.png'),
+    author: { '@type': 'Person', '@id': absoluteUrl('#person'), name: SITE.author, url: absoluteUrl() },
+    mainEntityOfPage: url,
     keywords: post.tags
   });
 }
@@ -410,7 +464,8 @@ async function renderIndex(posts) {
     filePath,
     title: SITE.title,
     description: SITE.description,
-    body
+    body,
+    schemaType: 'Blog'
   }));
 }
 
@@ -462,9 +517,12 @@ async function renderPost(post, posts, renderer) {
 ${html}
         </div>
         <footer class="blog-post-footer">
-          ${related.length ? `<section>
+          ${related.length ? `<section aria-labelledby="related-writing-title">
             <div class="blog-section-head">
-              <div><p class="blog-section-label" data-blog-i18n="section_related_label">Related</p></div>
+              <div>
+                <p class="blog-section-label" data-blog-i18n="section_related_label">Related</p>
+                <h2 id="related-writing-title" data-blog-i18n="section_related_title">Related writing</h2>
+              </div>
               ${hintHtml('hint_related')}
             </div>
             <div class="blog-grid">${related.map((item) => cardHtml(ctx, item)).join('')}</div>
@@ -490,7 +548,11 @@ ${html}
     description: post.description,
     body,
     extraHead: mathCss,
-    jsonLd: postJsonLd(post)
+    jsonLd: postJsonLd(post),
+    pageType: 'article',
+    publishedTime: post.date,
+    modifiedTime: post.updated,
+    contentLang: post.lang
   }));
 
   post.renderedText = stripHtml(html);
@@ -533,7 +595,8 @@ async function renderArchive(posts) {
     filePath,
     title: 'Writing Archive',
     description: 'All technical writing by wcx12.',
-    body
+    body,
+    schemaType: 'CollectionPage'
   }));
 }
 
@@ -551,8 +614,14 @@ async function renderTagPages(posts) {
         ${hintHtml('hint_tag')}
         <div class="blog-hero-actions"><a class="btn btn-outline" href="${ctx.link('blog/index.html')}" data-blog-i18n="back_to_writing">Back to writing</a></div>
       </section>
-      <section class="blog-section">
-        <div class="blog-section-head">${hintHtml('hint_tag_results')}</div>
+      <section class="blog-section" aria-labelledby="tag-results-title">
+        <div class="blog-section-head">
+          <div>
+            <p class="blog-section-label" data-blog-i18n="tag_results_label">Results</p>
+            <h2 id="tag-results-title"><span data-blog-i18n="tag_results_title">Writing tagged</span> ${escapeHtml(tag)}</h2>
+          </div>
+          ${hintHtml('hint_tag_results')}
+        </div>
         <div class="blog-grid">${tagged.map((post) => cardHtml(ctx, post)).join('')}</div>
       </section>
     `;
@@ -560,7 +629,8 @@ async function renderTagPages(posts) {
       filePath,
       title: `Tag: ${tag}`,
       description: `Writing tagged ${tag}.`,
-      body
+      body,
+      schemaType: 'CollectionPage'
     }));
   }
 }
@@ -576,6 +646,7 @@ async function renderJsonFeeds(posts) {
     tags: post.tags,
     research: post.research,
     series: post.series,
+    lang: post.lang,
     featured: post.featured,
     readingMinutes: post.readingMinutes,
     url: postUrl(post)
@@ -587,6 +658,7 @@ async function renderJsonFeeds(posts) {
     category: post.category,
     tags: post.tags,
     research: post.research,
+    lang: post.lang,
     url: `./posts/${post.slug}/`,
     text: excerptText(post.renderedText || post.content, 420)
   }));
@@ -619,7 +691,7 @@ async function renderRss(posts) {
     <title>${escapeXml(SITE.title)}</title>
     <link>${escapeXml(absoluteUrl('blog/'))}</link>
     <description>${escapeXml(SITE.description)}</description>
-    <language>en</language>
+    <language>${escapeXml(SITE.lang)}</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
 ${items}
   </channel>
