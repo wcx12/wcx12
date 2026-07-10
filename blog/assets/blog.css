@@ -60,6 +60,7 @@
 }
 
 .blog-nav a,
+.blog-nav button,
 .blog-nav select {
   display: inline-flex;
   align-items: center;
@@ -76,14 +77,20 @@
   touch-action: manipulation;
 }
 
+.blog-nav button {
+  cursor: pointer;
+}
+
 .blog-nav select {
   min-width: 132px;
   justify-content: center;
 }
 
 .blog-nav a:hover,
+.blog-nav button:hover,
 .blog-nav select:hover,
 .blog-nav a:focus-visible,
+.blog-nav button:focus-visible,
 .blog-nav select:focus-visible {
   border-color: var(--pink);
   outline: none;
@@ -91,6 +98,7 @@
 }
 
 .blog-nav a:active,
+.blog-nav button:active,
 .blog-nav select:active {
   transform: translateY(1px);
 }
@@ -197,7 +205,70 @@
   align-items: end;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 14px;
+}
+
+.blog-section-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.blog-hint {
+  width: fit-content;
+  max-width: min(100%, 460px);
+  color: var(--muted);
+}
+
+.blog-hint summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 7%, transparent);
+  cursor: pointer;
+  font: 700 0.72rem var(--blog-font-mono);
+  list-style: none;
+  white-space: nowrap;
+}
+
+.blog-hint summary::-webkit-details-marker {
+  display: none;
+}
+
+.blog-hint summary::after {
+  content: "+";
+  margin-left: 8px;
+  color: var(--text);
+}
+
+.blog-hint[open] summary {
+  border-color: color-mix(in srgb, var(--pink) 46%, transparent);
+  color: var(--text);
+}
+
+.blog-hint[open] summary::after {
+  content: "-";
+}
+
+.blog-hint summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 18%, transparent);
+}
+
+.blog-hint p {
+  margin: 8px 0 0;
+  border-left: 2px solid color-mix(in srgb, var(--cyan) 32%, transparent);
+  padding: 4px 0 4px 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
 }
 
 .blog-section h2,
@@ -600,6 +671,10 @@
   gap: 10px;
 }
 
+.blog-prev-next .blog-hint {
+  grid-column: 1 / -1;
+}
+
 .blog-prev-next a {
   border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
   border-radius: 12px;
@@ -632,6 +707,7 @@
 }
 
 :root[data-theme="mono"] .blog-nav a,
+:root[data-theme="mono"] .blog-nav button,
 :root[data-theme="mono"] .blog-nav select,
 :root[data-theme="mono"] .blog-card,
 :root[data-theme="mono"] .blog-section,

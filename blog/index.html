@@ -23,57 +23,61 @@
   <header class="blog-topbar">
     <a class="blog-brand" href="../">wcx12</a>
     <nav class="blog-nav" aria-label="Blog navigation">
-      <a href="../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage">Home</a>
-      <a href="./" title="Open the blog index" aria-label="Open the blog index">Blog</a>
-      <a href="archive/" title="Browse all posts by date" aria-label="Browse all posts by date">Archive</a>
-      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
-        <option value="neon">Default</option>
-        <option value="warm">Warm</option>
-        <option value="mono">Black &amp; White</option>
+      <a href="../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
+      <a href="./" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
+      <a href="archive/" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
+      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch language" aria-label="Switch language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
+      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
+        <option value="neon" data-blog-i18n="theme_default">Default</option>
+        <option value="warm" data-blog-i18n="theme_warm">Warm</option>
+        <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
       </select>
     </nav>
   </header>
   <main class="blog-shell">
 
     <section class="blog-hero">
-      <p class="blog-kicker">Research Writing</p>
-      <h1>Technical notes, research logs, and engineering write-ups.</h1>
-      <p>This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, and research-topic links.</p>
+      <p class="blog-kicker" data-blog-i18n="hero_kicker">Research Writing</p>
+      <h1 data-blog-i18n="hero_title">Technical notes, research logs, and engineering write-ups.</h1>
+      <p data-blog-i18n="hero_desc">This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, and research-topic links.</p>
+      <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_hero">This introduction explains what the writing space is for and gives quick routes into the latest notes or the archive.</p></details>
       <div class="blog-hero-actions">
-        <a class="btn btn-primary" href="#recent-writing">Read latest</a>
-        <a class="btn btn-outline" href="archive/">Browse archive</a>
+        <a class="btn btn-primary" href="#recent-writing" data-blog-i18n="hero_read_latest">Read latest</a>
+        <a class="btn btn-outline" href="archive/" data-blog-i18n="hero_browse_archive">Browse archive</a>
       </div>
       <div class="blog-stat-grid">
-        <article class="blog-stat"><span>Published</span><strong>1</strong></article>
-        <article class="blog-stat"><span>Topics</span><strong>3</strong></article>
-        <article class="blog-stat"><span>Search</span><strong>Ready</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>1</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>3</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_search">Search</span><strong data-blog-i18n="stat_ready">Ready</strong></article>
       </div>
     </section>
 
     <section class="blog-section blog-search" aria-label="Search writing">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Search</p>
-          <h2>Find notes by topic, tag, or summary</h2>
+          <p class="blog-section-label" data-blog-i18n="section_search_label">Search</p>
+          <h2 data-blog-i18n="section_search_title">Find notes by topic, tag, or summary</h2>
         </div>
+        <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_search">Use this search to find posts by title, summary, category, tag, or article text.</p></details>
       </div>
-      <input id="blogSearch" type="search" placeholder="Search writing..." autocomplete="off" />
+      <input id="blogSearch" type="search" placeholder="Search writing..." autocomplete="off" data-blog-i18n-ph="search_placeholder" />
       <div id="blogSearchResults" class="blog-search-results" aria-live="polite"></div>
     </section>
 
     <section class="blog-section">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Featured</p>
-          <h2>Start here</h2>
+          <p class="blog-section-label" data-blog-i18n="section_featured_label">Featured</p>
+          <h2 data-blog-i18n="section_featured_title">Start here</h2>
         </div>
+        <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_featured">Featured posts are the recommended starting points or currently important writing pieces.</p></details>
       </div>
       <div class="blog-grid">
     <a class="blog-card" href="posts/building-a-research-writing-system/">
       <div class="blog-card-meta">
-        <span>Jul 10, 2026</span>
+        <span data-blog-date="2026-07-10">Jul 10, 2026</span>
         <span>Engineering</span>
-        <span>1 min</span>
+        <span data-blog-minutes="1">1 min</span>
       </div>
       <h3>Building a Research Writing System for My Homepage</h3>
       <p>A short note on turning this personal homepage into a maintainable research and technical writing space.</p>
@@ -85,9 +89,10 @@
     <section class="blog-section">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Topics</p>
-          <h2>Browse by tag</h2>
+          <p class="blog-section-label" data-blog-i18n="section_topics_label">Topics</p>
+          <h2 data-blog-i18n="section_topics_title">Browse by tag</h2>
         </div>
+        <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_topics">Tags group writing by recurring themes so visitors can browse without knowing exact article titles.</p></details>
       </div>
       <div class="blog-topic-grid"><a class="blog-tag" href="tags/personal-site/">personal-site (1)</a><a class="blog-tag" href="tags/research-workflow/">research-workflow (1)</a><a class="blog-tag" href="tags/static-site/">static-site (1)</a></div>
     </section>
@@ -95,17 +100,20 @@
     <section id="recent-writing" class="blog-section">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Recent</p>
-          <h2>Latest writing</h2>
+          <p class="blog-section-label" data-blog-i18n="section_recent_label">Recent</p>
+          <h2 data-blog-i18n="section_recent_title">Latest writing</h2>
         </div>
-        <a class="blog-tag" href="archive/">Archive</a>
+        <div class="blog-section-tools">
+          <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_recent">Recent writing shows the newest published posts, with a link to the full archive.</p></details>
+          <a class="blog-tag" href="archive/" data-blog-i18n="nav_archive">Archive</a>
+        </div>
       </div>
       <div class="blog-grid">
     <a class="blog-card" href="posts/building-a-research-writing-system/">
       <div class="blog-card-meta">
-        <span>Jul 10, 2026</span>
+        <span data-blog-date="2026-07-10">Jul 10, 2026</span>
         <span>Engineering</span>
-        <span>1 min</span>
+        <span data-blog-minutes="1">1 min</span>
       </div>
       <h3>Building a Research Writing System for My Homepage</h3>
       <p>A short note on turning this personal homepage into a maintainable research and technical writing space.</p>

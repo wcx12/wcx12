@@ -23,28 +23,36 @@
   <header class="blog-topbar">
     <a class="blog-brand" href="../../">wcx12</a>
     <nav class="blog-nav" aria-label="Blog navigation">
-      <a href="../../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage">Home</a>
-      <a href="../" title="Open the blog index" aria-label="Open the blog index">Blog</a>
-      <a href="./" title="Browse all posts by date" aria-label="Browse all posts by date">Archive</a>
-      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
-        <option value="neon">Default</option>
-        <option value="warm">Warm</option>
-        <option value="mono">Black &amp; White</option>
+      <a href="../../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
+      <a href="../" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
+      <a href="./" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
+      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch language" aria-label="Switch language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
+      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
+        <option value="neon" data-blog-i18n="theme_default">Default</option>
+        <option value="warm" data-blog-i18n="theme_warm">Warm</option>
+        <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
       </select>
     </nav>
   </header>
   <main class="blog-shell">
 
     <section class="blog-hero">
-      <p class="blog-kicker">Archive</p>
-      <h1>All writing</h1>
-      <p>A chronological index of technical notes and research logs.</p>
+      <p class="blog-kicker" data-blog-i18n="archive_kicker">Archive</p>
+      <h1 data-blog-i18n="archive_title">All writing</h1>
+      <p data-blog-i18n="archive_desc">A chronological index of technical notes and research logs.</p>
+      <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_archive">The archive keeps all published writing in chronological order.</p></details>
     </section>
     
       <section class="blog-section">
-        <div class="blog-section-head"><div><p class="blog-section-label">2026</p><h2>1 post</h2></div></div>
+        <div class="blog-section-head">
+          <div>
+            <p class="blog-section-label">2026</p>
+            <h2><span>1</span> <span data-blog-count-label="1">post</span></h2>
+          </div>
+          <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_archive_year">This year group lists posts published in the selected year.</p></details>
+        </div>
         <ul class="blog-archive-list">
-          <li><a href="../posts/building-a-research-writing-system/">Building a Research Writing System for My Homepage</a> <span class="muted">- Jul 10, 2026 - Engineering</span></li>
+          <li><a href="../posts/building-a-research-writing-system/">Building a Research Writing System for My Homepage</a> <span class="muted">- <span data-blog-date="2026-07-10">Jul 10, 2026</span> - Engineering</span></li>
         </ul>
       </section>
     

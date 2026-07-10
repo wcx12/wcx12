@@ -23,31 +23,34 @@
   <header class="blog-topbar">
     <a class="blog-brand" href="../../../">wcx12</a>
     <nav class="blog-nav" aria-label="Blog navigation">
-      <a href="../../../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage">Home</a>
-      <a href="../../" title="Open the blog index" aria-label="Open the blog index">Blog</a>
-      <a href="../../archive/" title="Browse all posts by date" aria-label="Browse all posts by date">Archive</a>
-      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
-        <option value="neon">Default</option>
-        <option value="warm">Warm</option>
-        <option value="mono">Black &amp; White</option>
+      <a href="../../../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
+      <a href="../../" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
+      <a href="../../archive/" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
+      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch language" aria-label="Switch language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
+      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
+        <option value="neon" data-blog-i18n="theme_default">Default</option>
+        <option value="warm" data-blog-i18n="theme_warm">Warm</option>
+        <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
       </select>
     </nav>
   </header>
   <main class="blog-shell">
 
       <section class="blog-hero">
-        <p class="blog-kicker">Tag</p>
+        <p class="blog-kicker" data-blog-i18n="tag_kicker">Tag</p>
         <h1>personal-site</h1>
-        <p>1 related note in this topic.</p>
-        <div class="blog-hero-actions"><a class="btn btn-outline" href="../../">Back to writing</a></div>
+        <p><span>1</span> <span data-blog-note-label="1">related note</span> <span data-blog-i18n="tag_in_topic">in this topic.</span></p>
+        <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_tag">This page collects all posts that share the selected tag.</p></details>
+        <div class="blog-hero-actions"><a class="btn btn-outline" href="../../" data-blog-i18n="back_to_writing">Back to writing</a></div>
       </section>
       <section class="blog-section">
+        <div class="blog-section-head"><details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_tag_results">These cards are the posts currently associated with this tag.</p></details></div>
         <div class="blog-grid">
     <a class="blog-card" href="../../posts/building-a-research-writing-system/">
       <div class="blog-card-meta">
-        <span>Jul 10, 2026</span>
+        <span data-blog-date="2026-07-10">Jul 10, 2026</span>
         <span>Engineering</span>
-        <span>1 min</span>
+        <span data-blog-minutes="1">1 min</span>
       </div>
       <h3>Building a Research Writing System for My Homepage</h3>
       <p>A short note on turning this personal homepage into a maintainable research and technical writing space.</p>

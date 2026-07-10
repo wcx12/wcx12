@@ -1,6 +1,150 @@
 const THEME_KEY = 'wcx12-theme';
+const LANG_KEY = 'wcx12-lang';
 const themes = ['neon', 'warm', 'mono'];
+const languages = ['en', 'zh'];
 const themeSelect = document.getElementById('blogThemeSelect');
+const langToggle = document.getElementById('blogLangToggle');
+
+const blogI18n = {
+  en: {
+    nav_home: 'Home',
+    nav_home_title: 'Back to the interactive homepage',
+    nav_blog: 'Blog',
+    nav_blog_title: 'Open the blog index',
+    nav_archive: 'Archive',
+    nav_archive_title: 'Browse all posts by date',
+    lang_button: '中文',
+    lang_title: 'Switch language',
+    theme_title: 'Switch color theme',
+    theme_default: 'Default',
+    theme_warm: 'Warm',
+    theme_mono: 'Black & White',
+    hero_kicker: 'Research Writing',
+    hero_title: 'Technical notes, research logs, and engineering write-ups.',
+    hero_desc: 'This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, and research-topic links.',
+    hero_read_latest: 'Read latest',
+    hero_browse_archive: 'Browse archive',
+    stat_published: 'Published',
+    stat_topics: 'Topics',
+    stat_search: 'Search',
+    stat_ready: 'Ready',
+    section_search_label: 'Search',
+    section_search_title: 'Find notes by topic, tag, or summary',
+    section_featured_label: 'Featured',
+    section_featured_title: 'Start here',
+    section_topics_label: 'Topics',
+    section_topics_title: 'Browse by tag',
+    section_recent_label: 'Recent',
+    section_recent_title: 'Latest writing',
+    section_related_label: 'Related',
+    search_placeholder: 'Search writing...',
+    search_no_results: 'No matching notes yet.',
+    topics_empty: 'No tags yet.',
+    archive_kicker: 'Archive',
+    archive_title: 'All writing',
+    archive_desc: 'A chronological index of technical notes and research logs.',
+    tag_kicker: 'Tag',
+    tag_in_topic: 'in this topic.',
+    back_to_writing: 'Back to writing',
+    toc_title: 'Contents',
+    toc_empty: 'No sections.',
+    toc_disabled: 'Contents disabled.',
+    post_updated: 'Updated',
+    nav_newer: 'Newer',
+    nav_older: 'Older',
+    code_copy: 'Copy',
+    code_copied: 'Copied',
+    code_select: 'Select',
+    hint_summary: 'About this area',
+    hint_hero: 'This introduction explains what the writing space is for and gives quick routes into the latest notes or the archive.',
+    hint_search: 'Use this search to find posts by title, summary, category, tag, or article text.',
+    hint_featured: 'Featured posts are the recommended starting points or currently important writing pieces.',
+    hint_topics: 'Tags group writing by recurring themes so visitors can browse without knowing exact article titles.',
+    hint_recent: 'Recent writing shows the newest published posts, with a link to the full archive.',
+    hint_archive: 'The archive keeps all published writing in chronological order.',
+    hint_archive_year: 'This year group lists posts published in the selected year.',
+    hint_tag: 'This page collects all posts that share the selected tag.',
+    hint_tag_results: 'These cards are the posts currently associated with this tag.',
+    hint_post: 'This article page contains the full post, metadata, tags, and any code or math examples.',
+    hint_toc: 'The contents panel links to major headings in the current article.',
+    hint_related: 'Related writing appears here when another post shares tags or research areas.',
+    hint_prev_next: 'Use these links to move between newer and older posts.'
+  },
+  zh: {
+    nav_home: '主页',
+    nav_home_title: '返回互动主页',
+    nav_blog: '博客',
+    nav_blog_title: '打开博客首页',
+    nav_archive: '归档',
+    nav_archive_title: '按日期浏览所有文章',
+    lang_button: 'EN',
+    lang_title: '切换语言',
+    theme_title: '切换页面色调',
+    theme_default: '默认',
+    theme_warm: '暖色',
+    theme_mono: '黑白',
+    hero_kicker: '研究写作',
+    hero_title: '技术笔记、研究日志和工程记录。',
+    hero_desc: '这里把较长的文章从互动主页中独立出来，提供稳定链接、清晰排版、可搜索笔记和研究主题关联。',
+    hero_read_latest: '阅读最新',
+    hero_browse_archive: '浏览归档',
+    stat_published: '已发布',
+    stat_topics: '主题',
+    stat_search: '搜索',
+    stat_ready: '可用',
+    section_search_label: '搜索',
+    section_search_title: '按主题、标签或摘要查找笔记',
+    section_featured_label: '精选',
+    section_featured_title: '从这里开始',
+    section_topics_label: '主题',
+    section_topics_title: '按标签浏览',
+    section_recent_label: '最近',
+    section_recent_title: '最新文章',
+    section_related_label: '相关',
+    search_placeholder: '搜索文章...',
+    search_no_results: '暂时没有匹配的笔记。',
+    topics_empty: '还没有标签。',
+    archive_kicker: '归档',
+    archive_title: '全部文章',
+    archive_desc: '按时间顺序整理技术笔记和研究日志。',
+    tag_kicker: '标签',
+    tag_in_topic: '属于这个主题。',
+    back_to_writing: '返回博客',
+    toc_title: '目录',
+    toc_empty: '暂无小节。',
+    toc_disabled: '目录已关闭。',
+    post_updated: '更新于',
+    nav_newer: '更新文章',
+    nav_older: '更早文章',
+    code_copy: '复制',
+    code_copied: '已复制',
+    code_select: '请选择',
+    hint_summary: '区域说明',
+    hint_hero: '这里说明博客区的用途，并提供进入最新文章或归档页的快捷入口。',
+    hint_search: '用来按标题、摘要、分类、标签或正文内容搜索文章。',
+    hint_featured: '这里展示推荐优先阅读，或当前最重要的文章。',
+    hint_topics: '标签把文章按常见主题分组，访客不需要知道标题也能浏览。',
+    hint_recent: '这里展示最新发布的文章，并提供进入完整归档的入口。',
+    hint_archive: '归档页按时间顺序保存所有已发布文章。',
+    hint_archive_year: '这个年份分组列出该年份发布的文章。',
+    hint_tag: '这个页面汇总拥有同一标签的文章。',
+    hint_tag_results: '这些卡片是当前标签下关联的文章。',
+    hint_post: '这里是完整文章页，包含正文、元信息、标签以及代码或数学内容。',
+    hint_toc: '目录面板链接到当前文章的主要小节。',
+    hint_related: '如果其他文章共享标签或研究方向，相关内容会出现在这里。',
+    hint_prev_next: '用这些链接在更新和更早的文章之间切换。'
+  }
+};
+
+function normalizeLang(lang) {
+  return languages.includes(lang) ? lang : 'en';
+}
+
+let currentLang = normalizeLang(localStorage.getItem(LANG_KEY) || 'en');
+
+function t(key) {
+  return blogI18n[currentLang]?.[key] || blogI18n.en[key] || '';
+}
 
 function applyTheme(theme) {
   const next = themes.includes(theme) ? theme : 'neon';
@@ -12,6 +156,75 @@ function applyTheme(theme) {
 applyTheme(localStorage.getItem(THEME_KEY) || 'neon');
 
 themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
+
+function formatBlogDate(value) {
+  if (!value) return '';
+  return new Date(`${value}T00:00:00`).toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+function minuteLabel(minutes, long = false) {
+  const count = Number(minutes) || 1;
+  if (currentLang === 'zh') return long ? `约 ${count} 分钟阅读` : `${count} 分钟`;
+  return long ? `${count} min read` : `${count} min`;
+}
+
+function applyLanguage(lang = currentLang) {
+  currentLang = normalizeLang(lang);
+  localStorage.setItem(LANG_KEY, currentLang);
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+
+  document.querySelectorAll('[data-blog-i18n]').forEach((node) => {
+    const value = t(node.dataset.blogI18n);
+    if (value) node.textContent = value;
+  });
+  document.querySelectorAll('[data-blog-i18n-title]').forEach((node) => {
+    const value = t(node.dataset.blogI18nTitle);
+    if (value) node.setAttribute('title', value);
+  });
+  document.querySelectorAll('[data-blog-i18n-aria]').forEach((node) => {
+    const value = t(node.dataset.blogI18nAria);
+    if (value) node.setAttribute('aria-label', value);
+  });
+  document.querySelectorAll('[data-blog-i18n-ph]').forEach((node) => {
+    const value = t(node.dataset.blogI18nPh);
+    if (value) node.setAttribute('placeholder', value);
+  });
+  document.querySelectorAll('[data-blog-date]').forEach((node) => {
+    node.textContent = formatBlogDate(node.dataset.blogDate);
+  });
+  document.querySelectorAll('[data-blog-updated]').forEach((node) => {
+    node.textContent = `${t('post_updated')} ${formatBlogDate(node.dataset.blogUpdated)}`;
+  });
+  document.querySelectorAll('[data-blog-minutes]').forEach((node) => {
+    node.textContent = minuteLabel(node.dataset.blogMinutes);
+  });
+  document.querySelectorAll('[data-blog-minutes-long]').forEach((node) => {
+    node.textContent = minuteLabel(node.dataset.blogMinutesLong, true);
+  });
+  document.querySelectorAll('[data-blog-count-label]').forEach((node) => {
+    const count = Number(node.dataset.blogCountLabel) || 0;
+    node.textContent = currentLang === 'zh' ? '篇文章' : (count === 1 ? 'post' : 'posts');
+  });
+  document.querySelectorAll('[data-blog-note-label]').forEach((node) => {
+    const count = Number(node.dataset.blogNoteLabel) || 0;
+    node.textContent = currentLang === 'zh' ? '篇相关文章' : (count === 1 ? 'related note' : 'related notes');
+  });
+  document.querySelectorAll('.code-copy').forEach((button) => {
+    if (![t('code_copied'), t('code_select')].includes(button.textContent)) {
+      button.textContent = t('code_copy');
+    }
+  });
+
+  if (searchInput) renderSearch(searchInput.value);
+}
+
+langToggle?.addEventListener('click', () => {
+  applyLanguage(currentLang === 'en' ? 'zh' : 'en');
+});
 
 const progress = document.getElementById('blogProgress');
 function updateProgress() {
@@ -31,12 +244,12 @@ document.querySelectorAll('.code-copy').forEach((button) => {
     const code = frame?.querySelector('code')?.innerText || '';
     try {
       await navigator.clipboard.writeText(code);
-      button.textContent = 'Copied';
+      button.textContent = t('code_copied');
       window.setTimeout(() => {
-        button.textContent = 'Copy';
+        button.textContent = t('code_copy');
       }, 1400);
     } catch {
-      button.textContent = 'Select';
+      button.textContent = t('code_select');
     }
   });
 });
@@ -94,7 +307,7 @@ function renderSearch(query) {
     .map(({ item }) => resultTemplate(item))
     .join('');
 
-  searchResults.innerHTML = scored || '<p class="muted">No matching notes yet.</p>';
+  searchResults.innerHTML = scored || `<p class="muted">${escapeHtml(t('search_no_results'))}</p>`;
 }
 
 if (searchInput && searchResults) {
@@ -109,3 +322,10 @@ if (searchInput && searchResults) {
 
   searchInput.addEventListener('input', () => renderSearch(searchInput.value));
 }
+
+applyLanguage(currentLang);
+
+window.addEventListener('keydown', (event) => {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return;
+  if (event.key === 'l' || event.key === 'L') langToggle?.click();
+});

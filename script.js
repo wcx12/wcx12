@@ -100,7 +100,9 @@ const interestPapers = document.getElementById('interestPapers');
 const interestPosts = document.getElementById('interestPosts');
 const customCursor = document.getElementById('customCursor');
 
-let currentLang = 'en';
+const LANG_KEY = 'wcx12-lang';
+
+let currentLang = ['en', 'zh'].includes(localStorage.getItem(LANG_KEY)) ? localStorage.getItem(LANG_KEY) : 'en';
 let currentTheme = localStorage.getItem('wcx12-theme') || 'neon';
 let allRepos = [];
 let filteredRepos = [];
@@ -6101,6 +6103,7 @@ function applyTranslations() {
 
 langToggle.addEventListener('click', () => {
   currentLang = currentLang === 'en' ? 'zh' : 'en';
+  localStorage.setItem(LANG_KEY, currentLang);
   applyTranslations();
   restartTypeLoop();
 });

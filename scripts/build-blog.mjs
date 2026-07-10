@@ -90,7 +90,7 @@ function renderCodeFence(code, info) {
   const highlighted = normalizedLang === 'plaintext'
     ? escapeHtml(code)
     : hljs.highlight(code, { language: normalizedLang, ignoreIllegals: true }).value;
-  return `<div class="code-frame"><div class="code-head"><span>${escapeHtml(label)}</span><button class="code-copy" type="button">Copy</button></div><pre><code class="hljs language-${escapeHtml(normalizedLang)}">${highlighted}</code></pre></div>`;
+  return `<div class="code-frame"><div class="code-head"><span>${escapeHtml(label)}</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre><code class="hljs language-${escapeHtml(normalizedLang)}">${highlighted}</code></pre></div>`;
 }
 
 function postUrl(post) {
@@ -123,14 +123,35 @@ function postHref(ctx, post) {
   return ctx.link(`${postUrl(post)}index.html`);
 }
 
+const blogText = {
+  hint_summary: 'About this area',
+  hint_hero: 'This introduction explains what the writing space is for and gives quick routes into the latest notes or the archive.',
+  hint_search: 'Use this search to find posts by title, summary, category, tag, or article text.',
+  hint_featured: 'Featured posts are the recommended starting points or currently important writing pieces.',
+  hint_topics: 'Tags group writing by recurring themes so visitors can browse without knowing exact article titles.',
+  hint_recent: 'Recent writing shows the newest published posts, with a link to the full archive.',
+  hint_archive: 'The archive keeps all published writing in chronological order.',
+  hint_archive_year: 'This year group lists posts published in the selected year.',
+  hint_tag: 'This page collects all posts that share the selected tag.',
+  hint_tag_results: 'These cards are the posts currently associated with this tag.',
+  hint_post: 'This article page contains the full post, metadata, tags, and any code or math examples.',
+  hint_toc: 'The contents panel links to major headings in the current article.',
+  hint_related: 'Related writing appears here when another post shares tags or research areas.',
+  hint_prev_next: 'Use these links to move between newer and older posts.'
+};
+
+function hintHtml(key) {
+  return `<details class="blog-hint"><summary data-blog-i18n="hint_summary">${escapeHtml(blogText.hint_summary)}</summary><p data-blog-i18n="${key}">${escapeHtml(blogText[key])}</p></details>`;
+}
+
 function cardHtml(ctx, post) {
   const tags = post.tags.slice(0, 4).map((tag) => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join('');
   return `
     <a class="blog-card" href="${postHref(ctx, post)}">
       <div class="blog-card-meta">
-        <span>${escapeHtml(formatDate(post.date))}</span>
+        <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
         <span>${escapeHtml(post.category)}</span>
-        <span>${post.readingMinutes} min</span>
+        <span data-blog-minutes="${post.readingMinutes}">${post.readingMinutes} min</span>
       </div>
       <h3>${escapeHtml(post.title)}</h3>
       <p>${escapeHtml(post.description)}</p>
@@ -180,13 +201,14 @@ function renderShell({ filePath, title, description, body, extraHead = '', jsonL
   <header class="blog-topbar">
     <a class="blog-brand" href="${ctx.link('index.html')}">wcx12</a>
     <nav class="blog-nav" aria-label="Blog navigation">
-      <a href="${ctx.link('index.html')}" title="Back to the interactive homepage" aria-label="Back to the interactive homepage">Home</a>
-      <a href="${ctx.link('blog/index.html')}" title="Open the blog index" aria-label="Open the blog index">Blog</a>
-      <a href="${ctx.link('blog/archive/index.html')}" title="Browse all posts by date" aria-label="Browse all posts by date">Archive</a>
-      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
-        <option value="neon">Default</option>
-        <option value="warm">Warm</option>
-        <option value="mono">Black &amp; White</option>
+      <a href="${ctx.link('index.html')}" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
+      <a href="${ctx.link('blog/index.html')}" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
+      <a href="${ctx.link('blog/archive/index.html')}" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
+      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch language" aria-label="Switch language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
+      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
+        <option value="neon" data-blog-i18n="theme_default">Default</option>
+        <option value="warm" data-blog-i18n="theme_warm">Warm</option>
+        <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
       </select>
     </nav>
   </header>
@@ -244,7 +266,7 @@ function createMarkdownRenderer() {
 }
 
 function tocHtml(toc) {
-  if (!toc.length) return '<p class="muted">No sections.</p>';
+  if (!toc.length) return '<p class="muted" data-blog-i18n="toc_empty">No sections.</p>';
   return `<ol>${toc.map((item) => `<li><a href="#${escapeHtml(item.id)}">${escapeHtml(item.title)}</a></li>`).join('')}</ol>`;
 }
 
@@ -292,37 +314,40 @@ async function renderIndex(posts) {
 
   const body = `
     <section class="blog-hero">
-      <p class="blog-kicker">Research Writing</p>
-      <h1>Technical notes, research logs, and engineering write-ups.</h1>
-      <p>This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, and research-topic links.</p>
+      <p class="blog-kicker" data-blog-i18n="hero_kicker">Research Writing</p>
+      <h1 data-blog-i18n="hero_title">Technical notes, research logs, and engineering write-ups.</h1>
+      <p data-blog-i18n="hero_desc">This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, and research-topic links.</p>
+      ${hintHtml('hint_hero')}
       <div class="blog-hero-actions">
-        <a class="btn btn-primary" href="#recent-writing">Read latest</a>
-        <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}">Browse archive</a>
+        <a class="btn btn-primary" href="#recent-writing" data-blog-i18n="hero_read_latest">Read latest</a>
+        <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="hero_browse_archive">Browse archive</a>
       </div>
       <div class="blog-stat-grid">
-        <article class="blog-stat"><span>Published</span><strong>${posts.length}</strong></article>
-        <article class="blog-stat"><span>Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
-        <article class="blog-stat"><span>Search</span><strong>Ready</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>${posts.length}</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_search">Search</span><strong data-blog-i18n="stat_ready">Ready</strong></article>
       </div>
     </section>
 
     <section class="blog-section blog-search" aria-label="Search writing">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Search</p>
-          <h2>Find notes by topic, tag, or summary</h2>
+          <p class="blog-section-label" data-blog-i18n="section_search_label">Search</p>
+          <h2 data-blog-i18n="section_search_title">Find notes by topic, tag, or summary</h2>
         </div>
+        ${hintHtml('hint_search')}
       </div>
-      <input id="blogSearch" type="search" placeholder="Search writing..." autocomplete="off" />
+      <input id="blogSearch" type="search" placeholder="Search writing..." autocomplete="off" data-blog-i18n-ph="search_placeholder" />
       <div id="blogSearchResults" class="blog-search-results" aria-live="polite"></div>
     </section>
 
     ${featured.length ? `<section class="blog-section">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Featured</p>
-          <h2>Start here</h2>
+          <p class="blog-section-label" data-blog-i18n="section_featured_label">Featured</p>
+          <h2 data-blog-i18n="section_featured_title">Start here</h2>
         </div>
+        ${hintHtml('hint_featured')}
       </div>
       <div class="blog-grid">${featured.map((post) => cardHtml(ctx, post)).join('')}</div>
     </section>` : ''}
@@ -330,20 +355,24 @@ async function renderIndex(posts) {
     <section class="blog-section">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Topics</p>
-          <h2>Browse by tag</h2>
+          <p class="blog-section-label" data-blog-i18n="section_topics_label">Topics</p>
+          <h2 data-blog-i18n="section_topics_title">Browse by tag</h2>
         </div>
+        ${hintHtml('hint_topics')}
       </div>
-      <div class="blog-topic-grid">${tagLinks || '<p class="muted">No tags yet.</p>'}</div>
+      <div class="blog-topic-grid">${tagLinks || '<p class="muted" data-blog-i18n="topics_empty">No tags yet.</p>'}</div>
     </section>
 
     <section id="recent-writing" class="blog-section">
       <div class="blog-section-head">
         <div>
-          <p class="blog-section-label">Recent</p>
-          <h2>Latest writing</h2>
+          <p class="blog-section-label" data-blog-i18n="section_recent_label">Recent</p>
+          <h2 data-blog-i18n="section_recent_title">Latest writing</h2>
         </div>
-        <a class="blog-tag" href="${ctx.link('blog/archive/index.html')}">Archive</a>
+        <div class="blog-section-tools">
+          ${hintHtml('hint_recent')}
+          <a class="blog-tag" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="nav_archive">Archive</a>
+        </div>
       </div>
       <div class="blog-grid">${recent.map((post) => cardHtml(ctx, post)).join('')}</div>
     </section>
@@ -392,12 +421,13 @@ async function renderPost(post, posts, renderer) {
           <p class="blog-kicker">${escapeHtml(post.category)}</p>
           <h1 class="blog-post-title">${escapeHtml(post.title)}</h1>
           <div class="blog-meta">
-            <span>${escapeHtml(formatDate(post.date))}</span>
-            <span>Updated ${escapeHtml(formatDate(post.updated))}</span>
-            <span>${post.readingMinutes} min read</span>
+            <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
+            <span data-blog-updated="${escapeHtml(post.updated)}">Updated ${escapeHtml(formatDate(post.updated))}</span>
+            <span data-blog-minutes-long="${post.readingMinutes}">${post.readingMinutes} min read</span>
             ${post.series ? `<span>${escapeHtml(post.series)}</span>` : ''}
           </div>
           <p class="blog-post-subtitle">${escapeHtml(post.description)}</p>
+          ${hintHtml('hint_post')}
           <div class="blog-tag-row">${tagRow}</div>
         </header>
         <div class="blog-content">
@@ -405,18 +435,23 @@ ${html}
         </div>
         <footer class="blog-post-footer">
           ${related.length ? `<section>
-            <p class="blog-section-label">Related</p>
+            <div class="blog-section-head">
+              <div><p class="blog-section-label" data-blog-i18n="section_related_label">Related</p></div>
+              ${hintHtml('hint_related')}
+            </div>
             <div class="blog-grid">${related.map((item) => cardHtml(ctx, item)).join('')}</div>
           </section>` : ''}
           <nav class="blog-prev-next" aria-label="Post navigation">
-            ${newer ? `<a href="${postHref(ctx, newer)}"><span>Newer</span>${escapeHtml(newer.title)}</a>` : '<span></span>'}
-            ${older ? `<a href="${postHref(ctx, older)}"><span>Older</span>${escapeHtml(older.title)}</a>` : '<span></span>'}
+            ${hintHtml('hint_prev_next')}
+            ${newer ? `<a href="${postHref(ctx, newer)}"><span data-blog-i18n="nav_newer">Newer</span>${escapeHtml(newer.title)}</a>` : '<span></span>'}
+            ${older ? `<a href="${postHref(ctx, older)}"><span data-blog-i18n="nav_older">Older</span>${escapeHtml(older.title)}</a>` : '<span></span>'}
           </nav>
         </footer>
       </article>
       <aside class="blog-toc">
-        <h2>Contents</h2>
-        ${post.toc ? tocHtml(toc) : '<p class="muted">Contents disabled.</p>'}
+        <h2 data-blog-i18n="toc_title">Contents</h2>
+        ${hintHtml('hint_toc')}
+        ${post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>'}
       </aside>
     </div>
   `;
@@ -445,15 +480,22 @@ async function renderArchive(posts) {
 
   const body = `
     <section class="blog-hero">
-      <p class="blog-kicker">Archive</p>
-      <h1>All writing</h1>
-      <p>A chronological index of technical notes and research logs.</p>
+      <p class="blog-kicker" data-blog-i18n="archive_kicker">Archive</p>
+      <h1 data-blog-i18n="archive_title">All writing</h1>
+      <p data-blog-i18n="archive_desc">A chronological index of technical notes and research logs.</p>
+      ${hintHtml('hint_archive')}
     </section>
     ${[...years.entries()].map(([year, items]) => `
       <section class="blog-section">
-        <div class="blog-section-head"><div><p class="blog-section-label">${year}</p><h2>${items.length} post${items.length > 1 ? 's' : ''}</h2></div></div>
+        <div class="blog-section-head">
+          <div>
+            <p class="blog-section-label">${year}</p>
+            <h2><span>${items.length}</span> <span data-blog-count-label="${items.length}">${items.length > 1 ? 'posts' : 'post'}</span></h2>
+          </div>
+          ${hintHtml('hint_archive_year')}
+        </div>
         <ul class="blog-archive-list">
-          ${items.map((post) => `<li><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a> <span class="muted">- ${escapeHtml(formatDate(post.date))} - ${escapeHtml(post.category)}</span></li>`).join('')}
+          ${items.map((post) => `<li><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a> <span class="muted">- <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span> - ${escapeHtml(post.category)}</span></li>`).join('')}
         </ul>
       </section>
     `).join('')}
@@ -475,12 +517,14 @@ async function renderTagPages(posts) {
     const tagged = posts.filter((post) => post.tags.includes(tag));
     const body = `
       <section class="blog-hero">
-        <p class="blog-kicker">Tag</p>
+        <p class="blog-kicker" data-blog-i18n="tag_kicker">Tag</p>
         <h1>${escapeHtml(tag)}</h1>
-        <p>${tagged.length} related note${tagged.length > 1 ? 's' : ''} in this topic.</p>
-        <div class="blog-hero-actions"><a class="btn btn-outline" href="${ctx.link('blog/index.html')}">Back to writing</a></div>
+        <p><span>${tagged.length}</span> <span data-blog-note-label="${tagged.length}">${tagged.length > 1 ? 'related notes' : 'related note'}</span> <span data-blog-i18n="tag_in_topic">in this topic.</span></p>
+        ${hintHtml('hint_tag')}
+        <div class="blog-hero-actions"><a class="btn btn-outline" href="${ctx.link('blog/index.html')}" data-blog-i18n="back_to_writing">Back to writing</a></div>
       </section>
       <section class="blog-section">
+        <div class="blog-section-head">${hintHtml('hint_tag_results')}</div>
         <div class="blog-grid">${tagged.map((post) => cardHtml(ctx, post)).join('')}</div>
       </section>
     `;

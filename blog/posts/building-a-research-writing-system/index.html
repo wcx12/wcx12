@@ -23,13 +23,14 @@
   <header class="blog-topbar">
     <a class="blog-brand" href="../../../">wcx12</a>
     <nav class="blog-nav" aria-label="Blog navigation">
-      <a href="../../../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage">Home</a>
-      <a href="../../" title="Open the blog index" aria-label="Open the blog index">Blog</a>
-      <a href="../../archive/" title="Browse all posts by date" aria-label="Browse all posts by date">Archive</a>
-      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
-        <option value="neon">Default</option>
-        <option value="warm">Warm</option>
-        <option value="mono">Black &amp; White</option>
+      <a href="../../../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
+      <a href="../../" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
+      <a href="../../archive/" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
+      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch language" aria-label="Switch language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
+      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
+        <option value="neon" data-blog-i18n="theme_default">Default</option>
+        <option value="warm" data-blog-i18n="theme_warm">Warm</option>
+        <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
       </select>
     </nav>
   </header>
@@ -41,20 +42,21 @@
           <p class="blog-kicker">Engineering</p>
           <h1 class="blog-post-title">Building a Research Writing System for My Homepage</h1>
           <div class="blog-meta">
-            <span>Jul 10, 2026</span>
-            <span>Updated Jul 10, 2026</span>
-            <span>1 min read</span>
+            <span data-blog-date="2026-07-10">Jul 10, 2026</span>
+            <span data-blog-updated="2026-07-10">Updated Jul 10, 2026</span>
+            <span data-blog-minutes-long="1">1 min read</span>
             <span>Homepage Lab</span>
           </div>
           <p class="blog-post-subtitle">A short note on turning this personal homepage into a maintainable research and technical writing space.</p>
+          <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_post">This article page contains the full post, metadata, tags, and any code or math examples.</p></details>
           <div class="blog-tag-row"><a class="blog-tag" href="../../tags/personal-site/">personal-site</a><a class="blog-tag" href="../../tags/static-site/">static-site</a><a class="blog-tag" href="../../tags/research-workflow/">research-workflow</a></div>
         </header>
         <div class="blog-content">
 <p>This writing space is designed to sit beside the interactive profile page rather than replace it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and better support for code, equations, tags, and search.</p>
 <p>The workflow should stay simple:</p>
-<div class="code-frame"><div class="code-head"><span>Create a new post</span><button class="code-copy" type="button">Copy</button></div><pre><code class="hljs language-powershell">npm run new:post <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
+<div class="code-frame"><div class="code-head"><span>Create a new post</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre><code class="hljs language-powershell">npm run new:post <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
 </code></pre></div><p>Each post is a Markdown file with front matter. The metadata controls where the post appears, which research lanes it is connected to, whether math is enabled, and whether the article is still a draft.</p>
-<div class="code-frame"><div class="code-head"><span>Post metadata</span><button class="code-copy" type="button">Copy</button></div><pre><code class="hljs language-yaml"><span class="hljs-attr">title:</span> <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
+<div class="code-frame"><div class="code-head"><span>Post metadata</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre><code class="hljs language-yaml"><span class="hljs-attr">title:</span> <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
 <span class="hljs-attr">slug:</span> <span class="hljs-string">&quot;visual-place-recognition-notes&quot;</span>
 <span class="hljs-attr">date:</span> <span class="hljs-string">&quot;2026-07-10&quot;</span>
 <span class="hljs-attr">updated:</span> <span class="hljs-string">&quot;2026-07-10&quot;</span>
@@ -78,13 +80,15 @@
         <footer class="blog-post-footer">
           
           <nav class="blog-prev-next" aria-label="Post navigation">
+            <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_prev_next">Use these links to move between newer and older posts.</p></details>
             <span></span>
             <span></span>
           </nav>
         </footer>
       </article>
       <aside class="blog-toc">
-        <h2>Contents</h2>
+        <h2 data-blog-i18n="toc_title">Contents</h2>
+        <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_toc">The contents panel links to major headings in the current article.</p></details>
         <ol><li><a href="#what-this-enables">What this enables</a></li></ol>
       </aside>
     </div>
