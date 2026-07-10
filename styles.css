@@ -82,11 +82,15 @@
   color: var(--text);
   font-weight: 700;
   text-decoration: none;
+  opacity: 0;
+  pointer-events: none;
   transform: translateY(calc(-100% - 16px));
-  transition: transform 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -460,6 +464,7 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 }
 
 .hero-preview-title {
+  display: block;
   width: 100%;
   border: 0;
   padding: 0;
@@ -468,6 +473,7 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   background: transparent;
   font: inherit;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .hero-preview-title span {
@@ -506,18 +512,6 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   font: 700 0.68rem "JetBrains Mono", monospace;
 }
 
-.lab-panel {
-  border: 1px solid rgba(0, 245, 255, 0.24);
-  border-radius: 16px;
-  padding: 14px;
-  background:
-    linear-gradient(180deg, rgba(0, 245, 255, 0.08), rgba(255, 46, 136, 0.04)),
-    rgba(5, 8, 24, 0.72);
-  box-shadow: inset 0 0 28px rgba(0, 245, 255, 0.07);
-  min-width: 0;
-}
-
-.lab-head,
 .repo-map-head {
   display: flex;
   justify-content: space-between;
@@ -532,74 +526,6 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-}
-
-.lab-head h2 {
-  margin: 4px 0 0;
-  font-size: 1.05rem;
-  color: var(--text);
-}
-
-#labScore {
-  color: var(--cyan);
-  font-family: "JetBrains Mono", monospace;
-  font-size: 1.35rem;
-  text-shadow: 0 0 14px rgba(0, 245, 255, 0.62);
-}
-
-#registrationCanvas {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  margin-top: 12px;
-  border: 1px solid rgba(155, 92, 255, 0.28);
-  border-radius: 12px;
-  background:
-    linear-gradient(rgba(0, 245, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 245, 255, 0.08) 1px, transparent 1px),
-    rgba(3, 7, 18, 0.72);
-  background-size: 32px 32px;
-  touch-action: none;
-  user-select: none;
-}
-
-.lab-note {
-  margin: 10px 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
-.lab-controls {
-  display: grid;
-  gap: 10px;
-}
-
-.lab-controls label {
-  display: grid;
-  grid-template-columns: 72px 1fr 44px;
-  gap: 8px;
-  align-items: center;
-  color: var(--muted);
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.78rem;
-}
-
-.lab-controls input[type="range"] {
-  width: 100%;
-  accent-color: var(--cyan);
-}
-
-.lab-controls output {
-  color: #b8f3ff;
-  text-align: right;
-}
-
-.lab-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
 }
 
 .btn {
@@ -689,6 +615,43 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 .view-heading h2,
 .view-heading p {
   margin-top: 0;
+}
+
+.view-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.noscript-notice {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.noscript-notice h2 {
+  margin: 6px 0 8px;
+  font-size: 1.35rem;
+}
+
+.noscript-notice p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.noscript-notice nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.noscript-notice a {
+  color: var(--cyan);
+  overflow-wrap: anywhere;
 }
 
 .repo-toolbar {
@@ -983,7 +946,6 @@ button.research-badge:hover {
   background: color-mix(in srgb, var(--pink) 14%, transparent);
 }
 
-.research-badge.unmapped,
 .research-badge.fallback {
   color: var(--muted);
   border-color: color-mix(in srgb, var(--muted) 44%, transparent);
@@ -1185,6 +1147,7 @@ button.research-badge:hover {
   text-align: left;
   background: rgba(255, 255, 255, 0.035);
   cursor: pointer;
+  text-decoration: none;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
@@ -1278,6 +1241,7 @@ button.research-badge:hover {
 }
 
 .interest-child {
+  display: block;
   width: 100%;
   border: 0;
   border-top: 1px solid rgba(0, 245, 255, 0.14);
@@ -1287,6 +1251,7 @@ button.research-badge:hover {
   padding: 10px 12px;
   cursor: pointer;
   font: 600 0.92rem "Space Grotesk", system-ui, sans-serif;
+  text-decoration: none;
 }
 
 .interest-child small {
@@ -1999,10 +1964,6 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
     padding-right: 4px;
   }
 
-  .lab-controls label {
-    grid-template-columns: 64px 1fr 44px;
-  }
-
   .research-workbench,
   .interest-related,
   .manager-grid {
@@ -2073,6 +2034,10 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
     display: grid;
   }
 
+  .view-heading-actions {
+    justify-content: flex-start;
+  }
+
   #interestCanvas {
     height: 100%;
     min-height: 0;
@@ -2132,6 +2097,10 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
 }
 
 @media (max-width: 480px) {
+  .research-workbench {
+    height: clamp(840px, 100vh, 920px);
+  }
+
   .interest-section-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2139,6 +2108,22 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
   .interest-section-tabs button {
     min-height: 44px;
     border-radius: 10px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .interest-canvas-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .interest-canvas-controls .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    padding: 6px 4px;
+    font-size: 0.68rem;
+    line-height: 1.2;
     white-space: normal;
     overflow-wrap: anywhere;
   }

@@ -36,12 +36,15 @@ jobs:
 
       - name: Check browser scripts
         run: |
+          node --check site-data.js
           node --check script.js
+          node --check research-canvas.js
+          node --check repo-map.js
           node --check blog-src/assets/blog.js
           node --check scripts/build-blog.mjs
 
-      - name: Rebuild generated blog
-        run: npm run build:blog
+      - name: Rebuild generated site
+        run: npm run build:site
 
       - name: Verify generated files are current
-        run: git diff --exit-code -- blog resume rss.xml sitemap.xml
+        run: git diff --exit-code -- blog research publications zh resume publications.md rss.xml sitemap.xml

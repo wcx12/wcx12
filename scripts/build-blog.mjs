@@ -17,6 +17,7 @@ import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
+import { localRepos, staticPublications } from '../site-data.js';
 import {
   SITE,
   excerptText,
@@ -30,6 +31,8 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const outputDir = path.join(rootDir, 'blog');
 const sourceAssetsDir = path.join(rootDir, 'blog-src', 'assets');
 const outputAssetsDir = path.join(outputDir, 'assets');
+const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
+const researchChildren = researchConfig.interests.flatMap((interest) => interest.children);
 const markdownItKatex = typeof markdownItKatexModule === 'function'
   ? markdownItKatexModule
   : markdownItKatexModule.default;
@@ -150,6 +153,47 @@ const blogText = {
   hint_prev_next: 'Use these links to move between newer and older posts.'
 };
 
+const shellText = {
+  en: {
+    skip_main: 'Skip to main content',
+    nav_home: 'Home',
+    nav_home_title: 'Back to the interactive homepage',
+    nav_profile: 'Profile',
+    nav_profile_title: 'Open the research profile',
+    nav_research: 'Research',
+    nav_research_title: 'Browse research topics and evidence',
+    nav_blog: 'Blog',
+    nav_blog_title: 'Open the blog index',
+    nav_archive: 'Archive',
+    nav_archive_title: 'Browse all posts by date',
+    lang_label: '中文',
+    lang_title: '查看中文页面',
+    theme_title: 'Switch color theme',
+    theme_default: 'Default',
+    theme_warm: 'Warm',
+    theme_mono: 'Black & White'
+  },
+  zh: {
+    skip_main: '跳到主要内容',
+    nav_home: '主页',
+    nav_home_title: '返回互动主页',
+    nav_profile: '履历',
+    nav_profile_title: '打开研究履历',
+    nav_research: '研究',
+    nav_research_title: '浏览研究主题与成果',
+    nav_blog: '博客',
+    nav_blog_title: '打开博客首页',
+    nav_archive: '归档',
+    nav_archive_title: '按日期浏览所有文章',
+    lang_label: 'EN',
+    lang_title: 'View this page in English',
+    theme_title: '切换页面色调',
+    theme_default: '默认',
+    theme_warm: '暖色',
+    theme_mono: '黑白'
+  }
+};
+
 function hintHtml(key) {
   return `<details class="blog-hint"><summary data-blog-i18n="hint_summary">${escapeHtml(blogText.hint_summary)}</summary><p data-blog-i18n="${key}">${escapeHtml(blogText[key])}</p></details>`;
 }
@@ -183,19 +227,51 @@ function renderTags(ctx, tags) {
   return tags.map((tag) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)}</a>`).join('');
 }
 
-function renderShell({ filePath, title, description, body, extraHead = '', jsonLd = '', pageType = 'website', schemaType = 'WebPage', publishedTime = '', modifiedTime = '', contentLang = SITE.lang }) {
+function renderShell({
+  filePath,
+  title,
+  description,
+  body,
+  extraHead = '',
+  jsonLd = '',
+  pageType = 'website',
+  schemaType = 'WebPage',
+  publishedTime = '',
+  modifiedTime = '',
+  contentLang = SITE.lang,
+  fixedLanguage = '',
+  alternateUrl = ''
+}) {
   const ctx = createPageContext(filePath);
   const pageTitle = title === SITE.title ? title : `${title} | ${SITE.title}`;
   const pageDescription = description || SITE.description;
   const canonicalUrl = canonicalUrlForFile(filePath);
   const socialImage = absoluteUrl('assets/og-home.png');
+  const routeLanguage = fixedLanguage === 'zh' ? 'zh' : 'en';
+  const documentLanguage = contentLang === 'zh' ? 'zh-CN' : contentLang;
+  const text = shellText[routeLanguage];
+  const researchPath = fixedLanguage === 'zh' ? 'zh/research/index.html' : 'research/index.html';
+  const alternateLanguage = routeLanguage === 'zh' ? 'en' : 'zh-CN';
+  const alternateHref = alternateUrl ? absoluteUrl(alternateUrl) : '';
+  const englishHref = routeLanguage === 'en' ? canonicalUrl : alternateHref;
+  const chineseHref = routeLanguage === 'zh' ? canonicalUrl : alternateHref;
+  const languageAlternates = fixedLanguage && alternateHref ? `
+  <link rel="alternate" hreflang="en" href="${escapeHtml(englishHref)}" />
+  <link rel="alternate" hreflang="zh-CN" href="${escapeHtml(chineseHref)}" />
+  <link rel="alternate" hreflang="x-default" href="${escapeHtml(englishHref)}" />` : '';
+  const i18n = (key, attribute = '') => fixedLanguage
+    ? ''
+    : ` data-blog-i18n${attribute ? `-${attribute}` : ''}="${key}"`;
+  const languageControl = fixedLanguage
+    ? `<a id="blogLangLink" class="blog-nav-button" href="${ctx.link(`${alternateUrl}index.html`)}" hreflang="${alternateLanguage}" lang="${alternateLanguage}" title="${escapeHtml(text.lang_title)}" aria-label="${escapeHtml(text.lang_title)}">${escapeHtml(text.lang_label)}</a>`
+    : `<button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" aria-label="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>`;
   const metadata = jsonLd || JSON.stringify({
     '@context': 'https://schema.org',
     '@type': schemaType,
     name: pageTitle,
     description: pageDescription,
     url: canonicalUrl,
-    inLanguage: contentLang,
+    inLanguage: documentLanguage,
     author: {
       '@type': 'Person',
       '@id': absoluteUrl('#person'),
@@ -209,7 +285,7 @@ function renderShell({ filePath, title, description, body, extraHead = '', jsonL
     modifiedTime ? `<meta property="article:modified_time" content="${escapeHtml(modifiedTime)}" />` : ''
   ].filter(Boolean).map((tag) => `  ${tag}`).join('\n');
   return `<!doctype html>
-<html lang="${escapeHtml(contentLang)}" data-content-lang="${escapeHtml(contentLang)}" data-ui-lang="en">
+<html lang="${escapeHtml(documentLanguage)}" data-content-lang="${escapeHtml(documentLanguage)}" data-ui-lang="${routeLanguage}"${fixedLanguage ? ` data-fixed-language="${routeLanguage}"` : ''}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -221,13 +297,14 @@ function renderShell({ filePath, title, description, body, extraHead = '', jsonL
   <meta name="theme-color" content="#070914" />
   <meta name="color-scheme" content="dark" />
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
+${languageAlternates}
   <link rel="icon" type="image/svg+xml" href="${ctx.link('favicon.svg')}" />
   <meta property="og:title" content="${escapeHtml(pageTitle)}" />
   <meta property="og:description" content="${escapeHtml(pageDescription)}" />
   <meta property="og:type" content="${escapeHtml(pageType)}" />
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
   <meta property="og:site_name" content="${escapeHtml(SITE.title)}" />
-  <meta property="og:locale" content="${contentLang === 'zh' ? 'zh_CN' : 'en_US'}" />
+  <meta property="og:locale" content="${routeLanguage === 'zh' ? 'zh_CN' : 'en_US'}" />
   <meta property="og:image" content="${escapeHtml(socialImage)}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -248,20 +325,21 @@ ${extraHead.trim()}
   <script type="application/ld+json">${safeMetadata}</script>
 </head>
 <body class="blog-body">
-  <a class="skip-link" href="#main-content" data-blog-i18n="skip_main">Skip to main content</a>
+  <a class="skip-link" href="#main-content"${i18n('skip_main')}>${escapeHtml(text.skip_main)}</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
     <a class="blog-brand" href="${ctx.link('index.html')}">wcx12</a>
-    <nav class="blog-nav" aria-label="Blog navigation">
-      <a href="${ctx.link('index.html')}" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
-      <a href="${ctx.link('resume/index.html')}" title="Open the research profile" aria-label="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title" data-blog-i18n-aria="nav_profile_title">Profile</a>
-      <a href="${ctx.link('blog/index.html')}" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
-      <a href="${ctx.link('blog/archive/index.html')}" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
-      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" aria-label="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
-      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
-        <option value="neon" data-blog-i18n="theme_default">Default</option>
-        <option value="warm" data-blog-i18n="theme_warm">Warm</option>
-        <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
+    <nav class="blog-nav" aria-label="${routeLanguage === 'zh' ? '站点导航' : 'Site navigation'}">
+      <a href="${ctx.link('index.html')}" title="${escapeHtml(text.nav_home_title)}" aria-label="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}${i18n('nav_home_title', 'aria')}>${escapeHtml(text.nav_home)}</a>
+      <a href="${ctx.link('resume/index.html')}" title="${escapeHtml(text.nav_profile_title)}" aria-label="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}${i18n('nav_profile_title', 'aria')}>${escapeHtml(text.nav_profile)}</a>
+      <a href="${ctx.link(researchPath)}" title="${escapeHtml(text.nav_research_title)}" aria-label="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}${i18n('nav_research_title', 'aria')}>${escapeHtml(text.nav_research)}</a>
+      <a href="${ctx.link('blog/index.html')}" title="${escapeHtml(text.nav_blog_title)}" aria-label="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}${i18n('nav_blog_title', 'aria')}>${escapeHtml(text.nav_blog)}</a>
+      <a href="${ctx.link('blog/archive/index.html')}" title="${escapeHtml(text.nav_archive_title)}" aria-label="${escapeHtml(text.nav_archive_title)}"${i18n('nav_archive')}${i18n('nav_archive_title', 'title')}${i18n('nav_archive_title', 'aria')}>${escapeHtml(text.nav_archive)}</a>
+      ${languageControl}
+      <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
+        <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
+        <option value="warm"${i18n('theme_warm')}>${escapeHtml(text.theme_warm)}</option>
+        <option value="mono"${i18n('theme_mono')}>${escapeHtml(text.theme_mono)}</option>
       </select>
     </nav>
   </header>
@@ -271,7 +349,7 @@ ${body.trim()}
   <footer class="blog-footer">
     <span>&copy; ${new Date().getUTCFullYear()} wcx12</span>
     <nav aria-label="Profile links">
-      <a href="${ctx.link('index.html')}" data-blog-i18n="nav_home">Home</a>
+      <a href="${ctx.link('index.html')}"${i18n('nav_home')}>${escapeHtml(text.nav_home)}</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327">ORCID</a>
     </nav>
@@ -712,6 +790,388 @@ ${html}
   }));
 }
 
+function localized(value, language) {
+  return value?.[language] || value?.en || '';
+}
+
+function authorsFor(publication) {
+  return publication.authors.split(';').map((author) => author.trim()).filter(Boolean);
+}
+
+function readableAuthors(publication) {
+  const authors = authorsFor(publication);
+  if (authors.length < 2) return authors[0] || '';
+  if (authors.length === 2) return `${authors[0]} and ${authors[1]}`;
+  return `${authors.slice(0, -1).join(', ')}, and ${authors.at(-1)}`;
+}
+
+function publicationTopic(publication) {
+  const topicIds = researchConfig.paperAssignments[publication.title] || publication.interests || [];
+  return researchChildren.find((child) => topicIds.includes(child.id));
+}
+
+function publicationSchema(publication, language = 'en') {
+  const topic = publicationTopic(publication);
+  return {
+    '@type': 'ScholarlyArticle',
+    '@id': `${publication.link}#article`,
+    headline: publication.title,
+    name: publication.title,
+    url: publication.link,
+    datePublished: publication.year,
+    author: authorsFor(publication).map((name) => ({ '@type': 'Person', name })),
+    isPartOf: { '@type': 'Periodical', name: publication.venue },
+    identifier: {
+      '@type': 'PropertyValue',
+      propertyID: 'DOI',
+      value: publication.doi,
+      url: publication.link
+    },
+    ...(topic ? {
+      about: {
+        '@type': 'DefinedTerm',
+        termCode: topic.id,
+        name: localized(topic.title, language),
+        url: absoluteUrl(researchRoute(language, `${topic.id}/`))
+      }
+    } : {})
+  };
+}
+
+function evidenceForTopic(topicId, posts) {
+  const repos = localRepos.filter((repo) => new Set([
+    ...(repo.interests || []),
+    ...(researchConfig.repoAssignments[repo.name] || [])
+  ]).has(topicId));
+  const knownRepoNames = new Set(localRepos.map((repo) => repo.name));
+  const configuredOnlyRepos = Object.entries(researchConfig.repoAssignments)
+    .filter(([name, interestIds]) => !knownRepoNames.has(name) && Array.isArray(interestIds) && interestIds.includes(topicId))
+    .map(([name]) => ({
+      name,
+      description: 'Repository mapped to this research area in the site configuration.',
+      descriptionZh: '网站配置中映射到该研究方向的公开仓库。',
+      html_url: `https://github.com/wcx12/${encodeURIComponent(name)}`,
+      language: null,
+      updated_at: null
+    }));
+  const publications = staticPublications.filter((publication) => new Set([
+    ...(publication.interests || []),
+    ...(researchConfig.paperAssignments[publication.title] || [])
+  ]).has(topicId));
+  const writing = posts.filter((post) => post.research.includes(topicId));
+  return [
+    ...[...repos, ...configuredOnlyRepos].map((repo) => ({ type: 'SoftwareSourceCode', key: `repo:${repo.name}`, value: repo })),
+    ...publications.map((publication) => ({ type: 'ScholarlyArticle', key: `paper:${publication.doi}`, value: publication })),
+    ...writing.map((post) => ({ type: 'BlogPosting', key: `post:${post.slug}`, value: post }))
+  ];
+}
+
+function evidenceSchema(evidence, language = 'en') {
+  if (evidence.type === 'SoftwareSourceCode') {
+    const repo = evidence.value;
+    return {
+      '@type': 'SoftwareSourceCode',
+      '@id': `${repo.html_url}#software`,
+      name: repo.name,
+      description: language === 'zh' ? (repo.descriptionZh || repo.description) : repo.description,
+      url: repo.html_url,
+      codeRepository: repo.html_url,
+      ...(repo.language ? { programmingLanguage: repo.language } : {}),
+      ...(repo.updated_at ? { dateModified: repo.updated_at } : {}),
+      author: { '@type': 'Person', '@id': absoluteUrl('#person'), name: SITE.author }
+    };
+  }
+  if (evidence.type === 'ScholarlyArticle') return publicationSchema(evidence.value, language);
+  const post = evidence.value;
+  return {
+    '@type': 'BlogPosting',
+    '@id': `${absoluteUrl(postUrl(post))}#article`,
+    headline: post.title,
+    description: post.description,
+    url: absoluteUrl(postUrl(post)),
+    datePublished: post.date,
+    dateModified: post.updated,
+    inLanguage: post.lang,
+    author: { '@type': 'Person', '@id': absoluteUrl('#person'), name: SITE.author }
+  };
+}
+
+function evidenceHtml(ctx, evidence, language) {
+  const isZh = language === 'zh';
+  if (evidence.type === 'SoftwareSourceCode') {
+    const repo = evidence.value;
+    return `<article class="research-evidence" data-evidence-type="SoftwareSourceCode" data-evidence-key="${escapeHtml(evidence.key)}">
+      <h3 class="research-evidence-title"><a href="${escapeHtml(repo.html_url)}" rel="noreferrer">${escapeHtml(repo.name)}</a></h3>
+      <p${language === 'zh' && repo.descriptionZh ? '' : ' lang="en"'}>${escapeHtml(language === 'zh' ? (repo.descriptionZh || repo.description) : repo.description)}</p>
+      <dl class="research-meta">
+${repo.language ? `        <div><dt>${isZh ? '语言' : 'Language'}</dt><dd>${escapeHtml(repo.language)}</dd></div>` : ''}
+        <div><dt>${isZh ? '代码' : 'Code'}</dt><dd><a href="${escapeHtml(repo.html_url)}" rel="noreferrer">GitHub</a></dd></div>
+      </dl>
+    </article>`;
+  }
+  if (evidence.type === 'ScholarlyArticle') {
+    const publication = evidence.value;
+    const topic = publicationTopic(publication);
+    return `<article class="research-evidence" data-evidence-type="ScholarlyArticle" data-evidence-key="${escapeHtml(evidence.key)}">
+      <h3 class="research-evidence-title" lang="en"><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.title)}</a></h3>
+      <p class="research-authors">${escapeHtml(authorsFor(publication).join(', '))}</p>
+      <dl class="research-meta">
+        <div><dt>${isZh ? '期刊' : 'Journal'}</dt><dd>${escapeHtml(publication.venue)}</dd></div>
+        <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(isZh ? publication.statusZh : publication.status)}, ${escapeHtml(publication.year)}</dd></div>
+        <div><dt>DOI</dt><dd><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.doi)}</a></dd></div>
+        ${topic ? `<div><dt>${isZh ? '研究方向' : 'Research topic'}</dt><dd><a class="publication-topic-link" href="${ctx.link(`${researchRoute(language, `${topic.id}/`)}index.html`)}">${escapeHtml(localized(topic.title, language))}</a></dd></div>` : ''}
+      </dl>
+    </article>`;
+  }
+  const post = evidence.value;
+  return `<article class="research-evidence" data-evidence-type="BlogPosting" data-evidence-key="${escapeHtml(evidence.key)}" lang="${escapeHtml(post.lang)}">
+    <h3 class="research-evidence-title"><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a></h3>
+    <p>${escapeHtml(post.description)}</p>
+    <dl class="research-meta">
+      <div><dt>${isZh ? '发布于' : 'Published'}</dt><dd>${escapeHtml(post.date)}</dd></div>
+      <div><dt>${isZh ? '类别' : 'Category'}</dt><dd>${escapeHtml(post.category)}</dd></div>
+    </dl>
+  </article>`;
+}
+
+function evidenceSections(ctx, evidence, language) {
+  const isZh = language === 'zh';
+  const sections = [
+    ['SoftwareSourceCode', isZh ? '项目' : 'Projects'],
+    ['ScholarlyArticle', isZh ? '论文' : 'Papers'],
+    ['BlogPosting', isZh ? '写作' : 'Writing']
+  ];
+  return sections.map(([type, title]) => {
+    const items = evidence.filter((item) => item.type === type);
+    if (!items.length) return '';
+    return `<section class="research-section" aria-labelledby="evidence-${type}">
+      <div class="research-section-head"><h2 id="evidence-${type}">${title}</h2><span>${items.length}</span></div>
+      <div class="research-evidence-list">${items.map((item) => evidenceHtml(ctx, item, language)).join('')}</div>
+    </section>`;
+  }).join('');
+}
+
+function researchRoute(language, suffix = '') {
+  return `${language === 'zh' ? 'zh/' : ''}research/${suffix}`;
+}
+
+function publicationsRoute(language) {
+  return `${language === 'zh' ? 'zh/' : ''}publications/`;
+}
+
+async function renderResearchIndex(posts, language) {
+  const isZh = language === 'zh';
+  const relativeRoute = researchRoute(language);
+  const alternateRoute = researchRoute(isZh ? 'en' : 'zh');
+  const filePath = path.join(rootDir, relativeRoute, 'index.html');
+  const ctx = createPageContext(filePath);
+  const topics = researchChildren.map((child) => ({ child, evidence: evidenceForTopic(child.id, posts) }));
+  const body = `
+    <header class="research-header">
+      <p class="blog-kicker">${isZh ? '可核验的研究索引' : 'Verifiable research index'}</p>
+      <h1>${isZh ? '研究方向' : 'Research'}</h1>
+      <p>${isZh ? '按主题浏览公开项目、论文与研究写作。每个条目均链接到可访问的来源。' : 'Browse public projects, papers, and research writing by topic. Every item links to an accessible source.'}</p>
+      <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '查看全部论文' : 'View all publications'}</a>
+    </header>
+    <section class="research-section" aria-labelledby="research-topics-title">
+      <div class="research-section-head"><h2 id="research-topics-title">${isZh ? '主题' : 'Topics'}</h2><span>${topics.length}</span></div>
+      <div class="research-topic-list">
+        ${topics.map(({ child, evidence }) => `<a class="research-topic-link" href="${ctx.link(`${researchRoute(language, `${child.id}/`)}index.html`)}">
+          <span class="research-topic-copy"><strong>${escapeHtml(localized(child.title, language))}</strong><span>${escapeHtml(localized(child.description, language))}</span></span>
+          <span class="research-topic-count">${evidence.length} ${isZh ? '项成果' : evidence.length === 1 ? 'item' : 'items'}</span>
+        </a>`).join('')}
+      </div>
+    </section>`;
+  const canonicalUrl = absoluteUrl(relativeRoute);
+  const metadata = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': `${canonicalUrl}#page`,
+        name: isZh ? 'wcx12 研究方向' : 'wcx12 Research',
+        description: isZh ? 'wcx12 的公开研究方向与可核验成果索引。' : 'An index of wcx12 research topics and verifiable public evidence.',
+        url: canonicalUrl,
+        inLanguage: isZh ? 'zh-CN' : 'en',
+        mainEntity: { '@id': `${canonicalUrl}#topics` }
+      },
+      {
+        '@type': 'ItemList',
+        '@id': `${canonicalUrl}#topics`,
+        numberOfItems: topics.length,
+        itemListElement: topics.map(({ child }, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          item: {
+            '@type': 'DefinedTerm',
+            termCode: child.id,
+            name: localized(child.title, language),
+            description: localized(child.description, language),
+            url: absoluteUrl(researchRoute(language, `${child.id}/`))
+          }
+        }))
+      }
+    ]
+  });
+  await writePage(`${relativeRoute}index.html`, renderShell({
+    filePath,
+    title: isZh ? '研究方向' : 'Research',
+    description: isZh ? 'wcx12 的公开研究方向、项目、论文与研究写作索引。' : 'Public research topics, projects, papers, and research writing by wcx12.',
+    body,
+    jsonLd: metadata,
+    schemaType: 'CollectionPage',
+    contentLang: isZh ? 'zh-CN' : 'en',
+    fixedLanguage: language,
+    alternateUrl: alternateRoute
+  }));
+}
+
+async function renderResearchTopic(posts, child, language) {
+  const isZh = language === 'zh';
+  const relativeRoute = researchRoute(language, `${child.id}/`);
+  const alternateRoute = researchRoute(isZh ? 'en' : 'zh', `${child.id}/`);
+  const filePath = path.join(rootDir, relativeRoute, 'index.html');
+  const ctx = createPageContext(filePath);
+  const evidence = evidenceForTopic(child.id, posts);
+  const title = localized(child.title, language);
+  const description = localized(child.description, language);
+  const body = `
+    <header class="research-header">
+      <p class="blog-kicker">${escapeHtml(localized(child.label, language))}</p>
+      <h1>${escapeHtml(title)}</h1>
+      <p>${escapeHtml(description)}</p>
+      <div class="blog-hero-actions">
+        <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '全部研究方向' : 'All research topics'}</a>
+        <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '论文列表' : 'Publications'}</a>
+        <a class="btn btn-outline research-demo-link" href="${ctx.link('index.html')}#research/${escapeHtml(child.id)}">${isZh ? '打开交互演示' : 'Open interactive demo'}</a>
+      </div>
+    </header>
+    ${evidenceSections(ctx, evidence, language)}`;
+  const canonicalUrl = absoluteUrl(relativeRoute);
+  const metadata = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': `${canonicalUrl}#page`,
+        name: title,
+        description,
+        url: canonicalUrl,
+        inLanguage: isZh ? 'zh-CN' : 'en',
+        about: {
+          '@type': 'DefinedTerm',
+          termCode: child.id,
+          name: title,
+          description
+        },
+        mainEntity: { '@id': `${canonicalUrl}#evidence` }
+      },
+      {
+        '@type': 'ItemList',
+        '@id': `${canonicalUrl}#evidence`,
+        numberOfItems: evidence.length,
+        itemListElement: evidence.map((item) => evidenceSchema(item, language))
+      }
+    ]
+  });
+  await writePage(`${relativeRoute}index.html`, renderShell({
+    filePath,
+    title: isZh ? `${title}研究` : `${title} Research`,
+    description,
+    body,
+    jsonLd: metadata,
+    schemaType: 'CollectionPage',
+    contentLang: isZh ? 'zh-CN' : 'en',
+    fixedLanguage: language,
+    alternateUrl: alternateRoute
+  }));
+}
+
+async function renderPublications(language) {
+  const isZh = language === 'zh';
+  const relativeRoute = publicationsRoute(language);
+  const alternateRoute = publicationsRoute(isZh ? 'en' : 'zh');
+  const filePath = path.join(rootDir, relativeRoute, 'index.html');
+  const ctx = createPageContext(filePath);
+  const evidence = staticPublications.map((publication) => ({
+    type: 'ScholarlyArticle',
+    key: `paper:${publication.doi}`,
+    value: publication
+  }));
+  const body = `
+    <header class="research-header">
+      <p class="blog-kicker">${isZh ? '经 DOI 核验' : 'DOI-verified record'}</p>
+      <h1>${isZh ? '论文' : 'Publications'}</h1>
+      <p>${isZh ? 'Chenxu Wang（wcx12）署名的已发表与录用待刊论文。作者顺序与状态按公开记录展示。' : 'Published and in-press papers authored by Chenxu Wang (wcx12), with author order and status shown as verified.'}</p>
+      <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '浏览研究方向' : 'Browse research topics'}</a>
+    </header>
+    <section class="research-section" aria-labelledby="publication-list-title">
+      <div class="research-section-head"><h2 id="publication-list-title">${isZh ? '论文记录' : 'Paper records'}</h2><span>${evidence.length}</span></div>
+      <div class="research-evidence-list">${evidence.map((item) => evidenceHtml(ctx, item, language)).join('')}</div>
+    </section>`;
+  const canonicalUrl = absoluteUrl(relativeRoute);
+  const metadata = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': `${canonicalUrl}#page`,
+        name: isZh ? 'wcx12 论文' : 'wcx12 Publications',
+        description: isZh ? 'Chenxu Wang（wcx12）的 DOI 核验论文列表。' : 'DOI-verified publications authored by Chenxu Wang (wcx12).',
+        url: canonicalUrl,
+        inLanguage: isZh ? 'zh-CN' : 'en',
+        mainEntity: { '@id': `${canonicalUrl}#publications` }
+      },
+      {
+        '@type': 'ItemList',
+        '@id': `${canonicalUrl}#publications`,
+        numberOfItems: evidence.length,
+        itemListOrder: 'https://schema.org/ItemListOrderDescending',
+        itemListElement: staticPublications.map((publication) => publicationSchema(publication, language))
+      }
+    ]
+  });
+  await writePage(`${relativeRoute}index.html`, renderShell({
+    filePath,
+    title: isZh ? '论文' : 'Publications',
+    description: isZh ? 'Chenxu Wang（wcx12）的 DOI 核验论文列表。' : 'DOI-verified publications authored by Chenxu Wang (wcx12).',
+    body,
+    jsonLd: metadata,
+    schemaType: 'CollectionPage',
+    contentLang: isZh ? 'zh-CN' : 'en',
+    fixedLanguage: language,
+    alternateUrl: alternateRoute
+  }));
+}
+
+function publicationArea(publication) {
+  const child = researchChildren.find((item) => publication.interests.includes(item.id));
+  if (!child) return '';
+  if (child.title.en === 'VPR') return child.label.en;
+  return `${child.title.en} / ${child.label.en.replace(/\b\w/g, (letter) => letter.toUpperCase())}`;
+}
+
+async function renderPublicationsMarkdown() {
+  const sections = staticPublications.map((publication) => {
+    const statusLine = publication.status === 'In press'
+      ? '- Status: Journal pre-proof; issue publication scheduled for 2026'
+      : `- Year: ${publication.year}`;
+    const heading = publication.status === 'In press' ? 'In Press' : publication.status;
+    return `## ${heading}\n\n### ${publication.title}\n\n- Authors: ${readableAuthors(publication)}\n- Journal: ${publication.venue}\n${statusLine}\n- DOI: ${publication.link}\n- Research area: ${publicationArea(publication)}`;
+  });
+  const markdown = `# Publications\n\n${sections.join('\n\n')}\n\nOnly publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.\n`;
+  await fs.writeFile(path.join(rootDir, 'publications.md'), markdown);
+}
+
+async function renderResearchPages(posts) {
+  for (const language of ['en', 'zh']) {
+    await renderResearchIndex(posts, language);
+    for (const child of researchChildren) await renderResearchTopic(posts, child, language);
+    await renderPublications(language);
+  }
+  await renderPublicationsMarkdown();
+}
+
 async function renderJsonFeeds(posts) {
   const publicPosts = posts.map((post) => ({
     title: post.title,
@@ -778,11 +1238,17 @@ ${items}
 }
 
 async function renderSitemap(posts) {
+  const researchRoutes = ['en', 'zh'].flatMap((language) => [
+    researchRoute(language),
+    ...researchChildren.map((child) => researchRoute(language, `${child.id}/`)),
+    publicationsRoute(language)
+  ]);
   const urls = [
     '',
     'resume/',
     'blog/',
     'blog/archive/',
+    ...researchRoutes,
     ...posts.map((post) => postUrl(post)),
     ...topicCounts(posts, 'tags').map(([tag]) => `blog/tags/${slugify(tag)}/`)
   ];
@@ -805,6 +1271,9 @@ async function main() {
 
   await fs.rm(outputDir, { recursive: true, force: true });
   await fs.rm(path.join(rootDir, 'resume'), { recursive: true, force: true });
+  await fs.rm(path.join(rootDir, 'research'), { recursive: true, force: true });
+  await fs.rm(path.join(rootDir, 'publications'), { recursive: true, force: true });
+  await fs.rm(path.join(rootDir, 'zh'), { recursive: true, force: true });
   await fs.mkdir(outputDir, { recursive: true });
   await copyAssets();
 
@@ -813,6 +1282,7 @@ async function main() {
     await renderPost(post, posts, renderer);
   }
   await renderResume(renderer);
+  await renderResearchPages(posts);
   await renderIndex(posts);
   await renderArchive(posts);
   await renderTagPages(posts);

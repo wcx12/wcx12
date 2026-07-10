@@ -1,4 +1,4 @@
-name: Build blog
+name: Build site
 
 on:
   workflow_dispatch:
@@ -8,6 +8,8 @@ on:
       - "content/**"
       - "blog-src/**"
       - "scripts/**"
+      - "site-data.js"
+      - "research-config.json"
       - "resume.md"
       - "package.json"
       - "package-lock.json"
@@ -16,8 +18,12 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: build-site-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-blog:
+  build-site:
     if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
     env:
@@ -40,17 +46,17 @@ jobs:
       - name: Validate content
         run: npm run validate
 
-      - name: Build blog
-        run: npm run build:blog
+      - name: Build site
+        run: npm run build:site
 
-      - name: Commit generated blog
+      - name: Commit generated site
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add blog resume rss.xml sitemap.xml package-lock.json
+          git add blog research publications zh resume publications.md rss.xml sitemap.xml package-lock.json
           if git diff --cached --quiet; then
-            echo "No generated blog changes."
+            echo "No generated site changes."
           else
-            git commit -m "Build blog [skip ci]"
+            git commit -m "Build site [skip ci]"
             git push
           fi

@@ -1,5 +1,5 @@
 ﻿<p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&height=240&text=wcx12&fontAlign=50&fontAlignY=36&color=0:00F5FF,30:00D1FF,65:8A2BE2,100:FF2E88&fontColor=ffffff&desc=ML%20Researcher%20%7C%20Point%20Set%20Registration%20%7C%20Anomaly%20Detection&descAlignY=57&animation=twinkling" alt="wcx12 machine learning research profile" />
+  <img src="https://capsule-render.vercel.app/api?type=waving&height=240&text=wcx12&fontAlign=50&fontAlignY=36&color=0:00F5FF,30:00D1FF,65:8A2BE2,100:FF2E88&fontColor=ffffff&desc=ML%20Researcher%20%7C%20Point%20Set%20Registration%20%7C%20Visual%20Place%20Recognition&descAlignY=57&animation=twinkling" alt="wcx12 machine learning research profile" />
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 ## About Me
 - I am studying at **Beijing Institute of Technology** and plan to graduate in **2026**.
-- My research focus is **Point Set Registration** and **Anomaly Detection**.
+- My current research spans **Point-set Registration**, **Visual Place Recognition**, **Medical Image Analysis**, **LLM Agents**, and **AI for Education**.
 - I mainly build with **Python**, machine learning frameworks, and practical engineering workflows.
 - I am currently applying for **Master's / PhD** opportunities.
 
@@ -35,7 +35,8 @@
 
 
 ## Resources
-- Publications: [publications.md](./publications.md)
+- Research index: [research/](./research/)
+- Publications: [publications/](./publications/) (generated from the canonical records in [site-data.js](./site-data.js))
 - Research profile: [resume/](./resume/) (generated from [resume.md](./resume.md))
 - Writing: [blog/](./blog/)
 
@@ -45,17 +46,17 @@ Posts live in [`content/posts`](./content/posts) as Markdown with front matter. 
 ```bash
 npm run new:post "Post Title"
 npm run validate
-npm run build:blog
+npm run build:site
 ```
 
-Generated public pages are written to [`blog/`](./blog), with RSS at [`rss.xml`](./rss.xml) and sitemap at [`sitemap.xml`](./sitemap.xml). The `Build blog` GitHub Action rebuilds and commits generated blog output after content changes.
+Generated public pages are written to [`blog/`](./blog), [`research/`](./research), [`publications/`](./publications), and [`zh/`](./zh), with RSS at [`rss.xml`](./rss.xml) and sitemap at [`sitemap.xml`](./sitemap.xml). The `Build site` GitHub Action rebuilds and commits generated output after content or research-data changes.
 
 ## Quick Notes
 ```text
 [wcx12 Profile: ON]
-- Researching robust geometric learning pipelines
-- Exploring anomaly signals in complex data
-- Building useful open-source tooling
+- Researching robust geometric matching and visual perception
+- Building agentic and education-oriented AI systems
+- Developing useful, reproducible open-source tooling
 ```
 
 <p align="center">

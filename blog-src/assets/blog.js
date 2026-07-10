@@ -12,6 +12,8 @@ const blogI18n = {
     nav_home_title: 'Back to the interactive homepage',
     nav_profile: 'Profile',
     nav_profile_title: 'Open the research profile',
+    nav_research: 'Research',
+    nav_research_title: 'Browse research topics and evidence',
     nav_blog: 'Blog',
     nav_blog_title: 'Open the blog index',
     nav_archive: 'Archive',
@@ -89,6 +91,8 @@ const blogI18n = {
     nav_home_title: '返回互动主页',
     nav_profile: '履历',
     nav_profile_title: '打开研究履历',
+    nav_research: '研究',
+    nav_research_title: '浏览研究主题与成果',
     nav_blog: '博客',
     nav_blog_title: '打开博客首页',
     nav_archive: '归档',
@@ -166,7 +170,8 @@ function normalizeLang(lang) {
   return languages.includes(lang) ? lang : 'en';
 }
 
-let currentLang = normalizeLang(localStorage.getItem(LANG_KEY) || 'en');
+const fixedLanguage = document.documentElement.dataset.fixedLanguage;
+let currentLang = normalizeLang(fixedLanguage || localStorage.getItem(LANG_KEY) || 'en');
 
 function t(key) {
   return blogI18n[currentLang]?.[key] || blogI18n.en[key] || '';
@@ -204,8 +209,8 @@ function minuteLabel(minutes, long = false) {
 }
 
 function applyLanguage(lang = currentLang) {
-  currentLang = normalizeLang(lang);
-  localStorage.setItem(LANG_KEY, currentLang);
+  currentLang = normalizeLang(fixedLanguage || lang);
+  if (!fixedLanguage) localStorage.setItem(LANG_KEY, currentLang);
   const uiLang = currentLang === 'zh' ? 'zh-CN' : 'en';
   document.documentElement.dataset.uiLang = currentLang;
   document.documentElement.lang = uiLang;

@@ -6,10 +6,12 @@
   "scripts": {
     "new:post": "node scripts/new-post.mjs",
     "test:content": "node --test scripts/blog-content.test.mjs",
+    "test:homepage": "node --test scripts/homepage-runtime.test.mjs",
     "test:site": "node --test scripts/site-output.test.mjs",
-    "validate": "node scripts/validate-content.mjs && npm run test:content && npm run test:site",
-    "build:blog": "node scripts/build-blog.mjs",
-    "build": "npm run build:blog"
+    "validate": "node scripts/validate-content.mjs && npm run test:content && npm run test:homepage && npm run test:site",
+    "build:site": "node scripts/build-blog.mjs",
+    "build:blog": "npm run build:site",
+    "build": "npm run build:site"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

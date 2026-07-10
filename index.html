@@ -107,6 +107,7 @@
       </select>
       <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
       <button id="langToggle" class="ghost-btn" type="button">中文</button>
+      <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
       <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
       <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
       <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
@@ -120,8 +121,8 @@
         <h1><span data-i18n="hero_hi">Hi, I am</span> <span class="neon">wcx12</span></h1>
         <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget"></span></p>
         <p class="subtitle" data-i18n="hero_subtitle_html">
-          Point Set Registration + Anomaly Detection.<br />
-          Building clean pipelines and practical open-source tools.
+          3D Geometry + Visual Perception.<br />
+          Building reliable AI systems and practical open-source tools.
         </p>
 
         <div class="hero-actions">
@@ -146,6 +147,24 @@
         <div id="heroPreviewMeta" class="hero-preview-meta"></div>
       </aside>
     </section>
+
+    <noscript>
+      <section class="noscript-notice" aria-labelledby="noscriptTitle">
+        <p class="panel-eyebrow">Static research index</p>
+        <h2 id="noscriptTitle">Explore the research portfolio without JavaScript</h2>
+        <p>The interactive demos require JavaScript, but every research area, publication, project link, and article remains available as a static page.</p>
+        <nav aria-label="Static research pages">
+          <a href="./research/">All research areas</a>
+          <a href="./research/point-cloud-registration/">Point-cloud registration</a>
+          <a href="./research/vpr/">Visual place recognition</a>
+          <a href="./research/medical-image-analysis/">Medical image analysis</a>
+          <a href="./research/agent/">LLM agents</a>
+          <a href="./research/ai4edu/">AI for Education</a>
+          <a href="./publications/">Publications</a>
+          <a href="./zh/research/" lang="zh-CN">中文研究索引</a>
+        </nav>
+      </section>
+    </noscript>
 
     <section class="console" aria-label="interactive panel">
       <div class="console-head">
@@ -181,7 +200,10 @@
             <h2 data-i18n="research_title">Research Interests</h2>
             <p class="muted" data-i18n="research_intro">Choose a sub-interest to see related demos, projects, and papers.</p>
           </div>
-          <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research" hidden>Manage Mapping</button>
+          <div class="view-heading-actions">
+            <a class="btn btn-outline" href="./research/" data-i18n="research_static">Research Index</a>
+            <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research" hidden>Manage Mapping</button>
+          </div>
         </div>
         <section id="featuredResearch" class="featured-research" aria-label="featured research">
           <div class="featured-research-head">
@@ -274,8 +296,13 @@
       </div>
 
       <div class="view" id="publications">
-        <h2 data-i18n="pub_title">Publications</h2>
-        <p class="muted" data-i18n="pub_desc">Publication entries are shown below with status and links.</p>
+        <div class="view-heading">
+          <div>
+            <h2 data-i18n="pub_title">Publications</h2>
+            <p class="muted" data-i18n="pub_desc">Publication entries are shown below with status and links.</p>
+          </div>
+          <a class="btn btn-outline" href="./publications/" data-i18n="publication_static">Publication Index</a>
+        </div>
         <div class="pub-toolbar">
           <select id="pubMode" aria-label="Publication list mode">
             <option value="pagination" data-i18n="mode_pagination">Mode: Pagination</option>
@@ -327,7 +354,7 @@
           </article>
           <article>
             <time>2025</time>
-            <p data-i18n="timeline_2025">Deepening research on point set registration and anomaly signal analysis.</p>
+            <p data-i18n="timeline_2025">Deepening work on point-set registration, visual recognition, and sample-efficient learning.</p>
           </article>
           <article>
             <time>2026</time>
@@ -360,8 +387,8 @@
           </article>
           <article class="resource-card">
             <h3 data-i18n="pub_file_title">Raw Publication File</h3>
-            <p data-i18n="pub_file_desc">Open source markdown list.</p>
-            <a class="btn btn-outline" href="./publications.md" target="_blank" rel="noreferrer" data-i18n="pub_open">Open Publication List</a>
+            <p data-i18n="pub_file_desc">Open the stable publication index with verified citations and DOI links.</p>
+            <a class="btn btn-outline" href="./publications/" data-i18n="pub_open">Open Publication Index</a>
           </article>
         </div>
       </div>
@@ -468,6 +495,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
