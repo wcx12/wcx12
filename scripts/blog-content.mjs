@@ -3,8 +3,8 @@ import path from 'node:path';
 import matter from 'gray-matter';
 
 export const SITE = {
-  title: 'wcx12 Writing',
-  description: 'Technical notes, research logs, and engineering write-ups by wcx12.',
+  title: 'Research Fieldnotes',
+  description: 'Research notes by wcx12 on visual perception, point-cloud registration, VPR, LLM agents, and AI for Education.',
   author: 'wcx12',
   lang: 'en',
   url: (process.env.SITE_URL || 'https://wcx12.github.io/wcx12').replace(/\/$/, '')

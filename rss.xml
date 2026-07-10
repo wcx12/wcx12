@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>wcx12 Writing</title>
+    <title>Research Fieldnotes</title>
     <link>https://wcx12.github.io/wcx12/blog/</link>
-    <description>Technical notes, research logs, and engineering write-ups by wcx12.</description>
+    <description>Research notes by wcx12 on visual perception, point-cloud registration, VPR, LLM agents, and AI for Education.</description>
     <language>en</language>
     <lastBuildDate>Fri, 10 Jul 2026 00:00:00 GMT</lastBuildDate>
 

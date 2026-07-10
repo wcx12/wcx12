@@ -314,9 +314,9 @@ async function renderIndex(posts) {
 
   const body = `
     <section class="blog-hero">
-      <p class="blog-kicker" data-blog-i18n="hero_kicker">Research Writing</p>
-      <h1 data-blog-i18n="hero_title">Technical notes, research logs, and engineering write-ups.</h1>
-      <p data-blog-i18n="hero_desc">This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, and research-topic links.</p>
+      <p class="blog-kicker" data-blog-i18n="hero_kicker">wcx12 Writing</p>
+      <h1 data-blog-i18n="hero_title">Research Fieldnotes</h1>
+      <p data-blog-i18n="hero_desc">Notes from my work in visual perception, point-cloud registration, VPR, LLM agents, and AI for Education: paper reading, experiment logs, and engineering reflections.</p>
       ${hintHtml('hint_hero')}
       <div class="blog-hero-actions">
         <a class="btn btn-primary" href="#recent-writing" data-blog-i18n="hero_read_latest">Read latest</a>
