@@ -543,8 +543,8 @@ const fallbackPublications = {
 const i18n = {
   en: {
     theme_neon: 'Default',
-    theme_warm: 'Warm Archive',
-    theme_mono: 'Mono Lab',
+    theme_warm: 'Warm',
+    theme_mono: 'Black & White',
     hero_kicker: 'Machine Learning Researcher',
     hero_hi: 'Hi, I am',
     hero_status: 'Status',
@@ -728,7 +728,7 @@ const i18n = {
   },
   zh: {
     theme_neon: '默认风格',
-    theme_warm: '暖色档案',
+    theme_warm: '暖色',
     theme_mono: '黑白极简',
     hero_kicker: '机器学习研究者',
     hero_hi: '你好，我是',

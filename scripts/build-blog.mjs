@@ -177,14 +177,14 @@ function renderShell({ filePath, title, description, body, extraHead = '', jsonL
   <header class="blog-topbar">
     <a class="blog-brand" href="${ctx.link('index.html')}">wcx12</a>
     <nav class="blog-nav" aria-label="Blog navigation">
-      <a href="${ctx.link('index.html')}">Home</a>
-      <a href="${ctx.link('blog/index.html')}">Writing</a>
-      <a href="${ctx.link('blog/archive/index.html')}">Archive</a>
-      <a href="${ctx.link('rss.xml')}">RSS</a>
-      <select id="blogThemeSelect" aria-label="Theme">
+      <a href="${ctx.link('index.html')}" title="Back to the interactive homepage" aria-label="Back to the interactive homepage">Home</a>
+      <a href="${ctx.link('blog/index.html')}" title="Open the blog index" aria-label="Open the blog index">Blog</a>
+      <a href="${ctx.link('blog/archive/index.html')}" title="Browse all posts by date" aria-label="Browse all posts by date">Archive</a>
+      <a href="${ctx.link('rss.xml')}" title="Open the RSS feed for a feed reader" aria-label="Open the RSS feed for a feed reader">RSS</a>
+      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
         <option value="neon">Default</option>
-        <option value="warm">Warm Archive</option>
-        <option value="mono">Mono Lab</option>
+        <option value="warm">Warm</option>
+        <option value="mono">Black &amp; White</option>
       </select>
     </nav>
   </header>
