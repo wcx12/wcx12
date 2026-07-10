@@ -556,6 +556,8 @@
   color: #b8f3ff;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .blog-content blockquote {

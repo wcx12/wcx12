@@ -64,10 +64,12 @@ test('single-post blog avoids duplicate discovery sections', async () => {
 test('blog presents the agreed fieldnotes identity', async () => {
   const indexSource = await fs.readFile(path.join(rootDir, 'blog', 'index.html'), 'utf8');
   const clientSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
+  const styleSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8');
   assert.match(indexSource, />Research Fieldnotes<\/h1>/);
   assert.match(clientSource, /hero_title:\s*'知研札记'/);
   assert.match(clientSource, /hero_kicker:\s*'wcx12 的研究手记'/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
+  assert.match(styleSource, /\.blog-content a\s*\{[^}]*overflow-wrap:\s*anywhere/s, 'long DOI links must wrap on mobile');
 });
 
 test('generated code blocks and article contents remain keyboard reachable', async () => {
