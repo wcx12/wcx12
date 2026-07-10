@@ -1,4 +1,7 @@
 .blog-body {
+  --blog-font-ui: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --blog-font-reading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --blog-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
   min-height: 100dvh;
   background: var(--page-bg);
   color: var(--text);
@@ -66,7 +69,7 @@
   padding: 8px 11px;
   background: var(--card-bg);
   color: var(--text);
-  font: 700 0.88rem/1 "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 700 0.88rem/1 var(--blog-font-ui);
   letter-spacing: 0;
   text-decoration: none;
   white-space: nowrap;
@@ -115,7 +118,7 @@
 .blog-card-meta,
 .blog-tag,
 .blog-section-label {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--blog-font-mono);
 }
 
 .blog-kicker,
@@ -171,7 +174,7 @@
 .blog-stat span {
   display: block;
   color: var(--muted);
-  font: 700 0.72rem "JetBrains Mono", monospace;
+  font: 700 0.72rem var(--blog-font-mono);
 }
 
 .blog-stat strong {
@@ -293,7 +296,7 @@
   padding: 11px 13px;
   background: var(--field-bg);
   color: var(--text);
-  font: 500 1rem "Space Grotesk", system-ui, sans-serif;
+  font: 500 1rem var(--blog-font-ui);
 }
 
 .blog-search input:focus {
@@ -378,7 +381,7 @@
 
 .blog-content {
   color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--blog-font-reading);
   font-size: 1.03rem;
   font-weight: 400;
   line-height: 1.72;
@@ -459,7 +462,7 @@
   padding: 0.12em 0.34em;
   background: color-mix(in srgb, var(--cyan) 9%, transparent);
   color: var(--text);
-  font: 0.9em "JetBrains Mono", monospace;
+  font: 0.9em var(--blog-font-mono);
 }
 
 .code-frame {
@@ -481,7 +484,7 @@
   padding: 7px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: #c9d1d9;
-  font: 700 0.72rem "JetBrains Mono", monospace;
+  font: 700 0.72rem var(--blog-font-mono);
 }
 
 .code-copy {
@@ -492,7 +495,7 @@
   background: rgba(255, 255, 255, 0.06);
   color: #f0f6fc;
   cursor: pointer;
-  font: 700 0.7rem "JetBrains Mono", monospace;
+  font: 700 0.7rem var(--blog-font-mono);
 }
 
 .code-copy:hover,
@@ -506,8 +509,13 @@
   margin: 0;
   padding: 14px;
   overflow: auto;
+  font-family: var(--blog-font-mono);
   font-size: 0.9rem;
   line-height: 1.62;
+}
+
+.code-frame code {
+  font-family: inherit;
 }
 
 .hljs-comment,
@@ -559,7 +567,7 @@
 .blog-toc h2 {
   margin: 0 0 10px;
   color: var(--cyan);
-  font: 700 0.78rem "JetBrains Mono", monospace;
+  font: 700 0.78rem var(--blog-font-mono);
   text-transform: uppercase;
 }
 
@@ -604,7 +612,7 @@
 .blog-prev-next span {
   display: block;
   color: var(--muted);
-  font: 700 0.72rem "JetBrains Mono", monospace;
+  font: 700 0.72rem var(--blog-font-mono);
 }
 
 .footnotes {
