@@ -124,12 +124,13 @@
             </div>
             <p id="interestDescription" class="muted"></p>
             <div class="interest-section-tabs" role="tablist" aria-label="Research detail sections">
-              <button class="active" type="button" data-interest-panel="animation" data-i18n="section_animation">Animation</button>
-              <button type="button" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
-              <button type="button" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
-              <button type="button" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
+              <button class="active" type="button" role="tab" aria-selected="true" data-interest-panel="animation" data-i18n="section_animation">Animation</button>
+              <button type="button" role="tab" aria-selected="false" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
+              <button type="button" role="tab" aria-selected="false" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
+              <button type="button" role="tab" aria-selected="false" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
             </div>
-            <canvas id="interestCanvas" aria-label="research interest animation"></canvas>
+            <canvas id="interestCanvas" tabindex="-1" aria-label="research interest animation" aria-describedby="interestCanvasStatus"></canvas>
+            <p id="interestCanvasStatus" class="sr-only" aria-live="polite"></p>
             <div class="interest-related">
               <article class="interest-project-panel">
                 <h4 data-i18n="related_projects">Related Projects</h4>

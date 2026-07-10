@@ -95,6 +95,7 @@ const interestDetail = document.querySelector('.interest-detail');
 const interestSectionTabs = document.querySelectorAll('[data-interest-panel]');
 const interestCanvas = document.getElementById('interestCanvas');
 const interestCtx = interestCanvas.getContext('2d');
+const interestCanvasStatus = document.getElementById('interestCanvasStatus');
 const interestProjects = document.getElementById('interestProjects');
 const interestPapers = document.getElementById('interestPapers');
 const interestPosts = document.getElementById('interestPosts');
@@ -106,6 +107,7 @@ let currentLang = ['en', 'zh'].includes(localStorage.getItem(LANG_KEY)) ? localS
 let currentTheme = localStorage.getItem('wcx12-theme') || 'neon';
 let allRepos = [];
 let filteredRepos = [];
+let repoDataSource = 'snapshot';
 let loadedPublications = [];
 let blogPosts = [];
 let filteredBlogPosts = [];
@@ -116,6 +118,7 @@ let hoveredRepo = null;
 let hoveredMapField = null;
 let highlightedRepo = null;
 let highlightedPaper = null;
+let readmeReturnFocus = null;
 let activeInterestPanel = 'animation';
 let repoMapTick = 0;
 let activeInterestId = 'point-cloud-registration';
@@ -198,6 +201,32 @@ const educationInteraction = {
   masteryBoost: 0
 };
 
+const medicalCases = [
+  { id: 'C01', uncertainty: 0.82, finding: 'Normal', seed: 11 },
+  { id: 'C02', uncertainty: 0.31, finding: 'Normal', seed: 23 },
+  { id: 'C03', uncertainty: 0.74, finding: 'Finding A', seed: 37 },
+  { id: 'C04', uncertainty: 0.57, finding: 'Normal', seed: 43 },
+  { id: 'C05', uncertainty: 0.91, finding: 'Finding B', seed: 59 },
+  { id: 'C06', uncertainty: 0.46, finding: 'Normal', seed: 67 },
+  { id: 'C07', uncertainty: 0.68, finding: 'Finding A', seed: 79 },
+  { id: 'C08', uncertainty: 0.22, finding: 'Normal', seed: 83 },
+  { id: 'C09', uncertainty: 0.79, finding: 'Finding B', seed: 97 },
+  { id: 'C10', uncertainty: 0.52, finding: 'Normal', seed: 101 },
+  { id: 'C11', uncertainty: 0.63, finding: 'Finding A', seed: 113 },
+  { id: 'C12', uncertainty: 0.38, finding: 'Normal', seed: 127 }
+];
+
+const medicalInteraction = {
+  active: false,
+  dragging: false,
+  x: 0.5,
+  y: 0.5,
+  selected: 4,
+  hoverIndex: null,
+  labeled: new Set([1, 7]),
+  pulse: 0
+};
+
 const ORCID_ID = '0009-0005-6139-4327';
 
 const registrationState = {
@@ -247,9 +276,10 @@ const localRepos = [
   {
     name: 'FusionTrack',
     description: 'Graduation thesis and tracking-related research artifacts.',
-    language: 'TeX',
+    language: 'Python',
     stargazers_count: 0,
-    updated_at: '2026-05-16T15:24:53Z',
+    updated_at: '2026-06-02T16:16:58Z',
+    default_branch: 'main',
     html_url: 'https://github.com/wcx12/FusionTrack',
     readme_url: 'https://raw.githubusercontent.com/wcx12/FusionTrack/main/README.md',
     interests: ['point-cloud-registration']
@@ -259,7 +289,8 @@ const localRepos = [
     description: 'Interactive GitHub profile and research homepage.',
     language: 'JavaScript',
     stargazers_count: 2,
-    updated_at: '2026-05-16T15:56:07Z',
+    updated_at: '2026-07-10T08:19:32Z',
+    default_branch: 'main',
     html_url: 'https://github.com/wcx12/wcx12',
     readme_url: 'https://raw.githubusercontent.com/wcx12/wcx12/main/README.md',
     interests: []
@@ -270,6 +301,7 @@ const localRepos = [
     language: 'TypeScript',
     stargazers_count: 1,
     updated_at: '2026-05-13T11:45:15Z',
+    default_branch: 'master',
     html_url: 'https://github.com/wcx12/hlpp-crossword',
     readme_url: 'https://raw.githubusercontent.com/wcx12/hlpp-crossword/master/README.md',
     interests: ['ai4edu']
@@ -280,6 +312,7 @@ const localRepos = [
     language: null,
     stargazers_count: 0,
     updated_at: '2026-05-06T14:30:11Z',
+    default_branch: 'main',
     html_url: 'https://github.com/wcx12/codex-pet-battle',
     readme_url: 'https://raw.githubusercontent.com/wcx12/codex-pet-battle/main/README.md',
     interests: ['agent']
@@ -289,10 +322,33 @@ const localRepos = [
     description: 'Mathematics enrichment notes and education resources.',
     language: 'TeX',
     stargazers_count: 0,
-    updated_at: '2026-05-05T03:08:07Z',
+    updated_at: '2026-07-05T06:45:22Z',
+    default_branch: 'main',
     html_url: 'https://github.com/wcx12/shuxuepeiyou',
     readme_url: 'https://raw.githubusercontent.com/wcx12/shuxuepeiyou/main/README.md',
     interests: ['ai4edu']
+  },
+  {
+    name: 'major-intel',
+    description: 'Trusted RAG system for college major intelligence.',
+    language: 'Python',
+    stargazers_count: 2,
+    updated_at: '2026-06-18T06:54:19Z',
+    default_branch: 'main',
+    html_url: 'https://github.com/wcx12/major-intel',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/major-intel/main/README.md',
+    interests: ['agent']
+  },
+  {
+    name: 'TrendRadar',
+    description: 'AI-assisted public-opinion and trend monitoring with multi-platform feeds.',
+    language: null,
+    stargazers_count: 0,
+    updated_at: '2026-04-27T05:04:51Z',
+    default_branch: 'master',
+    html_url: 'https://github.com/wcx12/TrendRadar',
+    readme_url: 'https://raw.githubusercontent.com/wcx12/TrendRadar/master/README.md',
+    interests: []
   },
   {
     name: 'tetrahedron-visualizer',
@@ -300,6 +356,7 @@ const localRepos = [
     language: 'JavaScript',
     stargazers_count: 0,
     updated_at: '2026-04-18T15:51:40Z',
+    default_branch: 'master',
     html_url: 'https://github.com/wcx12/tetrahedron-visualizer',
     readme_url: 'https://raw.githubusercontent.com/wcx12/tetrahedron-visualizer/master/README.md',
     interests: ['ai4edu', 'point-cloud-registration']
@@ -310,6 +367,7 @@ const localRepos = [
     language: 'TeX',
     stargazers_count: 0,
     updated_at: '2024-10-05T11:04:02Z',
+    default_branch: 'main',
     html_url: 'https://github.com/wcx12/BIT-The-mathematical-foundation-of-big-Data',
     readme_url: 'https://raw.githubusercontent.com/wcx12/BIT-The-mathematical-foundation-of-big-Data/main/README.md',
     interests: ['ai4edu']
@@ -655,6 +713,9 @@ const i18n = {
     page_next: 'Next',
     page_info: 'Page {page}/{total}',
     repo_count: 'Showing {shown}/{total} repositories',
+    repo_source_live: 'live GitHub data',
+    repo_source_mixed: 'GitHub data with cached fallback',
+    repo_source_snapshot: 'cached repository snapshot',
     pub_count: 'Showing {shown}/{total} publications',
     infinite_hint: 'Scroll down to auto-load more',
     timeline_title: 'Timeline',
@@ -840,6 +901,9 @@ const i18n = {
     page_next: '下一页',
     page_info: '第 {page}/{total} 页',
     repo_count: '显示 {shown}/{total} 个仓库',
+    repo_source_live: 'GitHub 实时数据',
+    repo_source_mixed: 'GitHub 数据与本地快照',
+    repo_source_snapshot: '本地仓库快照',
     pub_count: '显示 {shown}/{total} 篇论文',
     infinite_hint: '向下滚动自动加载更多',
     timeline_title: '时间线',
@@ -1230,7 +1294,7 @@ function renderInterestRail() {
         <span>${textFor(domain.label)}</span>
       </div>
       ${domain.children.map((child) => `
-        <button class="interest-child ${child.id === activeInterestId ? 'active' : ''}" type="button" data-interest="${child.id}">
+        <button class="interest-child ${child.id === activeInterestId ? 'active' : ''}" type="button" data-interest="${child.id}" ${child.id === activeInterestId ? 'aria-current="true"' : ''}>
           ${textFor(child.title)}
           <small>${textFor(child.label)}</small>
         </button>
@@ -1357,7 +1421,10 @@ function setInterestPanel(panel) {
   activeInterestPanel = ['animation', 'projects', 'papers', 'writing'].includes(panel) ? panel : 'animation';
   if (interestDetail) interestDetail.dataset.panel = activeInterestPanel;
   interestSectionTabs.forEach((button) => {
-    button.classList.toggle('active', button.dataset.interestPanel === activeInterestPanel);
+    const active = button.dataset.interestPanel === activeInterestPanel;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
+    button.tabIndex = active ? 0 : -1;
   });
 }
 
@@ -1383,6 +1450,12 @@ function bindItemToInterestAnimation(item, kind, interestId) {
     vprInteraction.targetRoute = vprInteraction.route;
     vprInteraction.selected = bestVprCandidate()?.id || null;
     vprInteraction.energy = 1;
+  } else if (resolvedInterestId === 'medical-image-analysis') {
+    medicalInteraction.active = true;
+    medicalInteraction.selected = hash % medicalCases.length;
+    medicalInteraction.hoverIndex = medicalInteraction.selected;
+    medicalInteraction.pulse = 1;
+    updateInterestCanvasAccessibility();
   } else if (resolvedInterestId === 'agent') {
     agentInteraction.active = true;
     agentInteraction.taskIndex = hay.includes('readme') || kind === 'paper' ? 1 : 0;
@@ -1889,6 +1962,7 @@ function renderResearchInterest() {
   interestTag.textContent = textFor(entry.child.label);
   interestDescription.textContent = textFor(entry.child.description);
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
+  updateInterestCanvasAccessibility();
   setInterestPanel(activeInterestPanel);
   renderInterestRail();
   renderRelatedList(interestProjects, relatedRepos(), i18n[currentLang].no_related_projects, 'repo');
@@ -1925,8 +1999,21 @@ function applyTheme(theme, options = {}) {
 }
 
 themeSelect.addEventListener('change', () => applyTheme(themeSelect.value, { source: themeSelect }));
-interestSectionTabs.forEach((button) => {
+interestSectionTabs.forEach((button, index) => {
   button.addEventListener('click', () => setInterestPanel(button.dataset.interestPanel));
+  button.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const lastIndex = interestSectionTabs.length - 1;
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? lastIndex
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + interestSectionTabs.length) % interestSectionTabs.length;
+    const next = interestSectionTabs[nextIndex];
+    setInterestPanel(next.dataset.interestPanel);
+    next.focus();
+  });
 });
 
 function openResearchManager() {
@@ -2259,13 +2346,53 @@ function escapeHtml(value) {
   }[char]));
 }
 
-function safeMarkdownUrl(url) {
-  const value = String(url || '').trim();
-  if (/^(javascript|data):/i.test(value)) return '#';
-  return escapeHtml(value);
+function markdownUrlTarget(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  if (value.startsWith('<')) {
+    const close = value.indexOf('>');
+    if (close > 1) return value.slice(1, close);
+  }
+  const titled = value.match(/^(\S+?)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?$/);
+  return titled?.[1] || value;
 }
 
-function sanitizeMarkdownHtml(rawHtml) {
+function validatedReadmeUrl(candidate, kind = 'link') {
+  try {
+    const parsed = new URL(candidate, window.location.href);
+    const allowedProtocols = kind === 'image'
+      ? new Set(['http:', 'https:'])
+      : new Set(['http:', 'https:', 'mailto:', 'tel:']);
+    return allowedProtocols.has(parsed.protocol) ? parsed.href : '#';
+  } catch {
+    return '#';
+  }
+}
+
+function resolveReadmeUrl(rawUrl, repo, kind = 'link') {
+  const value = markdownUrlTarget(rawUrl);
+  if (!value) return '#';
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(value)) return validatedReadmeUrl(value, kind);
+  if (!repo) return validatedReadmeUrl(value, kind);
+
+  const repositoryUrl = String(repo.html_url || `https://github.com/${GITHUB_OWNER}/${repo.name}`).replace(/\/$/, '');
+  const branch = repo.default_branch || 'main';
+  if (value.startsWith('#')) return validatedReadmeUrl(`${repositoryUrl}/blob/${branch}/README.md${value}`, kind);
+  const relativePath = value.replace(/^\.\//, '').replace(/^\//, '');
+  const base = kind === 'image'
+    ? `https://raw.githubusercontent.com/${GITHUB_OWNER}/${repo.name}/${branch}/`
+    : `${repositoryUrl}/blob/${branch}/`;
+  try {
+    return validatedReadmeUrl(new URL(relativePath, base).href, kind);
+  } catch {
+    return '#';
+  }
+}
+
+function safeMarkdownUrl(url, repo, kind = 'link') {
+  return escapeHtml(resolveReadmeUrl(url, repo, kind));
+}
+
+function sanitizeMarkdownHtml(rawHtml, repo) {
   const template = document.createElement('template');
   template.innerHTML = String(rawHtml || '');
   const allowedTags = new Set(['A', 'B', 'BR', 'CODE', 'EM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'I', 'IMG', 'P', 'SPAN', 'STRONG', 'SUB', 'SUP']);
@@ -2281,8 +2408,10 @@ function sanitizeMarkdownHtml(rawHtml) {
         node.removeAttribute(attr.name);
         return;
       }
-      if ((name === 'href' || name === 'src') && /^(javascript|data):/i.test(attr.value.trim())) {
-        node.removeAttribute(attr.name);
+      if (name === 'href' || name === 'src') {
+        const resolved = resolveReadmeUrl(attr.value, repo, name === 'src' ? 'image' : 'link');
+        if (resolved === '#') node.removeAttribute(attr.name);
+        else node.setAttribute(attr.name, resolved);
       }
     });
     if (node.tagName === 'A') {
@@ -2300,13 +2429,20 @@ function isMarkdownHtmlLine(line) {
   return /^<\/?(a|b|br|code|em|h[1-6]|hr|i|img|p|span|strong|sub|sup)\b/i.test(line);
 }
 
-function renderInlineMarkdown(text) {
-  return escapeHtml(text)
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `<img src="${safeMarkdownUrl(url)}" alt="${escapeHtml(alt)}" loading="lazy" />`)
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => `<a href="${safeMarkdownUrl(url)}" target="_blank" rel="noreferrer">${label}</a>`)
+function renderInlineMarkdown(text, repo) {
+  const tokens = [];
+  const stash = (html) => {
+    const index = tokens.push(html) - 1;
+    return `\u0000${index}\u0000`;
+  };
+  const withLinks = String(text || '')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => stash(`<img src="${safeMarkdownUrl(url, repo, 'image')}" alt="${escapeHtml(alt)}" loading="lazy" />`))
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => stash(`<a href="${safeMarkdownUrl(url, repo)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`));
+  return escapeHtml(withLinks)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\u0000(\d+)\u0000/g, (_, index) => tokens[Number(index)] || '');
 }
 
 function markdownTableCells(line) {
@@ -2317,17 +2453,17 @@ function isMarkdownTableSeparator(line) {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
 }
 
-function renderMarkdownTable(rows) {
+function renderMarkdownTable(rows, repo) {
   const [head, ...body] = rows;
   return `
     <table>
-      <thead><tr>${head.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join('')}</tr></thead>
-      <tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join('')}</tr>`).join('')}</tbody>
+      <thead><tr>${head.map((cell) => `<th>${renderInlineMarkdown(cell, repo)}</th>`).join('')}</tr></thead>
+      <tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell, repo)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table>
   `;
 }
 
-function markdownToHtml(markdown) {
+function markdownToHtml(markdown, repo) {
   const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
   const html = [];
   let paragraph = [];
@@ -2337,7 +2473,7 @@ function markdownToHtml(markdown) {
 
   const closeParagraph = () => {
     if (!paragraph.length) return;
-    html.push(`<p>${paragraph.map(renderInlineMarkdown).join('<br />')}</p>`);
+    html.push(`<p>${paragraph.map((line) => renderInlineMarkdown(line, repo)).join('<br />')}</p>`);
     paragraph = [];
   };
 
@@ -2379,7 +2515,7 @@ function markdownToHtml(markdown) {
     if (isMarkdownHtmlLine(trimmed)) {
       closeParagraph();
       closeList();
-      html.push(sanitizeMarkdownHtml(trimmed));
+      html.push(sanitizeMarkdownHtml(trimmed, repo));
       return;
     }
 
@@ -2393,7 +2529,7 @@ function markdownToHtml(markdown) {
         lines[cursor] = '';
         cursor += 1;
       }
-      html.push(renderMarkdownTable(rows));
+      html.push(renderMarkdownTable(rows, repo));
       return;
     }
 
@@ -2404,7 +2540,7 @@ function markdownToHtml(markdown) {
       closeParagraph();
       closeList();
       const level = Math.min(heading[1].length + 1, 6);
-      html.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      html.push(`<h${level}>${renderInlineMarkdown(heading[2], repo)}</h${level}>`);
       return;
     }
 
@@ -2425,14 +2561,14 @@ function markdownToHtml(markdown) {
         listType = nextType;
         html.push(`<${listType}>`);
       }
-      html.push(`<li>${renderInlineMarkdown((unordered || ordered)[1])}</li>`);
+      html.push(`<li>${renderInlineMarkdown((unordered || ordered)[1], repo)}</li>`);
       return;
     }
 
     if (trimmed.startsWith('>')) {
       closeParagraph();
       closeList();
-      html.push(`<blockquote>${renderInlineMarkdown(trimmed.replace(/^>\s?/, ''))}</blockquote>`);
+      html.push(`<blockquote>${renderInlineMarkdown(trimmed.replace(/^>\s?/, ''), repo)}</blockquote>`);
       return;
     }
 
@@ -2470,7 +2606,7 @@ async function openRepoReadme(repoName) {
     const response = await fetch(repo.readme_url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const markdown = await response.text();
-    readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown)}</div>`;
+    readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown, repo)}</div>`;
   } catch {
     readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box"><p>${i18n[currentLang].readme_unavailable}</p></div>`;
   }
@@ -2480,6 +2616,9 @@ async function openRepoReadme(repoName) {
 
 function openReadmeDrawer(repo, html) {
   if (!readmeDrawer || !repo) return;
+  if (!readmeDrawer.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+    readmeReturnFocus = document.activeElement;
+  }
   readmeDrawerKicker.textContent = i18n[currentLang].repo_preview_title;
   readmeDrawerTitle.textContent = repo.name;
   readmeDrawerBody.innerHTML = html || '';
@@ -2487,17 +2626,41 @@ function openReadmeDrawer(repo, html) {
   readmeDrawerLink.textContent = i18n[currentLang].details_project_link_text;
   readmeDrawer.classList.add('open');
   readmeDrawer.setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => readmeDrawerClose?.focus());
 }
 
 function closeReadmeDrawer() {
   if (!readmeDrawer) return;
+  const wasOpen = readmeDrawer.classList.contains('open');
   readmeDrawer.classList.remove('open');
   readmeDrawer.setAttribute('aria-hidden', 'true');
+  if (wasOpen && readmeReturnFocus?.isConnected) readmeReturnFocus.focus();
+  readmeReturnFocus = null;
 }
 
 readmeDrawerClose?.addEventListener('click', closeReadmeDrawer);
 readmeDrawer?.addEventListener('click', (event) => {
   if (event.target === readmeDrawer) closeReadmeDrawer();
+});
+readmeDrawer?.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeReadmeDrawer();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusable = Array.from(readmeDrawer.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+    .filter((item) => item instanceof HTMLElement && item.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 });
 
 function openPaperDetail(title) {
@@ -2585,9 +2748,15 @@ function renderRepos(repos, preserveScroll = false) {
     repoPageInfo.textContent = '';
   }
 
+  const sourceLabel = {
+    live: i18n[currentLang].repo_source_live,
+    mixed: i18n[currentLang].repo_source_mixed,
+    snapshot: i18n[currentLang].repo_source_snapshot
+  }[repoDataSource] || i18n[currentLang].repo_source_snapshot;
   repoCount.textContent = i18n[currentLang].repo_count
     .replace('{shown}', String(shown.length))
-    .replace('{total}', String(total));
+    .replace('{total}', String(total))
+    + ` · ${sourceLabel}`;
 
   if (!shown.length) {
     repoGrid.innerHTML = `<p class="muted">${i18n[currentLang].no_repos}</p>`;
@@ -2974,12 +3143,63 @@ function isVprInterestActive() {
   return activeInterestAnimationType() === 'vpr';
 }
 
+function isMedicalImageInterestActive() {
+  return activeInterestAnimationType() === 'medical-image';
+}
+
 function isAgentInterestActive() {
   return activeInterestAnimationType() === 'agent';
 }
 
 function isEducationInterestActive() {
   return activeInterestAnimationType() === 'education';
+}
+
+function medicalLearningScore() {
+  return Math.min(94, 54 + medicalInteraction.labeled.size * 4);
+}
+
+function medicalFindingLabel(sample) {
+  if (currentLang !== 'zh') return sample.finding;
+  if (sample.finding === 'Normal') return '正常';
+  return sample.finding.replace('Finding', '病灶');
+}
+
+function medicalStatusText() {
+  const sample = medicalCases[medicalInteraction.selected] || medicalCases[0];
+  const labeled = medicalInteraction.labeled.has(medicalInteraction.selected);
+  if (currentLang === 'zh') {
+    return `${sample.id}，不确定度 ${Math.round(sample.uncertainty * 100)}%，${labeled ? `已标注为${medicalFindingLabel(sample)}` : '待标注'}。已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}，模型得分 ${medicalLearningScore()}%。使用方向键选择样本，按回车标注，按 R 重置。`;
+  }
+  return `${sample.id}, uncertainty ${Math.round(sample.uncertainty * 100)}%, ${labeled ? `labeled ${sample.finding}` : 'unlabeled'}. ${medicalInteraction.labeled.size}/${medicalCases.length} labeled, model score ${medicalLearningScore()}%. Use arrow keys to select, Enter to annotate, and R to reset.`;
+}
+
+function updateInterestCanvasAccessibility() {
+  const type = activeInterestAnimationType();
+  const labels = currentLang === 'zh'
+    ? {
+      'point-cloud': '点云配准交互动画。拖动指针观察点集对齐。',
+      vpr: '视觉地点识别交互动画。移动指针匹配路线中的地点。',
+      'medical-image': '医学影像主动学习交互。选择高不确定度样本并进行标注。',
+      agent: '人类与 AI 协作完成任务的交互动画。',
+      education: '机器人教师辅助学生学习的交互动画。'
+    }
+    : {
+      'point-cloud': 'Interactive point-cloud registration. Drag to inspect point-set alignment.',
+      vpr: 'Interactive visual place recognition. Move along the route to match a place.',
+      'medical-image': 'Interactive medical-image active learning. Select uncertain samples to annotate.',
+      agent: 'Interactive human and AI task collaboration.',
+      education: 'Interactive robot teacher supporting a learner.'
+    };
+  interestCanvas.setAttribute('aria-label', labels[type] || (currentLang === 'zh' ? '研究方向交互动画' : 'Research interest interaction'));
+  const keyboardInteractive = type === 'medical-image';
+  interestCanvas.tabIndex = keyboardInteractive ? 0 : -1;
+  if (!keyboardInteractive && document.activeElement === interestCanvas) interestCanvas.blur();
+  if (interestCanvasStatus) {
+    interestCanvasStatus.textContent = type === 'medical-image'
+      ? medicalStatusText()
+      : labels[type] || '';
+  }
 }
 
 function clamp01(value) {
@@ -4701,6 +4921,246 @@ function drawEducationGarden(width, height, t, primary, secondary, muted) {
   }
 }
 
+function medicalActiveLearningLayout(width, height) {
+  const compact = width < 540 || height < 230;
+  const pad = compact ? 10 : 16;
+  const top = compact ? 32 : 38;
+  const columns = 4;
+  const rows = 3;
+  const gap = compact ? 5 : 8;
+  const gridWidth = compact ? width - pad * 2 : Math.max(280, width * 0.62);
+  const gridHeight = compact ? Math.max(102, height * 0.53) : height - top - pad;
+  const cellWidth = (gridWidth - gap * (columns - 1)) / columns;
+  const cellHeight = (gridHeight - gap * (rows - 1)) / rows;
+  const tiles = medicalCases.map((sample, index) => ({
+    ...sample,
+    index,
+    x: pad + (index % columns) * (cellWidth + gap),
+    y: top + Math.floor(index / columns) * (cellHeight + gap),
+    w: cellWidth,
+    h: cellHeight
+  }));
+  const detailY = compact ? top + gridHeight + 9 : top;
+  return {
+    compact,
+    tiles,
+    detail: compact
+      ? { x: pad, y: detailY, w: width - pad * 2, h: Math.max(42, height - detailY - 8) }
+      : { x: pad + gridWidth + 18, y: detailY, w: width - (pad + gridWidth + 18) - pad, h: gridHeight }
+  };
+}
+
+function drawMedicalScan(ctx, tile, sample, options = {}) {
+  const { selected = false, labeled = false, large = false, primary, secondary, muted } = options;
+  const radius = large ? 12 : 7;
+  drawRoundedRect(ctx, tile.x, tile.y, tile.w, tile.h, radius);
+  ctx.fillStyle = large ? 'rgba(255,255,255,0.07)' : 'rgba(3,7,18,0.72)';
+  ctx.fill();
+
+  ctx.save();
+  drawRoundedRect(ctx, tile.x + 1, tile.y + 1, tile.w - 2, tile.h - 2, Math.max(3, radius - 1));
+  ctx.clip();
+  const cx = tile.x + tile.w * 0.5;
+  const cy = tile.y + tile.h * (large ? 0.46 : 0.48);
+  const bodyW = tile.w * (large ? 0.58 : 0.5);
+  const bodyH = tile.h * (large ? 0.68 : 0.58);
+  const drift = ((sample.seed % 7) - 3) * tile.w * 0.006;
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, bodyW * 0.58, bodyH * 0.55, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(232,240,255,0.13)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(232,240,255,0.2)';
+  ctx.lineWidth = large ? 1.4 : 0.8;
+  ctx.stroke();
+
+  [-1, 1].forEach((side) => {
+    ctx.beginPath();
+    ctx.ellipse(cx + side * bodyW * 0.2 + drift, cy, bodyW * 0.18, bodyH * 0.36, side * 0.05, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(3,7,18,0.78)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(232,240,255,0.16)';
+    ctx.stroke();
+  });
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - bodyH * 0.35);
+  ctx.lineTo(cx, cy + bodyH * 0.36);
+  ctx.strokeStyle = 'rgba(232,240,255,0.22)';
+  ctx.lineWidth = large ? 2 : 1;
+  ctx.stroke();
+
+  if (sample.finding !== 'Normal') {
+    const side = sample.seed % 2 ? -1 : 1;
+    const fx = cx + side * bodyW * 0.2;
+    const fy = cy + ((sample.seed % 5) - 2) * bodyH * 0.07;
+    ctx.beginPath();
+    ctx.arc(fx, fy, Math.max(2.2, Math.min(tile.w, tile.h) * (large ? 0.065 : 0.045)), 0, Math.PI * 2);
+    ctx.fillStyle = labeled ? primary : 'rgba(255,255,255,0.7)';
+    ctx.fill();
+    if (large || selected) {
+      ctx.beginPath();
+      ctx.arc(fx, fy, Math.max(5, Math.min(tile.w, tile.h) * 0.1), 0, Math.PI * 2);
+      ctx.strokeStyle = labeled ? primary : secondary;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+
+  for (let index = 0; index < (large ? 18 : 7); index += 1) {
+    const px = tile.x + ((sample.seed * 13 + index * 37) % 89) / 89 * tile.w;
+    const py = tile.y + ((sample.seed * 17 + index * 29) % 83) / 83 * tile.h;
+    ctx.fillStyle = `rgba(255,255,255,${0.025 + (index % 3) * 0.012})`;
+    ctx.fillRect(px, py, large ? 1.4 : 0.8, large ? 1.4 : 0.8);
+  }
+  ctx.restore();
+
+  drawRoundedRect(ctx, tile.x, tile.y, tile.w, tile.h, radius);
+  ctx.strokeStyle = selected ? secondary : labeled ? primary : 'rgba(255,255,255,0.16)';
+  ctx.lineWidth = selected ? 2.2 : labeled ? 1.5 : 1;
+  ctx.stroke();
+
+  if (!large) {
+    ctx.fillStyle = selected ? secondary : labeled ? primary : muted;
+    ctx.font = `${tile.w < 62 ? 7.5 : 8.5}px JetBrains Mono, monospace`;
+    ctx.fillText(sample.id, tile.x + 5, tile.y + 11);
+    const meterWidth = Math.max(8, tile.w - 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(tile.x + 5, tile.y + tile.h - 5, meterWidth, 2);
+    ctx.fillStyle = labeled ? primary : sample.uncertainty > 0.7 ? secondary : muted;
+    ctx.fillRect(tile.x + 5, tile.y + tile.h - 5, meterWidth * (labeled ? 0.16 : sample.uncertainty), 2);
+  }
+}
+
+function drawMedicalActiveLearning(width, height, t, primary, secondary, muted) {
+  const layout = medicalActiveLearningLayout(width, height);
+  const selected = medicalCases[medicalInteraction.selected] || medicalCases[0];
+  const isLabeled = medicalInteraction.labeled.has(medicalInteraction.selected);
+  const textColor = themeColor('--text') || '#f5f5f5';
+  medicalInteraction.pulse *= 0.9;
+
+  interestCtx.fillStyle = muted;
+  interestCtx.font = `${layout.compact ? 8.5 : 10}px JetBrains Mono, monospace`;
+  fillTruncatedText(
+    interestCtx,
+    currentLang === 'zh' ? '选择高不确定度影像进行标注 · 方向键 + 回车' : 'Select an uncertain scan to annotate · arrows + Enter',
+    layout.compact ? 10 : 16,
+    layout.compact ? 19 : 22,
+    width - (layout.compact ? 20 : 32)
+  );
+
+  layout.tiles.forEach((tile) => {
+    drawMedicalScan(interestCtx, tile, tile, {
+      selected: tile.index === medicalInteraction.selected || tile.index === medicalInteraction.hoverIndex,
+      labeled: medicalInteraction.labeled.has(tile.index),
+      primary,
+      secondary,
+      muted
+    });
+  });
+
+  const detail = layout.detail;
+  if (layout.compact) {
+    const score = medicalLearningScore();
+    interestCtx.fillStyle = isLabeled ? primary : secondary;
+    interestCtx.font = '700 9px JetBrains Mono, monospace';
+    const stateText = currentLang === 'zh'
+      ? `${selected.id} · ${isLabeled ? `已标注 ${medicalFindingLabel(selected)}` : `不确定度 ${Math.round(selected.uncertainty * 100)}%`}`
+      : `${selected.id} · ${isLabeled ? `labeled ${selected.finding}` : `${Math.round(selected.uncertainty * 100)}% uncertain`}`;
+    fillTruncatedText(interestCtx, stateText, detail.x, detail.y + 12, detail.w * 0.58);
+    interestCtx.fillStyle = muted;
+    interestCtx.font = '8px JetBrains Mono, monospace';
+    fillTruncatedText(
+      interestCtx,
+      currentLang === 'zh' ? `模型得分 ${score}% · 已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}` : `Model ${score}% · ${medicalInteraction.labeled.size}/${medicalCases.length} labeled`,
+      detail.x,
+      detail.y + 27,
+      detail.w * 0.58
+    );
+    const meterX = detail.x + detail.w * 0.62;
+    const meterY = detail.y + 18;
+    interestCtx.fillStyle = 'rgba(255,255,255,0.13)';
+    interestCtx.fillRect(meterX, meterY, detail.w * 0.36, 5);
+    interestCtx.fillStyle = primary;
+    interestCtx.fillRect(meterX, meterY, detail.w * 0.36 * score / 100, 5);
+  } else {
+    const preview = {
+      x: detail.x + detail.w * 0.14,
+      y: detail.y + 4,
+      w: detail.w * 0.72,
+      h: Math.max(72, detail.h * 0.5)
+    };
+    drawMedicalScan(interestCtx, preview, selected, {
+      selected: true,
+      labeled: isLabeled,
+      large: true,
+      primary,
+      secondary,
+      muted
+    });
+
+    interestCtx.fillStyle = isLabeled ? primary : secondary;
+    interestCtx.font = '700 11px JetBrains Mono, monospace';
+    interestCtx.fillText(`${selected.id} · ${isLabeled ? medicalFindingLabel(selected) : `${Math.round(selected.uncertainty * 100)}% ${currentLang === 'zh' ? '不确定' : 'UNCERTAIN'}`}`, detail.x, detail.y + detail.h * 0.62);
+    interestCtx.fillStyle = muted;
+    interestCtx.font = '9px JetBrains Mono, monospace';
+    fillTruncatedText(
+      interestCtx,
+      currentLang === 'zh' ? (isLabeled ? '标注已加入训练集' : '点击该影像加入标注集') : (isLabeled ? 'Annotation added to training set' : 'Click this scan to add a label'),
+      detail.x,
+      detail.y + detail.h * 0.72,
+      detail.w
+    );
+    const score = medicalLearningScore();
+    const meterY = detail.y + detail.h * 0.84;
+    interestCtx.fillStyle = 'rgba(255,255,255,0.13)';
+    interestCtx.fillRect(detail.x, meterY, detail.w, 6);
+    interestCtx.fillStyle = primary;
+    interestCtx.fillRect(detail.x, meterY, detail.w * score / 100, 6);
+    interestCtx.fillStyle = textColor;
+    interestCtx.font = '9px JetBrains Mono, monospace';
+    interestCtx.fillText(`${currentLang === 'zh' ? '模型得分' : 'MODEL SCORE'} ${score}%`, detail.x, meterY + 18);
+  }
+
+  if (medicalInteraction.pulse > 0.02) {
+    const tile = layout.tiles[medicalInteraction.selected];
+    interestCtx.beginPath();
+    interestCtx.arc(tile.x + tile.w / 2, tile.y + tile.h / 2, Math.max(tile.w, tile.h) * (0.48 + medicalInteraction.pulse * 0.18), 0, Math.PI * 2);
+    interestCtx.strokeStyle = `rgba(255,255,255,${medicalInteraction.pulse * 0.42})`;
+    interestCtx.lineWidth = 2;
+    interestCtx.stroke();
+  }
+}
+
+function medicalHitRegion(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  const layout = medicalActiveLearningLayout(rect.width, rect.height);
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return layout.tiles.find((tile) => x >= tile.x && x <= tile.x + tile.w && y >= tile.y && y <= tile.y + tile.h) || null;
+}
+
+function selectMedicalCase(index, annotate = false) {
+  const nextIndex = Math.max(0, Math.min(medicalCases.length - 1, index));
+  medicalInteraction.selected = nextIndex;
+  medicalInteraction.active = true;
+  if (annotate) {
+    medicalInteraction.labeled.add(nextIndex);
+    medicalInteraction.pulse = 1;
+  }
+  updateInterestCanvasAccessibility();
+  drawInterestAnimation();
+}
+
+function resetMedicalActiveLearning() {
+  medicalInteraction.labeled = new Set([1, 7]);
+  medicalInteraction.selected = 4;
+  medicalInteraction.hoverIndex = null;
+  medicalInteraction.pulse = 1;
+  updateInterestCanvasAccessibility();
+  drawInterestAnimation();
+}
+
 function drawInterestAnimation() {
   const rect = interestCanvas.getBoundingClientRect();
   if (rect.width < 2 || rect.height < 2) return;
@@ -4985,6 +5445,8 @@ function drawInterestAnimation() {
     interestCtx.fillText(`TOP ${Math.round(best.score * 100)}%`, scoreX + 12, scoreY + 18);
     interestCtx.fillStyle = muted;
     interestCtx.fillText(best.id, scoreX + 12, scoreY + 32);
+  } else if (type === 'medical-image') {
+    drawMedicalActiveLearning(width, height, t, primary, secondary, muted);
   } else if (type === 'agent') {
     drawHumanAiCollab(width, height, t, primary, secondary, muted);
     return;
@@ -5532,9 +5994,24 @@ function interactWithEducationStudio(event) {
   educationInteraction.masteryBoost = 1;
 }
 
+function updateMedicalPointer(event) {
+  const rect = interestCanvas.getBoundingClientRect();
+  medicalInteraction.x = clamp01((event.clientX - rect.left) / rect.width);
+  medicalInteraction.y = clamp01((event.clientY - rect.top) / rect.height);
+  medicalInteraction.active = true;
+  medicalInteraction.hoverIndex = medicalHitRegion(event)?.index ?? null;
+}
+
+function interactWithMedicalActiveLearning(event) {
+  const hit = medicalHitRegion(event);
+  if (!hit) return;
+  selectMedicalCase(hit.index, true);
+}
+
 function canvasCursorForActiveInterest() {
   if (isPointCloudInterestActive()) return pointCloudInteraction.dragging ? 'grabbing' : 'grab';
   if (isVprInterestActive()) return vprInteraction.dragging ? 'grabbing' : 'crosshair';
+  if (isMedicalImageInterestActive()) return medicalInteraction.dragging ? 'grabbing' : 'pointer';
   if (isAgentInterestActive()) return agentInteraction.dragging ? 'grabbing' : 'pointer';
   if (isEducationInterestActive()) return educationInteraction.dragging ? 'grabbing' : 'pointer';
   return 'default';
@@ -5543,6 +6020,7 @@ function canvasCursorForActiveInterest() {
 interestCanvas.addEventListener('pointerenter', (event) => {
   if (isPointCloudInterestActive()) updatePointCloudPointer(event);
   else if (isVprInterestActive()) updateVprPointer(event);
+  else if (isMedicalImageInterestActive()) updateMedicalPointer(event);
   else if (isAgentInterestActive()) updateAgentPointer(event);
   else if (isEducationInterestActive()) updateEducationPointer(event);
 });
@@ -5550,12 +6028,13 @@ interestCanvas.addEventListener('pointerenter', (event) => {
 interestCanvas.addEventListener('pointermove', (event) => {
   if (isPointCloudInterestActive()) updatePointCloudPointer(event);
   else if (isVprInterestActive()) updateVprPointer(event);
+  else if (isMedicalImageInterestActive()) updateMedicalPointer(event);
   else if (isAgentInterestActive()) updateAgentPointer(event);
   else if (isEducationInterestActive()) updateEducationPointer(event);
 });
 
 interestCanvas.addEventListener('pointerdown', (event) => {
-  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive() && !isEducationInterestActive()) return;
+  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isMedicalImageInterestActive() && !isAgentInterestActive() && !isEducationInterestActive()) return;
   event.preventDefault();
   if (isPointCloudInterestActive()) {
     pointCloudInteraction.dragging = true;
@@ -5565,6 +6044,10 @@ interestCanvas.addEventListener('pointerdown', (event) => {
     vprInteraction.dragging = true;
     vprInteraction.selected = null;
     updateVprPointer(event);
+  } else if (isMedicalImageInterestActive()) {
+    medicalInteraction.dragging = true;
+    updateMedicalPointer(event);
+    medicalInteraction.pulse = 0.55;
   } else if (isAgentInterestActive()) {
     agentInteraction.dragging = true;
     updateAgentPointer(event);
@@ -5585,7 +6068,7 @@ interestCanvas.addEventListener('pointerdown', (event) => {
 });
 
 interestCanvas.addEventListener('pointerup', (event) => {
-  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isAgentInterestActive() && !isEducationInterestActive()) return;
+  if (!isPointCloudInterestActive() && !isVprInterestActive() && !isMedicalImageInterestActive() && !isAgentInterestActive() && !isEducationInterestActive()) return;
   if (isPointCloudInterestActive()) {
     pointCloudInteraction.dragging = false;
     updatePointCloudPointer(event);
@@ -5593,6 +6076,10 @@ interestCanvas.addEventListener('pointerup', (event) => {
     updateVprPointer(event);
     vprInteraction.selected = bestVprCandidate()?.id || null;
     vprInteraction.dragging = false;
+  } else if (isMedicalImageInterestActive()) {
+    updateMedicalPointer(event);
+    interactWithMedicalActiveLearning(event);
+    medicalInteraction.dragging = false;
   } else if (isAgentInterestActive()) {
     updateAgentPointer(event);
     interactWithAgentRunner(event);
@@ -5615,6 +6102,9 @@ interestCanvas.addEventListener('pointercancel', () => {
   pointCloudInteraction.active = false;
   vprInteraction.dragging = false;
   vprInteraction.active = false;
+  medicalInteraction.dragging = false;
+  medicalInteraction.active = false;
+  medicalInteraction.hoverIndex = null;
   agentInteraction.dragging = false;
   agentInteraction.active = false;
   agentInteraction.hoverType = null;
@@ -5627,9 +6117,11 @@ interestCanvas.addEventListener('pointercancel', () => {
 });
 
 interestCanvas.addEventListener('pointerleave', () => {
-  if (pointCloudInteraction.dragging || vprInteraction.dragging || agentInteraction.dragging || educationInteraction.dragging) return;
+  if (pointCloudInteraction.dragging || vprInteraction.dragging || medicalInteraction.dragging || agentInteraction.dragging || educationInteraction.dragging) return;
   pointCloudInteraction.active = false;
   vprInteraction.active = false;
+  medicalInteraction.active = false;
+  medicalInteraction.hoverIndex = null;
   agentInteraction.active = false;
   agentInteraction.hoverType = null;
   agentInteraction.hoverId = null;
@@ -5637,6 +6129,36 @@ interestCanvas.addEventListener('pointerleave', () => {
   educationInteraction.hoverType = null;
   educationInteraction.hoverId = null;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
+});
+
+interestCanvas.addEventListener('keydown', (event) => {
+  if (!isMedicalImageInterestActive()) return;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+    event.preventDefault();
+    const columns = 4;
+    const row = Math.floor(medicalInteraction.selected / columns);
+    const column = medicalInteraction.selected % columns;
+    const nextRow = event.key === 'ArrowUp'
+      ? Math.max(0, row - 1)
+      : event.key === 'ArrowDown'
+        ? Math.min(Math.ceil(medicalCases.length / columns) - 1, row + 1)
+        : row;
+    const nextColumn = event.key === 'ArrowLeft'
+      ? Math.max(0, column - 1)
+      : event.key === 'ArrowRight'
+        ? Math.min(columns - 1, column + 1)
+        : column;
+    selectMedicalCase(Math.min(medicalCases.length - 1, nextRow * columns + nextColumn));
+  } else if (event.key === 'Home' || event.key === 'End') {
+    event.preventDefault();
+    selectMedicalCase(event.key === 'Home' ? 0 : medicalCases.length - 1);
+  } else if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    selectMedicalCase(medicalInteraction.selected, true);
+  } else if (event.key.toLowerCase() === 'r') {
+    event.preventDefault();
+    resetMedicalActiveLearning();
+  }
 });
 
 function currentPublications() {
@@ -5762,24 +6284,30 @@ async function loadRepos() {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const remoteRepos = await response.json();
+    if (!Array.isArray(remoteRepos)) throw new Error('Invalid repository payload');
     const remoteNames = new Set(remoteRepos.map((repo) => repo.name));
+    const localOnlyRepos = localRepos.filter((repo) => !remoteNames.has(repo.name));
+    repoDataSource = localOnlyRepos.length ? 'mixed' : 'live';
     allRepos = [
       ...remoteRepos.map((repo) => {
         const local = localByName.get(repo.name);
+        const defaultBranch = repo.default_branch || local?.default_branch || 'main';
         return {
           name: repo.name,
           description: repo.description || local?.description || '',
           language: repo.language || local?.language || null,
           stargazers_count: repo.stargazers_count ?? local?.stargazers_count ?? 0,
           updated_at: repo.updated_at || local?.updated_at || '',
+          default_branch: defaultBranch,
           html_url: repo.html_url || local?.html_url || `https://github.com/${GITHUB_OWNER}/${repo.name}`,
-          readme_url: local?.readme_url || `https://raw.githubusercontent.com/${GITHUB_OWNER}/${repo.name}/${repo.default_branch || 'main'}/README.md`,
+          readme_url: `https://raw.githubusercontent.com/${GITHUB_OWNER}/${repo.name}/${defaultBranch}/README.md`,
           interests: local?.interests
         };
       }),
-      ...localRepos.filter((repo) => !remoteNames.has(repo.name))
+      ...localOnlyRepos
     ];
   } catch {
+    repoDataSource = 'snapshot';
     allRepos = [...localRepos];
   }
   filteredRepos = [...allRepos];

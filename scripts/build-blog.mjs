@@ -290,6 +290,23 @@ async function writePage(relativeFile, html) {
   await fs.writeFile(filePath, html);
 }
 
+function referencedKatexFonts(css, katexDistDir) {
+  const fontsDir = path.join(katexDistDir, 'fonts');
+  const fontPaths = new Set();
+
+  for (const match of css.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^'")]*))\s*\)/g)) {
+    const url = (match[1] ?? match[2] ?? match[3] ?? '').trim();
+    if (!url || /^(?:data:|https?:|\/\/|#)/i.test(url)) continue;
+
+    const sourcePath = path.resolve(katexDistDir, url.replace(/[?#].*$/, ''));
+    const relativePath = path.relative(fontsDir, sourcePath);
+    if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) continue;
+    fontPaths.add(relativePath);
+  }
+
+  return [...fontPaths].sort((a, b) => a.localeCompare(b));
+}
+
 async function copyAssets() {
   await fs.mkdir(outputAssetsDir, { recursive: true });
   const entries = await fs.readdir(sourceAssetsDir, { withFileTypes: true });
@@ -298,8 +315,19 @@ async function copyAssets() {
       await fs.copyFile(path.join(sourceAssetsDir, entry.name), path.join(outputAssetsDir, entry.name));
     }
   }
-  const katexCss = path.join(rootDir, 'node_modules', 'katex', 'dist', 'katex.min.css');
-  await fs.copyFile(katexCss, path.join(outputAssetsDir, 'katex.min.css')).catch(() => {});
+
+  const katexDistDir = path.join(rootDir, 'node_modules', 'katex', 'dist');
+  const katexCssPath = path.join(katexDistDir, 'katex.min.css');
+  const katexCss = await fs.readFile(katexCssPath, 'utf8');
+  const fontPaths = referencedKatexFonts(katexCss, katexDistDir);
+  if (!fontPaths.length) throw new Error('KaTeX CSS does not reference any files under dist/fonts.');
+
+  await fs.copyFile(katexCssPath, path.join(outputAssetsDir, 'katex.min.css'));
+  for (const fontPath of fontPaths) {
+    const outputFontPath = path.join(outputAssetsDir, 'fonts', fontPath);
+    await fs.mkdir(path.dirname(outputFontPath), { recursive: true });
+    await fs.copyFile(path.join(katexDistDir, 'fonts', fontPath), outputFontPath);
+  }
 }
 
 async function renderIndex(posts) {

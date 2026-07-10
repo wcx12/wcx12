@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "interests": [
     {
       "id": "point-cloud",
@@ -61,16 +61,16 @@
           "id": "medical-image-analysis",
           "title": {
             "en": "Medical Image Analysis",
-            "zh": "??????"
+            "zh": "医学影像分析"
           },
           "label": {
             "en": "active learning",
-            "zh": "????"
+            "zh": "主动学习"
           },
           "animation": "medical-image",
           "description": {
             "en": "Medical image classification, active learning, and sample-efficient visual model training.",
-            "zh": "??????????????????????????????"
+            "zh": "围绕医学影像分类、主动学习与样本高效视觉模型训练展开的研究。"
           }
         }
       ]
@@ -153,7 +153,11 @@
     ],
     "BIT-The-mathematical-foundation-of-big-Data": [
       "ai4edu"
-    ]
+    ],
+    "major-intel": [
+      "agent"
+    ],
+    "TrendRadar": []
   },
   "paperAssignments": {
     "TF-VPR: A novel benchmark for training-free visual place recognition": [
