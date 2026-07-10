@@ -14,6 +14,6 @@
       "ai4edu"
     ],
     "url": "./posts/building-a-research-writing-system/",
-    "text": "This writing space is designed to sit beside the interactive profile page rather than replace it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and better support for code, equations, tags, RSS, and search. The workflow should stay simple: Create a new post Copy npm run new:post &quot;Visual Place Recognit..."
+    "text": "This writing space is designed to sit beside the interactive profile page rather than replace it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and better support for code, equations, tags, and search. The workflow should stay simple: Create a new post Copy npm run new:post &quot;Visual Place Recognition N..."
   }
 ]

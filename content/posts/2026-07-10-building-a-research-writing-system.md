@@ -15,7 +15,7 @@ toc: true
 lang: "en"
 ---
 
-This writing space is designed to sit beside the interactive profile page rather than replace it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and better support for code, equations, tags, RSS, and search.
+This writing space is designed to sit beside the interactive profile page rather than replace it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and better support for code, equations, tags, and search.
 
 The workflow should stay simple:
 
@@ -45,6 +45,6 @@ The important part is that the writing system remains repository-native. The sou
 - Research notes can be connected to point cloud registration, VPR, medical image analysis, agents, or AI for education.
 - Code-heavy posts can use syntax highlighting and copy buttons.
 - Longer posts can expose a table of contents without making short notes feel heavy.
-- RSS and sitemap output make the writing section easier to follow and index.
+- Sitemap output makes the writing section easier to index.
 
 This first note is intentionally small. It exists as a working example of the content model and will be replaced naturally as more technical posts are added.

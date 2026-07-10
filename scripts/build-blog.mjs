@@ -180,7 +180,6 @@ function renderShell({ filePath, title, description, body, extraHead = '', jsonL
       <a href="${ctx.link('index.html')}" title="Back to the interactive homepage" aria-label="Back to the interactive homepage">Home</a>
       <a href="${ctx.link('blog/index.html')}" title="Open the blog index" aria-label="Open the blog index">Blog</a>
       <a href="${ctx.link('blog/archive/index.html')}" title="Browse all posts by date" aria-label="Browse all posts by date">Archive</a>
-      <a href="${ctx.link('rss.xml')}" title="Open the RSS feed for a feed reader" aria-label="Open the RSS feed for a feed reader">RSS</a>
       <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
         <option value="neon">Default</option>
         <option value="warm">Warm</option>
@@ -292,7 +291,7 @@ async function renderIndex(posts) {
     <section class="blog-hero">
       <p class="blog-kicker">Research Writing</p>
       <h1>Technical notes, research logs, and engineering write-ups.</h1>
-      <p>This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, RSS, and research-topic links.</p>
+      <p>This section keeps longer posts separate from the interactive homepage: stable URLs, readable typography, searchable notes, and research-topic links.</p>
       <div class="blog-hero-actions">
         <a class="btn btn-primary" href="#recent-writing">Read latest</a>
         <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}">Browse archive</a>
@@ -300,7 +299,7 @@ async function renderIndex(posts) {
       <div class="blog-stat-grid">
         <article class="blog-stat"><span>Published</span><strong>${posts.length}</strong></article>
         <article class="blog-stat"><span>Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
-        <article class="blog-stat"><span>RSS</span><strong>Ready</strong></article>
+        <article class="blog-stat"><span>Search</span><strong>Ready</strong></article>
       </div>
     </section>
 
