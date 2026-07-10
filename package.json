@@ -6,7 +6,8 @@
   "scripts": {
     "new:post": "node scripts/new-post.mjs",
     "test:content": "node --test scripts/blog-content.test.mjs",
-    "validate": "node scripts/validate-content.mjs && npm run test:content",
+    "test:site": "node --test scripts/site-output.test.mjs",
+    "validate": "node scripts/validate-content.mjs && npm run test:content && npm run test:site",
     "build:blog": "node scripts/build-blog.mjs",
     "build": "npm run build:blog"
   },

@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://api.github.com https://pub.orcid.org https://raw.githubusercontent.com https://github.com" />
   <title>wcx12 | Machine Learning Research &amp; Engineering</title>
   <meta name="description" content="Interactive research portfolio by wcx12, covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
-  <meta name="author" content="wcx12" />
+  <meta name="author" content="Chenxu Wang" />
   <meta name="robots" content="index,follow,max-image-preview:large" />
   <meta name="theme-color" content="#070914" />
   <meta name="color-scheme" content="dark" />
@@ -18,6 +19,9 @@
   <meta property="og:title" content="wcx12 | Machine Learning Research &amp; Engineering" />
   <meta property="og:description" content="Research portfolio covering 3D geometry, visual perception, medical imaging, LLM agents, and AI for Education." />
   <meta property="og:type" content="profile" />
+  <meta property="profile:first_name" content="Chenxu" />
+  <meta property="profile:last_name" content="Wang" />
+  <meta property="profile:username" content="wcx12" />
   <meta property="og:url" content="https://wcx12.github.io/wcx12/" />
   <meta property="og:site_name" content="wcx12" />
   <meta property="og:locale" content="en_US" />
@@ -40,12 +44,15 @@
       "@type": "ProfilePage",
       "@id": "https://wcx12.github.io/wcx12/#profile",
       "url": "https://wcx12.github.io/wcx12/",
-      "name": "wcx12 | Machine Learning Research & Engineering",
+      "name": "Chenxu Wang (wcx12) | Machine Learning Research & Engineering",
       "description": "Interactive research portfolio covering point-cloud registration, visual perception, medical image analysis, LLM agents, and AI for Education.",
       "mainEntity": {
         "@type": "Person",
         "@id": "https://wcx12.github.io/wcx12/#person",
-        "name": "wcx12",
+        "name": "Chenxu Wang",
+        "alternateName": "wcx12",
+        "givenName": "Chenxu",
+        "familyName": "Wang",
         "url": "https://wcx12.github.io/wcx12/",
         "sameAs": [
           "https://github.com/wcx12",
@@ -65,8 +72,23 @@
       }
     }
   </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": "https://wcx12.github.io/wcx12/#website",
+      "url": "https://wcx12.github.io/wcx12/",
+      "name": "wcx12",
+      "alternateName": "wcx12 Research Portfolio",
+      "inLanguage": ["en", "zh"],
+      "publisher": {
+        "@id": "https://wcx12.github.io/wcx12/#person"
+      }
+    }
+  </script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content" data-i18n="skip_main">Skip to main content</a>
   <canvas id="starfield" aria-hidden="true"></canvas>
   <div id="customCursor" class="custom-cursor" aria-hidden="true">
     <span class="cursor-ring"></span>
@@ -86,11 +108,12 @@
       <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
       <button id="langToggle" class="ghost-btn" type="button">中文</button>
       <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
+      <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
       <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
     </div>
   </header>
 
-  <main>
+  <main id="main-content">
     <section class="hero">
       <div class="hero-copy">
         <p class="kicker" data-i18n="hero_kicker">Machine Learning Researcher</p>
@@ -110,7 +133,7 @@
         <div class="quick-stats">
           <article><span data-i18n="stat_focus">Focus Areas</span><strong id="focusAreaCount">4</strong></article>
           <article><span data-i18n="stat_grad">Graduation</span><strong>2026</strong></article>
-          <article><span data-i18n="stat_stack">Main Stack</span><strong>Python + ML</strong></article>
+          <article><span data-i18n="stat_pubs">Publications</span><strong id="heroPublicationCount">2</strong></article>
         </div>
       </div>
 
@@ -119,7 +142,7 @@
           <span class="panel-eyebrow" data-i18n="hero_preview_label">Research Preview</span>
           <span id="heroPreviewStatus" class="hero-preview-status">live</span>
         </div>
-        <canvas id="heroPreviewCanvas" aria-label="featured research preview"></canvas>
+        <canvas id="heroPreviewCanvas" role="img" aria-label="featured research preview"></canvas>
         <div id="heroPreviewMeta" class="hero-preview-meta"></div>
       </aside>
     </section>
@@ -132,9 +155,9 @@
         <p>wcx12-console</p>
       </div>
 
-      <p class="hint-row" data-i18n="hints">Shortcuts: P projects · R research · L language · / search repos</p>
+      <p class="hint-row" data-i18n="hints">Shortcut: Ctrl/⌘K command palette</p>
 
-      <div class="command-row">
+      <nav class="command-row" aria-label="Portfolio sections">
         <button class="cmd active" data-view="about" data-i18n="tab_about">about</button>
         <button class="cmd" data-view="research" data-i18n="tab_research">research</button>
         <button class="cmd" data-view="projects" data-i18n="tab_projects">projects</button>
@@ -144,11 +167,11 @@
         <button class="cmd" data-view="skills" data-i18n="tab_skills">skills</button>
         <button class="cmd" data-view="resources" data-i18n="tab_resources">resources</button>
         <button class="cmd" data-view="contact" data-i18n="tab_contact">contact</button>
-      </div>
+      </nav>
 
       <div class="view active" id="about">
         <h2 data-i18n="about_title">About</h2>
-        <p data-i18n="about_line1">I study at Beijing Institute of Technology and expect to graduate in 2026.</p>
+        <p data-i18n="about_line1">I am Chenxu Wang (wcx12), studying at Beijing Institute of Technology and expecting to graduate in 2026.</p>
         <p data-i18n="about_line2">I enjoy combining geometric understanding with reliable engineering delivery.</p>
       </div>
 
@@ -184,8 +207,15 @@
               <button type="button" role="tab" aria-selected="false" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
               <button type="button" role="tab" aria-selected="false" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
             </div>
-            <canvas id="interestCanvas" tabindex="-1" aria-label="research interest animation" aria-describedby="interestCanvasStatus"></canvas>
-            <p id="interestCanvasStatus" class="sr-only" aria-live="polite"></p>
+            <div class="interest-demo">
+              <canvas id="interestCanvas" role="img" tabindex="-1" aria-label="research interest animation" aria-describedby="interestCanvasStatus"></canvas>
+              <div id="interestCanvasControls" class="interest-canvas-controls" aria-label="Research demo controls">
+                <button id="interestDemoPrevious" class="btn btn-outline" type="button">Previous</button>
+                <button id="interestDemoAction" class="btn btn-primary" type="button">Run demo</button>
+                <button id="interestDemoReset" class="btn btn-outline" type="button">Reset</button>
+              </div>
+              <p id="interestCanvasStatus" class="interest-canvas-status" role="status" aria-live="polite"></p>
+            </div>
             <div class="interest-related">
               <article class="interest-project-panel">
                 <h4 data-i18n="related_projects">Related Projects</h4>
@@ -209,7 +239,7 @@
         <p class="muted" data-i18n="project_desc">All public repositories are listed below with quick jump links.</p>
 
         <div class="repo-toolbar">
-          <input id="repoSearch" type="search" data-i18n-ph="repo_search_ph" placeholder="Search repositories..." />
+          <input id="repoSearch" type="search" aria-label="Search repositories" data-i18n-ph="repo_search_ph" placeholder="Search repositories..." />
           <select id="repoSort" aria-label="Sort repositories">
             <option value="updated" data-i18n="sort_updated">Sort: Updated</option>
             <option value="stars" data-i18n="sort_stars">Sort: Stars</option>
@@ -224,7 +254,7 @@
             <option value="24">24</option>
             <option value="48">48</option>
           </select>
-          <span id="repoCount" class="muted"></span>
+          <span id="repoCount" class="muted" role="status" aria-live="polite"></span>
         </div>
 
         <div class="repo-map-panel">
@@ -232,7 +262,7 @@
             <span data-i18n="repo_map_title">Repo Constellation</span>
             <span id="repoMapHint" class="muted" data-i18n="repo_map_hint">Hover nodes to inspect projects.</span>
           </div>
-          <canvas id="repoMap" aria-label="repository constellation map"></canvas>
+          <canvas id="repoMap" role="img" aria-label="repository research field map" aria-describedby="repoMapHint"></canvas>
         </div>
 
         <div id="repoGrid" class="repo-grid"></div>
@@ -256,7 +286,7 @@
             <option value="12">12</option>
             <option value="24">24</option>
           </select>
-          <span id="pubCount" class="muted"></span>
+          <span id="pubCount" class="muted" role="status" aria-live="polite"></span>
         </div>
         <div id="pubList" class="pub-list"></div>
         <div id="pubPager" class="pager">
@@ -275,8 +305,8 @@
           <a class="btn btn-outline" href="./blog/" data-i18n="writing_open">Open Blog</a>
         </div>
         <div class="writing-toolbar">
-          <input id="writingSearch" type="search" data-i18n-ph="writing_search_ph" placeholder="Search writing..." />
-          <span id="writingCount" class="muted"></span>
+          <input id="writingSearch" type="search" aria-label="Search writing" data-i18n-ph="writing_search_ph" placeholder="Search writing..." />
+          <span id="writingCount" class="muted" role="status" aria-live="polite"></span>
         </div>
         <section class="writing-featured" aria-label="featured writing">
           <div class="featured-research-head">
@@ -308,16 +338,16 @@
 
       <div class="view" id="skills">
         <h2 data-i18n="skill_title">Skill Matrix</h2>
-        <div class="chips">
-          <button class="chip" data-tag="Python">Python</button>
-          <button class="chip" data-tag="PyTorch">PyTorch</button>
-          <button class="chip" data-tag="TensorFlow">TensorFlow</button>
-          <button class="chip" data-tag="OpenCV">OpenCV</button>
-          <button class="chip" data-tag="Scikit-learn">Scikit-learn</button>
-          <button class="chip" data-tag="Linux">Linux</button>
-          <button class="chip" data-tag="Git">Git</button>
+        <div class="chips" role="group" aria-label="Technical skills">
+          <button class="chip" type="button" aria-pressed="false" data-tag="Python">Python</button>
+          <button class="chip" type="button" aria-pressed="false" data-tag="PyTorch">PyTorch</button>
+          <button class="chip" type="button" aria-pressed="false" data-tag="TensorFlow">TensorFlow</button>
+          <button class="chip" type="button" aria-pressed="false" data-tag="OpenCV">OpenCV</button>
+          <button class="chip" type="button" aria-pressed="false" data-tag="Scikit-learn">Scikit-learn</button>
+          <button class="chip" type="button" aria-pressed="false" data-tag="Linux">Linux</button>
+          <button class="chip" type="button" aria-pressed="false" data-tag="Git">Git</button>
         </div>
-        <p id="chipOutput" data-i18n="skill_hint">Click a skill chip to highlight what I use.</p>
+        <p id="chipOutput" role="status" aria-live="polite" data-i18n="skill_hint">Click a skill chip to highlight what I use.</p>
       </div>
 
       <div class="view" id="resources">
@@ -325,8 +355,8 @@
         <div class="resource-grid">
           <article class="resource-card">
             <h3 data-i18n="cv_title">Resume</h3>
-            <p data-i18n="cv_desc">Download my latest CV snapshot from this repository.</p>
-            <a class="btn btn-primary" href="./resume.md" download data-i18n="cv_download">Download Resume</a>
+            <p data-i18n="cv_desc">Open a printable research profile with education, publications, projects, and skills.</p>
+            <a class="btn btn-primary" href="./resume/" data-i18n="cv_download">View Research Profile</a>
           </article>
           <article class="resource-card">
             <h3 data-i18n="pub_file_title">Raw Publication File</h3>
@@ -340,13 +370,14 @@
         <h2 data-i18n="contact_title">Contact</h2>
         <p>Email: <a href="mailto:c2675668@gmail.com">c2675668@gmail.com</a></p>
         <p>GitHub: <a href="https://github.com/wcx12" target="_blank" rel="noreferrer">github.com/wcx12</a></p>
+        <p>ORCID: <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327">0009-0005-6139-4327</a></p>
         <p data-i18n="contact_last">Open to research collaboration and open-source building.</p>
       </div>
     </section>
   </main>
 
   <div id="detailModal" class="modal" aria-hidden="true">
-    <div class="modal-card">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <button id="modalClose" class="modal-close" type="button" aria-label="Close">x</button>
       <h3 id="modalTitle"></h3>
       <div id="modalBody"></div>
@@ -355,9 +386,9 @@
   </div>
 
   <div id="researchManager" class="modal" aria-hidden="true">
-    <div class="modal-card manager-card">
+    <div class="modal-card manager-card" role="dialog" aria-modal="true" aria-labelledby="managerTitle">
       <button id="managerClose" class="modal-close" type="button" aria-label="Close">x</button>
-      <h3 data-i18n="manager_title">Research Mapping</h3>
+      <h3 id="managerTitle" data-i18n="manager_title">Research Mapping</h3>
       <div class="manager-grid">
         <section>
           <h4 data-i18n="manager_add_title">Add Category</h4>
@@ -410,7 +441,8 @@
 
   <div id="commandPalette" class="command-palette" aria-hidden="true">
     <div class="palette-card" role="dialog" aria-modal="true" aria-label="command palette">
-      <input id="commandInput" type="search" data-i18n-ph="command_placeholder" placeholder="Type a command or repository..." />
+      <button id="commandClose" class="modal-close" type="button" aria-label="Close command palette">x</button>
+      <input id="commandInput" type="search" aria-label="Search commands and repositories" data-i18n-ph="command_placeholder" placeholder="Type a command or repository..." />
       <div id="commandList" class="command-list"></div>
       <aside id="commandPreview" class="command-preview" aria-live="polite"></aside>
     </div>

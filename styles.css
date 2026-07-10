@@ -69,6 +69,32 @@
   border: 0 !important;
 }
 
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 2px solid var(--pink);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 16px));
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
+}
+
 [hidden] {
   display: none !important;
 }
@@ -721,7 +747,7 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 #repoPageSize,
 #pubMode,
 #pubPageSize {
-  border: 1px solid rgba(0, 245, 255, 0.28);
+  border: 1px solid color-mix(in srgb, var(--cyan) 55%, transparent);
   border-radius: 10px;
   background: rgba(6, 10, 28, 0.75);
   color: var(--text);
@@ -1029,7 +1055,7 @@ button.research-badge:hover {
 
 .writing-toolbar input {
   min-height: 42px;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--cyan) 55%, transparent);
   border-radius: 10px;
   padding: 9px 11px;
   background: var(--field-bg);
@@ -1344,6 +1370,33 @@ button.research-badge:hover {
   box-shadow: inset 0 0 42px rgba(0, 245, 255, 0.08);
 }
 
+.interest-demo {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.interest-canvas-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.interest-canvas-controls .btn {
+  min-height: 36px;
+  padding: 7px 11px;
+  font-size: 0.8rem;
+}
+
+.interest-canvas-status {
+  min-height: 1.45em;
+  margin: 0;
+  color: var(--muted);
+  font: 600 0.76rem/1.45 "JetBrains Mono", monospace;
+}
+
 #interestCanvas:focus-visible {
   outline: 2px solid var(--pink);
   outline-offset: 3px;
@@ -1632,7 +1685,13 @@ button.research-badge:hover {
   background: transparent;
   color: #fff;
   border-radius: 8px;
-  padding: 4px 8px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
   cursor: pointer;
 }
 
@@ -1724,6 +1783,7 @@ button.research-badge:hover {
 .command-palette.open { display: flex; }
 
 .palette-card {
+  position: relative;
   width: min(920px, 100%);
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.72fr);
@@ -1738,6 +1798,10 @@ button.research-badge:hover {
   padding: 12px;
 }
 
+.palette-card > .modal-close {
+  z-index: 2;
+}
+
 #commandInput {
   grid-area: input;
   width: 100%;
@@ -1745,7 +1809,7 @@ button.research-badge:hover {
   border-radius: 12px;
   background: rgba(3, 7, 18, 0.86);
   color: var(--text);
-  padding: 14px 16px;
+  padding: 14px 58px 14px 16px;
   font: 600 1rem "JetBrains Mono", monospace;
 }
 
@@ -1865,6 +1929,11 @@ button.research-badge:hover {
   border: 1px solid #f5f5f5;
 }
 
+:root[data-theme="mono"] .repo-preview-card {
+  --repo-accent: #d8d8d8 !important;
+  background: var(--card-bg);
+}
+
 :root[data-theme="mono"] .view a.btn-primary,
 :root[data-theme="mono"] .modal-card a.btn-primary {
   background: #f5f5f5;
@@ -1976,9 +2045,9 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
   }
 
   .interest-detail[data-panel="animation"] .interest-related,
-  .interest-detail[data-panel="projects"] #interestCanvas,
-  .interest-detail[data-panel="papers"] #interestCanvas,
-  .interest-detail[data-panel="writing"] #interestCanvas,
+  .interest-detail[data-panel="projects"] .interest-demo,
+  .interest-detail[data-panel="papers"] .interest-demo,
+  .interest-detail[data-panel="writing"] .interest-demo,
   .interest-detail[data-panel="projects"] .interest-paper-panel,
   .interest-detail[data-panel="projects"] .interest-writing-panel,
   .interest-detail[data-panel="papers"] .interest-project-panel,
@@ -1988,8 +2057,8 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
     display: none;
   }
 
-  .interest-detail[data-panel="animation"] #interestCanvas {
-    display: block;
+  .interest-detail[data-panel="animation"] .interest-demo {
+    display: grid;
   }
 
   .interest-detail[data-panel="projects"] .interest-related,
@@ -2015,6 +2084,14 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
 
   .repo-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .repo-grid,
+  .pub-list,
+  .writing-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .writing-toolbar {
@@ -2051,6 +2128,27 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
 
   .span-2 {
     grid-column: span 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .interest-section-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .interest-section-tabs button {
+    min-height: 44px;
+    border-radius: 10px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .research-showcase-card {
+    min-height: 174px;
+  }
+
+  .showcase-desc {
+    overflow: visible;
   }
 }
 

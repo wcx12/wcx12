@@ -74,17 +74,21 @@ ${body}
 `;
 }
 
-async function validateFixture(body) {
+async function validateSource(source) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'wcx12-content-'));
   try {
     const postsDir = path.join(root, 'content', 'posts');
     await fs.mkdir(postsDir, { recursive: true });
-    await fs.writeFile(path.join(postsDir, 'fixture.md'), postSource(body));
+    await fs.writeFile(path.join(postsDir, 'fixture.md'), source);
     const { diagnostics } = await loadPosts(root, { includeDrafts: true });
     return summarizeDiagnostics(diagnostics);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
+}
+
+async function validateFixture(body) {
+  return validateSource(postSource(body));
 }
 
 test('rejects Setext level-one headings supplied inside post bodies', async () => {
@@ -95,4 +99,22 @@ test('rejects Setext level-one headings supplied inside post bodies', async () =
 test('does not treat headings inside tilde code fences as document headings', async () => {
   const { errors } = await validateFixture('~~~sh\n# shell comment\n~~~');
   assert.equal(errors.length, 0);
+});
+
+test('rejects impossible calendar dates instead of normalizing them', async () => {
+  const source = postSource('Body')
+    .replace('date: "2026-07-10"', 'date: "2026-02-31"')
+    .replace('updated: "2026-07-10"', 'updated: "2026-02-31"');
+  const { errors } = await validateSource(source);
+  assert.match(errors.join('\n'), /date must be YYYY-MM-DD/);
+  assert.match(errors.join('\n'), /updated must be YYYY-MM-DD/);
+});
+
+test('requires front matter flags to use YAML booleans', async () => {
+  const source = postSource('Body')
+    .replace('draft: false', 'draft: "false"')
+    .replace('toc: true', 'toc: 1');
+  const { errors } = await validateSource(source);
+  assert.match(errors.join('\n'), /draft must be a boolean/);
+  assert.match(errors.join('\n'), /toc must be a boolean/);
 });

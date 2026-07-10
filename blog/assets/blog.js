@@ -7,27 +7,36 @@ const langToggle = document.getElementById('blogLangToggle');
 
 const blogI18n = {
   en: {
+    skip_main: 'Skip to main content',
     nav_home: 'Home',
     nav_home_title: 'Back to the interactive homepage',
+    nav_profile: 'Profile',
+    nav_profile_title: 'Open the research profile',
     nav_blog: 'Blog',
     nav_blog_title: 'Open the blog index',
     nav_archive: 'Archive',
     nav_archive_title: 'Browse all posts by date',
     lang_button: '中文',
-    lang_title: 'Switch language',
+    lang_title: 'Switch interface language',
     theme_title: 'Switch color theme',
     theme_default: 'Default',
     theme_warm: 'Warm',
     theme_mono: 'Black & White',
-    hero_kicker: 'wcx12 Writing',
+    hero_kicker: 'A notebook by wcx12',
     hero_title: 'Research Fieldnotes',
-    hero_desc: 'Notes from my work in visual perception, point-cloud registration, VPR, LLM agents, and AI for Education: paper reading, experiment logs, and engineering reflections.',
+    hero_desc: 'A growing notebook for reproducible research workflows, experiment logs, paper reading, and engineering reflections.',
     hero_read_latest: 'Read latest',
     hero_browse_archive: 'Browse archive',
     stat_published: 'Published',
     stat_topics: 'Topics',
     stat_search: 'Search',
     stat_ready: 'Ready',
+    stat_language: 'Languages',
+    stat_bilingual: 'EN / 中文',
+    profile_kicker: 'Research Profile',
+    profile_desc: 'A concise, verifiable snapshot of education, research, publications, projects, and technical skills.',
+    profile_print: 'Print / Save as PDF',
+    profile_contact: 'Contact',
     section_search_label: 'Search',
     section_search_title: 'Find notes by topic, tag, or summary',
     section_featured_label: 'Featured',
@@ -39,6 +48,7 @@ const blogI18n = {
     section_related_label: 'Related',
     section_related_title: 'Related writing',
     search_placeholder: 'Search writing...',
+    search_label: 'Search writing',
     search_no_results: 'No matching notes yet.',
     topics_empty: 'No tags yet.',
     archive_kicker: 'Archive',
@@ -74,27 +84,36 @@ const blogI18n = {
     hint_prev_next: 'Use these links to move between newer and older posts.'
   },
   zh: {
+    skip_main: '跳到主要内容',
     nav_home: '主页',
     nav_home_title: '返回互动主页',
+    nav_profile: '履历',
+    nav_profile_title: '打开研究履历',
     nav_blog: '博客',
     nav_blog_title: '打开博客首页',
     nav_archive: '归档',
     nav_archive_title: '按日期浏览所有文章',
     lang_button: 'EN',
-    lang_title: '切换语言',
+    lang_title: '切换界面语言',
     theme_title: '切换页面色调',
     theme_default: '默认',
     theme_warm: '暖色',
     theme_mono: '黑白',
-    hero_kicker: 'wcx12 Writing',
+    hero_kicker: 'wcx12 的研究手记',
     hero_title: '知研札记',
-    hero_desc: '记录我在视觉感知、点云配准、VPR、大模型和 AI4Edu 中的论文阅读、实验想法与工程复盘。',
+    hero_desc: '持续记录可复现研究流程、实验日志、论文阅读与工程复盘。',
     hero_read_latest: '阅读最新',
     hero_browse_archive: '浏览归档',
     stat_published: '已发布',
     stat_topics: '主题',
     stat_search: '搜索',
     stat_ready: '可用',
+    stat_language: '语言',
+    stat_bilingual: '中文 / EN',
+    profile_kicker: '研究履历',
+    profile_desc: '集中展示教育背景、研究方向、论文、项目与技术能力的可核验摘要。',
+    profile_print: '打印 / 保存为 PDF',
+    profile_contact: '联系我',
     section_search_label: '搜索',
     section_search_title: '按主题、标签或摘要查找笔记',
     section_featured_label: '精选',
@@ -106,6 +125,7 @@ const blogI18n = {
     section_related_label: '相关',
     section_related_title: '相关文章',
     search_placeholder: '搜索文章...',
+    search_label: '搜索文章',
     search_no_results: '暂时没有匹配的笔记。',
     topics_empty: '还没有标签。',
     archive_kicker: '归档',
@@ -187,9 +207,8 @@ function applyLanguage(lang = currentLang) {
   currentLang = normalizeLang(lang);
   localStorage.setItem(LANG_KEY, currentLang);
   const uiLang = currentLang === 'zh' ? 'zh-CN' : 'en';
-  const contentLang = document.documentElement.dataset.contentLang || 'en';
   document.documentElement.dataset.uiLang = currentLang;
-  document.documentElement.lang = contentLang === 'zh' ? 'zh-CN' : contentLang;
+  document.documentElement.lang = uiLang;
 
   document.querySelectorAll('[data-blog-i18n]').forEach((node) => {
     const value = t(node.dataset.blogI18n);
@@ -346,9 +365,6 @@ if (searchInput && searchResults) {
   searchInput.addEventListener('input', () => renderSearch(searchInput.value));
 }
 
-applyLanguage(currentLang);
+document.getElementById('printProfile')?.addEventListener('click', () => window.print());
 
-window.addEventListener('keydown', (event) => {
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return;
-  if (event.key === 'l' || event.key === 'L') langToggle?.click();
-});
+applyLanguage(currentLang);

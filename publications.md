@@ -1,14 +1,23 @@
-﻿# Publications
+# Publications
 
-## In Progress
-- Point Set Registration Under Partial Observation (work in progress)
-- Robust Anomaly Detection Pipelines for Complex Signals (work in progress)
+## Published
 
-## Technical Notes
-- Reproducible Experiment Template (coming soon)
-- Dataset Curation Notes (coming soon)
+### TF-VPR: A novel benchmark for training-free visual place recognition
 
-## Open Source Reports
-- You can browse my latest repositories here: https://github.com/wcx12?tab=repositories
+- Authors: Chenxu Wang, Qingtong Meng, Bonan Zhang, and Fusen Guo
+- Journal: Neurocomputing
+- Year: 2026
+- DOI: https://doi.org/10.1016/j.neucom.2026.133399
+- Research area: Visual Place Recognition
 
-> This page will be updated as papers and reports are publicly released.
+## In Press
+
+### Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification
+
+- Authors: Chenxu Wang, QingTong Meng, Qianxun Lin, Bonan Zhang, and Fusen Guo
+- Journal: Neurocomputing
+- Status: Journal pre-proof; issue publication scheduled for 2026
+- DOI: https://doi.org/10.1016/j.neucom.2026.134314
+- Research area: Medical Image Analysis / Active Learning
+
+Only publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.

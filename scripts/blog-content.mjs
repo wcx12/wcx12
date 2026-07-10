@@ -7,8 +7,8 @@ const validationMarkdown = new MarkdownIt({ html: false });
 
 export const SITE = {
   title: 'Research Fieldnotes',
-  description: 'Research notes by wcx12 on visual perception, point-cloud registration, VPR, LLM agents, and AI for Education.',
-  author: 'wcx12',
+  description: 'A growing research and engineering notebook by Chenxu Wang (wcx12), with reproducible workflows and fieldnotes from ongoing work.',
+  author: 'Chenxu Wang',
   lang: 'en',
   url: (process.env.SITE_URL || 'https://wcx12.github.io/wcx12').replace(/\/$/, '')
 };
@@ -92,13 +92,24 @@ function asArray(value) {
 
 function validateDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  return !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
 }
 
 function validatePost(post, seenSlugs) {
   const errors = [];
   const warnings = [];
   const data = post.data;
+  const rawData = post.rawData || data;
+
+  for (const field of ['draft', 'featured', 'math', 'toc']) {
+    if (Object.hasOwn(rawData, field) && typeof rawData[field] !== 'boolean') {
+      errors.push(`${field} must be a boolean`);
+    }
+  }
 
   for (const field of ['title', 'slug', 'date', 'category']) {
     if (!data[field] || typeof data[field] !== 'string') {
@@ -170,15 +181,16 @@ export async function loadPosts(rootDir, options = {}) {
       ...parsed.data,
       tags: asArray(parsed.data.tags).map((tag) => String(tag)),
       research: asArray(parsed.data.research).map((id) => String(id)),
-      draft: Boolean(parsed.data.draft),
-      featured: Boolean(parsed.data.featured),
-      math: Boolean(parsed.data.math),
+      draft: parsed.data.draft === true,
+      featured: parsed.data.featured === true,
+      math: parsed.data.math === true,
       toc: parsed.data.toc !== false,
       lang: String(parsed.data.lang || SITE.lang).toLowerCase()
     };
     const post = {
       sourcePath: file,
       relativePath: path.relative(rootDir, file).replace(/\\/g, '/'),
+      rawData: parsed.data,
       data,
       content: parsed.content
     };

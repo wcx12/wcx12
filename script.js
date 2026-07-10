@@ -4,6 +4,7 @@ const chips = document.querySelectorAll('.chip');
 const chipOutput = document.getElementById('chipOutput');
 const typeTarget = document.getElementById('typeTarget');
 const focusAreaCount = document.getElementById('focusAreaCount');
+const heroPublicationCount = document.getElementById('heroPublicationCount');
 const repoGrid = document.getElementById('repoGrid');
 const repoSearch = document.getElementById('repoSearch');
 const repoSort = document.getElementById('repoSort');
@@ -54,6 +55,7 @@ const managerActive = document.getElementById('managerActive');
 const managerProjects = document.getElementById('managerProjects');
 const managerPapers = document.getElementById('managerPapers');
 const commandPalette = document.getElementById('commandPalette');
+const commandClose = document.getElementById('commandClose');
 const commandInput = document.getElementById('commandInput');
 const commandList = document.getElementById('commandList');
 const commandPreview = document.getElementById('commandPreview');
@@ -69,6 +71,8 @@ const heroPreviewCtx = heroPreviewCanvas?.getContext('2d');
 const heroPreviewStatus = document.getElementById('heroPreviewStatus');
 const heroPreviewMeta = document.getElementById('heroPreviewMeta');
 const researchShowcase = document.getElementById('researchShowcase');
+const pageBackgroundElements = Array.from(document.querySelectorAll('header, main, footer'));
+const activeOverlayElements = new Set();
 
 const registrationCanvas = document.getElementById('registrationCanvas');
 const regCtx = registrationCanvas?.getContext('2d');
@@ -96,6 +100,9 @@ const interestSectionTabs = document.querySelectorAll('[data-interest-panel]');
 const interestCanvas = document.getElementById('interestCanvas');
 const interestCtx = interestCanvas.getContext('2d');
 const interestCanvasStatus = document.getElementById('interestCanvasStatus');
+const interestDemoPrevious = document.getElementById('interestDemoPrevious');
+const interestDemoAction = document.getElementById('interestDemoAction');
+const interestDemoReset = document.getElementById('interestDemoReset');
 const interestProjects = document.getElementById('interestProjects');
 const interestPapers = document.getElementById('interestPapers');
 const interestPosts = document.getElementById('interestPosts');
@@ -109,9 +116,13 @@ let allRepos = [];
 let filteredRepos = [];
 let repoDataSource = 'snapshot';
 let loadedPublications = [];
+let publicationLoadFailed = false;
 let blogPosts = [];
 let filteredBlogPosts = [];
 let commandCursor = 0;
+let commandReturnFocus = null;
+let modalReturnFocus = null;
+let researchManagerReturnFocus = null;
 let repoNodes = [];
 let repoMapFieldNodes = [];
 let hoveredRepo = null;
@@ -119,24 +130,33 @@ let hoveredMapField = null;
 let highlightedRepo = null;
 let highlightedPaper = null;
 let readmeReturnFocus = null;
+let readmeRequestController = null;
+let readmeRequestSequence = 0;
+let githubSaveController = null;
 let activeInterestPanel = 'animation';
+const initializedViews = new Set();
+const LAZY_VIEW_IDS = new Set(['research', 'projects', 'publications', 'writing']);
 let repoMapTick = 0;
 let activeInterestId = 'point-cloud-registration';
 let previewInterestId = null;
 let interestTick = 0;
 let heroPreviewTick = 0;
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+const compactInterestMotionQuery = window.matchMedia('(max-width: 720px)');
 const HERO_PREVIEW_FRAME_SKIP = 6;
 const STARFIELD_FRAME_SKIP = 6;
-const INTEREST_FRAME_SKIP = 2;
 const REPO_MAP_FRAME_SKIP = 6;
+const INTEREST_DESKTOP_FRAME_MS = 46;
+const INTEREST_MOBILE_FRAME_MS = 72;
 let lastHeroPreviewFrame = 0;
 let lastStarfieldFrame = 0;
 let lastInterestFrame = 0;
 let lastRepoMapFrame = 0;
 let heroPreviewVisible = true;
+let interestCanvasVisible = !('IntersectionObserver' in window);
 let motionTimer = null;
 let motionFrame = null;
+const themeColorCache = new Map();
 
 const pointCloudInteraction = {
   active: false,
@@ -145,7 +165,8 @@ const pointCloudInteraction = {
   y: 0.5,
   scrub: 0.48,
   targetScrub: 0.48,
-  energy: 0
+  energy: 0,
+  completed: false
 };
 
 const vprPlaces = [
@@ -186,7 +207,8 @@ const agentInteraction = {
   hoverType: null,
   hoverId: null,
   pulse: 0,
-  runBoost: 0
+  runBoost: 0,
+  completed: false
 };
 
 const educationInteraction = {
@@ -238,6 +260,7 @@ const registrationState = {
   seed: 7,
   animationFrame: null
 };
+let registrationParamsCache = null;
 
 function initCustomCursor() {
   if (!customCursor || !window.matchMedia('(pointer: fine) and (min-width: 720px)').matches) return;
@@ -350,6 +373,11 @@ const localRepos = [
     default_branch: 'master',
     html_url: 'https://github.com/wcx12/TrendRadar',
     readme_url: 'https://raw.githubusercontent.com/wcx12/TrendRadar/master/README.md',
+    fork: true,
+    source: {
+      full_name: 'sansan0/TrendRadar',
+      html_url: 'https://github.com/sansan0/TrendRadar'
+    },
     interests: []
   },
   {
@@ -361,7 +389,7 @@ const localRepos = [
     default_branch: 'master',
     html_url: 'https://github.com/wcx12/tetrahedron-visualizer',
     readme_url: 'https://raw.githubusercontent.com/wcx12/tetrahedron-visualizer/master/README.md',
-    interests: ['ai4edu', 'point-cloud-registration']
+    interests: ['ai4edu']
   },
   {
     name: 'BIT-The-mathematical-foundation-of-big-Data',
@@ -382,9 +410,24 @@ const staticPublications = [
     venue: 'Neurocomputing',
     year: '2026',
     status: 'Published',
+    statusZh: '已发表',
     summary: 'Benchmark work connected to visual place recognition and visual localization.',
+    authors: 'Chenxu Wang; Qingtong Meng; Bonan Zhang; Fusen Guo',
+    doi: '10.1016/j.neucom.2026.133399',
     link: 'https://doi.org/10.1016/j.neucom.2026.133399',
     interests: ['vpr']
+  },
+  {
+    title: 'Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification',
+    venue: 'Neurocomputing',
+    year: '2026',
+    status: 'In press',
+    statusZh: '录用待刊',
+    summary: 'A unified training objective for sample-efficient active learning in medical image classification.',
+    authors: 'Chenxu Wang; QingTong Meng; Qianxun Lin; Bonan Zhang; Fusen Guo',
+    doi: '10.1016/j.neucom.2026.134314',
+    link: 'https://doi.org/10.1016/j.neucom.2026.134314',
+    interests: ['medical-image-analysis']
   }
 ];
 
@@ -476,19 +519,91 @@ const GITHUB_REPOSITORY = 'wcx12/wcx12';
 const GITHUB_BRANCH = 'main';
 const GITHUB_OWNER = 'wcx12';
 const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
-const GITHUB_TOKEN_KEY = 'wcx12-github-token';
+const LEGACY_GITHUB_TOKEN_KEY = 'wcx12-github-token';
+const REQUEST_TIMEOUT_MS = Object.freeze({
+  config: 8000,
+  github: 10000,
+  orcid: 10000,
+  readme: 12000
+});
+
+function clearGitHubToken(options = {}) {
+  const { abortRequest = false } = options;
+  if (managerGitHubToken) managerGitHubToken.value = '';
+  if (abortRequest && githubSaveController) {
+    githubSaveController.abort();
+    githubSaveController = null;
+  }
+  try {
+    sessionStorage.removeItem(LEGACY_GITHUB_TOKEN_KEY);
+  } catch {
+    // Ignore storage restrictions while still clearing the in-memory input.
+  }
+}
+
+function timeoutSignal(timeoutMs) {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  const controller = new AbortController();
+  window.setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
+function requestSignal(timeoutMs, externalSignal) {
+  const timedSignal = timeoutSignal(timeoutMs);
+  if (!externalSignal) return timedSignal;
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.any === 'function') {
+    return AbortSignal.any([externalSignal, timedSignal]);
+  }
+
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (externalSignal.aborted || timedSignal.aborted) abort();
+  else {
+    externalSignal.addEventListener('abort', abort, { once: true });
+    timedSignal.addEventListener('abort', abort, { once: true });
+  }
+  return controller.signal;
+}
+
+function fetchWithTimeout(resource, options = {}, timeoutMs = REQUEST_TIMEOUT_MS.github) {
+  const { signal: externalSignal, ...fetchOptions } = options;
+  return fetch(resource, {
+    ...fetchOptions,
+    signal: requestSignal(timeoutMs, externalSignal)
+  });
+}
 
 function detectOwnerTools() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('ownerTools') === '1') localStorage.setItem(OWNER_TOOLS_KEY, 'enabled');
-  if (params.get('ownerTools') === '0') localStorage.removeItem(OWNER_TOOLS_KEY);
+  if (params.get('ownerTools') === '0') {
+    localStorage.removeItem(OWNER_TOOLS_KEY);
+    clearGitHubToken({ abortRequest: true });
+  } else {
+    clearGitHubToken();
+  }
   return localStorage.getItem(OWNER_TOOLS_KEY) === 'enabled';
 }
 
 const ownerToolsEnabled = detectOwnerTools();
 const RESEARCH_CONFIG_VERSION = 2;
+const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const CONFIG_LIMITS = Object.freeze({
+  domains: 64,
+  childrenPerDomain: 64,
+  assignments: 1000,
+  idLength: 80,
+  keyLength: 500,
+  shortTextLength: 240,
+  descriptionLength: 2000
+});
 
 const defaultResearchInterests = JSON.parse(JSON.stringify(researchInterests));
+const ALLOWED_RESEARCH_ANIMATIONS = new Set(
+  defaultResearchInterests.flatMap((domain) => domain.children.map((child) => child.animation))
+);
 
 function cloneConfigValue(value) {
   return JSON.parse(JSON.stringify(value));
@@ -526,15 +641,154 @@ function mergeDefaultResearchInterests(incomingInterests, defaultInterests) {
   return merged;
 }
 
+function isPlainRecord(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function configValidationError(path, message) {
+  return new Error(`Invalid research config at ${path}: ${message}`);
+}
+
+function validateConfigId(value, path) {
+  if (typeof value !== 'string'
+    || value.length > CONFIG_LIMITS.idLength
+    || !CONFIG_ID_PATTERN.test(value)) {
+    throw configValidationError(path, 'expected a lowercase slug id');
+  }
+  return value;
+}
+
+function validateConfigText(value, path, maxLength, options = {}) {
+  const { allowEmpty = false } = options;
+  if (typeof value !== 'string'
+    || value.length > maxLength
+    || (!allowEmpty && !value.trim())
+    || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) {
+    throw configValidationError(path, 'expected bounded plain text');
+  }
+  return value;
+}
+
+function validateLocalizedConfigText(value, path, maxLength) {
+  if (!isPlainRecord(value)) throw configValidationError(path, 'expected localized text');
+  return {
+    en: validateConfigText(value.en, `${path}.en`, maxLength),
+    zh: validateConfigText(value.zh, `${path}.zh`, maxLength)
+  };
+}
+
+function validateResearchInterests(value) {
+  if (!Array.isArray(value) || !value.length || value.length > CONFIG_LIMITS.domains) {
+    throw configValidationError('interests', 'expected a non-empty domain list');
+  }
+
+  const domainIds = new Set();
+  const childIds = new Set();
+  const interests = value.map((domain, domainIndex) => {
+    const domainPath = `interests[${domainIndex}]`;
+    if (!isPlainRecord(domain)) throw configValidationError(domainPath, 'expected a domain object');
+    const id = validateConfigId(domain.id, `${domainPath}.id`);
+    if (domainIds.has(id)) throw configValidationError(`${domainPath}.id`, 'duplicate domain id');
+    domainIds.add(id);
+    if (!Array.isArray(domain.children)
+      || !domain.children.length
+      || domain.children.length > CONFIG_LIMITS.childrenPerDomain) {
+      throw configValidationError(`${domainPath}.children`, 'expected a non-empty child list');
+    }
+
+    const children = domain.children.map((child, childIndex) => {
+      const childPath = `${domainPath}.children[${childIndex}]`;
+      if (!isPlainRecord(child)) throw configValidationError(childPath, 'expected a child object');
+      const childId = validateConfigId(child.id, `${childPath}.id`);
+      if (childIds.has(childId)) throw configValidationError(`${childPath}.id`, 'duplicate child id');
+      childIds.add(childId);
+      if (!ALLOWED_RESEARCH_ANIMATIONS.has(child.animation)) {
+        throw configValidationError(`${childPath}.animation`, 'unsupported animation');
+      }
+      return {
+        id: childId,
+        title: validateLocalizedConfigText(child.title, `${childPath}.title`, CONFIG_LIMITS.shortTextLength),
+        label: validateLocalizedConfigText(child.label, `${childPath}.label`, CONFIG_LIMITS.shortTextLength),
+        animation: child.animation,
+        description: validateLocalizedConfigText(child.description, `${childPath}.description`, CONFIG_LIMITS.descriptionLength)
+      };
+    });
+
+    return {
+      id,
+      title: validateLocalizedConfigText(domain.title, `${domainPath}.title`, CONFIG_LIMITS.shortTextLength),
+      label: validateLocalizedConfigText(domain.label, `${domainPath}.label`, CONFIG_LIMITS.shortTextLength),
+      children
+    };
+  });
+
+  return { interests, childIds };
+}
+
+function validateAssignments(value, path, childIds) {
+  if (!isPlainRecord(value)) throw configValidationError(path, 'expected an assignment object');
+  const entries = Object.entries(value);
+  if (entries.length > CONFIG_LIMITS.assignments) {
+    throw configValidationError(path, 'too many assignment entries');
+  }
+
+  const assignments = {};
+  entries.forEach(([key, ids]) => {
+    if (!key
+      || key.length > CONFIG_LIMITS.keyLength
+      || ['__proto__', 'prototype', 'constructor'].includes(key)
+      || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(key)) {
+      throw configValidationError(`${path}.${key}`, 'invalid assignment key');
+    }
+    if (!Array.isArray(ids) || ids.length > childIds.size) {
+      throw configValidationError(`${path}.${key}`, 'expected an id list');
+    }
+    const uniqueIds = new Set();
+    assignments[key] = ids.map((id, index) => {
+      const validatedId = validateConfigId(id, `${path}.${key}[${index}]`);
+      if (!childIds.has(validatedId)) {
+        throw configValidationError(`${path}.${key}[${index}]`, 'unknown child id');
+      }
+      if (uniqueIds.has(validatedId)) {
+        throw configValidationError(`${path}.${key}[${index}]`, 'duplicate child id');
+      }
+      uniqueIds.add(validatedId);
+      return validatedId;
+    });
+  });
+  return assignments;
+}
+
 function normalizeResearchConfig(config) {
+  if (!isPlainRecord(config)) throw configValidationError('root', 'expected an object');
+  const sourceVersion = config.version ?? 1;
+  if (!Number.isInteger(sourceVersion) || sourceVersion < 1 || sourceVersion > RESEARCH_CONFIG_VERSION) {
+    throw configValidationError('version', 'unsupported version');
+  }
+
   const defaults = defaultResearchConfig();
-  const incomingInterests = Array.isArray(config?.interests) && config.interests.length ? config.interests : defaults.interests;
-  const shouldBackfillDefaults = !config?.version || Number(config.version) < RESEARCH_CONFIG_VERSION;
+  const validated = validateResearchInterests(config.interests);
+  const shouldBackfillDefaults = sourceVersion < RESEARCH_CONFIG_VERSION;
+  const interests = shouldBackfillDefaults
+    ? mergeDefaultResearchInterests(validated.interests, defaults.interests)
+    : validated.interests;
+  const normalizedChildIds = new Set(interests.flatMap((domain) => domain.children.map((child) => child.id)));
+  const repoAssignments = validateAssignments(config.repoAssignments, 'repoAssignments', normalizedChildIds);
+  const paperAssignments = validateAssignments(config.paperAssignments, 'paperAssignments', normalizedChildIds);
+  const keepKnownIds = (ids) => ids.filter((id) => normalizedChildIds.has(id));
+  const defaultRepoAssignments = Object.fromEntries(
+    Object.entries(defaults.repoAssignments).map(([key, ids]) => [key, keepKnownIds(ids)])
+  );
+  const defaultPaperAssignments = Object.fromEntries(
+    Object.entries(defaults.paperAssignments).map(([key, ids]) => [key, keepKnownIds(ids)])
+  );
   return {
     version: RESEARCH_CONFIG_VERSION,
-    interests: shouldBackfillDefaults ? mergeDefaultResearchInterests(incomingInterests, defaults.interests) : incomingInterests,
-    repoAssignments: { ...defaults.repoAssignments, ...(config?.repoAssignments || {}) },
-    paperAssignments: { ...defaults.paperAssignments, ...(config?.paperAssignments || {}) }
+    interests,
+    repoAssignments: { ...defaultRepoAssignments, ...repoAssignments },
+    paperAssignments: { ...defaultPaperAssignments, ...paperAssignments }
   };
 }
 
@@ -559,14 +813,21 @@ function applyResearchConfig(nextConfig) {
 
 async function loadRemoteResearchConfig() {
   try {
-    const response = await fetch(`${CONFIG_PATH}?v=${Date.now()}`, { cache: 'no-store' });
+    const response = await fetchWithTimeout(
+      `${CONFIG_PATH}?v=${Date.now()}`,
+      { cache: 'no-store' },
+      REQUEST_TIMEOUT_MS.config
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const remoteConfig = await response.json();
     applyResearchConfig(remoteConfig);
     if (ownerToolsEnabled) localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
-    renderResearchInterest();
-    renderRepos(filteredRepos);
-    renderPublications();
+    updateHeroStats();
+    renderHeroPreview();
+    refreshInitializedView('research');
+    refreshInitializedView('projects');
+    refreshInitializedView('publications');
+    refreshInitializedView('writing');
     if (ownerToolsEnabled && managerRemoteStatus) {
       managerRemoteStatus.textContent = i18n[currentLang].manager_remote_loaded;
     }
@@ -606,6 +867,7 @@ const fallbackPublications = {
 
 const i18n = {
   en: {
+    skip_main: 'Skip to main content',
     theme_neon: 'Default',
     theme_warm: 'Warm',
     theme_mono: 'Black & White',
@@ -625,6 +887,7 @@ const i18n = {
     repo_preview_readme: 'Read README',
     btn_command: 'Command',
     btn_blog: 'Blog',
+    btn_profile: 'Profile',
     btn_blog_hero: 'Read Blog',
     btn_contact: 'Contact Me',
     btn_repos: 'Explore My Repos',
@@ -639,7 +902,8 @@ const i18n = {
     stat_focus: 'Focus Areas',
     stat_grad: 'Graduation',
     stat_stack: 'Main Stack',
-    hints: 'Shortcuts: Ctrl/⌘K commands · P projects · R research · L language · / search repos',
+    stat_pubs: 'Publications',
+    hints: 'Shortcut: Ctrl/⌘K command palette',
     tab_about: 'about',
     tab_research: 'research',
     tab_projects: 'projects',
@@ -650,7 +914,7 @@ const i18n = {
     tab_resources: 'resources',
     tab_contact: 'contact',
     about_title: 'About',
-    about_line1: 'I study at Beijing Institute of Technology and expect to graduate in 2026.',
+    about_line1: 'I\'m Chenxu Wang (wcx12), studying at Beijing Institute of Technology and expecting to graduate in 2026.',
     about_line2: 'I enjoy combining geometric understanding with reliable engineering delivery.',
     research_title: 'Research Interests',
     research_intro: 'Choose a sub-interest to see related demos, projects, and papers.',
@@ -689,6 +953,7 @@ const i18n = {
     manager_remote_saving: 'Saving to GitHub...',
     manager_remote_saved: 'Saved to GitHub. Pages may take about a minute to rebuild.',
     manager_remote_unchanged: 'GitHub config is already up to date.',
+    manager_remote_conflict: 'GitHub config changed remotely. Reload the page before saving again.',
     manager_remote_failed: 'GitHub save failed. Check token permission and try again.',
     manager_delete: 'Delete Category',
     manager_projects: 'Projects',
@@ -707,7 +972,10 @@ const i18n = {
     fallback_profile_label: 'Homepage',
     fallback_general_title: 'General',
     fallback_general_label: 'Other projects',
+    repo_fork_badge: 'Fork',
+    repo_forked_from: 'Forked from',
     repo_search_ph: 'Search repositories...',
+    repo_search_aria: 'Search repositories',
     sort_updated: 'Sort: Updated',
     sort_stars: 'Sort: Stars',
     sort_name: 'Sort: Name',
@@ -734,7 +1002,9 @@ const i18n = {
     pub_loading: 'Loading publications from ORCID...',
     pub_load_fail: 'Unable to load from ORCID right now. Showing local fallback list.',
     pub_empty: 'No public publication records found yet.',
+    pub_authors: 'Authors',
     pub_open: 'Open Publication List',
+    pub_open_article: 'Open Article',
     pub_file_title: 'Raw Publication File',
     pub_file_desc: 'Open source markdown list.',
     writing_title: 'Writing',
@@ -743,18 +1013,20 @@ const i18n = {
     writing_featured: 'Featured Notes',
     writing_hint: 'Full articles open as static blog pages.',
     writing_search_ph: 'Search writing...',
+    writing_search_aria: 'Search writing',
     writing_count: 'Showing {shown}/{total} notes',
     writing_empty: 'No writing notes found yet.',
     writing_loading: 'Loading writing index...',
     writing_read: 'Read Note',
     writing_minutes: '{minutes} min read',
     cv_title: 'Resume',
-    cv_desc: 'Download my latest CV snapshot from this repository.',
-    cv_download: 'Download Resume',
+    cv_desc: 'Open a printable research profile with education, publications, projects, and skills.',
+    cv_download: 'View Research Profile',
     contact_title: 'Contact',
     contact_last: 'Open to research collaboration and open-source building.',
     footer: '© 2026 wcx12',
     command_placeholder: 'Type a command or repository...',
+    command_search_aria: 'Search commands and repositories',
     command_empty: 'No matching command.',
     command_open: 'Open',
     command_jump: 'Jump',
@@ -794,6 +1066,7 @@ const i18n = {
     ]
   },
   zh: {
+    skip_main: '跳到主要内容',
     theme_neon: '默认风格',
     theme_warm: '暖色',
     theme_mono: '黑白极简',
@@ -813,6 +1086,7 @@ const i18n = {
     repo_preview_readme: '查看 README',
     btn_command: '命令',
     btn_blog: '博客',
+    btn_profile: '履历',
     btn_blog_hero: '阅读博客',
     btn_contact: '联系我',
     btn_repos: '查看我的仓库',
@@ -827,7 +1101,8 @@ const i18n = {
     stat_focus: '研究方向',
     stat_grad: '毕业时间',
     stat_stack: '主要技术栈',
-    hints: '快捷键：Ctrl/⌘K 命令 · P 项目 · R 研究 · L 语言切换 · / 搜索仓库',
+    stat_pubs: '论文',
+    hints: '快捷键：Ctrl/⌘K 打开命令面板',
     tab_about: '关于',
     tab_research: '研究',
     tab_projects: '项目',
@@ -838,7 +1113,7 @@ const i18n = {
     tab_resources: '资源',
     tab_contact: '联系',
     about_title: '关于我',
-    about_line1: '我目前在北京理工大学学习，预计 2026 年毕业。',
+    about_line1: '我是 Chenxu Wang（wcx12），目前就读于北京理工大学，预计于 2026 年毕业。',
     about_line2: '我喜欢把几何理解和可靠工程实现结合起来。',
     research_title: '研究兴趣',
     research_intro: '选择一个子兴趣，查看关联动画、项目和论文。',
@@ -877,6 +1152,7 @@ const i18n = {
     manager_remote_saving: '正在保存到 GitHub...',
     manager_remote_saved: '已保存到 GitHub，Pages 可能需要约一分钟重新构建。',
     manager_remote_unchanged: 'GitHub 配置已是最新。',
+    manager_remote_conflict: 'GitHub 配置已在远程更新，请重新加载页面后再保存。',
     manager_remote_failed: '保存到 GitHub 失败，请检查 token 权限后重试。',
     manager_delete: '删除分类',
     manager_projects: '项目',
@@ -895,7 +1171,10 @@ const i18n = {
     fallback_profile_label: '个人主页',
     fallback_general_title: '通用',
     fallback_general_label: '其它项目',
+    repo_fork_badge: 'Fork',
+    repo_forked_from: 'Fork 自',
     repo_search_ph: '搜索仓库...',
+    repo_search_aria: '搜索仓库',
     sort_updated: '排序：最近更新',
     sort_stars: '排序：星标数',
     sort_name: '排序：名称',
@@ -922,7 +1201,9 @@ const i18n = {
     pub_loading: '正在从 ORCID 加载论文...',
     pub_load_fail: '当前无法从 ORCID 加载，已显示本地备用列表。',
     pub_empty: '暂未发现公开论文记录。',
+    pub_authors: '作者',
     pub_open: '打开论文列表文件',
+    pub_open_article: '打开论文',
     pub_file_title: '原始论文文件',
     pub_file_desc: '查看仓库中的 markdown 列表。',
     writing_title: '技术博客',
@@ -931,18 +1212,20 @@ const i18n = {
     writing_featured: '精选文章',
     writing_hint: '完整文章会打开静态博客页面。',
     writing_search_ph: '搜索文章...',
+    writing_search_aria: '搜索文章',
     writing_count: '显示 {shown}/{total} 篇文章',
     writing_empty: '暂未找到文章。',
     writing_loading: '正在加载文章索引...',
     writing_read: '阅读文章',
     writing_minutes: '{minutes} 分钟阅读',
     cv_title: '简历',
-    cv_desc: '从当前仓库下载最新简历快照。',
-    cv_download: '下载简历',
+    cv_desc: '查看可打印的研究履历，内容包括教育经历、论文、项目和技能。',
+    cv_download: '查看研究履历',
     contact_title: '联系方式',
     contact_last: '欢迎研究合作与开源协作。',
     footer: '© 2026 wcx12',
     command_placeholder: '输入命令或仓库名称...',
+    command_search_aria: '搜索命令和仓库',
     command_empty: '没有匹配的命令。',
     command_open: '打开',
     command_jump: '跳转',
@@ -1039,6 +1322,17 @@ function updateViewDocumentTitle(viewId) {
   document.title = `${interest || label} | wcx12`;
 }
 
+function renderLazyView(viewId) {
+  if (viewId === 'projects') renderRepos(filteredRepos);
+  else if (viewId === 'research') renderResearchInterest();
+  else if (viewId === 'publications') renderPublications();
+  else if (viewId === 'writing') renderWriting();
+}
+
+function refreshInitializedView(viewId) {
+  if (initializedViews.has(viewId)) renderLazyView(viewId);
+}
+
 function activateView(viewId, options = {}) {
   const { historyMode = 'push', scroll = true } = options;
   const resolvedViewId = VALID_VIEW_IDS.has(viewId) ? viewId : 'about';
@@ -1051,10 +1345,13 @@ function activateView(viewId, options = {}) {
   views.forEach((v) => v.classList.remove('active'));
   const targetView = document.getElementById(resolvedViewId);
   if (targetView) targetView.classList.add('active');
-  if (resolvedViewId === 'projects') requestAnimationFrame(() => renderRepoMap(filteredRepos));
-  if (resolvedViewId === 'research') requestAnimationFrame(renderResearchInterest);
-  if (resolvedViewId === 'publications') requestAnimationFrame(renderPublications);
-  if (resolvedViewId === 'writing') requestAnimationFrame(renderWriting);
+  if (LAZY_VIEW_IDS.has(resolvedViewId)) {
+    requestAnimationFrame(() => {
+      if (!targetView?.classList.contains('active')) return;
+      initializedViews.add(resolvedViewId);
+      renderLazyView(resolvedViewId);
+    });
+  }
   if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
     requestAnimationFrame(() => targetView.closest('.console')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
@@ -1272,11 +1569,14 @@ function renderCommandPreview(item) {
       ? '切换当前页面色调，并保留你的选择。'
       : 'Switch the page color tone and keep the selection.';
   }
+  const detailHtml = item.kind === 'repo'
+    ? languageAwareHtml(detail || '')
+    : escapeHtml(detail || '');
 
   commandPreview.innerHTML = `
     <span class="panel-eyebrow">${escapeHtml(item.type)}</span>
     <h3>${escapeHtml(title)}</h3>
-    <p>${escapeHtml(detail || '')}</p>
+    <p>${detailHtml}</p>
     <div class="command-preview-tags">
       ${tags.filter(Boolean).slice(0, 5).map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}
     </div>
@@ -1315,9 +1615,62 @@ function renderCommandList() {
   renderCommandPreview(items[commandCursor]);
 }
 
+const OVERLAY_FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function setOverlayActive(overlay, active) {
+  if (!overlay) return;
+  if (active) activeOverlayElements.add(overlay);
+  else activeOverlayElements.delete(overlay);
+  const pageIsInert = activeOverlayElements.size > 0;
+  pageBackgroundElements.forEach((element) => {
+    element.inert = pageIsInert;
+    element.toggleAttribute('inert', pageIsInert);
+  });
+}
+
+function overlayFocusableElements(overlay) {
+  return Array.from(overlay.querySelectorAll(OVERLAY_FOCUSABLE_SELECTOR))
+    .filter((element) => element instanceof HTMLElement && element.offsetParent !== null);
+}
+
+function handleOverlayKeydown(event, overlay, closeOverlay) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    closeOverlay();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusable = overlayFocusableElements(overlay);
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (!overlay.contains(document.activeElement)) {
+    event.preventDefault();
+    first.focus();
+  } else if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function restoreOverlayFocus(element) {
+  if (element?.isConnected) element.focus();
+}
+
 function openCommandPalette() {
+  if (!commandPalette.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+    commandReturnFocus = document.activeElement;
+  }
   commandPalette.classList.add('open');
   commandPalette.setAttribute('aria-hidden', 'false');
+  setOverlayActive(commandPalette, true);
   commandInput.value = '';
   commandCursor = 0;
   renderCommandList();
@@ -1325,11 +1678,17 @@ function openCommandPalette() {
 }
 
 function closeCommandPalette() {
+  const wasOpen = commandPalette.classList.contains('open');
   commandPalette.classList.remove('open');
   commandPalette.setAttribute('aria-hidden', 'true');
+  setOverlayActive(commandPalette, false);
+  if (wasOpen) restoreOverlayFocus(commandReturnFocus);
+  commandReturnFocus = null;
 }
 
 openCommand.addEventListener('click', openCommandPalette);
+commandClose?.addEventListener('click', closeCommandPalette);
+commandPalette.addEventListener('keydown', (event) => handleOverlayKeydown(event, commandPalette, closeCommandPalette));
 commandPalette.addEventListener('click', (event) => {
   if (event.target === commandPalette) closeCommandPalette();
 });
@@ -1382,13 +1741,13 @@ function renderInterestRail() {
   interestRail.innerHTML = researchInterests.map((domain) => `
     <section class="interest-domain">
       <div class="interest-domain-head">
-        <strong>${textFor(domain.title)}</strong>
-        <span>${textFor(domain.label)}</span>
+        <strong>${escapeHtml(textFor(domain.title))}</strong>
+        <span>${escapeHtml(textFor(domain.label))}</span>
       </div>
       ${domain.children.map((child) => `
-        <button class="interest-child ${child.id === activeInterestId ? 'active' : ''}" type="button" data-interest="${child.id}" ${child.id === activeInterestId ? 'aria-current="true"' : ''}>
-          ${textFor(child.title)}
-          <small>${textFor(child.label)}</small>
+        <button class="interest-child ${child.id === activeInterestId ? 'active' : ''}" type="button" data-interest="${escapeHtml(child.id)}" ${child.id === activeInterestId ? 'aria-current="true"' : ''}>
+          ${escapeHtml(textFor(child.title))}
+          <small>${escapeHtml(textFor(child.label))}</small>
         </button>
       `).join('')}
     </section>
@@ -1446,6 +1805,7 @@ function assignedInterestIds(item, kind) {
   const map = kind === 'repo' ? researchConfig.repoAssignments : researchConfig.paperAssignments;
   const key = itemKey(item);
   if (Array.isArray(map[key])) return map[key];
+  if (kind === 'repo') return [];
   if (Array.isArray(item.interests)) return item.interests;
   return inferInterestIds(item);
 }
@@ -1483,12 +1843,14 @@ function researchBadgesHtml(item, kind) {
   const ids = assignedInterestIds(item, kind).filter((id) => interestEntryById(id));
   if (!ids.length) {
     const fallback = fallbackPublicCategory(item, kind);
-    return `<span class="research-badge fallback ${fallback.className}">${fallback.title}</span>`;
+    if (kind === 'repo' && fallback.className !== 'profile') return '';
+    return `<span class="research-badge fallback ${escapeHtml(fallback.className)}">${escapeHtml(fallback.title)}</span>`;
   }
   const sourceKey = escapeHtml(itemKey(item));
+  const sourceKind = escapeHtml(kind);
   return ids.map((id) => `
-    <button class="research-badge" type="button" data-interest-jump="${id}" data-interest-source-kind="${kind}" data-interest-source-key="${sourceKey}">
-      ${interestLabel(id)}
+    <button class="research-badge" type="button" data-interest-jump="${escapeHtml(id)}" data-interest-source-kind="${sourceKind}" data-interest-source-key="${sourceKey}">
+      ${escapeHtml(interestLabel(id))}
     </button>
   `).join('');
 }
@@ -1644,6 +2006,7 @@ function postReadTime(post) {
 function renderWritingCard(post, compact = false) {
   const title = escapeHtml(post.title || i18n[currentLang].writing_title);
   const description = escapeHtml(post.description || '');
+  const href = escapeHtml(postHref(post));
   const tags = (post.tags || []).slice(0, compact ? 2 : 4)
     .map((tag) => `<span class="research-badge">${escapeHtml(tag)}</span>`)
     .join('');
@@ -1654,11 +2017,11 @@ function renderWritingCard(post, compact = false) {
         <span>${escapeHtml(post.category || '')}</span>
         <span>${escapeHtml(postReadTime(post))}</span>
       </div>
-      <h3><a href="${postHref(post)}">${title}</a></h3>
+      <h3><a href="${href}">${title}</a></h3>
       <p class="muted">${description}</p>
       <div class="research-badges">${researchBadgesHtml(post, 'post')}${tags}</div>
       <div class="related-actions">
-        <a class="mini-action" href="${postHref(post)}">${i18n[currentLang].writing_read}</a>
+        <a class="mini-action" href="${href}">${i18n[currentLang].writing_read}</a>
       </div>
     </article>
   `;
@@ -1705,26 +2068,30 @@ function isProjectsViewActive() {
 
 function renderRelatedList(container, items, emptyText, kind) {
   if (!items.length) {
-    container.innerHTML = `<p class="muted">${emptyText}</p>`;
+    container.innerHTML = `<p class="muted">${escapeHtml(emptyText)}</p>`;
     return;
   }
 
   container.innerHTML = items.slice(0, 4).map((item) => {
-    const title = item.name || item.title;
-    const detail = item.description || item.summary || item.language || item.venue || '';
-    const meta = kind === 'repo'
+    const rawTitle = item.name || item.title || '';
+    const title = escapeHtml(rawTitle);
+    const rawDetail = item.description || item.summary || item.language || item.venue || '';
+    const detail = kind === 'repo' ? languageAwareHtml(rawDetail) : escapeHtml(rawDetail);
+    const rawMeta = kind === 'repo'
       ? `${item.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${item.stargazers_count || 0}`
       : kind === 'post'
         ? `${item.category || i18n[currentLang].tab_writing} · ${postReadTime(item)}`
         : `${item.venue || ''} · ${item.year || ''}`;
+    const meta = escapeHtml(rawMeta);
+    const safeKind = escapeHtml(kind);
     const action = kind === 'repo'
       ? `<button class="mini-action" type="button" data-show-project="${title}">${i18n[currentLang].show_in_projects}</button>`
       : kind === 'post'
-        ? `<a class="mini-action" href="${postHref(item)}">${i18n[currentLang].writing_read}</a>`
+        ? `<a class="mini-action" href="${escapeHtml(postHref(item))}">${i18n[currentLang].writing_read}</a>`
         : `<button class="mini-action" type="button" data-show-paper="${title}">${i18n[currentLang].tab_publications}</button>`;
     return `
       <div class="related-item">
-        <button class="related-link" type="button" data-kind="${kind}" data-key="${title}">${title}</button>
+        <button class="related-link" type="button" data-kind="${safeKind}" data-key="${title}">${title}</button>
         <div class="research-badges">${researchBadgesHtml(item, kind)}</div>
         <p class="muted">${detail}</p>
         <p class="muted">${meta}</p>
@@ -2066,7 +2433,7 @@ function renderResearchInterest() {
   if (interestPosts) renderRelatedList(interestPosts, relatedPosts(), i18n[currentLang].no_related_writing, 'post');
   renderResearchShowcase();
   renderHeroPreview();
-  if (isResearchViewActive()) drawInterestAnimation();
+  if (isResearchViewActive() && interestCanvasVisible) drawInterestAnimation();
 }
 
 function runThemeTransition(source = themeSelect) {
@@ -2085,6 +2452,7 @@ function applyTheme(theme, options = {}) {
   const { animate = true, source = themeSelect } = options;
   currentTheme = ['neon', 'warm', 'mono'].includes(theme) ? theme : 'neon';
   document.documentElement.dataset.theme = currentTheme;
+  themeColorCache.clear();
   themeSelect.value = currentTheme;
   localStorage.setItem('wcx12-theme', currentTheme);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', {
@@ -2094,8 +2462,11 @@ function applyTheme(theme, options = {}) {
   }[currentTheme]);
   if (animate) runThemeTransition(source);
   drawRegistrationDemo();
-  if (isProjectsViewActive()) renderRepoMap(filteredRepos);
-  if (isResearchViewActive()) drawInterestAnimation();
+  if (initializedViews.has('projects')) {
+    if (filteredRepos.length) renderRepos(filteredRepos, true);
+    else if (isProjectsViewActive()) renderRepoMap(filteredRepos);
+  }
+  if (initializedViews.has('research') && isResearchViewActive() && interestCanvasVisible) drawInterestAnimation();
   drawHeroPreviewCanvas();
 }
 
@@ -2119,15 +2490,25 @@ interestSectionTabs.forEach((button, index) => {
 
 function openResearchManager() {
   if (!ownerToolsEnabled) return;
-  managerGitHubToken.value = sessionStorage.getItem(GITHUB_TOKEN_KEY) || '';
+  if (!researchManager.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+    researchManagerReturnFocus = document.activeElement;
+  }
+  clearGitHubToken();
   renderResearchManager();
   researchManager.classList.add('open');
   researchManager.setAttribute('aria-hidden', 'false');
+  setOverlayActive(researchManager, true);
+  requestAnimationFrame(() => managerClose?.focus());
 }
 
 function closeResearchManager() {
+  const wasOpen = researchManager.classList.contains('open');
+  clearGitHubToken({ abortRequest: true });
   researchManager.classList.remove('open');
   researchManager.setAttribute('aria-hidden', 'true');
+  setOverlayActive(researchManager, false);
+  if (wasOpen) restoreOverlayFocus(researchManagerReturnFocus);
+  researchManagerReturnFocus = null;
 }
 
 function slugify(value) {
@@ -2142,16 +2523,16 @@ function renderResearchManager() {
   const projectIds = new Set(relatedRepos().map((item) => itemKey(item)));
   managerProjects.innerHTML = allRepos.map((repo) => `
     <label class="manager-check">
-      <input type="checkbox" data-kind="repo" value="${repo.name}" ${projectIds.has(repo.name) ? 'checked' : ''} />
-      <span>${repo.name}</span>
+      <input type="checkbox" data-kind="repo" value="${escapeHtml(repo.name)}" ${projectIds.has(repo.name) ? 'checked' : ''} />
+      <span>${escapeHtml(repo.name)}</span>
     </label>
   `).join('');
 
   const paperIds = new Set(relatedPapers().map((item) => itemKey(item)));
   managerPapers.innerHTML = currentPublications().map((paper) => `
     <label class="manager-check">
-      <input type="checkbox" data-kind="paper" value="${paper.title}" ${paperIds.has(paper.title) ? 'checked' : ''} />
-      <span>${paper.title}</span>
+      <input type="checkbox" data-kind="paper" value="${escapeHtml(paper.title)}" ${paperIds.has(paper.title) ? 'checked' : ''} />
+      <span>${escapeHtml(paper.title)}</span>
     </label>
   `).join('') || `<p class="muted">${i18n[currentLang].no_related_papers}</p>`;
 }
@@ -2176,13 +2557,17 @@ function collectManagerAssignments() {
 
 function saveManagerAssignments() {
   if (!ownerToolsEnabled) return;
-  collectManagerAssignments();
-  saveResearchConfig();
-  renderResearchInterest();
-  renderResearchManager();
-  updateViewDocumentTitle('research');
-  updateRoute('research', 'replace');
-  managerActive.textContent = `${i18n[currentLang].manager_saved} ${managerActive.textContent}`;
+  try {
+    collectManagerAssignments();
+    saveResearchConfig();
+    renderResearchInterest();
+    renderResearchManager();
+    updateViewDocumentTitle('research');
+    updateRoute('research', 'replace');
+    managerActive.textContent = `${i18n[currentLang].manager_saved} ${managerActive.textContent}`;
+  } finally {
+    clearGitHubToken();
+  }
 }
 
 function toBase64Utf8(value) {
@@ -2192,6 +2577,12 @@ function toBase64Utf8(value) {
     binary += String.fromCharCode(byte);
   });
   return btoa(binary);
+}
+
+function fromBase64Utf8(value) {
+  const binary = atob(value.replace(/\s/g, ''));
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
 
 function githubHeaders(token) {
@@ -2211,36 +2602,61 @@ async function readGitHubError(response) {
   }
 }
 
-async function fetchGitHubConfigFile(token) {
+async function fetchGitHubConfigFile(token, signal) {
   const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
-  const current = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, {
-    cache: 'no-store',
-    headers: githubHeaders(token)
-  });
+  const current = await fetchWithTimeout(
+    `${apiUrl}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,
+    {
+      cache: 'no-store',
+      headers: githubHeaders(token),
+      signal
+    },
+    REQUEST_TIMEOUT_MS.github
+  );
 
   if (!current.ok) {
     const detail = await readGitHubError(current);
     throw new Error(`read ${current.status}: ${detail}`);
   }
 
-  return current.json();
+  const payload = await current.json();
+  if (!isPlainRecord(payload)
+    || typeof payload.sha !== 'string'
+    || !/^[0-9a-f]{40,64}$/i.test(payload.sha)
+    || payload.encoding !== 'base64'
+    || typeof payload.content !== 'string') {
+    throw new Error('Invalid GitHub config response');
+  }
+
+  const remoteConfig = JSON.parse(fromBase64Utf8(payload.content).replace(/^\uFEFF/, ''));
+  normalizeResearchConfig(remoteConfig);
+  return { sha: payload.sha };
 }
 
-async function writeGitHubConfigFile(token, sha) {
+async function writeGitHubConfigFile(token, sha, signal) {
   const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
-  const response = await fetch(apiUrl, {
-    method: 'PUT',
-    headers: {
-      ...githubHeaders(token),
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      message: 'Update research mapping config',
-      branch: GITHUB_BRANCH,
-      sha,
-      content: toBase64Utf8(`${JSON.stringify(researchConfig, null, 2)}\n`)
-    })
+  const configToWrite = normalizeResearchConfig({
+    ...researchConfig,
+    interests: researchInterests
   });
+  const response = await fetchWithTimeout(
+    apiUrl,
+    {
+      method: 'PUT',
+      headers: {
+        ...githubHeaders(token),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: 'Update research mapping config',
+        branch: GITHUB_BRANCH,
+        sha,
+        content: toBase64Utf8(`${JSON.stringify(configToWrite, null, 2)}\n`)
+      }),
+      signal
+    },
+    REQUEST_TIMEOUT_MS.github
+  );
 
   if (!response.ok) {
     const detail = await readGitHubError(response);
@@ -2252,17 +2668,12 @@ async function writeGitHubConfigFile(token, sha) {
   return response.json();
 }
 
-async function updateResearchConfigOnGitHub(token) {
-  const currentFile = await fetchGitHubConfigFile(token);
+async function updateResearchConfigOnGitHub(token, signal) {
+  const currentFile = await fetchGitHubConfigFile(token, signal);
 
   try {
-    return await writeGitHubConfigFile(token, currentFile.sha);
+    return await writeGitHubConfigFile(token, currentFile.sha, signal);
   } catch (error) {
-    if (error.status === 409) {
-      const latestFile = await fetchGitHubConfigFile(token);
-      return writeGitHubConfigFile(token, latestFile.sha);
-    }
-
     if (error.status === 422 && error.message.toLowerCase().includes('content is unchanged')) {
       return { unchanged: true };
     }
@@ -2273,28 +2684,37 @@ async function updateResearchConfigOnGitHub(token) {
 
 async function saveResearchConfigToGitHub() {
   if (!ownerToolsEnabled) return;
-  collectManagerAssignments();
-  saveResearchConfig();
-
-  const token = managerGitHubToken.value.trim() || sessionStorage.getItem(GITHUB_TOKEN_KEY) || '';
+  let token = managerGitHubToken.value.trim();
   if (!token) {
     managerRemoteStatus.textContent = i18n[currentLang].manager_remote_need_token;
+    clearGitHubToken();
     managerGitHubToken.focus();
     return;
   }
 
-  sessionStorage.setItem(GITHUB_TOKEN_KEY, token);
+  githubSaveController?.abort();
+  const requestController = new AbortController();
+  githubSaveController = requestController;
   managerRemoteStatus.textContent = i18n[currentLang].manager_remote_saving;
   managerSaveRemote.disabled = true;
 
   try {
-    const result = await updateResearchConfigOnGitHub(token);
+    collectManagerAssignments();
+    saveResearchConfig();
+    const result = await updateResearchConfigOnGitHub(token, requestController.signal);
     managerRemoteStatus.textContent = result.unchanged
       ? i18n[currentLang].manager_remote_unchanged
       : i18n[currentLang].manager_remote_saved;
   } catch (error) {
-    managerRemoteStatus.textContent = `${i18n[currentLang].manager_remote_failed} (${error.message})`;
+    if (!requestController.signal.aborted) {
+      managerRemoteStatus.textContent = error.status === 409
+        ? i18n[currentLang].manager_remote_conflict
+        : `${i18n[currentLang].manager_remote_failed} (${error.message})`;
+    }
   } finally {
+    token = '';
+    clearGitHubToken();
+    if (githubSaveController === requestController) githubSaveController = null;
     managerSaveRemote.disabled = false;
   }
 }
@@ -2363,6 +2783,7 @@ function deleteActiveResearchCategory() {
 manageResearch.hidden = !ownerToolsEnabled;
 manageResearch.addEventListener('click', openResearchManager);
 managerClose.addEventListener('click', closeResearchManager);
+researchManager.addEventListener('keydown', (event) => handleOverlayKeydown(event, researchManager, closeResearchManager));
 researchManager.addEventListener('click', (event) => {
   if (event.target === researchManager) closeResearchManager();
 });
@@ -2373,33 +2794,48 @@ managerDelete.addEventListener('click', deleteActiveResearchCategory);
 
 chips.forEach((chip) => {
   chip.addEventListener('click', () => {
-    chips.forEach((c) => c.classList.remove('active'));
-    chip.classList.add('active');
+    chips.forEach((c) => {
+      const selected = c === chip;
+      c.classList.toggle('active', selected);
+      c.setAttribute('aria-pressed', String(selected));
+    });
     chipOutput.textContent = i18n[currentLang].chip_loaded.replace('{tag}', chip.dataset.tag);
   });
 });
 
 function openModal(config) {
+  if (!modal.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+    modalReturnFocus = document.activeElement;
+  }
   modalTitle.textContent = config.title;
   if (config.html) modalBody.innerHTML = config.html;
   else modalBody.textContent = config.body || '';
-  if (config.link) {
+  const externalLink = validatedExternalHttpUrl(config.link);
+  if (externalLink) {
     modalLink.style.display = 'inline-flex';
     modalLink.textContent = config.linkText || i18n[currentLang].open_external;
-    modalLink.href = config.link;
+    modalLink.href = externalLink;
   } else {
+    modalLink.removeAttribute('href');
     modalLink.style.display = 'none';
   }
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
+  setOverlayActive(modal, true);
+  requestAnimationFrame(() => modalClose?.focus());
 }
 
 function closeModal() {
+  const wasOpen = modal.classList.contains('open');
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
+  setOverlayActive(modal, false);
+  if (wasOpen) restoreOverlayFocus(modalReturnFocus);
+  modalReturnFocus = null;
 }
 
 modalClose.addEventListener('click', closeModal);
+modal.addEventListener('keydown', (event) => handleOverlayKeydown(event, modal, closeModal));
 modal.addEventListener('click', (event) => {
   if (event.target === modal) closeModal();
 });
@@ -2453,6 +2889,36 @@ function escapeHtml(value) {
   }[char]));
 }
 
+function languageAwareHtml(value) {
+  const cjkRun = /([\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef]+)/gi;
+  const cjkOnly = /^[\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef]+$/i;
+  return String(value || '').split(cjkRun).map((segment) => (
+    cjkOnly.test(segment)
+      ? `<span lang="zh-CN">${escapeHtml(segment)}</span>`
+      : escapeHtml(segment)
+  )).join('');
+}
+
+function externalText(value, fallback = '', maxLength = 500) {
+  if (typeof value !== 'string') return fallback;
+  const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+  return cleaned ? cleaned.slice(0, maxLength) : fallback;
+}
+
+function validatedExternalHttpUrl(candidate) {
+  if (typeof candidate !== 'string' || !candidate.trim()) return '';
+  try {
+    const parsed = new URL(candidate.trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function safeExternalHref(candidate) {
+  return escapeHtml(validatedExternalHttpUrl(candidate) || '#');
+}
+
 function markdownUrlTarget(rawUrl) {
   const value = String(rawUrl || '').trim();
   if (value.startsWith('<')) {
@@ -2466,9 +2932,7 @@ function markdownUrlTarget(rawUrl) {
 function validatedReadmeUrl(candidate, kind = 'link') {
   try {
     const parsed = new URL(candidate, window.location.href);
-    const allowedProtocols = kind === 'image'
-      ? new Set(['http:', 'https:'])
-      : new Set(['http:', 'https:', 'mailto:', 'tel:']);
+    const allowedProtocols = new Set(['http:', 'https:']);
     return allowedProtocols.has(parsed.protocol) ? parsed.href : '#';
   } catch {
     return '#';
@@ -2481,12 +2945,14 @@ function resolveReadmeUrl(rawUrl, repo, kind = 'link') {
   if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(value)) return validatedReadmeUrl(value, kind);
   if (!repo) return validatedReadmeUrl(value, kind);
 
-  const repositoryUrl = String(repo.html_url || `https://github.com/${GITHUB_OWNER}/${repo.name}`).replace(/\/$/, '');
-  const branch = repo.default_branch || 'main';
+  const encodedRepoName = encodeURIComponent(String(repo.name || ''));
+  const repositoryUrl = (validatedExternalHttpUrl(repo.html_url)
+    || `https://github.com/${encodeURIComponent(GITHUB_OWNER)}/${encodedRepoName}`).replace(/\/$/, '');
+  const branch = String(repo.default_branch || 'main').split('/').map(encodeURIComponent).join('/');
   if (value.startsWith('#')) return validatedReadmeUrl(`${repositoryUrl}/blob/${branch}/README.md${value}`, kind);
   const relativePath = value.replace(/^\.\//, '').replace(/^\//, '');
   const base = kind === 'image'
-    ? `https://raw.githubusercontent.com/${GITHUB_OWNER}/${repo.name}/${branch}/`
+    ? `https://raw.githubusercontent.com/${encodeURIComponent(GITHUB_OWNER)}/${encodedRepoName}/${branch}/`
     : `${repositoryUrl}/blob/${branch}/`;
   try {
     return validatedReadmeUrl(new URL(relativePath, base).href, kind);
@@ -2497,6 +2963,18 @@ function resolveReadmeUrl(rawUrl, repo, kind = 'link') {
 
 function safeMarkdownUrl(url, repo, kind = 'link') {
   return escapeHtml(resolveReadmeUrl(url, repo, kind));
+}
+
+function imageLinkAriaLabel(href) {
+  try {
+    const parsed = new URL(href);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    const host = parsed.hostname.replace(/^www\./i, '').slice(0, 80);
+    if (!host) return '';
+    return currentLang === 'zh' ? `图片链接：${host}` : `Image link: ${host}`;
+  } catch {
+    return '';
+  }
 }
 
 function sanitizeMarkdownHtml(rawHtml, repo) {
@@ -2527,7 +3005,15 @@ function sanitizeMarkdownHtml(rawHtml, repo) {
     }
     if (node.tagName === 'IMG') {
       node.setAttribute('loading', 'lazy');
+      if (!node.hasAttribute('alt')) node.setAttribute('alt', '');
     }
+  });
+  template.content.querySelectorAll('a').forEach((anchor) => {
+    const images = Array.from(anchor.querySelectorAll('img'));
+    if (!images.length || anchor.textContent.trim()) return;
+    const imageAlt = images.map((img) => img.getAttribute('alt')?.trim()).find(Boolean);
+    const label = imageAlt || imageLinkAriaLabel(anchor.getAttribute('href') || '');
+    if (label) anchor.setAttribute('aria-label', label);
   });
   return template.innerHTML;
 }
@@ -2692,16 +3178,37 @@ function markdownToHtml(markdown, repo) {
   return html.join('');
 }
 
+function repoForkAttributionHtml(repo) {
+  if (!repo?.fork) return '';
+  const sourceName = externalText(repo.source?.full_name, '', 200);
+  const sourceUrl = validatedExternalHttpUrl(repo.source?.html_url);
+  const sourceLink = sourceName && sourceUrl
+    ? `<a class="mini-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(i18n[currentLang].repo_forked_from)} ${escapeHtml(sourceName)}</a>`
+    : '';
+  return `
+    <div class="research-badges repo-fork-attribution">
+      <span class="research-badge fallback fork">${escapeHtml(i18n[currentLang].repo_fork_badge)}</span>
+      ${sourceLink}
+    </div>
+  `;
+}
+
 async function openRepoReadme(repoName) {
   const repo = allRepos.find((item) => item.name === repoName);
   if (!repo) return;
+  const requestSequence = ++readmeRequestSequence;
+  readmeRequestController?.abort();
+  const requestController = new AbortController();
+  readmeRequestController = requestController;
+  const mappingLabel = repoMappingLabel(repo);
   const overview = () => `
     <div class="project-overview">
       <span class="panel-eyebrow">${i18n[currentLang].project_overview}</span>
-      <p>${escapeHtml(repo.description || i18n[currentLang].no_desc)}</p>
+      <p>${languageAwareHtml(repo.description || i18n[currentLang].no_desc)}</p>
+      ${repoForkAttributionHtml(repo)}
       <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
       <div class="repo-meta">
-        <span>${i18n[currentLang].project_mapping}: ${escapeHtml(repoMappingLabel(repo))}</span>
+        ${mappingLabel ? `<span>${i18n[currentLang].project_mapping}: ${escapeHtml(mappingLabel)}</span>` : ''}
         <span>${i18n[currentLang].project_updated}: ${escapeHtml((repo.updated_at || '').slice(0, 10) || '-')}</span>
       </div>
     </div>
@@ -2710,13 +3217,24 @@ async function openRepoReadme(repoName) {
   attachInterestJumpHandlers(readmeDrawerBody);
 
   try {
-    const response = await fetch(repo.readme_url);
+    const readmeUrl = validatedExternalHttpUrl(repo.readme_url);
+    if (!readmeUrl) throw new Error('Invalid README URL');
+    const response = await fetchWithTimeout(
+      readmeUrl,
+      { signal: requestController.signal },
+      REQUEST_TIMEOUT_MS.readme
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const markdown = await response.text();
+    if (requestSequence !== readmeRequestSequence) return;
     readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown, repo)}</div>`;
   } catch {
+    if (requestSequence !== readmeRequestSequence) return;
     readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box"><p>${i18n[currentLang].readme_unavailable}</p></div>`;
+  } finally {
+    if (readmeRequestController === requestController) readmeRequestController = null;
   }
+  if (requestSequence !== readmeRequestSequence) return;
   attachInterestJumpHandlers(readmeDrawerBody);
   attachInteractiveCards(readmeDrawerBody);
 }
@@ -2729,19 +3247,31 @@ function openReadmeDrawer(repo, html) {
   readmeDrawerKicker.textContent = i18n[currentLang].repo_preview_title;
   readmeDrawerTitle.textContent = repo.name;
   readmeDrawerBody.innerHTML = html || '';
-  readmeDrawerLink.href = repo.html_url;
+  const repoUrl = validatedExternalHttpUrl(repo.html_url);
+  if (repoUrl) {
+    readmeDrawerLink.href = repoUrl;
+    readmeDrawerLink.style.display = '';
+  } else {
+    readmeDrawerLink.removeAttribute('href');
+    readmeDrawerLink.style.display = 'none';
+  }
   readmeDrawerLink.textContent = i18n[currentLang].details_project_link_text;
   readmeDrawer.classList.add('open');
   readmeDrawer.setAttribute('aria-hidden', 'false');
+  setOverlayActive(readmeDrawer, true);
   requestAnimationFrame(() => readmeDrawerClose?.focus());
 }
 
 function closeReadmeDrawer() {
   if (!readmeDrawer) return;
+  readmeRequestSequence += 1;
+  readmeRequestController?.abort();
+  readmeRequestController = null;
   const wasOpen = readmeDrawer.classList.contains('open');
   readmeDrawer.classList.remove('open');
   readmeDrawer.setAttribute('aria-hidden', 'true');
-  if (wasOpen && readmeReturnFocus?.isConnected) readmeReturnFocus.focus();
+  setOverlayActive(readmeDrawer, false);
+  if (wasOpen) restoreOverlayFocus(readmeReturnFocus);
   readmeReturnFocus = null;
 }
 
@@ -2749,34 +3279,18 @@ readmeDrawerClose?.addEventListener('click', closeReadmeDrawer);
 readmeDrawer?.addEventListener('click', (event) => {
   if (event.target === readmeDrawer) closeReadmeDrawer();
 });
-readmeDrawer?.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    closeReadmeDrawer();
-    return;
-  }
-  if (event.key !== 'Tab') return;
-  const focusable = Array.from(readmeDrawer.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
-    .filter((item) => item instanceof HTMLElement && item.offsetParent !== null);
-  if (!focusable.length) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-});
+readmeDrawer?.addEventListener('keydown', (event) => handleOverlayKeydown(event, readmeDrawer, closeReadmeDrawer));
 
 function openPaperDetail(title) {
   const paper = currentPublications().find((item) => item.title === title);
   if (!paper) return;
+  const authors = paper.authors
+    ? `<p class="muted"><strong>${i18n[currentLang].pub_authors}:</strong> ${escapeHtml(paper.authors)}</p>`
+    : '';
   openModal({
     title: paper.title,
-    html: `<div class="readme-box"><p class="muted">${paper.venue || ''} · ${paper.year || ''}</p><div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${paper.summary || ''}</p></div>`,
-    linkText: i18n[currentLang].open_external,
+    html: `<div class="readme-box"><p class="muted">${escapeHtml(paper.venue || '')} · ${escapeHtml(paper.year || '')}</p>${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${escapeHtml(paper.summary || '')}</p></div>`,
+    linkText: i18n[currentLang].pub_open_article,
     link: paper.link
   });
   attachInterestJumpHandlers(modalBody);
@@ -2796,34 +3310,38 @@ function renderRepoPreviewCard(repo) {
   const mappingLabel = repoMappingLabel(repo);
   const accent = repoColor(repo.language);
   const safeName = escapeHtml(repo.name);
-  const desc = escapeHtml(repo.description || i18n[currentLang].no_desc);
+  const desc = languageAwareHtml(repo.description || i18n[currentLang].no_desc);
+  const repoHref = safeExternalHref(repo.html_url);
   return `
     <article class="repo-card repo-preview-card interactive-card motion-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-motion-card data-motion-key="repo-${safeName}" data-repo="${safeName}" style="--repo-accent:${accent}">
       <div class="repo-preview-top">
         <div>
           <span class="panel-eyebrow">${i18n[currentLang].repo_preview_title}</span>
-          <h3><a href="${repo.html_url}" target="_blank" rel="noreferrer">${safeName}</a></h3>
+          <h3><a href="${repoHref}" target="_blank" rel="noreferrer">${safeName}</a></h3>
         </div>
         <div class="repo-preview-visual" aria-hidden="true">
           <span></span><span></span><span></span>
         </div>
       </div>
       <p class="muted repo-preview-desc">${desc}</p>
+      ${repoForkAttributionHtml(repo)}
       <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
       <div class="repo-preview-facts">
-        <span>${i18n[currentLang].project_mapping}</span>
-        <strong>${escapeHtml(mappingLabel)}</strong>
+        ${repoInterestId ? `
+          <span>${i18n[currentLang].project_mapping}</span>
+          <strong>${escapeHtml(mappingLabel)}</strong>
+        ` : ''}
         <span>${i18n[currentLang].project_updated}</span>
         <strong>${escapeHtml(repoUpdatedDate(repo))}</strong>
       </div>
       <div class="repo-meta">
-        <span>${i18n[currentLang].star} ${repo.stargazers_count}</span>
+        <span>${i18n[currentLang].star} ${escapeHtml(repo.stargazers_count)}</span>
         <span>${escapeHtml(repo.language || i18n[currentLang].mixed)}</span>
       </div>
       <div class="repo-actions">
         <button class="btn btn-outline repo-detail" type="button" data-repo="${safeName}">${i18n[currentLang].repo_preview_readme}</button>
         ${repoInterestId ? `<button class="btn btn-outline repo-research" type="button" data-repo="${safeName}">${i18n[currentLang].show_in_research}</button>` : ''}
-        <a class="btn btn-primary" href="${repo.html_url}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
+        <a class="btn btn-primary" href="${repoHref}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
       </div>
     </article>
   `;
@@ -2909,6 +3427,30 @@ function resizeDrawingCanvas(canvasElement, context) {
 }
 
 function repoColor(language) {
+  if (currentTheme === 'mono') {
+    const monoPalette = {
+      JavaScript: '#f2f2f2',
+      TypeScript: '#d4d4d4',
+      Python: '#b6b6b6',
+      TeX: '#989898',
+      HTML: '#7a7a7a'
+    };
+    const fallback = ['#e3e3e3', '#c5c5c5', '#a7a7a7', '#898989', '#6b6b6b'];
+    return monoPalette[language]
+      || fallback[Math.abs(hashString(String(language || 'Mixed'))) % fallback.length];
+  }
+  if (currentTheme === 'warm') {
+    const warmPalette = {
+      JavaScript: '#f2b84b',
+      TypeScript: '#df7a5e',
+      Python: '#c78b52',
+      TeX: '#e09f3e',
+      HTML: '#b86b4b'
+    };
+    const fallback = ['#d9a441', '#d47d5d', '#bd8455', '#e0a03f', '#aa684e'];
+    return warmPalette[language]
+      || fallback[Math.abs(hashString(String(language || 'Mixed'))) % fallback.length];
+  }
   const palette = {
     JavaScript: '#00f5ff',
     TypeScript: '#62a8ff',
@@ -2962,14 +3504,12 @@ function repoInterestEntries(repo) {
 
 function repoMappingLabel(repo) {
   const entries = repoInterestEntries(repo);
-  if (!entries.length) return fallbackPublicCategory(repo, 'repo').title;
+  if (!entries.length) return '';
   return entries.map((entry) => textFor(entry.child.title)).join(' + ');
 }
 
 function repoMapGroupKey(entries) {
-  return entries.length
-    ? entries.map((entry) => entry.child.id).sort().join('+')
-    : 'unmapped';
+  return entries.map((entry) => entry.child.id).sort().join('+');
 }
 
 function researchMapAnchors(width, height) {
@@ -3015,7 +3555,7 @@ function renderRepoMap(repos = filteredRepos) {
   const { width, height } = resizeDrawingCanvas(repoMap, repoMapCtx);
   repoMapCtx.clearRect(0, 0, width, height);
 
-  const items = sortedRepos(repos);
+  const items = sortedRepos(repos).filter((repo) => repoInterestEntries(repo).length);
   repoNodes = [];
   repoMapFieldNodes = [];
   const compact = width < 520;
@@ -3056,18 +3596,7 @@ function renderRepoMap(repos = filteredRepos) {
   }
 
   const anchors = researchMapAnchors(width, height);
-  const unmappedAnchor = {
-    id: 'unmapped',
-    x: compact ? width * 0.5 : width * 0.5,
-    y: compact ? height - 32 : height - 38,
-    r: compact ? 28 : 34,
-    color: themeColor('--muted') || '#9ca9cf',
-    mapTitle: i18n[currentLang].fallback_general_title,
-    domainTitle: i18n[currentLang].fallback_general_label,
-    index: anchors.length,
-    child: { id: 'unmapped' }
-  };
-  const mapAnchors = [...anchors, unmappedAnchor];
+  const mapAnchors = anchors;
   repoMapFieldNodes = mapAnchors;
   const anchorById = new Map(mapAnchors.map((anchor) => [anchor.id, anchor]));
   const contexts = items.map((repo, index) => {
@@ -3084,7 +3613,6 @@ function renderRepoMap(repos = filteredRepos) {
     const active = hoveredMapField === anchor.id || (hoveredRepo && contexts.some((context) => (
       context.repo.name === hoveredRepo && (
         context.entries.some((entry) => entry.child.id === anchor.id)
-        || (anchor.id === 'unmapped' && !context.entries.length)
       )
     )));
     const pulse = 2 + (Math.sin(repoMapTick * 0.035 + anchor.index) + 1) * 2;
@@ -3104,9 +3632,7 @@ function renderRepoMap(repos = filteredRepos) {
   });
 
   contexts.forEach((context) => {
-    const anchorRefs = context.entries.length
-      ? context.entries.map((entry) => anchorById.get(entry.child.id)).filter(Boolean)
-      : [unmappedAnchor];
+    const anchorRefs = context.entries.map((entry) => anchorById.get(entry.child.id)).filter(Boolean);
     const group = groups.get(context.key) || [];
     const slot = Math.max(0, group.indexOf(context.index));
     const total = Math.max(1, group.length);
@@ -3210,7 +3736,7 @@ repoMap.addEventListener('mousemove', (event) => {
   const fieldHit = hit ? null : repoMapFieldNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
   hoveredRepo = hit ? hit.repo.name : null;
   hoveredMapField = fieldHit ? fieldHit.id : null;
-  repoMap.style.cursor = hit || (fieldHit && fieldHit.id !== 'unmapped') ? 'pointer' : 'default';
+  repoMap.style.cursor = hit || fieldHit ? 'pointer' : 'default';
   repoMapHint.textContent = hit
     ? `${hit.repo.name} · ${repoMappingLabel(hit.repo)} · ${hit.repo.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${hit.repo.stargazers_count}`
     : fieldHit
@@ -3231,11 +3757,14 @@ repoMap.addEventListener('click', (event) => {
   const hit = repoNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
   const fieldHit = hit ? null : repoMapFieldNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
   if (hit) openRepoDetail(hit.repo.name);
-  else if (fieldHit && fieldHit.id !== 'unmapped') jumpToResearchInterest(fieldHit.id);
+  else if (fieldHit) jumpToResearchInterest(fieldHit.id);
 });
 
 function themeColor(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (themeColorCache.has(name)) return themeColorCache.get(name);
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  themeColorCache.set(name, value);
+  return value;
 }
 
 function activeInterestAnimationType() {
@@ -3276,9 +3805,103 @@ function medicalStatusText() {
   const sample = medicalCases[medicalInteraction.selected] || medicalCases[0];
   const labeled = medicalInteraction.labeled.has(medicalInteraction.selected);
   if (currentLang === 'zh') {
-    return `${sample.id}，不确定度 ${Math.round(sample.uncertainty * 100)}%，${labeled ? `已标注为${medicalFindingLabel(sample)}` : '待标注'}。已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}，模型得分 ${medicalLearningScore()}%。使用方向键选择样本，按回车标注，按 R 重置。`;
+    return `${sample.id}，不确定度 ${Math.round(sample.uncertainty * 100)}%，${labeled ? `已标注为${medicalFindingLabel(sample)}` : '待标注'}。已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}，模型得分 ${medicalLearningScore()}%。`;
   }
-  return `${sample.id}, uncertainty ${Math.round(sample.uncertainty * 100)}%, ${labeled ? `labeled ${sample.finding}` : 'unlabeled'}. ${medicalInteraction.labeled.size}/${medicalCases.length} labeled, model score ${medicalLearningScore()}%. Use arrow keys to select, Enter to annotate, and R to reset.`;
+  return `${sample.id}, uncertainty ${Math.round(sample.uncertainty * 100)}%, ${labeled ? `labeled ${sample.finding}` : 'unlabeled'}. ${medicalInteraction.labeled.size}/${medicalCases.length} labeled, model score ${medicalLearningScore()}%.`;
+}
+
+function pointCloudStatusText() {
+  const params = registrationParams();
+  const error = Math.max(0.2, (1 - clamp01(pointCloudInteraction.scrub)) * 8 + params.noise * 0.03 + params.missing * 0.015);
+  if (currentLang === 'zh') {
+    return pointCloudInteraction.completed
+      ? `配准完成，估计对齐误差 ${error.toFixed(2)}，旋转 ${params.rotation}°。`
+      : `当前旋转 ${params.rotation}°，估计对齐误差 ${error.toFixed(2)}。`;
+  }
+  return pointCloudInteraction.completed
+    ? `Registration complete. Estimated alignment error ${error.toFixed(2)} at ${params.rotation}° rotation.`
+    : `Current rotation ${params.rotation}°. Estimated alignment error ${error.toFixed(2)}.`;
+}
+
+function selectedVprCandidate() {
+  const selectedId = vprInteraction.selected || bestVprCandidate()?.id;
+  return vprCandidateScores().find((candidate) => candidate.id === selectedId) || bestVprCandidate();
+}
+
+function vprStatusText() {
+  const candidate = selectedVprCandidate();
+  if (!candidate) return currentLang === 'zh' ? '当前没有匹配候选。' : 'No match candidate is selected.';
+  const confidence = Math.round(candidate.score * 100);
+  return currentLang === 'zh'
+    ? `当前匹配 ${candidate.id}（${candidate.name}），置信度 ${confidence}%。`
+    : `Current match ${candidate.id} (${candidate.name}), ${confidence}% confidence.`;
+}
+
+function agentStatusText() {
+  const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
+  const stage = agentStages.find((item) => item.id === agentInteraction.selectedStage) || agentStages[0];
+  const stageZh = { plan: '规划', retrieve: '检索', act: '执行', observe: '检查', evaluate: '评估' }[stage.id] || stage.label;
+  const result = agentInteraction.completed ? task.outcome : (task.trace?.[stage.id] || stage.detail);
+  return currentLang === 'zh'
+    ? `任务 ${agentInteraction.taskIndex + 1}，阶段：${stageZh}。${agentInteraction.completed ? '结果' : '当前步骤'}：${result}。`
+    : `Task ${agentInteraction.taskIndex + 1}: ${task.title}. Stage: ${stage.label}. ${agentInteraction.completed ? 'Result' : 'Current step'}: ${result}.`;
+}
+
+function educationStatusText() {
+  const concept = educationConceptForSelected();
+  const signal = educationSignalForSelected();
+  const mastery = Math.round(educationMastery(concept) * 100);
+  const conceptZh = { algebra: '代数', functions: '函数', geometry: '几何', proof: '证明', word: '应用题' }[concept.id] || concept.label;
+  const signalZh = { correct: '回答正确', hint: '已使用提示', incorrect: '回答错误' }[signal.id] || signal.label;
+  return currentLang === 'zh'
+    ? `当前练习：${conceptZh}。学习状态：${signalZh}，掌握度 ${mastery}%。`
+    : `Current exercise: ${concept.label}. Learning state: ${signal.label}, ${mastery}% mastery.`;
+}
+
+function interestDemoStatusText(type) {
+  if (type === 'point-cloud') return pointCloudStatusText();
+  if (type === 'vpr') return vprStatusText();
+  if (type === 'medical-image') return medicalStatusText();
+  if (type === 'agent') return agentStatusText();
+  if (type === 'education') return educationStatusText();
+  return '';
+}
+
+function interestDemoLabels(type) {
+  const labels = currentLang === 'zh'
+    ? {
+      'point-cloud': ['旋转点云', '执行配准', '重置配准'],
+      vpr: ['前一候选', '下一候选', '重置匹配'],
+      'medical-image': ['前一高不确定样本', '标注样本', '重置主动学习'],
+      agent: ['前一任务', '执行下一步', '重置任务'],
+      education: ['前一练习', educationInteraction.selectedSignal === 'correct' ? '下一提示' : '提交回答', '重置学习']
+    }
+    : {
+      'point-cloud': ['Rotate Point Cloud', 'Run Registration', 'Reset Registration'],
+      vpr: ['Previous Candidate', 'Next Candidate', 'Reset Match'],
+      'medical-image': ['Previous Uncertain Sample', 'Annotate Sample', 'Reset Active Learning'],
+      agent: ['Previous Task', 'Run Next Step', 'Reset Task'],
+      education: ['Previous Exercise', educationInteraction.selectedSignal === 'correct' ? 'Next Hint' : 'Submit Response', 'Reset Learning']
+    };
+  return labels[type] || [];
+}
+
+function updateInterestDemoControls() {
+  const type = activeInterestAnimationType();
+  const labels = interestDemoLabels(type);
+  if (interestDemoPrevious) {
+    interestDemoPrevious.hidden = !labels[0];
+    if (labels[0]) interestDemoPrevious.textContent = labels[0];
+  }
+  if (interestDemoAction) {
+    interestDemoAction.hidden = !labels[1];
+    if (labels[1]) interestDemoAction.textContent = labels[1];
+  }
+  if (interestDemoReset) {
+    interestDemoReset.hidden = !labels[2];
+    if (labels[2]) interestDemoReset.textContent = labels[2];
+  }
+  if (interestCanvasStatus) interestCanvasStatus.textContent = interestDemoStatusText(type);
 }
 
 function updateInterestCanvasAccessibility() {
@@ -3298,16 +3921,190 @@ function updateInterestCanvasAccessibility() {
       agent: 'Interactive human and AI task collaboration.',
       education: 'Interactive robot teacher supporting a learner.'
     };
+  interestCanvas.setAttribute('role', 'img');
   interestCanvas.setAttribute('aria-label', labels[type] || (currentLang === 'zh' ? '研究方向交互动画' : 'Research interest interaction'));
-  const keyboardInteractive = type === 'medical-image';
-  interestCanvas.tabIndex = keyboardInteractive ? 0 : -1;
-  if (!keyboardInteractive && document.activeElement === interestCanvas) interestCanvas.blur();
-  if (interestCanvasStatus) {
-    interestCanvasStatus.textContent = type === 'medical-image'
-      ? medicalStatusText()
-      : labels[type] || '';
-  }
+  interestCanvas.tabIndex = -1;
+  if (document.activeElement === interestCanvas) interestCanvas.blur();
+  updateInterestDemoControls();
 }
+
+function commitInterestDemoControl() {
+  updateInterestCanvasAccessibility();
+  if (isResearchViewActive() && interestCanvasVisible) drawInterestAnimation();
+  scheduleMotionLoop({ immediate: true });
+}
+
+function cycleVprCandidate(delta) {
+  const currentId = vprInteraction.selected || bestVprCandidate()?.id;
+  const currentIndex = Math.max(0, vprPlaces.findIndex((place) => place.id === currentId));
+  const next = vprPlaces[(currentIndex + delta + vprPlaces.length) % vprPlaces.length];
+  vprInteraction.selected = next.id;
+  vprInteraction.route = next.u;
+  vprInteraction.targetRoute = next.u;
+  vprInteraction.condition = next.condition;
+  vprInteraction.targetCondition = next.condition;
+  vprInteraction.active = true;
+  vprInteraction.energy = 1;
+}
+
+function selectPreviousUncertainMedicalCase() {
+  const ordered = medicalCases
+    .map((sample, index) => ({ index, uncertainty: sample.uncertainty }))
+    .sort((a, b) => b.uncertainty - a.uncertainty);
+  const currentPosition = ordered.findIndex((item) => item.index === medicalInteraction.selected);
+  const nextPosition = (Math.max(0, currentPosition) - 1 + ordered.length) % ordered.length;
+  selectMedicalCase(ordered[nextPosition].index);
+}
+
+function selectPreviousAgentTask() {
+  agentInteraction.taskIndex = (agentInteraction.taskIndex - 1 + agentTasks.length) % agentTasks.length;
+  agentInteraction.selectedStage = agentStages[0].id;
+  agentInteraction.completed = false;
+  agentInteraction.active = true;
+  agentInteraction.pulse = 1;
+  agentInteraction.runBoost = 0.4;
+}
+
+function runNextAgentStage() {
+  const currentIndex = Math.max(0, agentStages.findIndex((stage) => stage.id === agentInteraction.selectedStage));
+  if (currentIndex >= agentStages.length - 1) {
+    agentInteraction.selectedStage = agentStages[agentStages.length - 1].id;
+    agentInteraction.completed = true;
+  } else {
+    agentInteraction.selectedStage = agentStages[currentIndex + 1].id;
+    agentInteraction.completed = false;
+  }
+  agentInteraction.active = true;
+  agentInteraction.pulse = 1;
+  agentInteraction.runBoost = 1;
+}
+
+function selectPreviousEducationExercise() {
+  const currentIndex = Math.max(0, educationConcepts.findIndex((concept) => concept.id === educationInteraction.selectedConcept));
+  const previous = educationConcepts[(currentIndex - 1 + educationConcepts.length) % educationConcepts.length];
+  educationInteraction.selectedConcept = previous.id;
+  educationInteraction.selectedSignal = 'hint';
+  educationInteraction.active = true;
+  educationInteraction.pulse = 1;
+  educationInteraction.masteryBoost = 0.25;
+}
+
+function runEducationAction() {
+  if (educationInteraction.selectedSignal === 'correct') {
+    const currentIndex = Math.max(0, educationConcepts.findIndex((concept) => concept.id === educationInteraction.selectedConcept));
+    educationInteraction.selectedConcept = educationConcepts[(currentIndex + 1) % educationConcepts.length].id;
+    educationInteraction.selectedSignal = 'hint';
+    educationInteraction.masteryBoost = 0.3;
+  } else {
+    educationInteraction.selectedSignal = 'correct';
+    educationInteraction.masteryBoost = 1;
+  }
+  educationInteraction.active = true;
+  educationInteraction.pulse = 1;
+}
+
+function runInterestDemoPrevious() {
+  const type = activeInterestAnimationType();
+  if (type === 'point-cloud') {
+    const rotation = (registrationParams().rotation + 15) % 360;
+    if (rotationRange) rotationRange.value = String(rotation);
+    registrationParamsCache = null;
+    pointCloudInteraction.scrub = 0.22;
+    pointCloudInteraction.targetScrub = 0.22;
+    pointCloudInteraction.x = 0.22;
+    pointCloudInteraction.active = true;
+    pointCloudInteraction.energy = 1;
+    pointCloudInteraction.completed = false;
+    updateRegistrationLabels();
+  } else if (type === 'vpr') {
+    cycleVprCandidate(-1);
+  } else if (type === 'medical-image') {
+    selectPreviousUncertainMedicalCase();
+    return;
+  } else if (type === 'agent') {
+    selectPreviousAgentTask();
+  } else if (type === 'education') {
+    selectPreviousEducationExercise();
+  }
+  commitInterestDemoControl();
+}
+
+function runInterestDemoAction() {
+  const type = activeInterestAnimationType();
+  if (type === 'point-cloud') {
+    pointCloudInteraction.scrub = 1;
+    pointCloudInteraction.targetScrub = 1;
+    pointCloudInteraction.x = 1;
+    pointCloudInteraction.active = true;
+    pointCloudInteraction.energy = 1;
+    pointCloudInteraction.completed = true;
+  } else if (type === 'vpr') {
+    cycleVprCandidate(1);
+  } else if (type === 'medical-image') {
+    selectMedicalCase(medicalInteraction.selected, true);
+    return;
+  } else if (type === 'agent') {
+    runNextAgentStage();
+  } else if (type === 'education') {
+    runEducationAction();
+  }
+  commitInterestDemoControl();
+}
+
+function resetInterestDemo() {
+  const type = activeInterestAnimationType();
+  if (type === 'point-cloud') {
+    if (rotationRange) rotationRange.value = '34';
+    registrationParamsCache = null;
+    pointCloudInteraction.active = false;
+    pointCloudInteraction.dragging = false;
+    pointCloudInteraction.x = 0.5;
+    pointCloudInteraction.y = 0.5;
+    pointCloudInteraction.scrub = 0.48;
+    pointCloudInteraction.targetScrub = 0.48;
+    pointCloudInteraction.energy = 0;
+    pointCloudInteraction.completed = false;
+    updateRegistrationLabels();
+  } else if (type === 'vpr') {
+    vprInteraction.active = false;
+    vprInteraction.dragging = false;
+    vprInteraction.route = 0.34;
+    vprInteraction.targetRoute = 0.34;
+    vprInteraction.condition = 0.42;
+    vprInteraction.targetCondition = 0.42;
+    vprInteraction.selected = bestVprCandidate()?.id || null;
+    vprInteraction.energy = 0;
+  } else if (type === 'medical-image') {
+    resetMedicalActiveLearning();
+    return;
+  } else if (type === 'agent') {
+    agentInteraction.active = false;
+    agentInteraction.dragging = false;
+    agentInteraction.taskIndex = 0;
+    agentInteraction.selectedStage = 'plan';
+    agentInteraction.selectedTool = 'rag';
+    agentInteraction.hoverType = null;
+    agentInteraction.hoverId = null;
+    agentInteraction.pulse = 0;
+    agentInteraction.runBoost = 0;
+    agentInteraction.completed = false;
+  } else if (type === 'education') {
+    educationInteraction.active = false;
+    educationInteraction.dragging = false;
+    educationInteraction.selectedPath = 'learner';
+    educationInteraction.selectedConcept = 'functions';
+    educationInteraction.selectedSignal = 'hint';
+    educationInteraction.hoverType = null;
+    educationInteraction.hoverId = null;
+    educationInteraction.pulse = 0;
+    educationInteraction.masteryBoost = 0;
+  }
+  commitInterestDemoControl();
+}
+
+interestDemoPrevious?.addEventListener('click', runInterestDemoPrevious);
+interestDemoAction?.addEventListener('click', runInterestDemoAction);
+interestDemoReset?.addEventListener('click', resetInterestDemo);
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
@@ -5314,9 +6111,10 @@ function drawInterestAnimation() {
     pointCloudInteraction.scrub += (pointCloudInteraction.targetScrub - pointCloudInteraction.scrub) * (pointCloudInteraction.dragging ? 0.72 : 0.18);
     pointCloudInteraction.energy += ((pointCloudInteraction.active ? 1 : 0) - pointCloudInteraction.energy) * 0.16;
     const progress = Math.max(0, Math.min(1, pointCloudInteraction.scrub));
+    const params = registrationParams();
 
     registrationState.points.forEach((point, index) => {
-      const target = transformPoint(point, index, registrationParams());
+      const target = transformPoint(point, index, params);
       if (!target.visible) return;
       const sourceX = cx + point.x * scale;
       const sourceY = cy + point.y * scale;
@@ -6238,49 +7036,35 @@ interestCanvas.addEventListener('pointerleave', () => {
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
 });
 
-interestCanvas.addEventListener('keydown', (event) => {
-  if (!isMedicalImageInterestActive()) return;
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
-    event.preventDefault();
-    const columns = 4;
-    const row = Math.floor(medicalInteraction.selected / columns);
-    const column = medicalInteraction.selected % columns;
-    const nextRow = event.key === 'ArrowUp'
-      ? Math.max(0, row - 1)
-      : event.key === 'ArrowDown'
-        ? Math.min(Math.ceil(medicalCases.length / columns) - 1, row + 1)
-        : row;
-    const nextColumn = event.key === 'ArrowLeft'
-      ? Math.max(0, column - 1)
-      : event.key === 'ArrowRight'
-        ? Math.min(columns - 1, column + 1)
-        : column;
-    selectMedicalCase(Math.min(medicalCases.length - 1, nextRow * columns + nextColumn));
-  } else if (event.key === 'Home' || event.key === 'End') {
-    event.preventDefault();
-    selectMedicalCase(event.key === 'Home' ? 0 : medicalCases.length - 1);
-  } else if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault();
-    selectMedicalCase(medicalInteraction.selected, true);
-  } else if (event.key.toLowerCase() === 'r') {
-    event.preventDefault();
-    resetMedicalActiveLearning();
-  }
-});
-
 function currentPublications() {
   const source = loadedPublications.length ? loadedPublications : [];
   const byTitle = new Map();
+  const trustedOverrides = new Map(staticPublications.map((item) => [item.title, item]));
   [...staticPublications, ...source, ...fallbackPublications[currentLang]].forEach((item) => {
-    byTitle.set(item.title, item);
+    const override = trustedOverrides.get(item.title);
+    byTitle.set(item.title, override
+      ? {
+        ...item,
+        authors: override.authors,
+        doi: override.doi,
+        link: override.link,
+        status: currentLang === 'zh' ? override.statusZh : override.status,
+        interests: override.interests
+      }
+      : item);
   });
   return Array.from(byTitle.values());
+}
+
+function updateHeroPublicationCount() {
+  if (heroPublicationCount) heroPublicationCount.textContent = String(currentPublications().length);
 }
 
 function renderPublications(preserveScroll = false) {
   const beforeScroll = pubList.scrollTop;
   const previousCards = snapshotMotionCards(pubList);
   const items = currentPublications();
+  updateHeroPublicationCount();
   const total = items.length;
   let shown = [];
 
@@ -6314,24 +7098,30 @@ function renderPublications(preserveScroll = false) {
 
   pubList.innerHTML = shown.map((item) => {
     const primaryId = primaryInterestId(item, 'paper');
+    const safeTitle = escapeHtml(item.title);
     return `
-    <article class="pub-card interactive-card motion-card ${highlightedPaper === item.title ? 'highlight' : ''}" data-motion-card data-motion-key="paper-${escapeHtml(item.title)}" data-paper-card="${escapeHtml(item.title)}">
+    <article class="pub-card interactive-card motion-card ${highlightedPaper === item.title ? 'highlight' : ''}" data-motion-card data-motion-key="paper-${safeTitle}" data-paper-card="${safeTitle}">
       <div class="pub-meta">
-        <span>${item.venue}</span>
-        <span>${item.year}</span>
-        <span class="pub-status">${item.status}</span>
+        <span>${escapeHtml(item.venue || '')}</span>
+        <span>${escapeHtml(item.year || '')}</span>
+        <span class="pub-status">${escapeHtml(item.status || '')}</span>
       </div>
-      <h4>${item.title}</h4>
+      <h3 style="margin:8px 0;font-size:1em">${safeTitle}</h3>
+      ${item.authors ? `<p class="muted"><strong>${i18n[currentLang].pub_authors}:</strong> ${escapeHtml(item.authors)}</p>` : ''}
       <div class="research-badges">${researchBadgesHtml(item, 'paper')}</div>
-      <p class="muted">${item.summary}</p>
+      <p class="muted">${escapeHtml(item.summary || '')}</p>
       <div class="repo-actions">
-        <button class="btn btn-outline pub-detail" type="button" data-paper="${escapeHtml(item.title)}">${i18n[currentLang].view_details}</button>
-        <button class="btn btn-outline pub-research" type="button" data-paper="${escapeHtml(item.title)}" ${primaryId ? '' : 'disabled'}>${i18n[currentLang].show_in_research}</button>
-        <a class="btn btn-primary" href="${item.link}" target="_blank" rel="noreferrer">${i18n[currentLang].pub_open}</a>
+        <button class="btn btn-outline pub-detail" type="button" data-paper="${safeTitle}">${i18n[currentLang].view_details}</button>
+        <button class="btn btn-outline pub-research" type="button" data-paper="${safeTitle}" ${primaryId ? '' : 'disabled'}>${i18n[currentLang].show_in_research}</button>
+        <a class="btn btn-primary" href="${safeExternalHref(item.link)}" target="_blank" rel="noreferrer">${i18n[currentLang].pub_open_article}</a>
       </div>
     </article>
   `;
   }).join('');
+
+  if (publicationLoadFailed) {
+    pubList.insertAdjacentHTML('afterbegin', `<p class="muted">${i18n[currentLang].pub_load_fail}</p>`);
+  }
 
   if (pubState.mode === 'infinite' && shown.length < total) {
     pubList.insertAdjacentHTML('beforeend', `<p class="muted">${i18n[currentLang].infinite_hint}</p>`);
@@ -6362,87 +7152,133 @@ function renderPublications(preserveScroll = false) {
 function mapOrcidWorks(payload) {
   const groups = Array.isArray(payload.group) ? payload.group : [];
   return groups
+    .slice(0, 200)
     .map((group) => {
       const summary = Array.isArray(group['work-summary']) ? group['work-summary'][0] : null;
-      if (!summary) return null;
-      const title = summary.title?.title?.value;
+      if (!isPlainRecord(summary)) return null;
+      const title = externalText(summary.title?.title?.value, '', 500);
       if (!title) return null;
 
-      const year = summary['publication-date']?.year?.value || '';
-      const venue = summary['journal-title']?.value || 'ORCID Record';
+      const year = externalText(summary['publication-date']?.year?.value, '', 20);
+      const venue = externalText(summary['journal-title']?.value, 'ORCID Record', 300);
       const status = currentLang === 'zh' ? '已发表' : 'Published';
-      const summaryText = summary.type
-        ? `Type: ${summary.type}`
+      const workType = externalText(summary.type, '', 100);
+      const summaryText = workType
+        ? `Type: ${workType}`
         : (currentLang === 'zh' ? '来自 ORCID 公开记录。' : 'From ORCID public record.');
-      const link = summary.url?.value
-        || summary['external-ids']?.['external-id']?.[0]?.['external-id-url']?.value
-        || './publications.md';
+      const link = validatedExternalHttpUrl(summary.url?.value)
+        || validatedExternalHttpUrl(
+          summary['external-ids']?.['external-id']?.[0]?.['external-id-url']?.value
+        )
+        || `https://orcid.org/${ORCID_ID}`;
 
-      return { title, venue, year, status, summary: summaryText, link, interests: inferInterestIds({ title, summary: summaryText, venue }) };
+      return {
+        title,
+        venue,
+        year,
+        status,
+        summary: summaryText,
+        link,
+        interests: inferInterestIds({ title, summary: summaryText, venue })
+      };
     })
     .filter(Boolean);
+}
+
+function normalizeGitHubRepo(repo, localByName) {
+  if (!isPlainRecord(repo)) throw new Error('Invalid GitHub repository entry');
+  const name = externalText(repo.name, '', 100);
+  if (!/^[A-Za-z0-9._-]+$/.test(name)) throw new Error('Invalid GitHub repository name');
+  const local = localByName.get(name);
+  const defaultBranch = externalText(repo.default_branch, local?.default_branch || 'main', 255);
+  const encodedOwner = encodeURIComponent(GITHUB_OWNER);
+  const encodedName = encodeURIComponent(name);
+  const encodedBranch = defaultBranch.split('/').map(encodeURIComponent).join('/');
+  const fallbackRepoUrl = `https://github.com/${encodedOwner}/${encodedName}`;
+  const stars = Number.isSafeInteger(repo.stargazers_count) && repo.stargazers_count >= 0
+    ? repo.stargazers_count
+    : (local?.stargazers_count || 0);
+  const remoteSource = isPlainRecord(repo.source)
+    ? repo.source
+    : (isPlainRecord(repo.parent) ? repo.parent : null);
+  const sourceName = externalText(remoteSource?.full_name, local?.source?.full_name || '', 200);
+  const sourceUrl = validatedExternalHttpUrl(remoteSource?.html_url)
+    || validatedExternalHttpUrl(local?.source?.html_url);
+  const fork = repo.fork === true || local?.fork === true;
+
+  return {
+    name,
+    description: externalText(repo.description, '', 1000) || local?.description || '',
+    language: externalText(repo.language, '', 100) || local?.language || null,
+    stargazers_count: stars,
+    updated_at: externalText(repo.updated_at, local?.updated_at || '', 100),
+    default_branch: defaultBranch,
+    html_url: validatedExternalHttpUrl(repo.html_url)
+      || validatedExternalHttpUrl(local?.html_url)
+      || fallbackRepoUrl,
+    readme_url: `https://raw.githubusercontent.com/${encodedOwner}/${encodedName}/${encodedBranch}/README.md`,
+    fork,
+    source: fork && sourceName && sourceUrl
+      ? { full_name: sourceName, html_url: sourceUrl }
+      : null,
+    interests: local?.interests
+  };
 }
 
 async function loadRepos() {
   const localByName = new Map(localRepos.map((repo) => [repo.name, repo]));
   try {
-    const response = await fetch(`https://api.github.com/users/${GITHUB_OWNER}/repos?per_page=100&sort=updated`, {
-      headers: { Accept: 'application/vnd.github+json' }
-    });
+    const response = await fetchWithTimeout(
+      `https://api.github.com/users/${GITHUB_OWNER}/repos?per_page=100&sort=updated`,
+      { headers: { Accept: 'application/vnd.github+json' } },
+      REQUEST_TIMEOUT_MS.github
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const remoteRepos = await response.json();
     if (!Array.isArray(remoteRepos)) throw new Error('Invalid repository payload');
-    const remoteNames = new Set(remoteRepos.map((repo) => repo.name));
+    const normalizedRemoteRepos = remoteRepos.map((repo) => normalizeGitHubRepo(repo, localByName));
+    const remoteNames = new Set(normalizedRemoteRepos.map((repo) => repo.name));
     const localOnlyRepos = localRepos.filter((repo) => !remoteNames.has(repo.name));
     repoDataSource = localOnlyRepos.length ? 'mixed' : 'live';
-    allRepos = [
-      ...remoteRepos.map((repo) => {
-        const local = localByName.get(repo.name);
-        const defaultBranch = repo.default_branch || local?.default_branch || 'main';
-        return {
-          name: repo.name,
-          description: repo.description || local?.description || '',
-          language: repo.language || local?.language || null,
-          stargazers_count: repo.stargazers_count ?? local?.stargazers_count ?? 0,
-          updated_at: repo.updated_at || local?.updated_at || '',
-          default_branch: defaultBranch,
-          html_url: repo.html_url || local?.html_url || `https://github.com/${GITHUB_OWNER}/${repo.name}`,
-          readme_url: `https://raw.githubusercontent.com/${GITHUB_OWNER}/${repo.name}/${defaultBranch}/README.md`,
-          interests: local?.interests
-        };
-      }),
-      ...localOnlyRepos
-    ];
+    allRepos = [...normalizedRemoteRepos, ...localOnlyRepos];
   } catch {
     repoDataSource = 'snapshot';
     allRepos = [...localRepos];
   }
   filteredRepos = [...allRepos];
-  renderRepos(filteredRepos);
-  renderResearchInterest();
+  renderHeroPreview();
+  refreshInitializedView('projects');
+  refreshInitializedView('research');
 }
 
 async function loadPublications() {
-  pubList.innerHTML = `<p class="muted">${i18n[currentLang].pub_loading}</p>`;
+  if (initializedViews.has('publications')) {
+    pubList.innerHTML = `<p class="muted">${i18n[currentLang].pub_loading}</p>`;
+  }
   try {
-    const response = await fetch(`https://pub.orcid.org/v3.0/${ORCID_ID}/works`, {
-      headers: { Accept: 'application/json' }
-    });
+    const response = await fetchWithTimeout(
+      `https://pub.orcid.org/v3.0/${ORCID_ID}/works`,
+      { headers: { Accept: 'application/json' } },
+      REQUEST_TIMEOUT_MS.orcid
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     loadedPublications = mapOrcidWorks(payload);
-    renderPublications();
-    renderResearchInterest();
+    publicationLoadFailed = false;
   } catch {
     loadedPublications = [];
-    renderPublications();
-    renderResearchInterest();
-    pubList.insertAdjacentHTML('afterbegin', `<p class="muted">${i18n[currentLang].pub_load_fail}</p>`);
+    publicationLoadFailed = true;
   }
+  updateHeroPublicationCount();
+  renderHeroPreview();
+  refreshInitializedView('publications');
+  refreshInitializedView('research');
 }
 
 async function loadBlogPosts() {
-  if (writingList) writingList.innerHTML = `<p class="muted">${i18n[currentLang].writing_loading}</p>`;
+  if (initializedViews.has('writing') && writingList) {
+    writingList.innerHTML = `<p class="muted">${i18n[currentLang].writing_loading}</p>`;
+  }
   try {
     const response = await fetch(`./blog/posts.json?v=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -6452,8 +7288,9 @@ async function loadBlogPosts() {
     blogPosts = [];
   }
   filteredBlogPosts = [...blogPosts];
-  renderWriting();
-  renderResearchInterest();
+  renderHeroPreview();
+  refreshInitializedView('writing');
+  refreshInitializedView('research');
   if (commandPalette.classList.contains('open')) renderCommandList();
 }
 
@@ -6543,11 +7380,13 @@ function generateRegistrationPoints() {
 }
 
 function registrationParams() {
-  return {
+  if (registrationParamsCache) return registrationParamsCache;
+  registrationParamsCache = {
     noise: Number(noiseRange?.value ?? 12),
     missing: Number(missingRange?.value ?? 18),
     rotation: Number(rotationRange?.value ?? 34)
   };
+  return registrationParamsCache;
 }
 
 function updateRegistrationLabels() {
@@ -6669,6 +7508,7 @@ function resetRegistrationDemo() {
 
 [noiseRange, missingRange, rotationRange].filter(Boolean).forEach((input) => {
   input.addEventListener('input', () => {
+    registrationParamsCache = null;
     registrationState.progress = 0;
     updateRegistrationLabels();
     drawRegistrationDemo();
@@ -6678,46 +7518,26 @@ alignDemo?.addEventListener('click', runAlignmentDemo);
 resetDemo?.addEventListener('click', resetRegistrationDemo);
 
 let statusIndex = 0;
-let charIndex = 0;
-let deleting = false;
 let typeTimer = null;
+const STATUS_ROTATION_MS = 6000;
 
 function typeLoop() {
   const statuses = i18n[currentLang].statuses;
-  if (reducedMotionQuery.matches || document.hidden) {
-    typeTarget.textContent = statuses[statusIndex % statuses.length];
+  if (!statuses.length) {
+    typeTarget.textContent = '';
     return;
   }
-  const current = statuses[statusIndex % statuses.length];
-  if (!deleting) {
-    charIndex += 1;
-    typeTarget.textContent = current.slice(0, charIndex);
-    if (charIndex >= current.length) {
-      deleting = true;
-      typeTimer = setTimeout(typeLoop, 1200);
-      return;
-    }
-  } else {
-    charIndex -= 1;
-    typeTarget.textContent = current.slice(0, Math.max(charIndex, 0));
-    if (charIndex <= 0) {
-      deleting = false;
-      statusIndex = (statusIndex + 1) % statuses.length;
-    }
-  }
-  typeTimer = setTimeout(typeLoop, deleting ? 35 : 60);
+  typeTarget.textContent = statuses[statusIndex % statuses.length];
+  if (reducedMotionQuery.matches || document.hidden) return;
+  typeTimer = setTimeout(() => {
+    statusIndex = (statusIndex + 1) % statuses.length;
+    typeLoop();
+  }, STATUS_ROTATION_MS);
 }
 
 function restartTypeLoop() {
   clearTimeout(typeTimer);
   statusIndex = 0;
-  charIndex = 0;
-  deleting = false;
-  if (reducedMotionQuery.matches || document.hidden) {
-    typeTarget.textContent = i18n[currentLang].statuses[0];
-    return;
-  }
-  typeTarget.textContent = '';
   typeLoop();
 }
 
@@ -6733,6 +7553,9 @@ function applyTranslations() {
     const value = i18n[currentLang][key];
     if (typeof value === 'string') node.setAttribute('placeholder', value);
   });
+  repoSearch.setAttribute('aria-label', i18n[currentLang].repo_search_aria);
+  writingSearch?.setAttribute('aria-label', i18n[currentLang].writing_search_aria);
+  commandInput.setAttribute('aria-label', i18n[currentLang].command_search_aria);
   document.querySelectorAll('[data-i18n="hero_subtitle_html"]').forEach((node) => {
     node.innerHTML = i18n[currentLang].hero_subtitle_html;
   });
@@ -6740,10 +7563,13 @@ function applyTranslations() {
   langToggle.textContent = i18n[currentLang].lang_btn;
   modalClose.textContent = i18n[currentLang].modal_close;
   if (!hoveredRepo) repoMapHint.textContent = i18n[currentLang].repo_map_hint;
-  renderRepos(filteredRepos);
-  renderPublications();
-  renderWriting();
-  renderResearchInterest();
+  updateHeroStats();
+  updateHeroPublicationCount();
+  renderHeroPreview();
+  refreshInitializedView('projects');
+  refreshInitializedView('publications');
+  refreshInitializedView('writing');
+  refreshInitializedView('research');
   updateRegistrationLabels();
   drawRegistrationDemo();
   updateViewDocumentTitle(document.querySelector('.view.active')?.id || 'about');
@@ -6756,11 +7582,6 @@ langToggle.addEventListener('click', () => {
   applyTranslations();
   restartTypeLoop();
 });
-
-function isEditableTarget(target) {
-  const tag = target.tagName;
-  return target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-}
 
 document.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -6775,15 +7596,6 @@ document.addEventListener('keydown', (event) => {
     else if (researchManager.classList.contains('open')) closeResearchManager();
     else if (modal.classList.contains('open')) closeModal();
     return;
-  }
-  if (isEditableTarget(event.target)) return;
-  if (event.key === 'p' || event.key === 'P') activateView('projects');
-  if (event.key === 'r' || event.key === 'R') activateView('research');
-  if (event.key === 'l' || event.key === 'L') langToggle.click();
-  if (event.key === '/') {
-    event.preventDefault();
-    activateView('projects');
-    repoSearch.focus();
   }
 });
 
@@ -6812,10 +7624,18 @@ function shouldAnimateHeroPreview(timestamp) {
     && timestamp - lastHeroPreviewFrame >= HERO_PREVIEW_FRAME_SKIP * 16;
 }
 
+function interestFrameInterval() {
+  return compactInterestMotionQuery.matches
+    ? INTEREST_MOBILE_FRAME_MS
+    : INTEREST_DESKTOP_FRAME_MS;
+}
+
 function shouldAnimateInterest(timestamp) {
-  return shouldRunMotion()
+  return !reducedMotionQuery.matches
+    && document.visibilityState === 'visible'
+    && interestCanvasVisible
     && document.getElementById('research')?.classList.contains('active')
-    && timestamp - lastInterestFrame >= INTEREST_FRAME_SKIP * 16;
+    && timestamp - lastInterestFrame >= interestFrameInterval();
 }
 
 function shouldAnimateRepoMap(timestamp) {
@@ -6842,7 +7662,7 @@ function drawStarfieldFrame(timestamp = 0) {
 }
 
 function motionCadence() {
-  if (isResearchViewActive()) return 33;
+  if (isResearchViewActive() && interestCanvasVisible) return interestFrameInterval();
   if (isProjectsViewActive()) return 100;
   return heroPreviewVisible ? 100 : 140;
 }
@@ -6915,10 +7735,35 @@ if ('IntersectionObserver' in window && heroPreviewCanvas) {
   }, { threshold: 0.08 });
   heroPreviewObserver.observe(heroPreviewCanvas);
 }
+if ('IntersectionObserver' in window && interestCanvas) {
+  const interestCanvasObserver = new IntersectionObserver(([entry]) => {
+    const nextVisible = Boolean(entry?.isIntersecting);
+    if (interestCanvasVisible === nextVisible) return;
+    interestCanvasVisible = nextVisible;
+    lastInterestFrame = 0;
+    stopMotionLoop();
+    if (interestCanvasVisible
+      && initializedViews.has('research')
+      && isResearchViewActive()
+      && document.visibilityState === 'visible'
+      && !reducedMotionQuery.matches) {
+      drawInterestAnimation();
+    }
+    scheduleMotionLoop({ immediate: interestCanvasVisible });
+  }, { threshold: 0.05 });
+  interestCanvasObserver.observe(interestCanvas);
+}
+compactInterestMotionQuery.addEventListener?.('change', () => {
+  lastInterestFrame = 0;
+  if (isResearchViewActive() && interestCanvasVisible) {
+    stopMotionLoop();
+    scheduleMotionLoop({ immediate: true });
+  }
+});
 reducedMotionQuery.addEventListener?.('change', () => {
   restartTypeLoop();
   drawHeroPreviewCanvas();
-  if (isResearchViewActive()) drawInterestAnimation();
+  if (initializedViews.has('research') && isResearchViewActive() && interestCanvasVisible) drawInterestAnimation();
   if (isProjectsViewActive()) renderRepoMap(filteredRepos);
   if (reducedMotionQuery.matches) stopMotionLoop();
   else scheduleMotionLoop({ immediate: true });
@@ -6937,13 +7782,13 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('resize', () => {
+  themeColorCache.clear();
   resizeCanvas();
   drawRegistrationDemo();
-  if (isProjectsViewActive()) renderRepoMap(filteredRepos);
-  if (isResearchViewActive()) drawInterestAnimation();
+  if (initializedViews.has('projects') && isProjectsViewActive()) renderRepoMap(filteredRepos);
+  if (initializedViews.has('research') && isResearchViewActive() && interestCanvasVisible) drawInterestAnimation();
   drawHeroPreviewCanvas();
 });
 resizeCanvas();
 drawRegistrationDemo();
-renderResearchInterest();
 scheduleMotionLoop({ immediate: true });

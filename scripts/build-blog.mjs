@@ -94,7 +94,7 @@ function renderCodeFence(code, info) {
   const highlighted = normalizedLang === 'plaintext'
     ? escapeHtml(code)
     : hljs.highlight(code, { language: normalizedLang, ignoreIllegals: true }).value;
-  return `<div class="code-frame"><div class="code-head"><span>${escapeHtml(label)}</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre><code class="hljs language-${escapeHtml(normalizedLang)}">${highlighted}</code></pre></div>`;
+  return `<div class="code-frame"><div class="code-head"><span>${escapeHtml(label)}</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre tabindex="0"><code class="hljs language-${escapeHtml(normalizedLang)}">${highlighted}</code></pre></div>`;
 }
 
 function postUrl(post) {
@@ -157,7 +157,7 @@ function hintHtml(key) {
 function cardHtml(ctx, post) {
   const tags = post.tags.slice(0, 4).map((tag) => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join('');
   return `
-    <a class="blog-card" href="${postHref(ctx, post)}">
+    <a class="blog-card" href="${postHref(ctx, post)}" lang="${escapeHtml(post.lang || SITE.lang)}">
       <div class="blog-card-meta">
         <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
         <span>${escapeHtml(post.category)}</span>
@@ -213,6 +213,7 @@ function renderShell({ filePath, title, description, body, extraHead = '', jsonL
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com" />
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeHtml(pageDescription)}" />
   <meta name="author" content="${escapeHtml(SITE.author)}" />
@@ -243,18 +244,20 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="${ctx.link('styles.css')}" />
   <link rel="stylesheet" href="${ctx.link('blog/assets/blog.css')}" />
-  ${extraHead}
+${extraHead.trim()}
   <script type="application/ld+json">${safeMetadata}</script>
 </head>
 <body class="blog-body">
+  <a class="skip-link" href="#main-content" data-blog-i18n="skip_main">Skip to main content</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
     <a class="blog-brand" href="${ctx.link('index.html')}">wcx12</a>
     <nav class="blog-nav" aria-label="Blog navigation">
       <a href="${ctx.link('index.html')}" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
+      <a href="${ctx.link('resume/index.html')}" title="Open the research profile" aria-label="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title" data-blog-i18n-aria="nav_profile_title">Profile</a>
       <a href="${ctx.link('blog/index.html')}" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
       <a href="${ctx.link('blog/archive/index.html')}" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
-      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch language" aria-label="Switch language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
+      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" aria-label="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
       <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
         <option value="neon" data-blog-i18n="theme_default">Default</option>
         <option value="warm" data-blog-i18n="theme_warm">Warm</option>
@@ -262,9 +265,17 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
       </select>
     </nav>
   </header>
-  <main class="blog-shell">
-${body}
+  <main id="main-content" class="blog-shell">
+${body.trim()}
   </main>
+  <footer class="blog-footer">
+    <span>&copy; ${new Date().getUTCFullYear()} wcx12</span>
+    <nav aria-label="Profile links">
+      <a href="${ctx.link('index.html')}" data-blog-i18n="nav_home">Home</a>
+      <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
+      <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327">ORCID</a>
+    </nav>
+  </footer>
   <script type="module" src="${ctx.link('blog/assets/blog.js')}"></script>
 </body>
 </html>
@@ -389,6 +400,9 @@ async function renderIndex(posts) {
   const ctx = createPageContext(filePath);
   const featured = posts.filter((post) => post.featured).slice(0, 3);
   const recent = posts.slice(0, 6);
+  const showSearch = posts.length >= 3;
+  const showFeatured = posts.length > 1 && featured.length > 0;
+  const latestHref = posts.length === 1 ? postHref(ctx, posts[0]) : '#recent-writing';
   const tagLinks = topicCounts(posts, 'tags')
     .slice(0, 14)
     .map(([tag, count]) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)} (${count})</a>`)
@@ -396,22 +410,24 @@ async function renderIndex(posts) {
 
   const body = `
     <section class="blog-hero">
-      <p class="blog-kicker" data-blog-i18n="hero_kicker">wcx12 Writing</p>
+      <p class="blog-kicker" data-blog-i18n="hero_kicker">A notebook by wcx12</p>
       <h1 data-blog-i18n="hero_title">Research Fieldnotes</h1>
-      <p data-blog-i18n="hero_desc">Notes from my work in visual perception, point-cloud registration, VPR, LLM agents, and AI for Education: paper reading, experiment logs, and engineering reflections.</p>
+      <p data-blog-i18n="hero_desc">A growing notebook for reproducible research workflows, experiment logs, paper reading, and engineering reflections.</p>
       ${hintHtml('hint_hero')}
       <div class="blog-hero-actions">
-        <a class="btn btn-primary" href="#recent-writing" data-blog-i18n="hero_read_latest">Read latest</a>
+        <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>
         <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="hero_browse_archive">Browse archive</a>
       </div>
       <div class="blog-stat-grid">
         <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>${posts.length}</strong></article>
         <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
-        <article class="blog-stat"><span data-blog-i18n="stat_search">Search</span><strong data-blog-i18n="stat_ready">Ready</strong></article>
+        ${showSearch
+          ? '<article class="blog-stat"><span data-blog-i18n="stat_search">Search</span><strong data-blog-i18n="stat_ready">Ready</strong></article>'
+          : '<article class="blog-stat"><span data-blog-i18n="stat_language">Languages</span><strong data-blog-i18n="stat_bilingual">EN / 中文</strong></article>'}
       </div>
     </section>
 
-    <section class="blog-section blog-search" aria-label="Search writing">
+${showSearch ? `<section class="blog-section blog-search" aria-label="Search writing">
       <div class="blog-section-head">
         <div>
           <p class="blog-section-label" data-blog-i18n="section_search_label">Search</p>
@@ -419,11 +435,11 @@ async function renderIndex(posts) {
         </div>
         ${hintHtml('hint_search')}
       </div>
-      <input id="blogSearch" type="search" placeholder="Search writing..." autocomplete="off" data-blog-i18n-ph="search_placeholder" />
+      <input id="blogSearch" type="search" aria-label="Search writing" placeholder="Search writing..." autocomplete="off" data-blog-i18n-ph="search_placeholder" data-blog-i18n-aria="search_label" />
       <div id="blogSearchResults" class="blog-search-results" aria-live="polite"></div>
-    </section>
+    </section>` : ''}
 
-    ${featured.length ? `<section class="blog-section">
+${showFeatured ? `<section class="blog-section">
       <div class="blog-section-head">
         <div>
           <p class="blog-section-label" data-blog-i18n="section_featured_label">Featured</p>
@@ -496,14 +512,16 @@ async function renderPost(post, posts, renderer) {
   const related = relatedPostsFor(post, posts);
   const tagRow = renderTags(ctx, post.tags);
   const mathCss = post.math ? `<link rel="stylesheet" href="${ctx.link('blog/assets/katex.min.css')}" />` : '';
+  const renderedToc = post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>';
 
   const body = `
     <div class="blog-post-layout">
-      <article class="blog-post-card">
+      <article class="blog-post-card" lang="${escapeHtml(post.lang || SITE.lang)}">
         <header class="blog-post-header">
           <p class="blog-kicker">${escapeHtml(post.category)}</p>
           <h1 class="blog-post-title">${escapeHtml(post.title)}</h1>
           <div class="blog-meta">
+            <a class="blog-author" href="${ctx.link('resume/index.html')}" rel="author">${escapeHtml(SITE.author)}</a>
             <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
             <span data-blog-updated="${escapeHtml(post.updated)}">Updated ${escapeHtml(formatDate(post.updated))}</span>
             <span data-blog-minutes-long="${post.readingMinutes}">${post.readingMinutes} min read</span>
@@ -513,6 +531,11 @@ async function renderPost(post, posts, renderer) {
           ${hintHtml('hint_post')}
           <div class="blog-tag-row">${tagRow}</div>
         </header>
+        <aside class="blog-toc blog-toc-mobile" aria-label="Article contents">
+          <h2 data-blog-i18n="toc_title">Contents</h2>
+          ${hintHtml('hint_toc')}
+          ${renderedToc}
+        </aside>
         <div class="blog-content">
 ${html}
         </div>
@@ -534,10 +557,10 @@ ${html}
           </nav>
         </footer>
       </article>
-      <aside class="blog-toc">
+      <aside class="blog-toc blog-toc-desktop" aria-label="Article contents">
         <h2 data-blog-i18n="toc_title">Contents</h2>
         ${hintHtml('hint_toc')}
-        ${post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>'}
+        ${renderedToc}
       </aside>
     </div>
   `;
@@ -585,7 +608,7 @@ async function renderArchive(posts) {
           ${hintHtml('hint_archive_year')}
         </div>
         <ul class="blog-archive-list">
-          ${items.map((post) => `<li><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a> <span class="muted">- <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span> - ${escapeHtml(post.category)}</span></li>`).join('')}
+          ${items.map((post) => `<li lang="${escapeHtml(post.lang || SITE.lang)}"><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a> <span class="muted">- <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span> - ${escapeHtml(post.category)}</span></li>`).join('')}
         </ul>
       </section>
     `).join('')}
@@ -633,6 +656,60 @@ async function renderTagPages(posts) {
       schemaType: 'CollectionPage'
     }));
   }
+}
+
+async function renderResume(renderer) {
+  const source = await fs.readFile(path.join(rootDir, 'resume.md'), 'utf8');
+  const withoutDocumentTitle = source.replace(/^#\s+[^\r\n]+\r?\n+/, '');
+  const { html } = renderer.render(withoutDocumentTitle);
+  const filePath = path.join(rootDir, 'resume', 'index.html');
+  const body = `
+    <article class="blog-post-card research-profile" lang="en">
+      <header class="blog-post-header">
+        <p class="blog-kicker" data-blog-i18n="profile_kicker">Research Profile</p>
+        <h1 class="blog-post-title">Chenxu Wang <span class="profile-handle">(wcx12)</span></h1>
+        <p class="blog-post-subtitle" data-blog-i18n="profile_desc">A concise, verifiable snapshot of education, research, publications, projects, and technical skills.</p>
+        <div class="blog-hero-actions profile-actions">
+          <button id="printProfile" class="btn btn-primary" type="button" data-blog-i18n="profile_print">Print / Save as PDF</button>
+          <a class="btn btn-outline" href="mailto:c2675668@gmail.com" data-blog-i18n="profile_contact">Contact</a>
+        </div>
+      </header>
+      <div class="blog-content">
+${html}
+      </div>
+    </article>
+  `;
+  const metadata = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    name: 'Chenxu Wang (wcx12) Research Profile',
+    description: 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
+    url: absoluteUrl('resume/'),
+    mainEntity: {
+      '@type': 'Person',
+      name: 'Chenxu Wang',
+      alternateName: 'wcx12',
+      url: absoluteUrl(),
+      email: 'mailto:c2675668@gmail.com',
+      affiliation: {
+        '@type': 'CollegeOrUniversity',
+        name: 'Beijing Institute of Technology'
+      },
+      sameAs: [
+        'https://github.com/wcx12',
+        'https://orcid.org/0009-0005-6139-4327'
+      ]
+    }
+  });
+
+  await writePage('resume/index.html', renderShell({
+    filePath,
+    title: 'Research Profile',
+    description: 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
+    body,
+    jsonLd: metadata,
+    schemaType: 'ProfilePage'
+  }));
 }
 
 async function renderJsonFeeds(posts) {
@@ -703,6 +780,7 @@ ${items}
 async function renderSitemap(posts) {
   const urls = [
     '',
+    'resume/',
     'blog/',
     'blog/archive/',
     ...posts.map((post) => postUrl(post)),
@@ -726,6 +804,7 @@ async function main() {
   }
 
   await fs.rm(outputDir, { recursive: true, force: true });
+  await fs.rm(path.join(rootDir, 'resume'), { recursive: true, force: true });
   await fs.mkdir(outputDir, { recursive: true });
   await copyAssets();
 
@@ -733,6 +812,7 @@ async function main() {
   for (const post of posts) {
     await renderPost(post, posts, renderer);
   }
+  await renderResume(renderer);
   await renderIndex(posts);
   await renderArchive(posts);
   await renderTagPages(posts);
