@@ -24,6 +24,7 @@ export function createRepoMap(options) {
   let repoMapTick = 0;
   let lastRepoMapFrame = 0;
   let repoMapVisible = !('IntersectionObserver' in window);
+  let repoMapSize = { width: 0, height: 0, scale: 1 };
 
   function syncContext() {
     const context = getContext();
@@ -71,17 +72,29 @@ export function createRepoMap(options) {
     return document.getElementById('projects')?.classList.contains('active');
   }
 
-  function resizeDrawingCanvas(canvasElement, context) {
-    const rect = canvasElement.getBoundingClientRect();
+  function updateRepoMapSize(width, height) {
+    if (!repoMap || !repoMapCtx) return false;
     const scale = Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
-    const width = Math.max(1, Math.floor(rect.width * scale));
-    const height = Math.max(1, Math.floor(rect.height * scale));
-    if (canvasElement.width !== width || canvasElement.height !== height) {
-      canvasElement.width = width;
-      canvasElement.height = height;
-    }
-    context.setTransform(scale, 0, 0, scale, 0, 0);
-    return { width: rect.width, height: rect.height };
+    const cssWidth = Math.max(0, width);
+    const cssHeight = Math.max(0, height);
+    const pixelWidth = Math.max(1, Math.floor(cssWidth * scale));
+    const pixelHeight = Math.max(1, Math.floor(cssHeight * scale));
+    const changed = repoMap.width !== pixelWidth
+      || repoMap.height !== pixelHeight
+      || repoMapSize.width !== cssWidth
+      || repoMapSize.height !== cssHeight
+      || repoMapSize.scale !== scale;
+    if (repoMap.width !== pixelWidth) repoMap.width = pixelWidth;
+    if (repoMap.height !== pixelHeight) repoMap.height = pixelHeight;
+    repoMapCtx.setTransform(scale, 0, 0, scale, 0, 0);
+    repoMapSize = { width: cssWidth, height: cssHeight, scale };
+    return changed;
+  }
+
+  function measureRepoMapSize() {
+    if (!repoMap) return false;
+    const rect = repoMap.getBoundingClientRect();
+    return updateRepoMapSize(rect.width, rect.height);
   }
 
   function colorWithAlpha(color, alpha) {
@@ -222,7 +235,8 @@ function researchMapAnchors(width, height) {
 }
 
 function renderRepoMap(repos = filteredRepos) {
-  const { width, height } = resizeDrawingCanvas(repoMap, repoMapCtx);
+  const { width, height } = repoMapSize;
+  if (width < 2 || height < 2) return;
   repoMapCtx.clearRect(0, 0, width, height);
 
   const items = sortedRepos(repos).filter((repo) => repoInterestEntries(repo).length);
@@ -394,10 +408,10 @@ function renderRepoMap(repos = filteredRepos) {
 }
 
 function repoMapPointer(event) {
-  const rect = repoMap.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  return { x, y };
+  return {
+    x: Math.max(0, Math.min(repoMapSize.width, Number(event.offsetX) || 0)),
+    y: Math.max(0, Math.min(repoMapSize.height, Number(event.offsetY) || 0))
+  };
 }
 
 repoMap.addEventListener('mousemove', (event) => {
@@ -432,8 +446,14 @@ repoMap.addEventListener('click', (event) => {
 
   function render() {
     if (!repoMap || !repoMapCtx) return;
+    if (repoMapSize.width < 2 || repoMapSize.height < 2) measureRepoMapSize();
     syncContext();
     renderRepoMap(filteredRepos);
+  }
+
+  function resize() {
+    measureRepoMapSize();
+    render();
   }
 
   function frameInterval() {
@@ -459,6 +479,17 @@ repoMap.addEventListener('click', (event) => {
   }
 
   syncContext();
+  measureRepoMapSize();
+
+  if ('ResizeObserver' in window && repoMap) {
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      const rect = entry?.contentRect;
+      if (!rect || !updateRepoMapSize(rect.width, rect.height)) return;
+      if (isProjectsViewActive() && repoMapVisible) render();
+      requestMotionFrame({ immediate: true });
+    });
+    resizeObserver.observe(repoMap);
+  }
 
   if ('IntersectionObserver' in window && repoMap) {
     const observer = new IntersectionObserver(([entry]) => {
@@ -483,7 +514,7 @@ repoMap.addEventListener('click', (event) => {
     frame,
     isVisible: () => repoMapVisible,
     render,
-    resize: render,
+    resize,
     scrollIntoView: () => repoMap?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   };
   requestMotionFrame({ immediate: true });

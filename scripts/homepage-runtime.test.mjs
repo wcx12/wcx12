@@ -69,6 +69,7 @@ test('research and repository visualizations are real lazy modules', async () =>
 test('homepage prioritizes verified identity and defers optional data requests', async () => {
   assert.match(indexSource, /<title>Chenxu Wang \(wcx12\) \| Machine Learning Researcher<\/title>/);
   assert.match(indexSource, /<h1>Chenxu Wang <span class="hero-alias">\(wcx12\)<\/span><\/h1>/);
+  assert.match(indexSource, /"propertyID": "ORCID"/);
   assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
   assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
   assert.match(styleSource, /space-grotesk-latin\.woff2/);
@@ -101,7 +102,7 @@ test('project view gives immediate feedback and limits first-render work on phon
   assert.match(scriptSource, /pageSize: compactViewportQuery\.matches \? 6 : 12/);
   assert.match(scriptSource, /requestAnimationFrame\(\(\) => \{[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?renderLazyView\(resolvedViewId\)/);
   assert.match(scriptSource, /previousCards\.size === 0/, 'first render must not animate every card from an empty layout');
-  assert.match(styleSource, /\.repo-card\s*\{[^}]*content-visibility:\s*auto;[^}]*contain-intrinsic-size:\s*360px;/s);
+  assert.doesNotMatch(styleSource, /\.repo-card\s*\{[^}]*content-visibility:\s*auto;/s, 'offscreen cards must not flash as blank placeholders');
 });
 
 test('canvas motion respects mobile budgets and page visibility', () => {
@@ -115,6 +116,7 @@ test('canvas motion respects mobile budgets and page visibility', () => {
   assert.match(researchCanvasSource, /INTEREST_MOBILE_IDLE_FRAME_MS = 200/);
   assert.match(researchCanvasSource, /if \(isInterestDragging\(\)\) return INTEREST_DESKTOP_FRAME_MS/);
   assert.match(repoMapSource, /REPO_MAP_MOBILE_IDLE_FRAME_MS = 200/);
+  assert.match(researchCanvasSource, /addEventListener\('pointerup'[\s\S]*?updateInterestCanvasAccessibility\(\);[\s\S]*?releasePointerCapture/);
 });
 
 test('owner mapping uses a framed-safe Actions dispatch instead of a contents token', () => {
@@ -136,6 +138,7 @@ test('homepage source exposes crawlable research and publication routes', () => 
     './research/medical-image-analysis/',
     './research/agent/',
     './research/ai4edu/',
+    './projects/',
     './publications/'
   ];
 
@@ -149,11 +152,30 @@ test('canonical repository and publication data stays unique and classifiable', 
   assert.ok(localRepos.length >= 9, 'repository snapshot unexpectedly lost records');
   assert.equal(new Set(localRepos.map((repo) => repo.name)).size, localRepos.length, 'repository names must be unique');
   assert.equal(new Set(localRepos.map((repo) => repo.html_url)).size, localRepos.length, 'repository URLs must be unique');
+  for (const repo of localRepos) {
+    assert.ok(repo.stage?.en && repo.stage?.zh, `${repo.name} is missing a bilingual maturity stage`);
+    assert.ok(repo.evidence?.en && repo.evidence?.zh, `${repo.name} is missing a bilingual public-evidence note`);
+  }
+  assert.equal(localRepos.find((repo) => repo.name === 'codex-pet-battle')?.stage?.en, 'Planning');
+  assert.equal(localRepos.find((repo) => repo.name === 'TrendRadar')?.stage?.en, 'Upstream fork');
+  assert.deepEqual(
+    localRepos.filter((repo) => repo.demo_url).map((repo) => repo.name).sort(),
+    ['FusionTrack', 'shuxuepeiyou', 'tetrahedron-visualizer']
+  );
+  assert.ok(localRepos.filter((repo) => repo.demo_url).every((repo) => /^https:\/\//.test(repo.demo_url)));
+  assert.match(scriptSource, /stage: local\?\.stage \|\| null/);
+  assert.match(scriptSource, /evidence: local\?\.evidence \|\| null/);
+  assert.match(scriptSource, /demo_url: validatedExternalHttpUrl\(local\?\.demo_url\)/);
+  assert.match(scriptSource, /description: local\?\.description \|\| externalText\(repo\.description/);
 
   assert.ok(staticPublications.length >= 2, 'canonical publication data unexpectedly lost verified papers');
   assert.equal(new Set(staticPublications.map((publication) => publication.doi)).size, staticPublications.length, 'publication DOIs must be unique');
   for (const doi of ['10.1016/j.neucom.2026.133399', '10.1016/j.neucom.2026.134314']) {
     assert.ok(staticPublications.some((publication) => publication.doi === doi), `verified publication is missing: ${doi}`);
+  }
+  for (const publication of staticPublications) {
+    assert.match(publication.code_url || '', /^https:\/\/github\.com\/ddfs430\//);
+    assert.ok(publication.code_note?.en && publication.code_note?.zh, `${publication.doi} is missing a bilingual code-hosting note`);
   }
 
   const assignmentGroups = [
@@ -168,9 +190,38 @@ test('canonical repository and publication data stays unique and classifiable', 
 
   assert.deepEqual(researchConfig.repoAssignments.FusionTrack, ['point-cloud-registration']);
   assert.deepEqual(researchConfig.repoAssignments.wcx12, []);
+  for (const name of ['hlpp-crossword', 'codex-pet-battle', 'shuxuepeiyou', 'tetrahedron-visualizer', 'BIT-The-mathematical-foundation-of-big-Data']) {
+    assert.deepEqual(researchConfig.repoAssignments[name], [], `${name} must remain a project without being counted as research evidence`);
+    assert.deepEqual(localRepos.find((repo) => repo.name === name)?.interests, []);
+  }
+  assert.match(
+    researchConfig.interests.find((domain) => domain.id === 'ai4edu')?.children[0]?.description?.en || '',
+    /Educational software, interactive mathematics visualizations/
+  );
   assert.deepEqual(
     researchConfig.paperAssignments['Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification'],
     ['medical-image-analysis']
+  );
+});
+
+test('homepage localizes accessible names and avoids per-frame canvas layout reads', () => {
+  assert.match(indexSource, /data-i18n-aria="aria_theme"/);
+  assert.match(indexSource, /id="readmeDrawerTitle"/);
+  assert.match(indexSource, /role="status" aria-live="polite"/);
+  assert.match(indexSource, /id="repoMap" aria-hidden="true"/);
+  assert.match(scriptSource, /querySelectorAll\('\[data-i18n-aria\]'\)/);
+  assert.match(scriptSource, /new ResizeObserver/);
+  assert.doesNotMatch(
+    scriptSource.match(/function drawHeroPreviewCanvas\(\)[\s\S]*?\n}/)?.[0] || '',
+    /getBoundingClientRect/
+  );
+  assert.doesNotMatch(
+    researchCanvasSource.match(/function drawInterestAnimation\(\)[\s\S]*?\n}/)?.[0] || '',
+    /getBoundingClientRect|resizeDrawingCanvas/
+  );
+  assert.doesNotMatch(
+    repoMapSource.match(/function renderRepoMap\([^)]*\)[\s\S]*?\n}/)?.[0] || '',
+    /getBoundingClientRect|resizeDrawingCanvas/
   );
 });
 

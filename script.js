@@ -58,6 +58,7 @@ const managerInterest = document.getElementById('managerInterest');
 const managerLabel = document.getElementById('managerLabel');
 const managerAnimation = document.getElementById('managerAnimation');
 const managerAdd = document.getElementById('managerAdd');
+const managerAddStatus = document.getElementById('managerAddStatus');
 const managerSave = document.getElementById('managerSave');
 const managerDelete = document.getElementById('managerDelete');
 const managerGitHubToken = document.getElementById('managerGitHubToken');
@@ -76,6 +77,7 @@ const readmeDrawer = document.getElementById('readmeDrawer');
 const readmeDrawerTitle = document.getElementById('readmeDrawerTitle');
 const readmeDrawerKicker = document.getElementById('readmeDrawerKicker');
 const readmeDrawerBody = document.getElementById('readmeDrawerBody');
+const readmeDrawerStatus = document.getElementById('readmeDrawerStatus');
 const readmeDrawerLink = document.getElementById('readmeDrawerLink');
 const readmeDrawerClose = document.getElementById('readmeDrawerClose');
 const heroPreviewCanvas = document.getElementById('heroPreviewCanvas');
@@ -141,6 +143,7 @@ const STARFIELD_FRAME_SKIP = 6;
 let lastHeroPreviewFrame = 0;
 let lastStarfieldFrame = 0;
 let heroPreviewVisible = true;
+let heroPreviewSize = { width: 0, height: 0, scale: 1 };
 let motionTimer = null;
 let motionFrame = null;
 const themeColorCache = new Map();
@@ -643,6 +646,26 @@ const i18n = {
     theme_neon: 'Default',
     theme_warm: 'Warm',
     theme_mono: 'Black & White',
+    aria_theme: 'Color theme',
+    aria_hero_preview: 'Research concept preview',
+    aria_hero_canvas: 'Featured research concept',
+    aria_interactive_portfolio: 'Interactive portfolio',
+    aria_portfolio_sections: 'Portfolio sections',
+    aria_featured_research: 'Featured research',
+    aria_research_interests: 'Research interests',
+    aria_research_sections: 'Research detail sections',
+    aria_research_demo: 'Research interest concept demo',
+    aria_research_demo_controls: 'Research demo controls',
+    aria_repo_sort: 'Sort repositories',
+    aria_repo_mode: 'Repository list mode',
+    aria_repo_page_size: 'Repositories per page',
+    aria_pub_mode: 'Publication list mode',
+    aria_pub_page_size: 'Publications per page',
+    aria_featured_writing: 'Featured writing',
+    aria_technical_skills: 'Technical skills',
+    aria_close: 'Close',
+    aria_command_palette: 'Command palette',
+    aria_command_close: 'Close command palette',
     hero_kicker: 'Machine Learning Researcher',
     hero_affiliation: 'Beijing Institute of Technology',
     hero_status: 'Status',
@@ -660,6 +683,7 @@ const i18n = {
     btn_command: 'Command',
     btn_settings: 'Settings',
     btn_research: 'Research',
+    btn_projects: 'Projects',
     btn_publications: 'Publications',
     btn_publications_hero: 'View Publications',
     btn_blog: 'Blog',
@@ -728,10 +752,17 @@ const i18n = {
     manager_projects: 'Projects',
     manager_papers: 'Papers',
     manager_saved: 'Saved.',
+    manager_required: 'Enter both a domain and a sub-interest.',
+    readme_open: 'Read README for {repo}',
     readme_loading: 'Loading README...',
+    readme_loading_for: 'Loading README for {repo}.',
+    readme_loaded: 'README loaded for {repo}.',
+    readme_failed: 'README could not be loaded for {repo}.',
+    readme_content: 'README content for {repo}',
     readme_unavailable: 'README is unavailable right now.',
     open_external: 'Open Link',
     project_title: 'Repositories',
+    project_static: 'Project Index',
     project_desc: 'All public repositories are listed below with quick jump links.',
     repo_map_title: 'Research Field Map',
     repo_map_hint: 'Hover projects to inspect their research mapping.',
@@ -772,10 +803,13 @@ const i18n = {
     pub_load_fail: 'Unable to load from ORCID right now. Showing local fallback list.',
     pub_empty: 'No public publication records found yet.',
     pub_authors: 'Authors',
+    pub_code: 'Official implementation',
+    pub_code_note: 'Hosting note',
+    pub_open_code: 'Open official code',
     pub_open: 'Open Publication Index',
     pub_open_article: 'Open Article',
     pub_file_title: 'Publication Index',
-    pub_file_desc: 'Open the stable publication index with verified citations and DOI links.',
+    pub_file_desc: 'Open the stable publication index with author order, DOI links, and official implementations.',
     writing_title: 'Writing',
     writing_desc: 'Technical notes and research logs generated from Markdown.',
     writing_open: 'Open Blog',
@@ -824,6 +858,9 @@ const i18n = {
     details_project_link_text: 'Open Repository',
     project_overview: 'Project Overview',
     project_mapping: 'Research Mapping',
+    project_stage: 'Stage',
+    project_evidence: 'Public evidence',
+    project_demo: 'Live demo',
     project_updated: 'Updated',
     modal_close: 'x',
     lang_btn: '中文',
@@ -835,6 +872,26 @@ const i18n = {
     theme_neon: '默认风格',
     theme_warm: '暖色',
     theme_mono: '黑白极简',
+    aria_theme: '页面色调',
+    aria_hero_preview: '研究概念预览',
+    aria_hero_canvas: '精选研究概念',
+    aria_interactive_portfolio: '互动个人主页',
+    aria_portfolio_sections: '主页内容分区',
+    aria_featured_research: '精选研究',
+    aria_research_interests: '研究兴趣',
+    aria_research_sections: '研究详情分区',
+    aria_research_demo: '研究兴趣概念演示',
+    aria_research_demo_controls: '研究演示控制',
+    aria_repo_sort: '仓库排序',
+    aria_repo_mode: '仓库列表模式',
+    aria_repo_page_size: '每页仓库数量',
+    aria_pub_mode: '论文列表模式',
+    aria_pub_page_size: '每页论文数量',
+    aria_featured_writing: '精选写作',
+    aria_technical_skills: '技术技能',
+    aria_close: '关闭',
+    aria_command_palette: '命令面板',
+    aria_command_close: '关闭命令面板',
     hero_kicker: '机器学习研究者',
     hero_affiliation: '北京理工大学',
     hero_status: '状态',
@@ -852,6 +909,7 @@ const i18n = {
     btn_command: '命令',
     btn_settings: '设置',
     btn_research: '研究',
+    btn_projects: '项目',
     btn_publications: '论文',
     btn_publications_hero: '查看论文',
     btn_blog: '博客',
@@ -920,10 +978,17 @@ const i18n = {
     manager_projects: '项目',
     manager_papers: '论文',
     manager_saved: '已保存。',
+    manager_required: '请同时填写一级领域和子兴趣。',
+    readme_open: '查看 {repo} 的 README',
     readme_loading: '正在加载 README...',
+    readme_loading_for: '正在加载 {repo} 的 README。',
+    readme_loaded: '已加载 {repo} 的 README。',
+    readme_failed: '无法加载 {repo} 的 README。',
+    readme_content: '{repo} 的 README 内容',
     readme_unavailable: '当前无法加载 README。',
     open_external: '打开链接',
     project_title: '仓库列表',
+    project_static: '项目索引',
     project_desc: '这里列出全部公开仓库，可直接跳转到对应项目。',
     repo_map_title: '研究领域地图',
     repo_map_hint: '悬停项目查看研究方向映射。',
@@ -964,10 +1029,13 @@ const i18n = {
     pub_load_fail: '当前无法从 ORCID 加载，已显示本地备用列表。',
     pub_empty: '暂未发现公开论文记录。',
     pub_authors: '作者',
+    pub_code: '官方实现',
+    pub_code_note: '托管说明',
+    pub_open_code: '打开官方代码',
     pub_open: '打开论文索引',
     pub_open_article: '打开论文',
     pub_file_title: '论文索引',
-    pub_file_desc: '查看包含核验引用与 DOI 链接的稳定论文页面。',
+    pub_file_desc: '查看包含作者顺序、DOI 链接与官方实现的稳定论文页面。',
     writing_title: '技术博客',
     writing_desc: '从 Markdown 自动生成的技术笔记和研究日志。',
     writing_open: '打开博客',
@@ -1016,6 +1084,9 @@ const i18n = {
     details_project_link_text: '打开仓库',
     project_overview: '项目概览',
     project_mapping: '研究映射',
+    project_stage: '阶段',
+    project_evidence: '公开证据',
+    project_demo: '在线演示',
     project_updated: '更新时间',
     modal_close: 'x',
     lang_btn: 'EN',
@@ -1235,6 +1306,15 @@ function ensureViewData(viewId) {
   return Promise.allSettled(tasks);
 }
 
+function scheduleViewDataRefresh(viewId) {
+  const refresh = () => { void ensureViewData(viewId); };
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(refresh, { timeout: 1200 });
+  } else {
+    window.setTimeout(refresh, 0);
+  }
+}
+
 function activateView(viewId, options = {}) {
   const { historyMode = 'push', scroll = true, scrollFeature = false } = options;
   const resolvedViewId = VALID_VIEW_IDS.has(viewId) ? viewId : 'about';
@@ -1250,20 +1330,26 @@ function activateView(viewId, options = {}) {
   if (targetView) targetView.classList.add('active');
   if (LAZY_VIEW_IDS.has(resolvedViewId)) {
     initializedViews.add(resolvedViewId);
-    void ensureViewData(resolvedViewId);
+    if (!['research', 'projects'].includes(resolvedViewId)) void ensureViewData(resolvedViewId);
     requestAnimationFrame(() => {
       if (!isCurrentActivation(resolvedViewId, generation)) return;
       requestAnimationFrame(() => {
         if (!isCurrentActivation(resolvedViewId, generation)) return;
         renderLazyView(resolvedViewId);
-        void activateLazyFeature(resolvedViewId, generation, { scrollFeature });
+        const featureReady = activateLazyFeature(resolvedViewId, generation, { scrollFeature });
+        if (['research', 'projects'].includes(resolvedViewId)) {
+          void featureReady.finally(() => scheduleViewDataRefresh(resolvedViewId));
+        }
       });
     });
   }
   if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
     requestAnimationFrame(() => {
       if (isCurrentActivation(resolvedViewId, generation)) {
-        targetView.closest('.console')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetView.closest('.console')?.scrollIntoView({
+          behavior: compactViewportQuery.matches ? 'auto' : 'smooth',
+          block: 'start'
+        });
       }
     });
   }
@@ -2137,11 +2223,14 @@ function renderHeroPreview() {
   const entry = heroPreviewEntry();
   if (!entry || !heroPreviewMeta) return;
   const metrics = interestMetrics(entry.child.id);
+  const domainTitle = textFor(entry.domain.title);
+  const childTitle = textFor(entry.child.title);
   if (heroPreviewStatus) heroPreviewStatus.textContent = i18n[currentLang].hero_preview_live;
+  heroPreviewCanvas?.setAttribute('aria-label', `${i18n[currentLang].aria_hero_canvas}: ${domainTitle}, ${childTitle}`);
   heroPreviewMeta.innerHTML = `
     <a class="hero-preview-title" href="${researchPageHref(entry.child.id)}" data-hero-interest="${escapeHtml(entry.child.id)}">
-      <span>${escapeHtml(textFor(entry.domain.title))}</span>
-      <strong>${escapeHtml(textFor(entry.child.title))}</strong>
+      <span>${escapeHtml(domainTitle)}</span>
+      <strong>${escapeHtml(childTitle)}</strong>
     </a>
     <p>${escapeHtml(textFor(entry.child.description))}</p>
     <div class="hero-preview-pills">
@@ -2236,16 +2325,40 @@ function fillTruncatedText(ctx, text, x, y, maxWidth) {
 
 function drawHeroPreviewCanvas() {
   if (!heroPreviewCanvas || !heroPreviewCtx) return;
-  const rect = heroPreviewCanvas.getBoundingClientRect();
-  if (rect.width < 2 || rect.height < 2) return;
+  const { width, height } = heroPreviewSize;
+  if (width < 2 || height < 2) return;
   const entry = heroPreviewEntry();
   if (!entry) return;
-  const { width, height } = resizeDrawingCanvas(heroPreviewCanvas, heroPreviewCtx);
   const ctx = heroPreviewCtx;
   const colors = heroThemeColors();
   const t = heroPreviewTick * 0.05;
   const scene = heroPreviewScenes[entry.child.animation] || heroPreviewScenes.generic;
   drawHeroScenePreview(ctx, width, height, t, scene, colors, entry);
+}
+
+function updateHeroPreviewSize(width, height) {
+  if (!heroPreviewCanvas || !heroPreviewCtx) return false;
+  const scale = Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
+  const cssWidth = Math.max(0, width);
+  const cssHeight = Math.max(0, height);
+  const pixelWidth = Math.max(1, Math.floor(cssWidth * scale));
+  const pixelHeight = Math.max(1, Math.floor(cssHeight * scale));
+  const changed = heroPreviewCanvas.width !== pixelWidth
+    || heroPreviewCanvas.height !== pixelHeight
+    || heroPreviewSize.width !== cssWidth
+    || heroPreviewSize.height !== cssHeight
+    || heroPreviewSize.scale !== scale;
+  if (heroPreviewCanvas.width !== pixelWidth) heroPreviewCanvas.width = pixelWidth;
+  if (heroPreviewCanvas.height !== pixelHeight) heroPreviewCanvas.height = pixelHeight;
+  heroPreviewCtx.setTransform(scale, 0, 0, scale, 0, 0);
+  heroPreviewSize = { width: cssWidth, height: cssHeight, scale };
+  return changed;
+}
+
+function measureHeroPreviewSize() {
+  if (!heroPreviewCanvas) return false;
+  const rect = heroPreviewCanvas.getBoundingClientRect();
+  return updateHeroPreviewSize(rect.width, rect.height);
 }
 
 function drawHeroScenePreview(ctx, width, height, t, scene, colors, entry) {
@@ -2345,6 +2458,10 @@ function renderResearchInterest() {
   }
   interestPath.textContent = `${textFor(entry.domain.title)} / ${textFor(entry.child.title)}`;
   interestTitle.textContent = textFor(entry.child.title);
+  document.getElementById('interestCanvas')?.setAttribute(
+    'aria-label',
+    `${i18n[currentLang].aria_research_demo}: ${textFor(entry.domain.title)}, ${textFor(entry.child.title)}`
+  );
   interestTag.textContent = textFor(entry.child.label);
   interestDescription.textContent = textFor(entry.child.description);
   setInterestPanel(activeInterestPanel);
@@ -2619,7 +2736,16 @@ function addResearchCategory() {
   if (!ownerToolsEnabled) return;
   const domainTitle = managerDomain.value.trim();
   const interestTitleValue = managerInterest.value.trim();
-  if (!domainTitle || !interestTitleValue) return;
+  managerDomain.setAttribute('aria-invalid', String(!domainTitle));
+  managerInterest.setAttribute('aria-invalid', String(!interestTitleValue));
+  if (!domainTitle || !interestTitleValue) {
+    if (managerAddStatus) managerAddStatus.textContent = i18n[currentLang].manager_required;
+    (!domainTitle ? managerDomain : managerInterest).focus();
+    return;
+  }
+  if (managerAddStatus) managerAddStatus.textContent = '';
+  managerDomain.removeAttribute('aria-invalid');
+  managerInterest.removeAttribute('aria-invalid');
   const label = managerLabel.value.trim() || interestTitleValue;
   const domainId = slugify(domainTitle);
   const childId = `${domainId}-${slugify(interestTitleValue)}`;
@@ -2687,6 +2813,12 @@ managerSave.addEventListener('click', saveManagerAssignments);
 managerSaveRemote.addEventListener('click', saveResearchConfigToGitHub);
 managerAdd.addEventListener('click', addResearchCategory);
 managerDelete.addEventListener('click', deleteActiveResearchCategory);
+[managerDomain, managerInterest].forEach((input) => {
+  input?.addEventListener('input', () => {
+    input.removeAttribute('aria-invalid');
+    if (managerAddStatus) managerAddStatus.textContent = '';
+  });
+});
 
 chips.forEach((chip) => {
   chip.addEventListener('click', () => {
@@ -2911,6 +3043,14 @@ function sanitizeMarkdownHtml(rawHtml, repo) {
     const label = imageAlt || imageLinkAriaLabel(anchor.getAttribute('href') || '');
     if (label) anchor.setAttribute('aria-label', label);
   });
+  template.content.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((heading) => {
+    const sourceLevel = Number(heading.tagName.slice(1));
+    const targetLevel = Math.min(sourceLevel + 2, 6);
+    if (sourceLevel === targetLevel) return;
+    const replacement = document.createElement(`h${targetLevel}`);
+    replacement.innerHTML = heading.innerHTML;
+    heading.replaceWith(replacement);
+  });
   return template.innerHTML;
 }
 
@@ -3028,7 +3168,7 @@ function markdownToHtml(markdown, repo) {
     if (heading) {
       closeParagraph();
       closeList();
-      const level = Math.min(heading[1].length + 1, 6);
+      const level = Math.min(heading[1].length + 2, 6);
       html.push(`<h${level}>${renderInlineMarkdown(heading[2], repo)}</h${level}>`);
       return;
     }
@@ -3089,6 +3229,25 @@ function repoForkAttributionHtml(repo) {
   `;
 }
 
+function repoEvidenceSummaryHtml(repo) {
+  const stage = textFor(repo?.stage);
+  const evidence = textFor(repo?.evidence);
+  if (!stage && !evidence) return '';
+  return `
+    <dl class="project-evidence">
+      ${stage ? `<div><dt>${escapeHtml(i18n[currentLang].project_stage)}</dt><dd><strong>${escapeHtml(stage)}</strong></dd></div>` : ''}
+      ${evidence ? `<div><dt>${escapeHtml(i18n[currentLang].project_evidence)}</dt><dd>${escapeHtml(evidence)}</dd></div>` : ''}
+    </dl>
+  `;
+}
+
+function repoDemoLinkHtml(repo) {
+  const demoUrl = validatedExternalHttpUrl(repo?.demo_url);
+  return demoUrl
+    ? `<a class="mini-action" href="${escapeHtml(demoUrl)}" target="_blank" rel="noreferrer">${escapeHtml(i18n[currentLang].project_demo)}</a>`
+    : '';
+}
+
 async function openRepoReadme(repoName) {
   const repo = allRepos.find((item) => item.name === repoName);
   if (!repo) return;
@@ -3102,6 +3261,8 @@ async function openRepoReadme(repoName) {
       <span class="panel-eyebrow">${i18n[currentLang].project_overview}</span>
       <p>${languageAwareHtml(repo.description || i18n[currentLang].no_desc)}</p>
       ${repoForkAttributionHtml(repo)}
+      ${repoEvidenceSummaryHtml(repo)}
+      ${repoDemoLinkHtml(repo)}
       <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
       <div class="repo-meta">
         ${mappingLabel ? `<span>${i18n[currentLang].project_mapping}: ${escapeHtml(mappingLabel)}</span>` : ''}
@@ -3110,6 +3271,9 @@ async function openRepoReadme(repoName) {
     </div>
   `;
   openReadmeDrawer(repo, `${overview()}<p class="muted">${i18n[currentLang].readme_loading}</p>`);
+  if (readmeDrawerStatus) {
+    readmeDrawerStatus.textContent = i18n[currentLang].readme_loading_for.replace('{repo}', repo.name);
+  }
   attachInterestJumpHandlers(readmeDrawerBody);
 
   try {
@@ -3124,9 +3288,17 @@ async function openRepoReadme(repoName) {
     const markdown = await response.text();
     if (requestSequence !== readmeRequestSequence) return;
     readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown, repo)}</div>`;
+    readmeDrawerBody.setAttribute('aria-busy', 'false');
+    if (readmeDrawerStatus) {
+      readmeDrawerStatus.textContent = i18n[currentLang].readme_loaded.replace('{repo}', repo.name);
+    }
   } catch {
     if (requestSequence !== readmeRequestSequence) return;
     readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box"><p>${i18n[currentLang].readme_unavailable}</p></div>`;
+    readmeDrawerBody.setAttribute('aria-busy', 'false');
+    if (readmeDrawerStatus) {
+      readmeDrawerStatus.textContent = i18n[currentLang].readme_failed.replace('{repo}', repo.name);
+    }
   } finally {
     if (readmeRequestController === requestController) readmeRequestController = null;
   }
@@ -3144,6 +3316,8 @@ function openReadmeDrawer(repo, html) {
   readmeDrawerKicker.textContent = i18n[currentLang].repo_preview_title;
   readmeDrawerTitle.textContent = repo.name;
   readmeDrawerBody.innerHTML = html || '';
+  readmeDrawerBody.setAttribute('aria-label', i18n[currentLang].readme_content.replace('{repo}', repo.name));
+  readmeDrawerBody.setAttribute('aria-busy', 'true');
   const repoUrl = validatedExternalHttpUrl(repo.html_url);
   if (repoUrl) {
     readmeDrawerLink.href = repoUrl;
@@ -3167,6 +3341,8 @@ function closeReadmeDrawer() {
   const wasOpen = readmeDrawer.classList.contains('open');
   readmeDrawer.classList.remove('open');
   readmeDrawer.setAttribute('aria-hidden', 'true');
+  readmeDrawerBody?.setAttribute('aria-busy', 'false');
+  if (readmeDrawerStatus) readmeDrawerStatus.textContent = '';
   setOverlayActive(readmeDrawer, false);
   if (wasOpen) {
     const repoFallback = Array.from(document.querySelectorAll('.repo-detail'))
@@ -3191,22 +3367,38 @@ function openPaperDetail(title) {
   const authors = paper.authors
     ? `<p class="muted"><strong>${i18n[currentLang].pub_authors}:</strong> ${escapeHtml(paper.authors)}</p>`
     : '';
+  const codeUrl = validatedExternalHttpUrl(paper.code_url);
+  const codeNote = textFor(paper.code_note);
+  const codeEvidence = codeUrl ? `
+    <dl class="project-evidence">
+      <div><dt>${escapeHtml(i18n[currentLang].pub_code)}</dt><dd><a href="${escapeHtml(codeUrl)}" target="_blank" rel="noreferrer">${escapeHtml(i18n[currentLang].pub_open_code)}</a></dd></div>
+      ${codeNote ? `<div><dt>${escapeHtml(i18n[currentLang].pub_code_note)}</dt><dd>${escapeHtml(codeNote)}</dd></div>` : ''}
+    </dl>
+  ` : '';
   openModal({
     title: paper.title,
-    html: `<div class="readme-box"><p class="muted">${escapeHtml(paper.venue || '')} · ${escapeHtml(paper.year || '')}</p>${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${escapeHtml(paper.summary || '')}</p></div>`,
+    html: `<div class="readme-box"><p class="muted">${escapeHtml(paper.venue || '')} · ${escapeHtml(paper.year || '')}</p>${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${escapeHtml(paper.summary || '')}</p>${codeEvidence}</div>`,
     linkText: i18n[currentLang].pub_open_article,
     link: paper.link
   });
   attachInterestJumpHandlers(modalBody);
 }
 
+const repoDateFormatters = new Map();
+
 function repoUpdatedDate(repo) {
   if (!repo.updated_at) return '-';
-  return new Date(repo.updated_at).toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+  const date = new Date(repo.updated_at);
+  if (Number.isNaN(date.getTime())) return '-';
+  const locale = currentLang === 'zh' ? 'zh-CN' : 'en-US';
+  if (!repoDateFormatters.has(locale)) {
+    repoDateFormatters.set(locale, new Intl.DateTimeFormat(locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }));
+  }
+  return repoDateFormatters.get(locale).format(date);
 }
 
 function renderRepoPreviewCard(repo) {
@@ -3215,7 +3407,9 @@ function renderRepoPreviewCard(repo) {
   const accent = repoColor(repo.language);
   const safeName = escapeHtml(repo.name);
   const desc = languageAwareHtml(repo.description || i18n[currentLang].no_desc);
+  const stage = textFor(repo.stage);
   const repoHref = safeExternalHref(repo.html_url);
+  const demoHref = validatedExternalHttpUrl(repo.demo_url);
   return `
     <article class="repo-card repo-preview-card interactive-card motion-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-motion-card data-motion-key="repo-${safeName}" data-repo="${safeName}" style="--repo-accent:${accent}">
       <div class="repo-preview-top">
@@ -3231,6 +3425,10 @@ function renderRepoPreviewCard(repo) {
       ${repoForkAttributionHtml(repo)}
       <div class="research-badges">${researchBadgesHtml(repo, 'repo')}</div>
       <div class="repo-preview-facts">
+        ${stage ? `
+          <span>${i18n[currentLang].project_stage}</span>
+          <strong>${escapeHtml(stage)}</strong>
+        ` : ''}
         ${repoInterestId ? `
           <span>${i18n[currentLang].project_mapping}</span>
           <strong>${escapeHtml(mappingLabel)}</strong>
@@ -3243,9 +3441,10 @@ function renderRepoPreviewCard(repo) {
         <span>${escapeHtml(repo.language || i18n[currentLang].mixed)}</span>
       </div>
       <div class="repo-actions">
-        <button class="btn btn-outline repo-detail" type="button" data-repo="${safeName}">${i18n[currentLang].repo_preview_readme}</button>
+        <button class="btn btn-outline repo-detail" type="button" data-repo="${safeName}" aria-label="${escapeHtml(i18n[currentLang].readme_open.replace('{repo}', repo.name))}">${i18n[currentLang].repo_preview_readme}</button>
         ${repoInterestId ? `<button class="btn btn-outline repo-research" type="button" data-repo="${safeName}">${i18n[currentLang].show_in_research}</button>` : ''}
-        <a class="btn btn-primary" href="${repoHref}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
+        ${demoHref ? `<a class="btn btn-primary" href="${escapeHtml(demoHref)}" target="_blank" rel="noreferrer">${i18n[currentLang].project_demo}</a>` : ''}
+        <a class="btn ${demoHref ? 'btn-outline' : 'btn-primary'}" href="${repoHref}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
       </div>
     </article>
   `;
@@ -3315,19 +3514,6 @@ function renderRepos(repos, preserveScroll = false) {
 
   if (isProjectsViewActive()) repoMapFeature?.render();
   if (preserveScroll) repoGrid.scrollTop = beforeScroll;
-}
-
-function resizeDrawingCanvas(canvasElement, context) {
-  const rect = canvasElement.getBoundingClientRect();
-  const scale = Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
-  const width = Math.max(1, Math.floor(rect.width * scale));
-  const height = Math.max(1, Math.floor(rect.height * scale));
-  if (canvasElement.width !== width || canvasElement.height !== height) {
-    canvasElement.width = width;
-    canvasElement.height = height;
-  }
-  context.setTransform(scale, 0, 0, scale, 0, 0);
-  return { width: rect.width, height: rect.height };
 }
 
 function repoColor(language) {
@@ -3431,6 +3617,8 @@ function currentPublications() {
         authors: override.authors,
         doi: override.doi,
         link: override.link,
+        code_url: override.code_url,
+        code_note: override.code_note,
         status: currentLang === 'zh' ? override.statusZh : override.status,
         interests: override.interests
       }
@@ -3589,7 +3777,7 @@ function normalizeGitHubRepo(repo, localByName) {
 
   return {
     name,
-    description: externalText(repo.description, '', 1000) || local?.description || '',
+    description: local?.description || externalText(repo.description, '', 1000),
     language: externalText(repo.language, '', 100) || local?.language || null,
     stargazers_count: stars,
     updated_at: externalText(repo.updated_at, local?.updated_at || '', 100),
@@ -3598,10 +3786,13 @@ function normalizeGitHubRepo(repo, localByName) {
       || validatedExternalHttpUrl(local?.html_url)
       || fallbackRepoUrl,
     readme_url: `https://raw.githubusercontent.com/${encodedOwner}/${encodedName}/${encodedBranch}/README.md`,
+    demo_url: validatedExternalHttpUrl(local?.demo_url),
     fork,
     source: fork && sourceName && sourceUrl
       ? { full_name: sourceName, html_url: sourceUrl }
       : null,
+    stage: local?.stage || null,
+    evidence: local?.evidence || null,
     interests: local?.interests
   };
 }
@@ -3774,6 +3965,11 @@ function applyTranslations() {
     const value = i18n[currentLang][key];
     if (typeof value === 'string') node.setAttribute('placeholder', value);
   });
+  document.querySelectorAll('[data-i18n-aria]').forEach((node) => {
+    const key = node.dataset.i18nAria;
+    const value = i18n[currentLang][key];
+    if (typeof value === 'string') node.setAttribute('aria-label', value);
+  });
   repoSearch.setAttribute('aria-label', i18n[currentLang].repo_search_aria);
   writingSearch?.setAttribute('aria-label', i18n[currentLang].writing_search_aria);
   commandInput.setAttribute('aria-label', i18n[currentLang].command_search_aria);
@@ -3913,7 +4109,7 @@ function scheduleMotionLoop(options = {}) {
 function runMotionFrame(timestamp = 0) {
   motionFrame = null;
   if (!shouldRunMotion()) return;
-  drawStarfieldFrame(timestamp);
+  if (!isResearchViewActive() && !isProjectsViewActive()) drawStarfieldFrame(timestamp);
   researchCanvasFeature?.frame(timestamp);
   if (shouldAnimateHeroPreview(timestamp)) {
     heroPreviewTick += 1;
@@ -3925,6 +4121,7 @@ function runMotionFrame(timestamp = 0) {
 }
 
 initCustomCursor();
+measureHeroPreviewSize();
 applyTheme(currentTheme, { animate: false });
 applyTranslations();
 applyLocationRoute({ scroll: Boolean(window.location.hash) });
@@ -3937,6 +4134,14 @@ if ('IntersectionObserver' in window && heroPreviewCanvas) {
     scheduleMotionLoop({ immediate: heroPreviewVisible });
   }, { threshold: 0.08 });
   heroPreviewObserver.observe(heroPreviewCanvas);
+}
+if ('ResizeObserver' in window && heroPreviewCanvas) {
+  const heroPreviewResizeObserver = new ResizeObserver(([entry]) => {
+    const rect = entry?.contentRect;
+    if (!rect) return;
+    if (updateHeroPreviewSize(rect.width, rect.height) && heroPreviewVisible) drawHeroPreviewCanvas();
+  });
+  heroPreviewResizeObserver.observe(heroPreviewCanvas);
 }
 reducedMotionQuery.addEventListener?.('change', () => {
   restartTypeLoop();
@@ -3964,6 +4169,7 @@ window.addEventListener('resize', () => {
   resizeCanvas();
   repoMapFeature?.resize();
   researchCanvasFeature?.resize();
+  measureHeroPreviewSize();
   drawHeroPreviewCanvas();
 });
 resizeCanvas();

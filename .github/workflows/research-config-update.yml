@@ -58,7 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git add research-config.json index.html blog research publications zh resume publications.md rss.xml sitemap.xml package-lock.json
+          git add research-config.json index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml package-lock.json
           if git diff --cached --quiet; then
             echo "Research mapping is already current."
             echo "changed=false" >> "$GITHUB_OUTPUT"

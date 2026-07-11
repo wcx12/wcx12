@@ -38,7 +38,7 @@
 <span class="hljs-attr">draft:</span> <span class="hljs-literal">false</span>
 <span class="hljs-attr">math:</span> <span class="hljs-literal">true</span>
 <span class="hljs-attr">toc:</span> <span class="hljs-literal">true</span>
-</code></pre></div><p>Local images and attachments use portable <code>media/...</code> links. The build verifies that every referenced file exists with exact casing, stays inside its article directory, is not a symbolic link, and remains below the publication size limit. Published images also require meaningful alternative text.</p>
+</code></pre></div><p>Local article images use portable <code>media/...</code> links. The build verifies that every referenced file exists with exact casing, stays inside its article directory, is not a symbolic link, matches an allowed raster signature, and remains below the publication size limit. Published images also require meaningful alternative text. Other downloadable artifacts stay in a repository or release instead of sharing the article origin.</p>
 <h2 id="publication-states">Publication states</h2>
 <p>The repository has three explicit states:</p>
 <ul>
@@ -57,6 +57,16 @@
 <li>content fingerprints that prevent browsers from mixing resources across deployments.</li>
 </ul>
 <p>This first note is intentionally compact, but it exercises the same path intended for longer experiment logs, paper notes, tutorials, and engineering retrospectives.</p>
+<h2 id="inspect-the-implementation">Inspect the implementation</h2>
+<p>The claims above can be checked against the public implementation:</p>
+<ul>
+<li><a href="https://github.com/wcx12/wcx12" target="_blank" rel="noreferrer">homepage source repository</a>;</li>
+<li><a href="https://github.com/wcx12/wcx12/blob/main/content/posts/2026-07-10-building-a-research-writing-system/index.md" target="_blank" rel="noreferrer">this article’s versioned Markdown source</a>;</li>
+<li><a href="https://github.com/wcx12/wcx12/blob/main/scripts/blog-content.mjs" target="_blank" rel="noreferrer">content validation and media policy</a>;</li>
+<li><a href="https://github.com/wcx12/wcx12/blob/main/scripts/build-blog.mjs" target="_blank" rel="noreferrer">deterministic site generator</a>;</li>
+<li><a href="https://github.com/wcx12/wcx12/blob/main/.github/workflows/blog-build.yml" target="_blank" rel="noreferrer">scheduled build workflow</a>.</li>
+</ul>
+<p>The <a href="https://wcx12.github.io/wcx12/research/" target="_blank" rel="noreferrer">public research index</a> remains separate from this engineering case study, so site infrastructure is not presented as research evidence.</p>
 ]]></content:encoded>
     </item>
   

@@ -49,7 +49,7 @@ math: true
 toc: true
 ```
 
-Local images and attachments use portable `media/...` links. The build verifies that every referenced file exists with exact casing, stays inside its article directory, is not a symbolic link, and remains below the publication size limit. Published images also require meaningful alternative text.
+Local article images use portable `media/...` links. The build verifies that every referenced file exists with exact casing, stays inside its article directory, is not a symbolic link, matches an allowed raster signature, and remains below the publication size limit. Published images also require meaningful alternative text. Other downloadable artifacts stay in a repository or release instead of sharing the article origin.
 
 ## Publication states
 
@@ -72,3 +72,15 @@ The source of truth remains plain Markdown and versioned media in GitHub. The bu
 - content fingerprints that prevent browsers from mixing resources across deployments.
 
 This first note is intentionally compact, but it exercises the same path intended for longer experiment logs, paper notes, tutorials, and engineering retrospectives.
+
+## Inspect the implementation
+
+The claims above can be checked against the public implementation:
+
+- [homepage source repository](https://github.com/wcx12/wcx12);
+- [this article's versioned Markdown source](https://github.com/wcx12/wcx12/blob/main/content/posts/2026-07-10-building-a-research-writing-system/index.md);
+- [content validation and media policy](https://github.com/wcx12/wcx12/blob/main/scripts/blog-content.mjs);
+- [deterministic site generator](https://github.com/wcx12/wcx12/blob/main/scripts/build-blog.mjs);
+- [scheduled build workflow](https://github.com/wcx12/wcx12/blob/main/.github/workflows/blog-build.yml).
+
+The [public research index](https://wcx12.github.io/wcx12/research/) remains separate from this engineering case study, so site infrastructure is not presented as research evidence.

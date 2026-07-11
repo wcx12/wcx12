@@ -34,8 +34,7 @@
   <meta name="twitter:description" content="Interactive portfolio for point-cloud, visual perception, medical imaging, agents, and AI for Education research." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <link rel="preload" href="./assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=c9ac8763d2a6" />
+  <link rel="stylesheet" href="styles.css?v=d10088cea638" />
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -52,6 +51,12 @@
         "givenName": "Chenxu",
         "familyName": "Wang",
         "url": "https://wcx12.github.io/wcx12/",
+        "identifier": {
+          "@type": "PropertyValue",
+          "propertyID": "ORCID",
+          "value": "0009-0005-6139-4327",
+          "url": "https://orcid.org/0009-0005-6139-4327"
+        },
         "sameAs": [
           "https://github.com/wcx12",
           "https://orcid.org/0009-0005-6139-4327"
@@ -99,13 +104,14 @@
     <div class="brand">wcx12</div>
     <div class="top-actions">
       <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
+      <a class="ghost-btn" href="./projects/" data-i18n="btn_projects">Projects</a>
       <a class="ghost-btn" href="./publications/" data-i18n="btn_publications">Publications</a>
       <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
       <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
       <div class="utility-menu">
         <button class="ghost-btn utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Settings</button>
         <div id="utilityMenuPanel" class="utility-menu-panel">
-          <select id="themeSelect" class="theme-select" aria-label="Theme">
+          <select id="themeSelect" class="theme-select" aria-label="Color theme" data-i18n-aria="aria_theme">
             <option value="neon" data-i18n="theme_neon">Default</option>
             <option value="warm" data-i18n="theme_warm">Warm</option>
             <option value="mono" data-i18n="theme_mono">Black &amp; White</option>
@@ -142,12 +148,12 @@
         </div>
       </div>
 
-      <aside class="hero-preview-panel" aria-label="research preview">
+      <aside class="hero-preview-panel" aria-label="Research concept preview" data-i18n-aria="aria_hero_preview">
         <div class="hero-preview-head">
           <span class="panel-eyebrow" data-i18n="hero_preview_label">Research Preview</span>
           <span id="heroPreviewStatus" class="hero-preview-status">concept</span>
         </div>
-        <canvas id="heroPreviewCanvas" role="img" aria-label="featured research preview"></canvas>
+        <canvas id="heroPreviewCanvas" role="img" aria-label="Featured research concept" aria-describedby="heroPreviewStatus heroPreviewMeta" data-i18n-aria="aria_hero_canvas"></canvas>
         <div id="heroPreviewMeta" class="hero-preview-meta"></div>
       </aside>
     </section>
@@ -170,7 +176,7 @@
       </section>
     </noscript>
 
-    <section class="console" aria-label="interactive panel">
+    <section class="console" aria-label="Interactive portfolio" data-i18n-aria="aria_interactive_portfolio">
       <div class="console-head">
         <span class="dot pink"></span>
         <span class="dot cyan"></span>
@@ -183,7 +189,7 @@
         <span class="touch-hint" data-i18n="hints_touch">Use Command in Settings to search and navigate.</span>
       </p>
 
-      <nav class="command-row" aria-label="Portfolio sections">
+      <nav class="command-row" aria-label="Portfolio sections" data-i18n-aria="aria_portfolio_sections">
         <button class="cmd active" data-view="about" data-i18n="tab_about">about</button>
         <button class="cmd" data-view="research" data-i18n="tab_research">research</button>
         <button class="cmd" data-view="projects" data-i18n="tab_projects">projects</button>
@@ -212,7 +218,7 @@
             <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research" hidden>Manage Mapping</button>
           </div>
         </div>
-        <section id="featuredResearch" class="featured-research" aria-label="featured research">
+        <section id="featuredResearch" class="featured-research" aria-label="Featured research" data-i18n-aria="aria_featured_research">
           <div class="featured-research-head">
             <span class="panel-eyebrow" data-i18n="featured_research_label">Featured Research</span>
             <span class="muted" data-i18n="featured_research_hint">Fast entry points into the concept gallery.</span>
@@ -220,7 +226,7 @@
           <div id="researchShowcase" class="research-showcase"></div>
         </section>
         <div class="research-workbench">
-          <aside class="interest-rail" id="interestRail" aria-label="research interests"></aside>
+          <aside class="interest-rail" id="interestRail" aria-label="Research interests" data-i18n-aria="aria_research_interests"></aside>
           <section class="interest-detail">
             <div class="interest-detail-head">
               <div>
@@ -230,15 +236,15 @@
               <span id="interestTag" class="interest-tag"></span>
             </div>
             <p id="interestDescription" class="muted"></p>
-            <div class="interest-section-tabs" role="tablist" aria-label="Research detail sections">
+            <div class="interest-section-tabs" role="tablist" aria-label="Research detail sections" data-i18n-aria="aria_research_sections">
               <button class="active" type="button" role="tab" aria-selected="true" data-interest-panel="animation" data-i18n="section_animation">Concept Demo</button>
               <button type="button" role="tab" aria-selected="false" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
               <button type="button" role="tab" aria-selected="false" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
               <button type="button" role="tab" aria-selected="false" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
             </div>
             <div class="interest-demo">
-              <canvas id="interestCanvas" role="img" tabindex="-1" aria-label="research interest concept demo" aria-describedby="interestCanvasStatus"></canvas>
-              <div id="interestCanvasControls" class="interest-canvas-controls" aria-label="Research demo controls">
+              <canvas id="interestCanvas" role="img" tabindex="-1" aria-label="Research interest concept demo" aria-describedby="interestCanvasStatus" data-i18n-aria="aria_research_demo"></canvas>
+              <div id="interestCanvasControls" class="interest-canvas-controls" role="group" aria-label="Research demo controls" data-i18n-aria="aria_research_demo_controls">
                 <button id="interestDemoPrevious" class="btn btn-outline" type="button">Previous</button>
                 <button id="interestDemoAction" class="btn btn-primary" type="button">Run demo</button>
                 <button id="interestDemoReset" class="btn btn-outline" type="button">Reset</button>
@@ -264,21 +270,26 @@
       </div>
 
       <div class="view" id="projects">
-        <h2 data-i18n="project_title">Repositories</h2>
-        <p class="muted" data-i18n="project_desc">All public repositories are listed below with quick jump links.</p>
+        <div class="view-heading">
+          <div>
+            <h2 data-i18n="project_title">Repositories</h2>
+            <p class="muted" data-i18n="project_desc">All public repositories are listed below with quick jump links.</p>
+          </div>
+          <a class="btn btn-outline" href="./projects/" data-i18n="project_static">Project Index</a>
+        </div>
 
         <div class="repo-toolbar">
           <input id="repoSearch" type="search" aria-label="Search repositories" data-i18n-ph="repo_search_ph" placeholder="Search repositories..." />
-          <select id="repoSort" aria-label="Sort repositories">
+          <select id="repoSort" aria-label="Sort repositories" data-i18n-aria="aria_repo_sort">
             <option value="updated" data-i18n="sort_updated">Sort: Updated</option>
             <option value="stars" data-i18n="sort_stars">Sort: Stars</option>
             <option value="name" data-i18n="sort_name">Sort: Name</option>
           </select>
-          <select id="repoMode" aria-label="Repository list mode">
+          <select id="repoMode" aria-label="Repository list mode" data-i18n-aria="aria_repo_mode">
             <option value="pagination" data-i18n="mode_pagination">Mode: Pagination</option>
             <option value="infinite" data-i18n="mode_infinite">Mode: Infinite</option>
           </select>
-          <select id="repoPageSize" aria-label="Items per page">
+          <select id="repoPageSize" aria-label="Repositories per page" data-i18n-aria="aria_repo_page_size">
             <option value="6">6</option>
             <option value="12">12</option>
             <option value="24">24</option>
@@ -287,7 +298,7 @@
           <span id="repoCount" class="muted" role="status" aria-live="polite"></span>
         </div>
 
-        <div class="repo-map-panel">
+        <div class="repo-map-panel" aria-hidden="true">
           <div class="repo-map-head">
             <span data-i18n="repo_map_title">Repo Constellation</span>
             <span id="repoMapHint" class="muted">
@@ -295,7 +306,7 @@
               <span class="touch-hint" data-i18n="repo_map_hint_touch">Tap a project to inspect its research mapping.</span>
             </span>
           </div>
-          <canvas id="repoMap" role="img" aria-label="repository research field map" aria-describedby="repoMapHint"></canvas>
+          <canvas id="repoMap" aria-hidden="true"></canvas>
         </div>
 
         <div id="repoGrid" class="repo-grid"></div>
@@ -315,11 +326,11 @@
           <a class="btn btn-outline" href="./publications/" data-i18n="publication_static">Publication Index</a>
         </div>
         <div class="pub-toolbar">
-          <select id="pubMode" aria-label="Publication list mode">
+          <select id="pubMode" aria-label="Publication list mode" data-i18n-aria="aria_pub_mode">
             <option value="pagination" data-i18n="mode_pagination">Mode: Pagination</option>
             <option value="infinite" data-i18n="mode_infinite">Mode: Infinite</option>
           </select>
-          <select id="pubPageSize" aria-label="Publication items per page">
+          <select id="pubPageSize" aria-label="Publications per page" data-i18n-aria="aria_pub_page_size">
             <option value="6">6</option>
             <option value="12">12</option>
             <option value="24">24</option>
@@ -346,7 +357,7 @@
           <input id="writingSearch" type="search" aria-label="Search writing" data-i18n-ph="writing_search_ph" placeholder="Search writing..." />
           <span id="writingCount" class="muted" role="status" aria-live="polite"></span>
         </div>
-        <section class="writing-featured" aria-label="featured writing">
+        <section class="writing-featured" aria-label="Featured writing" data-i18n-aria="aria_featured_writing">
           <div class="featured-research-head">
             <span class="panel-eyebrow" data-i18n="writing_featured">Featured Notes</span>
             <span class="muted" data-i18n="writing_hint">Full articles open as static blog pages.</span>
@@ -376,7 +387,7 @@
 
       <div class="view" id="skills">
         <h2 data-i18n="skill_title">Skill Matrix</h2>
-        <div class="chips" role="group" aria-label="Technical skills">
+        <div class="chips" role="group" aria-label="Technical skills" data-i18n-aria="aria_technical_skills">
           <button class="chip" type="button" aria-pressed="false" data-tag="Python">Python</button>
           <button class="chip" type="button" aria-pressed="false" data-tag="PyTorch">PyTorch</button>
           <button class="chip" type="button" aria-pressed="false" data-tag="TensorFlow">TensorFlow</button>
@@ -416,8 +427,8 @@
 
   <div id="detailModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <button id="modalClose" class="modal-close" type="button" aria-label="Close">x</button>
-      <h3 id="modalTitle"></h3>
+      <button id="modalClose" class="modal-close" type="button" aria-label="Close" data-i18n-aria="aria_close">x</button>
+      <h2 id="modalTitle"></h2>
       <div id="modalBody"></div>
       <a id="modalLink" class="btn btn-primary" href="#" target="_blank" rel="noreferrer">Open Link</a>
     </div>
@@ -425,18 +436,18 @@
 
   <div id="researchManager" class="modal" aria-hidden="true">
     <div class="modal-card manager-card" role="dialog" aria-modal="true" aria-labelledby="managerTitle">
-      <button id="managerClose" class="modal-close" type="button" aria-label="Close">x</button>
-      <h3 id="managerTitle" data-i18n="manager_title">Research Mapping</h3>
+      <button id="managerClose" class="modal-close" type="button" aria-label="Close" data-i18n-aria="aria_close">x</button>
+      <h2 id="managerTitle" data-i18n="manager_title">Research Mapping</h2>
       <div class="manager-grid">
         <section>
           <h4 data-i18n="manager_add_title">Add Category</h4>
           <label>
             <span data-i18n="manager_domain">Domain</span>
-            <input id="managerDomain" type="text" placeholder="Computer Vision" />
+            <input id="managerDomain" type="text" placeholder="Computer Vision" required aria-describedby="managerAddStatus" />
           </label>
           <label>
             <span data-i18n="manager_interest">Sub-interest</span>
-            <input id="managerInterest" type="text" placeholder="VPR" />
+            <input id="managerInterest" type="text" placeholder="VPR" required aria-describedby="managerAddStatus" />
           </label>
           <label>
             <span data-i18n="manager_label">Label</span>
@@ -452,6 +463,7 @@
             </select>
           </label>
           <button id="managerAdd" class="btn btn-primary" type="button" data-i18n="manager_add">Add</button>
+          <p id="managerAddStatus" class="muted manager-status" role="status" aria-live="polite"></p>
         </section>
         <section>
           <h4 data-i18n="manager_assign_title">Assign Current Category</h4>
@@ -467,7 +479,7 @@
           <div class="manager-actions">
             <button id="managerSaveRemote" class="btn btn-primary" type="button" data-i18n="manager_save_remote">Start GitHub update</button>
           </div>
-          <p id="managerRemoteStatus" class="muted manager-status" data-i18n="manager_remote_hint">Use a single-repository token with Actions read/write only. It is cleared immediately after dispatch.</p>
+          <p id="managerRemoteStatus" class="muted manager-status" role="status" aria-live="polite" data-i18n="manager_remote_hint">Use a single-repository token with Actions read/write only. It is cleared immediately after dispatch.</p>
           <h5 data-i18n="manager_projects">Projects</h5>
           <div id="managerProjects" class="manager-list"></div>
           <h5 data-i18n="manager_papers">Papers</h5>
@@ -478,8 +490,8 @@
   </div>
 
   <div id="commandPalette" class="command-palette" aria-hidden="true">
-    <div class="palette-card" role="dialog" aria-modal="true" aria-label="command palette">
-      <button id="commandClose" class="modal-close" type="button" aria-label="Close command palette">x</button>
+    <div class="palette-card" role="dialog" aria-modal="true" aria-label="Command palette" data-i18n-aria="aria_command_palette">
+      <button id="commandClose" class="modal-close" type="button" aria-label="Close command palette" data-i18n-aria="aria_command_close">x</button>
       <input id="commandInput" type="search" aria-label="Search commands and repositories" data-i18n-ph="command_placeholder" placeholder="Type a command or repository..." />
       <div id="commandList" class="command-list"></div>
       <aside id="commandPreview" class="command-preview" aria-live="polite"></aside>
@@ -487,15 +499,16 @@
   </div>
 
   <div id="readmeDrawer" class="readme-drawer" aria-hidden="true">
-    <div class="readme-drawer-card" role="dialog" aria-modal="true" aria-label="repository README">
+    <div class="readme-drawer-card" role="dialog" aria-modal="true" aria-labelledby="readmeDrawerTitle">
       <div class="readme-drawer-head">
         <div>
           <span class="panel-eyebrow" id="readmeDrawerKicker">Repository Preview</span>
-          <h3 id="readmeDrawerTitle"></h3>
+          <h2 id="readmeDrawerTitle"></h2>
         </div>
-        <button id="readmeDrawerClose" class="modal-close" type="button" aria-label="Close">x</button>
+        <button id="readmeDrawerClose" class="modal-close" type="button" aria-label="Close" data-i18n-aria="aria_close">x</button>
       </div>
-      <div id="readmeDrawerBody" class="readme-drawer-body"></div>
+      <p id="readmeDrawerStatus" class="sr-only" role="status" aria-live="polite"></p>
+      <div id="readmeDrawerBody" class="readme-drawer-body" role="region" aria-label="Repository README content" aria-busy="false"></div>
       <div class="readme-drawer-actions">
         <a id="readmeDrawerLink" class="btn btn-primary" href="#" target="_blank" rel="noreferrer">Open Repository</a>
       </div>
@@ -506,6 +519,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="script.js?v=c9ac8763d2a6"></script>
+  <script type="module" src="script.js?v=d10088cea638"></script>
 </body>
 </html>

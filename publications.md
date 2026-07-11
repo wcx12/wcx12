@@ -8,6 +8,8 @@
 - Journal: Neurocomputing
 - Year: 2026
 - DOI: https://doi.org/10.1016/j.neucom.2026.133399
+- Official implementation: https://github.com/ddfs430/TF-VPR
+- Hosting note: Official implementation hosted under a coauthor's account; linked as paper evidence, not claimed as this profile's repository.
 - Research area: Visual Place Recognition
 
 ## In Press
@@ -18,6 +20,8 @@
 - Journal: Neurocomputing
 - Status: Journal pre-proof; issue publication scheduled for 2026
 - DOI: https://doi.org/10.1016/j.neucom.2026.134314
+- Official implementation: https://github.com/ddfs430/Synergistic-Learning
+- Hosting note: Official implementation hosted under a coauthor's account; linked as paper evidence, not claimed as this profile's repository.
 - Research area: Medical Image Analysis / Active Learning
 
 Only publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.

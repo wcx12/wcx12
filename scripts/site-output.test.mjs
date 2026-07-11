@@ -19,9 +19,14 @@ function publicationsRoute(language) {
   return `${language === 'zh' ? 'zh/' : ''}publications/`;
 }
 
+function projectsRoute(language) {
+  return `${language === 'zh' ? 'zh/' : ''}projects/`;
+}
+
 const staticRoutes = ['en', 'zh'].flatMap((language) => [
   researchRoute(language),
   ...researchChildren.map((child) => researchRoute(language, `${child.id}/`)),
+  projectsRoute(language),
   publicationsRoute(language)
 ]);
 
@@ -120,7 +125,7 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
       assert.match(source, /class="skip-link"[^>]+href="#main-content"/i, `${relative}: missing skip link`);
       assert.match(source, /<main\s+[^>]*id="main-content"/i, `${relative}: missing main target`);
       assert.doesNotMatch(source, /fonts\.(?:googleapis|gstatic)\.com/i, `${relative}: external font dependency returned`);
-      assert.match(source, /space-grotesk-latin\.woff2/i, `${relative}: missing self-hosted primary font preload`);
+      assert.doesNotMatch(source, /<link\b[^>]*rel="preload"[^>]*as="font"/i, `${relative}: optional fonts must not compete with first paint`);
       assert.doesNotMatch(source, /script-src[^;"]*'unsafe-inline'/i, `${relative}: executable inline scripts must stay disabled`);
     } else {
       assert.match(source, /name="robots"\s+content="noindex,follow"/i, '404 must not be indexed');
@@ -189,9 +194,14 @@ test('portfolio routes use the researcher identity while blog routes retain thei
   const researchSource = await fs.readFile(path.join(rootDir, 'research', 'index.html'), 'utf8');
   const publicationsSource = await fs.readFile(path.join(rootDir, 'publications', 'index.html'), 'utf8');
   const blogSource = await fs.readFile(path.join(rootDir, 'blog', 'index.html'), 'utf8');
+  const resumeSource = await fs.readFile(path.join(rootDir, 'resume', 'index.html'), 'utf8');
   assert.match(researchSource, /<title>Research \| Chenxu Wang \(wcx12\)<\/title>/);
   assert.match(publicationsSource, /<title>Publications \| Chenxu Wang \(wcx12\)<\/title>/);
   assert.match(blogSource, /<title>Research Fieldnotes<\/title>/);
+  const profile = jsonLdFor(resumeSource);
+  assert.equal(profile.mainEntity['@id'], `${SITE.url}/#person`);
+  assert.equal(profile.mainEntity.identifier.propertyID, 'ORCID');
+  assert.equal(profile.mainEntity.identifier.value, '0009-0005-6139-4327');
 });
 
 test('generated code blocks and article contents remain keyboard reachable', async () => {
@@ -203,6 +213,11 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(pre, /tabindex="0"/i, `${path.relative(rootDir, file)}: scrollable pre must be focusable`);
     }
     assert.match(source, /blog-toc-mobile/, `${path.relative(rootDir, file)}: missing mobile contents navigation`);
+    if (file.includes('building-a-research-writing-system')) {
+      assert.match(source, /href="https:\/\/github\.com\/wcx12\/wcx12\/blob\/main\/scripts\/blog-content\.mjs"/);
+      assert.match(source, /href="https:\/\/github\.com\/wcx12\/wcx12\/blob\/main\/\.github\/workflows\/blog-build\.yml"/);
+      assert.match(source, /href="https:\/\/wcx12\.github\.io\/wcx12\/research\/"/);
+    }
   }
 });
 
@@ -221,10 +236,11 @@ test('bundled post media is copied, fingerprinted, and rendered accessibly', asy
   assert.match(article, /publishing-flow\.png[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"/);
 });
 
-test('all configured research and publication routes exist without stale generated HTML', async () => {
-  assert.equal(staticRoutes.length, 14, 'five topics plus two index routes must have English and Chinese pages');
+test('all configured research, project, and publication routes exist without stale generated HTML', async () => {
+  assert.equal(staticRoutes.length, 16, 'five topics plus three index routes must have English and Chinese pages');
   const generated = [
     ...await walk(path.join(rootDir, 'research'), (file) => file.endsWith('.html')),
+    ...await walk(path.join(rootDir, 'projects'), (file) => file.endsWith('.html')),
     ...await walk(path.join(rootDir, 'publications'), (file) => file.endsWith('.html')),
     ...await walk(path.join(rootDir, 'zh'), (file) => file.endsWith('.html'))
   ].map((file) => path.relative(rootDir, file).replace(/\\/g, '/')).sort();
@@ -309,10 +325,43 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
       assert.deepEqual(schemaKeys, visibleKeys, `${route}: JSON-LD evidence differs from visible evidence`);
       assert.deepEqual([...evidenceTypes].filter((type) => !['SoftwareSourceCode', 'ScholarlyArticle', 'BlogPosting'].includes(type)), [], `${route}: unsupported evidence type`);
       assert.equal(list.numberOfItems, visibleEvidence.length, `${route}: evidence count mismatch`);
+      for (const item of list.itemListElement.filter((entry) => entry['@type'] === 'SoftwareSourceCode')) {
+        const repo = localRepos.find((entry) => entry.name === item.name);
+        if (!repo) continue;
+        assert.equal(item.creativeWorkStatus, repo.stage[language], `${route}: repository stage is missing from JSON-LD`);
+      }
       for (const [, type] of visibleEvidence) assert.ok(['SoftwareSourceCode', 'ScholarlyArticle', 'BlogPosting'].includes(type));
       for (const [, article] of matches(source, /(<article class="research-evidence"[\s\S]*?<\/article>)/g)) {
         assert.match(article, /<a\s+[^>]*href="[^"]+"/i, `${route}: visible evidence needs a crawlable link`);
+        if (/data-evidence-type="SoftwareSourceCode"/.test(article)) {
+          assert.match(article, new RegExp(`<dt>${language === 'zh' ? '阶段' : 'Stage'}<\\/dt>`), `${route}: visible project stage is missing`);
+          assert.match(article, new RegExp(`<dt>${language === 'zh' ? '公开证据' : 'Public evidence'}<\\/dt>`), `${route}: visible project evidence is missing`);
+        }
       }
+    }
+  }
+});
+
+test('project indexes expose every repository with maturity and public evidence', async () => {
+  const expectedNames = localRepos.map((repo) => repo.name).sort();
+  for (const language of ['en', 'zh']) {
+    const route = projectsRoute(language);
+    const source = await fs.readFile(path.join(rootDir, route, 'index.html'), 'utf8');
+    const metadata = jsonLdFor(source);
+    const page = graphNode(metadata, 'CollectionPage');
+    const list = graphNode(metadata, 'ItemList');
+    assert.ok(page, `${route}: missing CollectionPage`);
+    assert.equal(page.mainEntity['@id'], `${SITE.url}/${route}#projects`);
+    assert.equal(list.numberOfItems, localRepos.length);
+    assert.deepEqual(list.itemListElement.map((item) => item.name).sort(), expectedNames);
+    assert.deepEqual(
+      matches(source, /data-evidence-key="repo:([^"]+)"/g).map(([, name]) => name).sort(),
+      expectedNames
+    );
+    for (const item of list.itemListElement) {
+      const repo = localRepos.find((entry) => entry.name === item.name);
+      assert.equal(item.creativeWorkStatus, repo.stage[language]);
+      assert.match(source, new RegExp(repo.html_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     }
   }
 });
@@ -342,14 +391,18 @@ test('publication pages expose every canonical DOI record with ordered authors',
       assert.equal(list.itemListElement[index].about['@type'], 'DefinedTerm', `${route}: missing publication topic term`);
       assert.equal(list.itemListElement[index].about.termCode, topic.id, `${route}: publication topic mapping changed`);
       assert.equal(list.itemListElement[index].about.url, expectedTopicUrl, `${route}: JSON-LD topic URL is incorrect`);
+      assert.equal(list.itemListElement[index].subjectOf?.codeRepository, publication.code_url, `${route}: official implementation is missing from JSON-LD`);
 
       const record = matches(source, /(<article class="research-evidence"[\s\S]*?<\/article>)/g)[index]?.[1] || '';
       const topicHref = record.match(/<a class="publication-topic-link" href="([^"]+)"/i)?.[1];
       assert.ok(topicHref, `${route}: publication ${publication.doi} is missing its visible topic link`);
       assert.equal(new URL(topicHref, `${SITE.url}/${route}`).href, expectedTopicUrl, `${route}: visible and JSON-LD topic URLs differ`);
+      assert.match(record, new RegExp(publication.code_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(record, new RegExp(language === 'zh' ? '合作者账号托管' : 'coauthor[^<]+account', 'i'));
     });
     const visibleDois = matches(source, /data-evidence-key="paper:([^"]+)"/g).map(([, doi]) => doi);
     assert.deepEqual(visibleDois, expectedDois, `${route}: visible DOI records differ from JSON-LD`);
+    assert.doesNotMatch(source, /DOI-verified/i);
   }
 });
 
@@ -442,7 +495,7 @@ test('research mapping workflow validates, rebuilds, and deploys from the latest
   const pages = workflow.indexOf('name: Request GitHub Pages build');
   assert.ok(sync < validate && validate < build && build < generatedValidation && generatedValidation < commit && commit < pages);
   assert.ok(validate < workflow.indexOf('GH_TOKEN: ${{ github.token }}'));
-  assert.match(workflow, /git add research-config\.json index\.html blog research publications zh resume publications\.md rss\.xml sitemap\.xml package-lock\.json/);
+  assert.match(workflow, /git add research-config\.json index\.html blog research projects publications zh resume publications\.md rss\.xml sitemap\.xml package-lock\.json/);
   assert.match(workflow, /pages: write/);
   assert.match(workflow, /gh api --method POST "repos\/\$\{GITHUB_REPOSITORY\}\/pages\/builds"/);
   assert.match(applyScript, /normalizeResearchConfigValue/);

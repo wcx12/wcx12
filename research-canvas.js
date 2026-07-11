@@ -20,10 +20,12 @@ export function createResearchCanvas(options) {
   const MAX_CANVAS_DPR = 2;
   const INTEREST_DESKTOP_FRAME_MS = 46;
   const INTEREST_MOBILE_IDLE_FRAME_MS = 200;
+  const LEGACY_RUNNER_SCENES_ENABLED = false;
   let currentLang = 'en';
   let interestTick = 0;
   let lastInterestFrame = 0;
   let interestCanvasVisible = !('IntersectionObserver' in window);
+  let interestCanvasSize = { width: 0, height: 0, scale: 1 };
 
   function syncContext() {
     currentLang = getContext().lang;
@@ -41,17 +43,36 @@ export function createResearchCanvas(options) {
     return document.getElementById('research')?.classList.contains('active');
   }
 
-  function resizeDrawingCanvas(canvasElement, context) {
-    const rect = canvasElement.getBoundingClientRect();
+  function updateInterestCanvasSize(width, height) {
+    if (!interestCanvas || !interestCtx) return false;
     const scale = Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
-    const width = Math.max(1, Math.floor(rect.width * scale));
-    const height = Math.max(1, Math.floor(rect.height * scale));
-    if (canvasElement.width !== width || canvasElement.height !== height) {
-      canvasElement.width = width;
-      canvasElement.height = height;
-    }
-    context.setTransform(scale, 0, 0, scale, 0, 0);
-    return { width: rect.width, height: rect.height };
+    const cssWidth = Math.max(0, width);
+    const cssHeight = Math.max(0, height);
+    const pixelWidth = Math.max(1, Math.floor(cssWidth * scale));
+    const pixelHeight = Math.max(1, Math.floor(cssHeight * scale));
+    const changed = interestCanvas.width !== pixelWidth
+      || interestCanvas.height !== pixelHeight
+      || interestCanvasSize.width !== cssWidth
+      || interestCanvasSize.height !== cssHeight
+      || interestCanvasSize.scale !== scale;
+    if (interestCanvas.width !== pixelWidth) interestCanvas.width = pixelWidth;
+    if (interestCanvas.height !== pixelHeight) interestCanvas.height = pixelHeight;
+    interestCtx.setTransform(scale, 0, 0, scale, 0, 0);
+    interestCanvasSize = { width: cssWidth, height: cssHeight, scale };
+    return changed;
+  }
+
+  function measureInterestCanvasSize() {
+    if (!interestCanvas) return false;
+    const rect = interestCanvas.getBoundingClientRect();
+    return updateInterestCanvasSize(rect.width, rect.height);
+  }
+
+  function interestPointer(event) {
+    return {
+      x: Math.max(0, Math.min(interestCanvasSize.width, Number(event.offsetX) || 0)),
+      y: Math.max(0, Math.min(interestCanvasSize.height, Number(event.offsetY) || 0))
+    };
   }
 
   function colorWithAlpha(color, alpha) {
@@ -891,10 +912,8 @@ function agentInspectText(task, activeTrace, confidence) {
 }
 
 function agentHitRegion(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  const layout = humanAiCollabLayout(rect.width, rect.height);
+  const { x, y } = interestPointer(event);
+  const layout = humanAiCollabLayout(interestCanvasSize.width, interestCanvasSize.height);
   const regions = [
     ...layout.taskCards.map((item) => ({ type: 'task', item })),
     { type: 'human', item: layout.human },
@@ -1050,10 +1069,8 @@ function educationRunnerLayout(width, height) {
 }
 
 function educationHitRegion(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  const layout = robotTeacherLayout(rect.width, rect.height);
+  const { x, y } = interestPointer(event);
+  const layout = robotTeacherLayout(interestCanvasSize.width, interestCanvasSize.height);
   const regions = [
     ...layout.feedbackButtons.map((item) => ({ type: 'signal', item })),
     { type: 'robot', item: { x: layout.robot.x - layout.robot.w / 2, y: layout.robot.y - layout.robot.h / 2, w: layout.robot.w, h: layout.robot.h, id: 'robot' } },
@@ -2535,10 +2552,8 @@ function drawMedicalActiveLearning(width, height, t, primary, secondary, muted) 
 }
 
 function medicalHitRegion(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  const layout = medicalActiveLearningLayout(rect.width, rect.height);
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+  const { x, y } = interestPointer(event);
+  const layout = medicalActiveLearningLayout(interestCanvasSize.width, interestCanvasSize.height);
   return layout.tiles.find((tile) => x >= tile.x && x <= tile.x + tile.w && y >= tile.y && y <= tile.y + tile.h) || null;
 }
 
@@ -2564,9 +2579,7 @@ function resetMedicalActiveLearning() {
 }
 
 function drawInterestAnimation() {
-  const rect = interestCanvas.getBoundingClientRect();
-  if (rect.width < 2 || rect.height < 2) return;
-  const { width, height } = resizeDrawingCanvas(interestCanvas, interestCtx);
+  const { width, height } = interestCanvasSize;
   if (width < 2 || height < 2) return;
   const entry = activeInterestEntry();
   if (!entry) return;
@@ -2852,7 +2865,7 @@ function drawInterestAnimation() {
     drawMedicalActiveLearning(width, height, t, primary, secondary, muted);
   } else if (type === 'agent') {
     drawHumanAiCollab(width, height, t, primary, secondary, muted);
-    return;
+    if (!LEGACY_RUNNER_SCENES_ENABLED) return;
     const layout = agentRunnerLayout(width, height);
     const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
     const autonomy = clamp01(agentInteraction.active ? agentInteraction.x : 0.52 + Math.sin(t * 0.52) * 0.18);
@@ -3082,7 +3095,7 @@ function drawInterestAnimation() {
     }
   } else if (type === 'education') {
     drawRobotTeacherClassroom(width, height, t, primary, secondary, muted);
-    return;
+    if (!LEGACY_RUNNER_SCENES_ENABLED) return;
     const layout = educationRunnerLayout(width, height);
     const path = educationPathForSelected();
     const concept = educationConceptForSelected();
@@ -3306,18 +3319,18 @@ function drawInterestAnimation() {
 }
 
 function updatePointCloudPointer(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  pointCloudInteraction.x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-  pointCloudInteraction.y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+  const pointer = interestPointer(event);
+  pointCloudInteraction.x = clamp01(pointer.x / Math.max(1, interestCanvasSize.width));
+  pointCloudInteraction.y = clamp01(pointer.y / Math.max(1, interestCanvasSize.height));
   pointCloudInteraction.active = true;
   pointCloudInteraction.targetScrub = pointCloudInteraction.x;
   if (pointCloudInteraction.dragging) pointCloudInteraction.scrub = pointCloudInteraction.x;
 }
 
 function updateVprPointer(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  vprInteraction.targetRoute = clamp01((event.clientX - rect.left) / rect.width);
-  vprInteraction.targetCondition = clamp01((event.clientY - rect.top) / rect.height);
+  const pointer = interestPointer(event);
+  vprInteraction.targetRoute = clamp01(pointer.x / Math.max(1, interestCanvasSize.width));
+  vprInteraction.targetCondition = clamp01(pointer.y / Math.max(1, interestCanvasSize.height));
   vprInteraction.active = true;
   if (vprInteraction.dragging) {
     vprInteraction.route = vprInteraction.targetRoute;
@@ -3326,9 +3339,9 @@ function updateVprPointer(event) {
 }
 
 function updateAgentPointer(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  agentInteraction.x = clamp01((event.clientX - rect.left) / rect.width);
-  agentInteraction.y = clamp01((event.clientY - rect.top) / rect.height);
+  const pointer = interestPointer(event);
+  agentInteraction.x = clamp01(pointer.x / Math.max(1, interestCanvasSize.width));
+  agentInteraction.y = clamp01(pointer.y / Math.max(1, interestCanvasSize.height));
   agentInteraction.active = true;
   const hit = agentHitRegion(event);
   agentInteraction.hoverType = hit?.type || null;
@@ -3359,9 +3372,9 @@ function interactWithAgentRunner(event) {
 }
 
 function updateEducationPointer(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  educationInteraction.x = clamp01((event.clientX - rect.left) / rect.width);
-  educationInteraction.y = clamp01((event.clientY - rect.top) / rect.height);
+  const pointer = interestPointer(event);
+  educationInteraction.x = clamp01(pointer.x / Math.max(1, interestCanvasSize.width));
+  educationInteraction.y = clamp01(pointer.y / Math.max(1, interestCanvasSize.height));
   educationInteraction.active = true;
   const hit = educationHitRegion(event);
   educationInteraction.hoverType = hit?.type || null;
@@ -3398,9 +3411,9 @@ function interactWithEducationStudio(event) {
 }
 
 function updateMedicalPointer(event) {
-  const rect = interestCanvas.getBoundingClientRect();
-  medicalInteraction.x = clamp01((event.clientX - rect.left) / rect.width);
-  medicalInteraction.y = clamp01((event.clientY - rect.top) / rect.height);
+  const pointer = interestPointer(event);
+  medicalInteraction.x = clamp01(pointer.x / Math.max(1, interestCanvasSize.width));
+  medicalInteraction.y = clamp01(pointer.y / Math.max(1, interestCanvasSize.height));
   medicalInteraction.active = true;
   medicalInteraction.hoverIndex = medicalHitRegion(event)?.index ?? null;
 }
@@ -3508,6 +3521,7 @@ interestCanvas.addEventListener('pointerup', (event) => {
     interactWithEducationStudio(event);
     educationInteraction.dragging = false;
   }
+  updateInterestCanvasAccessibility();
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
   try {
     interestCanvas.releasePointerCapture?.(event.pointerId);
@@ -3561,6 +3575,7 @@ interestCanvas.addEventListener('pointerleave', () => {
 
   function render() {
     if (!interestCanvas || !interestCtx) return;
+    if (interestCanvasSize.width < 2 || interestCanvasSize.height < 2) measureInterestCanvasSize();
     syncContext();
     updateInterestCanvasAccessibility();
     interestCanvas.style.cursor = canvasCursorForActiveInterest();
@@ -3586,8 +3601,24 @@ interestCanvas.addEventListener('pointerleave', () => {
     if (isResearchViewActive() && interestCanvasVisible) drawInterestAnimation();
   }
 
+  function resize() {
+    measureInterestCanvasSize();
+    render();
+  }
+
   generateRegistrationPoints();
   syncContext();
+  measureInterestCanvasSize();
+
+  if ('ResizeObserver' in window && interestCanvas) {
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      const rect = entry?.contentRect;
+      if (!rect || !updateInterestCanvasSize(rect.width, rect.height)) return;
+      if (isResearchViewActive() && interestCanvasVisible) render();
+      requestMotionFrame({ immediate: true });
+    });
+    resizeObserver.observe(interestCanvas);
+  }
 
   if ('IntersectionObserver' in window && interestCanvas) {
     const observer = new IntersectionObserver(([entry]) => {
@@ -3616,7 +3647,7 @@ interestCanvas.addEventListener('pointerleave', () => {
     getRegistrationParams: () => ({ ...registrationParams() }),
     isVisible: () => interestCanvasVisible,
     render,
-    resize: render,
+    resize,
     scrollIntoView: () => interestCanvas?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   };
   return researchCanvasInstance;

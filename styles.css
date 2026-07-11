@@ -365,7 +365,7 @@ footer { position: relative; z-index: 1; }
   background: transparent;
   font: inherit;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .ghost-btn:hover { border-color: var(--cyan); box-shadow: 0 0 16px var(--glow); }
@@ -580,7 +580,7 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
   cursor: pointer;
   background: transparent;
 }
@@ -773,7 +773,8 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 #repoPageSize:focus,
 #pubMode:focus,
 #pubPageSize:focus {
-  outline: none;
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
   border-color: var(--pink);
 }
 
@@ -869,8 +870,6 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
   border-radius: 12px;
   padding: 12px;
   background: rgba(0, 245, 255, 0.04);
-  content-visibility: auto;
-  contain-intrinsic-size: 360px;
 }
 
 .repo-preview-card {
@@ -936,6 +935,34 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 .repo-preview-facts strong {
   min-width: 0;
   color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.project-evidence {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding-left: 12px;
+  border-left: 2px solid color-mix(in srgb, var(--cyan) 52%, transparent);
+}
+
+.project-evidence div {
+  display: grid;
+  grid-template-columns: minmax(92px, auto) minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+
+.project-evidence dt {
+  color: var(--muted);
+  font: 700 0.74rem "JetBrains Mono", monospace;
+}
+
+.project-evidence dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 
@@ -1077,7 +1104,8 @@ button.research-badge:hover {
 }
 
 .writing-toolbar input:focus {
-  outline: none;
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
   border-color: var(--cyan);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 20%, transparent);
 }
@@ -1486,11 +1514,10 @@ button.research-badge:hover {
 }
 
 .project-overview {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px;
-  background: var(--soft-bg);
-  margin-bottom: 12px;
+  border-left: 2px solid var(--cyan);
+  padding: 2px 0 2px 14px;
+  background: transparent;
+  margin: 4px 0 18px;
 }
 
 .project-overview p {
@@ -1758,7 +1785,7 @@ button.research-badge:hover {
   min-width: 0;
 }
 
-.readme-drawer-head h3 {
+.readme-drawer-head h2 {
   margin: 4px 34px 0 0;
   overflow-wrap: anywhere;
 }
@@ -1832,7 +1859,8 @@ button.research-badge:hover {
 }
 
 #commandInput:focus {
-  outline: none;
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
   border-color: var(--pink);
 }
 

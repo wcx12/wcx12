@@ -127,8 +127,8 @@
           },
           "animation": "education",
           "description": {
-            "en": "AI-assisted learning tools, practice generation, feedback, and knowledge tracing ideas.",
-            "zh": "面向学习工具、练习生成、反馈闭环与知识追踪的 AI4教育方向。"
+            "en": "Educational software, interactive mathematics visualizations, teaching resources, and exploratory AI-supported learning workflows.",
+            "zh": "围绕教育软件、交互式数学可视化、教学资源与探索中的 AI 辅助学习工作流。"
           }
         }
       ]
@@ -139,21 +139,11 @@
       "point-cloud-registration"
     ],
     "wcx12": [],
-    "hlpp-crossword": [
-      "ai4edu"
-    ],
-    "codex-pet-battle": [
-      "agent"
-    ],
-    "shuxuepeiyou": [
-      "ai4edu"
-    ],
-    "tetrahedron-visualizer": [
-      "ai4edu"
-    ],
-    "BIT-The-mathematical-foundation-of-big-Data": [
-      "ai4edu"
-    ],
+    "hlpp-crossword": [],
+    "codex-pet-battle": [],
+    "shuxuepeiyou": [],
+    "tetrahedron-visualizer": [],
+    "BIT-The-mathematical-foundation-of-big-Data": [],
     "major-intel": [
       "agent"
     ],
