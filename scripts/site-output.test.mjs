@@ -90,6 +90,9 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
       assert.match(source, /<link\s+rel="canonical"/i, `${relative}: missing canonical URL`);
       assert.match(source, /class="skip-link"[^>]+href="#main-content"/i, `${relative}: missing skip link`);
       assert.match(source, /<main\s+[^>]*id="main-content"/i, `${relative}: missing main target`);
+      assert.doesNotMatch(source, /fonts\.(?:googleapis|gstatic)\.com/i, `${relative}: external font dependency returned`);
+      assert.match(source, /space-grotesk-latin\.woff2/i, `${relative}: missing self-hosted primary font preload`);
+      assert.doesNotMatch(source, /script-src[^;"]*'unsafe-inline'/i, `${relative}: executable inline scripts must stay disabled`);
     } else {
       assert.match(source, /name="robots"\s+content="noindex,follow"/i, '404 must not be indexed');
     }
@@ -119,6 +122,15 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(clientSource, /hero_kicker:\s*'wcx12 的研究手记'/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
   assert.match(styleSource, /\.blog-content a\s*\{[^}]*overflow-wrap:\s*anywhere/s, 'long DOI links must wrap on mobile');
+});
+
+test('portfolio routes use the researcher identity while blog routes retain their own brand', async () => {
+  const researchSource = await fs.readFile(path.join(rootDir, 'research', 'index.html'), 'utf8');
+  const publicationsSource = await fs.readFile(path.join(rootDir, 'publications', 'index.html'), 'utf8');
+  const blogSource = await fs.readFile(path.join(rootDir, 'blog', 'index.html'), 'utf8');
+  assert.match(researchSource, /<title>Research \| Chenxu Wang \(wcx12\)<\/title>/);
+  assert.match(publicationsSource, /<title>Publications \| Chenxu Wang \(wcx12\)<\/title>/);
+  assert.match(blogSource, /<title>Research Fieldnotes<\/title>/);
 });
 
 test('generated code blocks and article contents remain keyboard reachable', async () => {
@@ -215,7 +227,7 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
       assert.equal(page.about['@type'], 'DefinedTerm', `${route}: topic must be about a DefinedTerm`);
       assert.equal(page.about.termCode, child.id, `${route}: incorrect DefinedTerm`);
       assert.ok(demoLink, `${route}: missing interactive demo link`);
-      assert.equal(demoLink[2], language === 'zh' ? '打开交互演示' : 'Open interactive demo');
+      assert.equal(demoLink[2], language === 'zh' ? '打开概念演示' : 'Open concept demo');
       assert.equal(new URL(demoLink[1], `${SITE.url}/${route}`).href, `${SITE.url}/#research/${child.id}`, `${route}: interactive demo link targets the wrong homepage state`);
       assert.deepEqual(visibleKeys, expectedKeys, `${route}: visible evidence differs from configured sources`);
       assert.deepEqual(schemaKeys, visibleKeys, `${route}: JSON-LD evidence differs from visible evidence`);
@@ -229,7 +241,7 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
   }
 });
 
-test('publication pages expose exactly the two source DOI records with ordered authors', async () => {
+test('publication pages expose every canonical DOI record with ordered authors', async () => {
   const expectedDois = staticPublications.map((publication) => publication.doi);
   for (const language of ['en', 'zh']) {
     const route = publicationsRoute(language);
@@ -238,8 +250,8 @@ test('publication pages expose exactly the two source DOI records with ordered a
     const page = graphNode(metadata, 'CollectionPage');
     const list = graphNode(metadata, 'ItemList');
     assert.ok(page, `${route}: missing CollectionPage`);
-    assert.equal(list.numberOfItems, 2, `${route}: publication count must be exact`);
-    assert.equal(list.itemListElement.length, 2, `${route}: publication ItemList must contain exactly two records`);
+    assert.equal(list.numberOfItems, staticPublications.length, `${route}: publication count must follow canonical data`);
+    assert.equal(list.itemListElement.length, staticPublications.length, `${route}: publication ItemList must follow canonical data`);
     assert.ok(list.itemListElement.every((item) => item['@type'] === 'ScholarlyArticle'));
     assert.deepEqual(list.itemListElement.map((item) => item.identifier.value), expectedDois);
     staticPublications.forEach((publication, index) => {
@@ -272,6 +284,14 @@ test('sitemap covers every configured fixed-language route', async () => {
   }
 });
 
+test('RSS declares itself and preserves post taxonomy', async () => {
+  const rss = await fs.readFile(path.join(rootDir, 'rss.xml'), 'utf8');
+  assert.match(rss, /xmlns:atom="http:\/\/www\.w3\.org\/2005\/Atom"/);
+  assert.match(rss, /<atom:link href="https:\/\/wcx12\.github\.io\/wcx12\/rss\.xml" rel="self" type="application\/rss\+xml" \/>/);
+  assert.match(rss, /<category>Engineering<\/category>/);
+  assert.match(rss, /<category>research-workflow<\/category>/);
+});
+
 test('fixed routes ignore stored language while preserving theme selection', async () => {
   const source = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
   assert.match(source, /const fixedLanguage = document\.documentElement\.dataset\.fixedLanguage/);
@@ -293,9 +313,13 @@ test('GitHub Actions are pinned and do not expose a long-lived metrics token', a
   }
 });
 
-test('public publication source contains only the two verified DOI records', async () => {
+test('public publication source and generated profile contain every canonical DOI', async () => {
   const source = await fs.readFile(path.join(rootDir, 'publications.md'), 'utf8');
-  assert.match(source, /10\.1016\/j\.neucom\.2026\.133399/);
-  assert.match(source, /10\.1016\/j\.neucom\.2026\.134314/);
+  const profile = await fs.readFile(path.join(rootDir, 'resume', 'index.html'), 'utf8');
+  for (const publication of staticPublications) {
+    const escapedDoi = publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    assert.match(source, new RegExp(escapedDoi), `publications.md is missing ${publication.doi}`);
+    assert.match(profile, new RegExp(escapedDoi), `generated profile is missing ${publication.doi}`);
+  }
   assert.doesNotMatch(source, /coming soon|work in progress/i);
 });

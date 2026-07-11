@@ -87,18 +87,24 @@ const interestProjects = document.getElementById('interestProjects');
 const interestPapers = document.getElementById('interestPapers');
 const interestPosts = document.getElementById('interestPosts');
 const customCursor = document.getElementById('customCursor');
+const utilityMenu = document.querySelector('.utility-menu');
+const utilityMenuToggle = document.querySelector('.utility-menu-toggle');
 
 const LANG_KEY = 'wcx12-lang';
 
 let currentLang = ['en', 'zh'].includes(localStorage.getItem(LANG_KEY)) ? localStorage.getItem(LANG_KEY) : 'en';
 let currentTheme = localStorage.getItem('wcx12-theme') || 'neon';
-let allRepos = [];
-let filteredRepos = [];
+let allRepos = [...localRepos];
+let filteredRepos = [...localRepos];
 let repoDataSource = 'snapshot';
 let loadedPublications = [];
 let publicationLoadFailed = false;
 let blogPosts = [];
 let filteredBlogPosts = [];
+let reposLoadPromise = null;
+let publicationsLoadPromise = null;
+let blogPostsLoadPromise = null;
+let researchConfigLoadPromise = null;
 let commandCursor = 0;
 let commandReturnFocus = null;
 let modalReturnFocus = null;
@@ -552,8 +558,8 @@ function applyResearchConfig(nextConfig) {
 async function loadRemoteResearchConfig() {
   try {
     const response = await fetchWithTimeout(
-      `${CONFIG_PATH}?v=${Date.now()}`,
-      { cache: 'no-store' },
+      CONFIG_PATH,
+      { cache: ownerToolsEnabled ? 'no-store' : 'default' },
       REQUEST_TIMEOUT_MS.config
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -610,20 +616,21 @@ const i18n = {
     theme_warm: 'Warm',
     theme_mono: 'Black & White',
     hero_kicker: 'Machine Learning Researcher',
-    hero_hi: 'Hi, I am',
+    hero_affiliation: 'Beijing Institute of Technology',
     hero_status: 'Status',
-    hero_subtitle_html: '3D Geometry + Visual Perception.<br />Building reliable AI systems and practical open-source tools.',
-    hero_preview_label: 'Research Preview',
-    hero_preview_live: 'live',
-    hero_preview_hint: 'Click to open this research lane.',
+    hero_subtitle_html: 'Reliable visual intelligence under imperfect observations and limited labels.<br />Research spanning 3D geometry, visual localization, medical imaging, and evidence-grounded AI systems.',
+    hero_preview_label: 'Research Concept',
+    hero_preview_live: 'concept',
+    hero_preview_hint: 'Open this research area.',
     featured_research_label: 'Featured Research',
-    featured_research_hint: 'Fast entry points into the demo gallery.',
+    featured_research_hint: 'Fast entry points into the concept gallery.',
     preview_projects: 'Projects',
     preview_papers: 'Papers',
     explore_research: 'Explore',
     repo_preview_title: 'Repository Preview',
     repo_preview_readme: 'Read README',
     btn_command: 'Command',
+    btn_settings: 'Settings',
     btn_research: 'Research',
     btn_blog: 'Blog',
     btn_profile: 'Profile',
@@ -649,13 +656,13 @@ const i18n = {
     about_line2: 'I enjoy combining geometric understanding with reliable engineering delivery.',
     research_title: 'Research Interests',
     research_static: 'Research Index',
-    research_intro: 'Choose a sub-interest to see related demos, projects, and papers.',
+    research_intro: 'Choose a sub-interest to see its concept demo, projects, and papers.',
     manage_research: 'Manage Mapping',
     view_details: 'View Details',
     related_projects: 'Related Projects',
     related_papers: 'Related Papers',
     related_writing: 'Related Writing',
-    section_animation: 'Animation',
+    section_animation: 'Concept Demo',
     section_projects: 'Projects',
     section_papers: 'Papers',
     section_writing: 'Writing',
@@ -787,11 +794,7 @@ const i18n = {
     modal_close: 'x',
     lang_btn: '中文',
     chip_loaded: 'Loaded: {tag} -> actively used in my current workflow.',
-    statuses: [
-      'Applying for Master/PhD programs',
-      'Building robust ML experiments',
-      'Open to research collaboration'
-    ]
+    statuses: ['Applying for Master/PhD programs']
   },
   zh: {
     skip_main: '跳到主要内容',
@@ -799,20 +802,21 @@ const i18n = {
     theme_warm: '暖色',
     theme_mono: '黑白极简',
     hero_kicker: '机器学习研究者',
-    hero_hi: '你好，我是',
+    hero_affiliation: '北京理工大学',
     hero_status: '状态',
-    hero_subtitle_html: '三维几何 + 视觉感知。<br />构建可靠的 AI 系统与实用开源工具。',
-    hero_preview_label: '研究预览',
-    hero_preview_live: '实时',
-    hero_preview_hint: '点击进入这个研究方向。',
+    hero_subtitle_html: '研究不完整观测与有限标注条件下的可靠视觉智能。<br />方向涵盖三维几何、视觉定位、医学影像与证据驱动的 AI 系统。',
+    hero_preview_label: '研究概念',
+    hero_preview_live: '概念',
+    hero_preview_hint: '进入这个研究方向。',
     featured_research_label: '精选研究方向',
-    featured_research_hint: '快速进入对应动画、项目与论文。',
+    featured_research_hint: '快速查看概念演示、项目与论文。',
     preview_projects: '项目',
     preview_papers: '论文',
     explore_research: '进入研究',
     repo_preview_title: '仓库预览',
     repo_preview_readme: '查看 README',
     btn_command: '命令',
+    btn_settings: '设置',
     btn_research: '研究',
     btn_blog: '博客',
     btn_profile: '履历',
@@ -838,13 +842,13 @@ const i18n = {
     about_line2: '我喜欢把几何理解和可靠工程实现结合起来。',
     research_title: '研究兴趣',
     research_static: '研究索引',
-    research_intro: '选择一个子兴趣，查看关联动画、项目和论文。',
+    research_intro: '选择一个子兴趣，查看概念演示、关联项目和论文。',
     manage_research: '管理映射',
     view_details: '查看详情',
     related_projects: '相关项目',
     related_papers: '相关论文',
     related_writing: '相关文章',
-    section_animation: '动画',
+    section_animation: '概念演示',
     section_projects: '项目',
     section_papers: '论文',
     section_writing: '文章',
@@ -976,11 +980,7 @@ const i18n = {
     modal_close: 'x',
     lang_btn: 'EN',
     chip_loaded: '已加载: {tag} -> 已纳入当前工作流。',
-    statuses: [
-      '正在申请硕士/博士项目',
-      '构建稳健的机器学习实验体系',
-      '欢迎科研合作'
-    ]
+    statuses: ['正在申请硕士/博士项目']
   }
 };
 
@@ -1040,9 +1040,14 @@ function updateViewDocumentTitle(viewId) {
   document.title = `${interest || label} | wcx12`;
 }
 
-function lazyFeatureStatus(viewId, message) {
+function lazyFeatureStatus(viewId, message, state = 'loading') {
   const status = document.getElementById(viewId === 'research' ? 'interestCanvasStatus' : 'repoMapHint');
-  if (status) status.textContent = message;
+  const canvas = document.getElementById(viewId === 'research' ? 'interestCanvas' : 'repoMap');
+  if (status && message) status.textContent = message;
+  if (canvas) {
+    canvas.dataset.featureState = state;
+    canvas.setAttribute('aria-busy', String(state === 'loading'));
+  }
 }
 
 function currentFeatureContext() {
@@ -1133,6 +1138,7 @@ async function activateLazyFeature(viewId, generation, options = {}) {
     if (!isCurrentActivation(viewId, generation)) return;
     feature.contextChanged();
     feature.render();
+    lazyFeatureStatus(viewId, '', 'ready');
     scheduleMotionLoop({ immediate: true });
     if (options.scrollFeature) {
       requestAnimationFrame(() => {
@@ -1141,7 +1147,7 @@ async function activateLazyFeature(viewId, generation, options = {}) {
     }
   } catch (error) {
     console.error(`Unable to load ${viewId} interactive feature`, error);
-    if (isCurrentActivation(viewId, generation)) lazyFeatureStatus(viewId, failureText);
+    if (isCurrentActivation(viewId, generation)) lazyFeatureStatus(viewId, failureText, 'error');
   }
 }
 
@@ -1154,6 +1160,35 @@ function renderLazyView(viewId) {
 
 function refreshInitializedView(viewId) {
   if (initializedViews.has(viewId)) renderLazyView(viewId);
+}
+
+function ensureReposLoaded() {
+  if (!reposLoadPromise) reposLoadPromise = loadRepos();
+  return reposLoadPromise;
+}
+
+function ensurePublicationsLoaded() {
+  if (!publicationsLoadPromise) publicationsLoadPromise = loadPublications();
+  return publicationsLoadPromise;
+}
+
+function ensureBlogPostsLoaded() {
+  if (!blogPostsLoadPromise) blogPostsLoadPromise = loadBlogPosts();
+  return blogPostsLoadPromise;
+}
+
+function ensureResearchConfigLoaded() {
+  if (!researchConfigLoadPromise) researchConfigLoadPromise = loadRemoteResearchConfig();
+  return researchConfigLoadPromise;
+}
+
+function ensureViewData(viewId) {
+  const tasks = [];
+  if (['research', 'projects'].includes(viewId)) tasks.push(ensureReposLoaded());
+  if (['research', 'publications'].includes(viewId)) tasks.push(ensurePublicationsLoaded());
+  if (['research', 'writing'].includes(viewId)) tasks.push(ensureBlogPostsLoaded());
+  if (LAZY_VIEW_IDS.has(viewId)) tasks.push(ensureResearchConfigLoaded());
+  return Promise.allSettled(tasks);
 }
 
 function activateView(viewId, options = {}) {
@@ -1172,6 +1207,7 @@ function activateView(viewId, options = {}) {
   if (LAZY_VIEW_IDS.has(resolvedViewId)) {
     initializedViews.add(resolvedViewId);
     renderLazyView(resolvedViewId);
+    void ensureViewData(resolvedViewId);
     activateLazyFeature(resolvedViewId, generation, { scrollFeature });
   }
   if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
@@ -1501,6 +1537,9 @@ function openCommandPalette() {
   commandInput.value = '';
   commandCursor = 0;
   renderCommandList();
+  void ensureViewData('research').then(() => {
+    if (commandPalette.classList.contains('open')) renderCommandList();
+  });
   requestAnimationFrame(() => commandInput.focus());
 }
 
@@ -3598,7 +3637,7 @@ async function loadBlogPosts() {
     writingList.innerHTML = `<p class="muted">${i18n[currentLang].writing_loading}</p>`;
   }
   try {
-    const response = await fetch(`./blog/posts.json?v=${Date.now()}`, { cache: 'no-store' });
+    const response = await fetch('./blog/posts.json', { cache: 'default' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const posts = await response.json();
     blogPosts = Array.isArray(posts) ? posts : [];
@@ -3686,7 +3725,7 @@ function typeLoop() {
     return;
   }
   typeTarget.textContent = statuses[statusIndex % statuses.length];
-  if (reducedMotionQuery.matches || document.hidden) return;
+  if (statuses.length <= 1 || reducedMotionQuery.matches || document.hidden) return;
   typeTimer = setTimeout(() => {
     statusIndex = (statusIndex + 1) % statuses.length;
     typeLoop();
@@ -3740,6 +3779,19 @@ langToggle.addEventListener('click', () => {
   restartTypeLoop();
 });
 
+function setUtilityMenuOpen(open) {
+  utilityMenu?.classList.toggle('open', open);
+  utilityMenuToggle?.setAttribute('aria-expanded', String(open));
+}
+
+utilityMenuToggle?.addEventListener('click', () => {
+  setUtilityMenuOpen(!utilityMenu.classList.contains('open'));
+});
+
+document.addEventListener('pointerdown', (event) => {
+  if (utilityMenu?.classList.contains('open') && !utilityMenu.contains(event.target)) setUtilityMenuOpen(false);
+});
+
 document.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault();
@@ -3752,6 +3804,10 @@ document.addEventListener('keydown', (event) => {
     else if (readmeDrawer?.classList.contains('open')) closeReadmeDrawer();
     else if (researchManager.classList.contains('open')) closeResearchManager();
     else if (modal.classList.contains('open')) closeModal();
+    else if (utilityMenu?.classList.contains('open')) {
+      setUtilityMenuOpen(false);
+      utilityMenuToggle?.focus();
+    }
     return;
   }
 });
@@ -3850,10 +3906,6 @@ applyTranslations();
 applyLocationRoute({ scroll: Boolean(window.location.hash) });
 lastHandledRouteUrl = currentRouteUrl();
 restartTypeLoop();
-loadRepos();
-loadPublications();
-loadBlogPosts();
-loadRemoteResearchConfig();
 if ('IntersectionObserver' in window && heroPreviewCanvas) {
   const heroPreviewObserver = new IntersectionObserver(([entry]) => {
     heroPreviewVisible = Boolean(entry?.isIntersecting);

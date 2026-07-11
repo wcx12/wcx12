@@ -22,8 +22,7 @@
 
 ## Publications
 
-1. Chenxu Wang, Qingtong Meng, Bonan Zhang, and Fusen Guo. "TF-VPR: A novel benchmark for training-free visual place recognition." Neurocomputing, 2026. https://doi.org/10.1016/j.neucom.2026.133399
-2. Chenxu Wang, QingTong Meng, Qianxun Lin, Bonan Zhang, and Fusen Guo. "Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification." Neurocomputing, in press, 2026. https://doi.org/10.1016/j.neucom.2026.134314
+{{PUBLICATIONS}}
 
 ## Selected Projects
 

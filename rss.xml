@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Research Fieldnotes</title>
     <link>https://wcx12.github.io/wcx12/blog/</link>
+    <atom:link href="https://wcx12.github.io/wcx12/rss.xml" rel="self" type="application/rss+xml" />
     <description>A growing research and engineering notebook by Chenxu Wang (wcx12), with reproducible workflows and fieldnotes from ongoing work.</description>
     <language>en</language>
     <lastBuildDate>Fri, 10 Jul 2026 00:00:00 GMT</lastBuildDate>
@@ -13,6 +14,10 @@
       <guid>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</guid>
       <pubDate>Fri, 10 Jul 2026 00:00:00 GMT</pubDate>
       <description>A short note on turning this personal homepage into a maintainable research and technical writing space.</description>
+      <category>Engineering</category>
+      <category>personal-site</category>
+      <category>static-site</category>
+      <category>research-workflow</category>
     </item>
   
   </channel>

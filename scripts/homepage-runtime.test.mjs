@@ -62,6 +62,23 @@ test('research and repository visualizations are real lazy modules', async () =>
   assert.ok(eagerBytes < 180 * 1024, `eager homepage script grew to ${eagerBytes} bytes`);
 });
 
+test('homepage prioritizes verified identity and defers optional data requests', async () => {
+  assert.match(indexSource, /<h1>Chenxu Wang <span class="hero-alias">\(wcx12\)<\/span><\/h1>/);
+  assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
+  assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
+  assert.match(styleSource, /space-grotesk-latin\.woff2/);
+  assert.match(styleSource, /jetbrains-mono-latin\.woff2/);
+
+  const initialization = scriptSource.slice(scriptSource.lastIndexOf('initCustomCursor();'));
+  assert.doesNotMatch(initialization, /\bload(?:Repos|Publications|BlogPosts|RemoteResearchConfig)\(\);/);
+  assert.match(scriptSource, /void ensureViewData\(resolvedViewId\)/);
+
+  for (const file of ['space-grotesk-latin.woff2', 'jetbrains-mono-latin.woff2', 'OFL-SpaceGrotesk.txt', 'OFL-JetBrainsMono.txt']) {
+    const stats = await fs.stat(path.join(rootDir, 'assets', 'fonts', file));
+    assert.ok(stats.size > 1000, `${file} is missing or unexpectedly small`);
+  }
+});
+
 test('homepage source exposes crawlable research and publication routes', () => {
   const expectedHrefs = [
     './research/',
@@ -84,8 +101,11 @@ test('canonical repository and publication data stays unique and classifiable', 
   assert.equal(new Set(localRepos.map((repo) => repo.name)).size, localRepos.length, 'repository names must be unique');
   assert.equal(new Set(localRepos.map((repo) => repo.html_url)).size, localRepos.length, 'repository URLs must be unique');
 
-  assert.equal(staticPublications.length, 2, 'public publication list must contain only the two verified papers');
+  assert.ok(staticPublications.length >= 2, 'canonical publication data unexpectedly lost verified papers');
   assert.equal(new Set(staticPublications.map((publication) => publication.doi)).size, staticPublications.length, 'publication DOIs must be unique');
+  for (const doi of ['10.1016/j.neucom.2026.133399', '10.1016/j.neucom.2026.134314']) {
+    assert.ok(staticPublications.some((publication) => publication.doi === doi), `verified publication is missing: ${doi}`);
+  }
 
   const assignmentGroups = [
     ...Object.entries(researchConfig.repoAssignments),

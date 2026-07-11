@@ -118,3 +118,11 @@ test('requires front matter flags to use YAML booleans', async () => {
   assert.match(errors.join('\n'), /draft must be a boolean/);
   assert.match(errors.join('\n'), /toc must be a boolean/);
 });
+
+test('requires math metadata when prose contains formulas', async () => {
+  const { errors } = await validateFixture('The relation $E=mc^2$ is rendered as mathematics.');
+  assert.match(errors.join('\n'), /math content requires front matter "math: true"/);
+
+  const codeOnly = await validateFixture('`$E=mc^2$`\n\n```sh\necho "$HOME"\n```');
+  assert.doesNotMatch(codeOnly.errors.join('\n'), /math content requires/);
+});

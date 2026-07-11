@@ -6,7 +6,7 @@ updated: "2026-07-10"
 description: "A short note on turning this personal homepage into a maintainable research and technical writing space."
 category: "Engineering"
 tags: ["personal-site", "static-site", "research-workflow"]
-research: ["agent", "ai4edu"]
+research: []
 series: "Homepage Lab"
 featured: true
 draft: false

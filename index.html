@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://api.github.com https://pub.orcid.org https://raw.githubusercontent.com https://github.com" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://api.github.com https://pub.orcid.org https://raw.githubusercontent.com https://github.com" />
   <title>wcx12 | Machine Learning Research &amp; Engineering</title>
   <meta name="description" content="Interactive research portfolio by wcx12, covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="author" content="Chenxu Wang" />
@@ -34,9 +34,7 @@
   <meta name="twitter:description" content="Interactive portfolio for point-cloud, visual perception, medical imaging, agents, and AI for Education research." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preload" href="./assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="styles.css" />
   <script type="application/ld+json">
     {
@@ -100,17 +98,22 @@
   <header class="topbar">
     <div class="brand">wcx12</div>
     <div class="top-actions">
-      <select id="themeSelect" class="theme-select" aria-label="Theme">
-        <option value="neon" data-i18n="theme_neon">Default</option>
-        <option value="warm" data-i18n="theme_warm">Warm</option>
-        <option value="mono" data-i18n="theme_mono">Black &amp; White</option>
-      </select>
-      <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
-      <button id="langToggle" class="ghost-btn" type="button">中文</button>
       <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
       <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
       <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
       <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
+      <div class="utility-menu">
+        <button class="ghost-btn utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Settings</button>
+        <div id="utilityMenuPanel" class="utility-menu-panel">
+          <select id="themeSelect" class="theme-select" aria-label="Theme">
+            <option value="neon" data-i18n="theme_neon">Default</option>
+            <option value="warm" data-i18n="theme_warm">Warm</option>
+            <option value="mono" data-i18n="theme_mono">Black &amp; White</option>
+          </select>
+          <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
+          <button id="langToggle" class="ghost-btn" type="button">中文</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -118,7 +121,8 @@
     <section class="hero">
       <div class="hero-copy">
         <p class="kicker" data-i18n="hero_kicker">Machine Learning Researcher</p>
-        <h1><span data-i18n="hero_hi">Hi, I am</span> <span class="neon">wcx12</span></h1>
+        <h1>Chenxu Wang <span class="hero-alias">(wcx12)</span></h1>
+        <p class="hero-affiliation" data-i18n="hero_affiliation">Beijing Institute of Technology</p>
         <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget"></span></p>
         <p class="subtitle" data-i18n="hero_subtitle_html">
           3D Geometry + Visual Perception.<br />
@@ -141,7 +145,7 @@
       <aside class="hero-preview-panel" aria-label="research preview">
         <div class="hero-preview-head">
           <span class="panel-eyebrow" data-i18n="hero_preview_label">Research Preview</span>
-          <span id="heroPreviewStatus" class="hero-preview-status">live</span>
+          <span id="heroPreviewStatus" class="hero-preview-status">concept</span>
         </div>
         <canvas id="heroPreviewCanvas" role="img" aria-label="featured research preview"></canvas>
         <div id="heroPreviewMeta" class="hero-preview-meta"></div>
@@ -152,7 +156,7 @@
       <section class="noscript-notice" aria-labelledby="noscriptTitle">
         <p class="panel-eyebrow">Static research index</p>
         <h2 id="noscriptTitle">Explore the research portfolio without JavaScript</h2>
-        <p>The interactive demos require JavaScript, but every research area, publication, project link, and article remains available as a static page.</p>
+        <p>The concept demos require JavaScript, but every research area, publication, project link, and article remains available as a static page.</p>
         <nav aria-label="Static research pages">
           <a href="./research/">All research areas</a>
           <a href="./research/point-cloud-registration/">Point-cloud registration</a>
@@ -208,7 +212,7 @@
         <section id="featuredResearch" class="featured-research" aria-label="featured research">
           <div class="featured-research-head">
             <span class="panel-eyebrow" data-i18n="featured_research_label">Featured Research</span>
-            <span class="muted" data-i18n="featured_research_hint">Fast entry points into the demo gallery.</span>
+            <span class="muted" data-i18n="featured_research_hint">Fast entry points into the concept gallery.</span>
           </div>
           <div id="researchShowcase" class="research-showcase"></div>
         </section>
@@ -224,13 +228,13 @@
             </div>
             <p id="interestDescription" class="muted"></p>
             <div class="interest-section-tabs" role="tablist" aria-label="Research detail sections">
-              <button class="active" type="button" role="tab" aria-selected="true" data-interest-panel="animation" data-i18n="section_animation">Animation</button>
+              <button class="active" type="button" role="tab" aria-selected="true" data-interest-panel="animation" data-i18n="section_animation">Concept Demo</button>
               <button type="button" role="tab" aria-selected="false" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
               <button type="button" role="tab" aria-selected="false" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
               <button type="button" role="tab" aria-selected="false" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
             </div>
             <div class="interest-demo">
-              <canvas id="interestCanvas" role="img" tabindex="-1" aria-label="research interest animation" aria-describedby="interestCanvasStatus"></canvas>
+              <canvas id="interestCanvas" role="img" tabindex="-1" aria-label="research interest concept demo" aria-describedby="interestCanvasStatus"></canvas>
               <div id="interestCanvasControls" class="interest-canvas-controls" aria-label="Research demo controls">
                 <button id="interestDemoPrevious" class="btn btn-outline" type="button">Previous</button>
                 <button id="interestDemoAction" class="btn btn-primary" type="button">Run demo</button>

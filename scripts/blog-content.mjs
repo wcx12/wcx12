@@ -99,6 +99,16 @@ function validateDate(value) {
     && parsed.getUTCDate() === day;
 }
 
+function contentUsesMath(content) {
+  const textUsesMath = (value) => {
+    const text = String(value || '').replace(/\\\$/g, '');
+    return /\$\$[\s\S]*?\$\$/.test(text)
+      || /(^|[^$])\$(?![$\s])[^$\n]*\S\$(?!\$)/.test(text);
+  };
+  return validationMarkdown.parse(content, {}).some((token) => token.type === 'inline'
+    && token.children?.some((child) => child.type === 'text' && textUsesMath(child.content)));
+}
+
 function validatePost(post, seenSlugs) {
   const errors = [];
   const warnings = [];
@@ -155,6 +165,9 @@ function validatePost(post, seenSlugs) {
   });
 
   if (!post.content.trim()) errors.push('post body is empty');
+  if (!data.math && contentUsesMath(post.content)) {
+    errors.push('math content requires front matter "math: true"');
+  }
   const hasLevelOneHeading = validationMarkdown
     .parse(post.content, {})
     .some((token) => token.type === 'heading_open' && token.tag === 'h1');

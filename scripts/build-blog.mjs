@@ -33,6 +33,7 @@ const sourceAssetsDir = path.join(rootDir, 'blog-src', 'assets');
 const outputAssetsDir = path.join(outputDir, 'assets');
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
 const researchChildren = researchConfig.interests.flatMap((interest) => interest.children);
+const PORTFOLIO_TITLE = 'Chenxu Wang (wcx12)';
 const markdownItKatex = typeof markdownItKatexModule === 'function'
   ? markdownItKatexModule
   : markdownItKatexModule.default;
@@ -243,7 +244,11 @@ function renderShell({
   alternateUrl = ''
 }) {
   const ctx = createPageContext(filePath);
-  const pageTitle = title === SITE.title ? title : `${title} | ${SITE.title}`;
+  const relativeFilePath = path.relative(rootDir, filePath).replace(/\\/g, '/');
+  const isBlogPage = relativeFilePath.startsWith('blog/');
+  const titleSuffix = isBlogPage ? SITE.title : PORTFOLIO_TITLE;
+  const pageTitle = title === SITE.title ? title : `${title} | ${titleSuffix}`;
+  const siteName = isBlogPage ? SITE.title : 'wcx12 Research Portfolio';
   const pageDescription = description || SITE.description;
   const canonicalUrl = canonicalUrlForFile(filePath);
   const socialImage = absoluteUrl('assets/og-home.png');
@@ -289,7 +294,7 @@ function renderShell({
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'" />
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeHtml(pageDescription)}" />
   <meta name="author" content="${escapeHtml(SITE.author)}" />
@@ -303,7 +308,7 @@ ${languageAlternates}
   <meta property="og:description" content="${escapeHtml(pageDescription)}" />
   <meta property="og:type" content="${escapeHtml(pageType)}" />
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
-  <meta property="og:site_name" content="${escapeHtml(SITE.title)}" />
+  <meta property="og:site_name" content="${escapeHtml(siteName)}" />
   <meta property="og:locale" content="${routeLanguage === 'zh' ? 'zh_CN' : 'en_US'}" />
   <meta property="og:image" content="${escapeHtml(socialImage)}" />
   <meta property="og:image:width" content="1200" />
@@ -316,9 +321,7 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <meta name="twitter:image:alt" content="wcx12 research portfolio and fieldnotes" />
   <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${escapeHtml(absoluteUrl('rss.xml'))}" />
   <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preload" href="${ctx.link('assets/fonts/space-grotesk-latin.woff2')}" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="${ctx.link('styles.css')}" />
   <link rel="stylesheet" href="${ctx.link('blog/assets/blog.css')}" />
 ${extraHead.trim()}
@@ -738,7 +741,13 @@ async function renderTagPages(posts) {
 
 async function renderResume(renderer) {
   const source = await fs.readFile(path.join(rootDir, 'resume.md'), 'utf8');
-  const withoutDocumentTitle = source.replace(/^#\s+[^\r\n]+\r?\n+/, '');
+  const publicationList = staticPublications.map((publication, index) => {
+    const status = publication.status === 'In press' ? 'in press, ' : '';
+    return `${index + 1}. ${readableAuthors(publication)}. "${publication.title}." ${publication.venue}, ${status}${publication.year}. ${publication.link}`;
+  }).join('\n');
+  if (!source.includes('{{PUBLICATIONS}}')) throw new Error('resume.md must contain {{PUBLICATIONS}}');
+  const hydratedSource = source.replace('{{PUBLICATIONS}}', publicationList);
+  const withoutDocumentTitle = hydratedSource.replace(/^#\s+[^\r\n]+\r?\n+/, '');
   const { html } = renderer.render(withoutDocumentTitle);
   const filePath = path.join(rootDir, 'resume', 'index.html');
   const body = `
@@ -1043,7 +1052,7 @@ async function renderResearchTopic(posts, child, language) {
       <div class="blog-hero-actions">
         <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '全部研究方向' : 'All research topics'}</a>
         <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '论文列表' : 'Publications'}</a>
-        <a class="btn btn-outline research-demo-link" href="${ctx.link('index.html')}#research/${escapeHtml(child.id)}">${isZh ? '打开交互演示' : 'Open interactive demo'}</a>
+        <a class="btn btn-outline research-demo-link" href="${ctx.link('index.html')}#research/${escapeHtml(child.id)}">${isZh ? '打开概念演示' : 'Open concept demo'}</a>
       </div>
     </header>
     ${evidenceSections(ctx, evidence, language)}`;
@@ -1212,21 +1221,28 @@ async function renderRss(posts) {
   const lastBuildDate = latestPostDate
     ? new Date(`${latestPostDate}T00:00:00Z`).toUTCString()
     : new Date(0).toUTCString();
-  const items = posts.slice(0, 20).map((post) => `
+  const items = posts.slice(0, 20).map((post) => {
+    const categories = [post.category, ...post.tags]
+      .map((category) => `      <category>${escapeXml(category)}</category>`)
+      .join('\n');
+    return `
     <item>
       <title>${escapeXml(post.title)}</title>
       <link>${escapeXml(absoluteUrl(postUrl(post)))}</link>
       <guid>${escapeXml(absoluteUrl(postUrl(post)))}</guid>
       <pubDate>${new Date(`${post.date}T00:00:00Z`).toUTCString()}</pubDate>
       <description>${escapeXml(post.description)}</description>
+${categories}
     </item>
-  `).join('');
+  `;
+  }).join('');
 
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${escapeXml(SITE.title)}</title>
     <link>${escapeXml(absoluteUrl('blog/'))}</link>
+    <atom:link href="${escapeXml(absoluteUrl('rss.xml'))}" rel="self" type="application/rss+xml" />
     <description>${escapeXml(SITE.description)}</description>
     <language>${escapeXml(SITE.lang)}</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>

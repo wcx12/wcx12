@@ -409,21 +409,21 @@ function updateInterestCanvasAccessibility() {
   const type = activeInterestAnimationType();
   const labels = currentLang === 'zh'
     ? {
-      'point-cloud': '点云配准交互动画。拖动指针观察点集对齐。',
-      vpr: '视觉地点识别交互动画。移动指针匹配路线中的地点。',
-      'medical-image': '医学影像主动学习交互。选择高不确定度样本并进行标注。',
-      agent: '人类与 AI 协作完成任务的交互动画。',
-      education: '机器人教师辅助学生学习的交互动画。'
+      'point-cloud': '点云配准概念演示。拖动指针观察点集对齐。',
+      vpr: '视觉地点识别概念演示。移动指针匹配路线中的地点。',
+      'medical-image': '医学影像主动学习概念演示。选择高不确定度样本并进行标注。',
+      agent: '人类与 AI 协作完成任务的概念演示。',
+      education: '机器人教师辅助学生学习的概念演示。'
     }
     : {
-      'point-cloud': 'Interactive point-cloud registration. Drag to inspect point-set alignment.',
-      vpr: 'Interactive visual place recognition. Move along the route to match a place.',
-      'medical-image': 'Interactive medical-image active learning. Select uncertain samples to annotate.',
-      agent: 'Interactive human and AI task collaboration.',
-      education: 'Interactive robot teacher supporting a learner.'
+      'point-cloud': 'Illustrative point-cloud registration concept. Drag to inspect point-set alignment.',
+      vpr: 'Illustrative visual place recognition concept. Move along the route to match a place.',
+      'medical-image': 'Illustrative medical-image active-learning concept. Select uncertain samples to annotate.',
+      agent: 'Illustrative concept of human and AI task collaboration.',
+      education: 'Illustrative concept of a robot teacher supporting a learner.'
     };
   interestCanvas.setAttribute('role', 'img');
-  interestCanvas.setAttribute('aria-label', labels[type] || (currentLang === 'zh' ? '研究方向交互动画' : 'Research interest interaction'));
+  interestCanvas.setAttribute('aria-label', labels[type] || (currentLang === 'zh' ? '研究方向概念演示' : 'Research interest concept demo'));
   interestCanvas.tabIndex = -1;
   if (document.activeElement === interestCanvas) interestCanvas.blur();
   updateInterestDemoControls();

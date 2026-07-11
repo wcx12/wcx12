@@ -11,10 +11,7 @@
       "static-site",
       "research-workflow"
     ],
-    "research": [
-      "agent",
-      "ai4edu"
-    ],
+    "research": [],
     "series": "Homepage Lab",
     "lang": "en",
     "featured": true,

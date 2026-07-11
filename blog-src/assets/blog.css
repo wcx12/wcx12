@@ -64,7 +64,7 @@
 .blog-nav select {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 8px 11px;
