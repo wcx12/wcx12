@@ -15,10 +15,11 @@ export function createResearchCanvas(options) {
   const interestDemoPrevious = document.getElementById('interestDemoPrevious');
   const interestDemoAction = document.getElementById('interestDemoAction');
   const interestDemoReset = document.getElementById('interestDemoReset');
-  const compactInterestMotionQuery = window.matchMedia('(max-width: 720px)');
+  const compactInterestMotionQuery = window.matchMedia('(max-width: 720px), (hover: none), (pointer: coarse)');
   const themeColorCache = new Map();
+  const MAX_CANVAS_DPR = 2;
   const INTEREST_DESKTOP_FRAME_MS = 46;
-  const INTEREST_MOBILE_FRAME_MS = 72;
+  const INTEREST_MOBILE_IDLE_FRAME_MS = 200;
   let currentLang = 'en';
   let interestTick = 0;
   let lastInterestFrame = 0;
@@ -42,7 +43,7 @@ export function createResearchCanvas(options) {
 
   function resizeDrawingCanvas(canvasElement, context) {
     const rect = canvasElement.getBoundingClientRect();
-    const scale = window.devicePixelRatio || 1;
+    const scale = Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
     const width = Math.max(1, Math.floor(rect.width * scale));
     const height = Math.max(1, Math.floor(rect.height * scale));
     if (canvasElement.width !== width || canvasElement.height !== height) {
@@ -431,7 +432,7 @@ function updateInterestCanvasAccessibility() {
 
 function commitInterestDemoControl() {
   updateInterestCanvasAccessibility();
-  if (isResearchViewActive() && interestCanvasVisible) drawInterestAnimation();
+  drawInterestInteractionFrame();
   requestMotionFrame({ immediate: true });
 }
 
@@ -3419,6 +3420,19 @@ function canvasCursorForActiveInterest() {
   return 'default';
 }
 
+function isInterestDragging() {
+  return pointCloudInteraction.dragging
+    || vprInteraction.dragging
+    || medicalInteraction.dragging
+    || agentInteraction.dragging
+    || educationInteraction.dragging;
+}
+
+function drawInterestInteractionFrame() {
+  if (document.visibilityState !== 'visible' || !interestCanvasVisible || !isResearchViewActive()) return;
+  drawInterestAnimation();
+}
+
 interestCanvas.addEventListener('pointerenter', (event) => {
   if (isPointCloudInterestActive()) updatePointCloudPointer(event);
   else if (isVprInterestActive()) updateVprPointer(event);
@@ -3433,6 +3447,7 @@ interestCanvas.addEventListener('pointermove', (event) => {
   else if (isMedicalImageInterestActive()) updateMedicalPointer(event);
   else if (isAgentInterestActive()) updateAgentPointer(event);
   else if (isEducationInterestActive()) updateEducationPointer(event);
+  if (isInterestDragging()) drawInterestInteractionFrame();
 });
 
 interestCanvas.addEventListener('pointerdown', (event) => {
@@ -3467,6 +3482,8 @@ interestCanvas.addEventListener('pointerdown', (event) => {
   } catch {
     // Synthetic pointer events used by browser tests may not own capture.
   }
+  drawInterestInteractionFrame();
+  requestMotionFrame({ immediate: true });
 });
 
 interestCanvas.addEventListener('pointerup', (event) => {
@@ -3497,6 +3514,8 @@ interestCanvas.addEventListener('pointerup', (event) => {
   } catch {
     // Synthetic pointer events used by browser tests may not own capture.
   }
+  drawInterestInteractionFrame();
+  requestMotionFrame({ immediate: true });
 });
 
 interestCanvas.addEventListener('pointercancel', () => {
@@ -3516,6 +3535,7 @@ interestCanvas.addEventListener('pointercancel', () => {
   educationInteraction.hoverType = null;
   educationInteraction.hoverId = null;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
+  drawInterestInteractionFrame();
 });
 
 interestCanvas.addEventListener('pointerleave', () => {
@@ -3531,10 +3551,12 @@ interestCanvas.addEventListener('pointerleave', () => {
   educationInteraction.hoverType = null;
   educationInteraction.hoverId = null;
   interestCanvas.style.cursor = canvasCursorForActiveInterest();
+  drawInterestInteractionFrame();
 });
 
   function frameInterval() {
-    return compactInterestMotionQuery.matches ? INTEREST_MOBILE_FRAME_MS : INTEREST_DESKTOP_FRAME_MS;
+    if (isInterestDragging()) return INTEREST_DESKTOP_FRAME_MS;
+    return compactInterestMotionQuery.matches ? INTEREST_MOBILE_IDLE_FRAME_MS : INTEREST_DESKTOP_FRAME_MS;
   }
 
   function render() {

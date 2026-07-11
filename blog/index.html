@@ -31,8 +31,8 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="../styles.css?v=644018672784" />
-  <link rel="stylesheet" href="assets/blog.css?v=644018672784" />
+  <link rel="stylesheet" href="../styles.css?v=c9ac8763d2a6" />
+  <link rel="stylesheet" href="assets/blog.css?v=c9ac8763d2a6" />
 
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"Blog","name":"Research Fieldnotes","description":"A growing research and engineering notebook by Chenxu Wang (wcx12), with reproducible workflows and fieldnotes from ongoing work.","url":"https://wcx12.github.io/wcx12/blog/","inLanguage":"en","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"}}</script>
 </head>
@@ -41,53 +41,36 @@
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
     <a class="blog-brand" href="../">wcx12</a>
-    <nav class="blog-nav" aria-label="Site navigation">
-      <a href="../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
-      <a href="../resume/" title="Open the research profile" aria-label="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title" data-blog-i18n-aria="nav_profile_title">Profile</a>
-      <a href="../research/" title="Browse research topics and evidence" aria-label="Browse research topics and evidence" data-blog-i18n="nav_research" data-blog-i18n-title="nav_research_title" data-blog-i18n-aria="nav_research_title">Research</a>
-      <a href="./" title="Open the blog index" aria-label="Open the blog index" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Blog</a>
-      <a href="archive/" title="Browse all posts by date" aria-label="Browse all posts by date" data-blog-i18n="nav_archive" data-blog-i18n-title="nav_archive_title" data-blog-i18n-aria="nav_archive_title">Archive</a>
-      <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" aria-label="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
-      <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
-        <option value="neon" data-blog-i18n="theme_default">Default</option>
-        <option value="warm" data-blog-i18n="theme_warm">Warm</option>
-        <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
-      </select>
-    </nav>
+    <div class="blog-menu">
+      <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="Open site navigation" aria-label="Open site navigation" data-blog-i18n="nav_menu" data-blog-i18n-title="nav_menu_title" data-blog-i18n-aria="nav_menu_title">Menu</button>
+      <nav id="blogSiteNav" class="blog-nav" aria-label="Site navigation">
+        <a href="../" title="Back to the interactive homepage" aria-label="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title" data-blog-i18n-aria="nav_home_title">Home</a>
+        <a href="../resume/" title="Open the research profile" aria-label="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title" data-blog-i18n-aria="nav_profile_title">Profile</a>
+        <a href="../research/" title="Browse research topics and evidence" aria-label="Browse research topics and evidence" data-blog-i18n="nav_research" data-blog-i18n-title="nav_research_title" data-blog-i18n-aria="nav_research_title">Research</a>
+        <a href="../publications/" title="Browse verified publications" aria-label="Browse verified publications" data-blog-i18n="nav_publications" data-blog-i18n-title="nav_publications_title" data-blog-i18n-aria="nav_publications_title">Publications</a>
+        <a href="./" aria-current="page" title="Open Research Fieldnotes" aria-label="Open Research Fieldnotes" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title" data-blog-i18n-aria="nav_blog_title">Writing</a>
+        <button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" aria-label="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>
+        <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
+          <option value="neon" data-blog-i18n="theme_default">Default</option>
+          <option value="warm" data-blog-i18n="theme_warm">Warm</option>
+          <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
+        </select>
+      </nav>
+    </div>
   </header>
   <main id="main-content" class="blog-shell">
-<section class="blog-hero">
-      <p class="blog-kicker" data-blog-i18n="hero_kicker">A notebook by wcx12</p>
+<section class="blog-hero blog-hero-compact">
+      <p class="blog-kicker" data-blog-i18n="hero_kicker">Research · Engineering · Reflection</p>
       <h1 data-blog-i18n="hero_title">Research Fieldnotes</h1>
-      <p data-blog-i18n="hero_desc">A growing notebook for reproducible research workflows, experiment logs, paper reading, and engineering reflections.</p>
+      <p data-blog-i18n="hero_desc">Tracing how research questions are broken down, experiments are verified, and code becomes a reproducible answer.</p>
       <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_hero">This introduction explains what the writing space is for and gives quick routes into the latest notes or the archive.</p></details>
       <div class="blog-hero-actions">
         <a class="btn btn-primary" href="posts/building-a-research-writing-system/" data-blog-i18n="hero_read_latest">Read latest</a>
-        <a class="btn btn-outline" href="archive/" data-blog-i18n="hero_browse_archive">Browse archive</a>
-      </div>
-      <div class="blog-stat-grid">
-        <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>1</strong></article>
-        <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>3</strong></article>
-        <article class="blog-stat"><span data-blog-i18n="stat_language">Languages</span><strong data-blog-i18n="stat_bilingual">EN / 中文</strong></article>
       </div>
     </section>
 
 
-
-
-
-    <section class="blog-section">
-      <div class="blog-section-head">
-        <div>
-          <p class="blog-section-label" data-blog-i18n="section_topics_label">Topics</p>
-          <h2 data-blog-i18n="section_topics_title">Browse by tag</h2>
-        </div>
-        <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_topics">Tags group writing by recurring themes so visitors can browse without knowing exact article titles.</p></details>
-      </div>
-      <div class="blog-topic-grid"><a class="blog-tag" href="tags/personal-site/">personal-site (1)</a><a class="blog-tag" href="tags/research-workflow/">research-workflow (1)</a><a class="blog-tag" href="tags/static-site/">static-site (1)</a></div>
-    </section>
-
-    <section id="recent-writing" class="blog-section">
+    <section id="recent-writing" class="blog-section blog-latest-section">
       <div class="blog-section-head">
         <div>
           <p class="blog-section-label" data-blog-i18n="section_recent_label">Recent</p>
@@ -95,7 +78,6 @@
         </div>
         <div class="blog-section-tools">
           <details class="blog-hint"><summary data-blog-i18n="hint_summary">About this area</summary><p data-blog-i18n="hint_recent">Recent writing shows the newest published posts, with a link to the full archive.</p></details>
-          <a class="blog-tag" href="archive/" data-blog-i18n="nav_archive">Archive</a>
         </div>
       </div>
       <div class="blog-grid">
@@ -120,6 +102,6 @@
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327">ORCID</a>
     </nav>
   </footer>
-  <script type="module" src="assets/blog.js?v=644018672784"></script>
+  <script type="module" src="assets/blog.js?v=c9ac8763d2a6"></script>
 </body>
 </html>

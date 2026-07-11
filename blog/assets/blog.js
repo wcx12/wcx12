@@ -4,6 +4,8 @@ const themes = ['neon', 'warm', 'mono'];
 const languages = ['en', 'zh'];
 const themeSelect = document.getElementById('blogThemeSelect');
 const langToggle = document.getElementById('blogLangToggle');
+const blogMenu = document.querySelector('.blog-menu');
+const blogMenuToggle = document.querySelector('.blog-menu-toggle');
 
 const blogI18n = {
   en: {
@@ -14,19 +16,24 @@ const blogI18n = {
     nav_profile_title: 'Open the research profile',
     nav_research: 'Research',
     nav_research_title: 'Browse research topics and evidence',
-    nav_blog: 'Blog',
-    nav_blog_title: 'Open the blog index',
+    nav_publications: 'Publications',
+    nav_publications_title: 'Browse verified publications',
+    nav_blog: 'Writing',
+    nav_blog_title: 'Open Research Fieldnotes',
     nav_archive: 'Archive',
     nav_archive_title: 'Browse all posts by date',
+    nav_menu: 'Menu',
+    nav_menu_title: 'Open site navigation',
     lang_button: '中文',
     lang_title: 'Switch interface language',
     theme_title: 'Switch color theme',
     theme_default: 'Default',
     theme_warm: 'Warm',
     theme_mono: 'Black & White',
-    hero_kicker: 'A notebook by wcx12',
+    page_title: 'Research Fieldnotes | wcx12',
+    hero_kicker: 'Research · Engineering · Reflection',
     hero_title: 'Research Fieldnotes',
-    hero_desc: 'A growing notebook for reproducible research workflows, experiment logs, paper reading, and engineering reflections.',
+    hero_desc: 'Tracing how research questions are broken down, experiments are verified, and code becomes a reproducible answer.',
     hero_read_latest: 'Read latest',
     hero_browse_archive: 'Browse archive',
     stat_published: 'Published',
@@ -93,19 +100,24 @@ const blogI18n = {
     nav_profile_title: '打开研究履历',
     nav_research: '研究',
     nav_research_title: '浏览研究主题与成果',
-    nav_blog: '博客',
-    nav_blog_title: '打开博客首页',
+    nav_publications: '论文',
+    nav_publications_title: '浏览已核验论文',
+    nav_blog: '写作',
+    nav_blog_title: '打开知研札记',
     nav_archive: '归档',
     nav_archive_title: '按日期浏览所有文章',
+    nav_menu: '菜单',
+    nav_menu_title: '打开站点导航',
     lang_button: 'EN',
     lang_title: '切换界面语言',
     theme_title: '切换页面色调',
     theme_default: '默认',
     theme_warm: '暖色',
     theme_mono: '黑白',
-    hero_kicker: 'wcx12 的研究手记',
+    page_title: '知研札记 | wcx12',
+    hero_kicker: '研究 · 工程 · 思考',
     hero_title: '知研札记',
-    hero_desc: '持续记录可复现研究流程、实验日志、论文阅读与工程复盘。',
+    hero_desc: '记录研究问题如何被拆解、实验如何被验证，以及代码如何成为可复现的答案。',
     hero_read_latest: '阅读最新',
     hero_browse_archive: '浏览归档',
     stat_published: '已发布',
@@ -193,6 +205,31 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'neon');
 
 themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
 
+function setBlogMenuOpen(open) {
+  if (!blogMenu || !blogMenuToggle) return;
+  blogMenu.classList.toggle('open', open);
+  document.body.classList.toggle('blog-menu-open', open);
+  blogMenuToggle.setAttribute('aria-expanded', String(open));
+}
+
+blogMenuToggle?.addEventListener('click', () => {
+  setBlogMenuOpen(!blogMenu.classList.contains('open'));
+});
+
+blogMenu?.querySelectorAll('a').forEach((link) => {
+  link.addEventListener('click', () => setBlogMenuOpen(false));
+});
+
+document.addEventListener('pointerdown', (event) => {
+  if (blogMenu?.classList.contains('open') && !blogMenu.contains(event.target)) setBlogMenuOpen(false);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !blogMenu?.classList.contains('open')) return;
+  setBlogMenuOpen(false);
+  blogMenuToggle?.focus();
+});
+
 function formatBlogDate(value) {
   if (!value) return '';
   return new Date(`${value}T00:00:00`).toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : 'en-US', {
@@ -214,6 +251,10 @@ function applyLanguage(lang = currentLang) {
   const uiLang = currentLang === 'zh' ? 'zh-CN' : 'en';
   document.documentElement.dataset.uiLang = currentLang;
   document.documentElement.lang = uiLang;
+
+  if (document.querySelector('[data-blog-i18n="hero_title"]')) {
+    document.title = t('page_title');
+  }
 
   document.querySelectorAll('[data-blog-i18n]').forEach((node) => {
     const value = t(node.dataset.blogI18n);

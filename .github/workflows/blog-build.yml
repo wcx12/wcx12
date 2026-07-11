@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: build-site-${{ github.ref }}
@@ -41,7 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
@@ -62,13 +63,24 @@ jobs:
         run: npm run validate
 
       - name: Commit generated site
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html blog research publications zh resume publications.md rss.xml sitemap.xml package-lock.json
           if git diff --cached --quiet; then
             echo "No generated site changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "Build site [skip ci]"
-            git push
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Request GitHub Pages build
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"

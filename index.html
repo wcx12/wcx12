@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://api.github.com https://pub.orcid.org https://raw.githubusercontent.com https://github.com" />
-  <title>wcx12 | Machine Learning Research &amp; Engineering</title>
-  <meta name="description" content="Interactive research portfolio by wcx12, covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
+  <title>Chenxu Wang (wcx12) | Machine Learning Researcher</title>
+  <meta name="description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="author" content="Chenxu Wang" />
   <meta name="robots" content="index,follow,max-image-preview:large" />
   <meta name="theme-color" content="#070914" />
@@ -16,26 +16,26 @@
   <link rel="me" href="https://orcid.org/0009-0005-6139-4327" />
   <link rel="sitemap" type="application/xml" href="./sitemap.xml" />
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="./rss.xml" />
-  <meta property="og:title" content="wcx12 | Machine Learning Research &amp; Engineering" />
+  <meta property="og:title" content="Chenxu Wang (wcx12) | Machine Learning Researcher" />
   <meta property="og:description" content="Research portfolio covering 3D geometry, visual perception, medical imaging, LLM agents, and AI for Education." />
   <meta property="og:type" content="profile" />
   <meta property="profile:first_name" content="Chenxu" />
   <meta property="profile:last_name" content="Wang" />
   <meta property="profile:username" content="wcx12" />
   <meta property="og:url" content="https://wcx12.github.io/wcx12/" />
-  <meta property="og:site_name" content="wcx12" />
+  <meta property="og:site_name" content="Chenxu Wang Research Portfolio" />
   <meta property="og:locale" content="en_US" />
   <meta property="og:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="wcx12 machine learning research portfolio" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="wcx12 | Machine Learning Research &amp; Engineering" />
+  <meta name="twitter:title" content="Chenxu Wang (wcx12) | Machine Learning Researcher" />
   <meta name="twitter:description" content="Interactive portfolio for point-cloud, visual perception, medical imaging, agents, and AI for Education research." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
   <link rel="preload" href="./assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=644018672784" />
+  <link rel="stylesheet" href="styles.css?v=c9ac8763d2a6" />
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -99,9 +99,9 @@
     <div class="brand">wcx12</div>
     <div class="top-actions">
       <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
+      <a class="ghost-btn" href="./publications/" data-i18n="btn_publications">Publications</a>
       <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
       <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
-      <a class="ghost-btn" href="https://github.com/wcx12" target="_blank" rel="noreferrer">GitHub</a>
       <div class="utility-menu">
         <button class="ghost-btn utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Settings</button>
         <div id="utilityMenuPanel" class="utility-menu-panel">
@@ -125,18 +125,18 @@
         <p class="hero-affiliation" data-i18n="hero_affiliation">Beijing Institute of Technology</p>
         <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget"></span></p>
         <p class="subtitle" data-i18n="hero_subtitle_html">
-          3D Geometry + Visual Perception.<br />
-          Building reliable AI systems and practical open-source tools.
+          Reliable visual intelligence under imperfect observations and limited labels.<br />
+          Research spanning 3D geometry, visual localization, medical imaging, and evidence-grounded AI systems.
         </p>
 
         <div class="hero-actions">
-          <a href="mailto:c2675668@gmail.com" class="btn btn-primary" data-i18n="btn_contact">Contact Me</a>
-          <button id="openProjects" type="button" class="btn btn-outline" data-i18n="btn_repos">Explore My Repos</button>
-          <a href="./blog/" class="btn btn-outline" data-i18n="btn_blog_hero">Read Blog</a>
+          <a href="./publications/" class="btn btn-primary" data-i18n="btn_publications_hero">View Publications</a>
+          <button id="openResearch" type="button" class="btn btn-outline" data-i18n="btn_research_hero">Explore Research</button>
+          <a href="mailto:c2675668@gmail.com?subject=Research%20collaboration%20with%20Chenxu%20Wang" class="btn btn-outline" data-i18n="btn_contact">Contact Me</a>
         </div>
 
         <div class="quick-stats">
-          <article><span data-i18n="stat_focus">Focus Areas</span><strong id="focusAreaCount">4</strong></article>
+          <article><span data-i18n="stat_focus">Research Domains</span><strong id="focusAreaCount">4</strong></article>
           <article><span data-i18n="stat_grad">Graduation</span><strong>2026</strong></article>
           <article><span data-i18n="stat_pubs">Publications</span><strong id="heroPublicationCount">2</strong></article>
         </div>
@@ -178,7 +178,10 @@
         <p>wcx12-console</p>
       </div>
 
-      <p class="hint-row" data-i18n="hints">Shortcut: Ctrl/⌘K command palette</p>
+      <p class="hint-row">
+        <span class="desktop-hint" data-i18n="hints">Shortcut: Ctrl/⌘K command palette</span>
+        <span class="touch-hint" data-i18n="hints_touch">Use Command in Settings to search and navigate.</span>
+      </p>
 
       <nav class="command-row" aria-label="Portfolio sections">
         <button class="cmd active" data-view="about" data-i18n="tab_about">about</button>
@@ -276,6 +279,7 @@
             <option value="infinite" data-i18n="mode_infinite">Mode: Infinite</option>
           </select>
           <select id="repoPageSize" aria-label="Items per page">
+            <option value="6">6</option>
             <option value="12">12</option>
             <option value="24">24</option>
             <option value="48">48</option>
@@ -286,7 +290,10 @@
         <div class="repo-map-panel">
           <div class="repo-map-head">
             <span data-i18n="repo_map_title">Repo Constellation</span>
-            <span id="repoMapHint" class="muted" data-i18n="repo_map_hint">Hover nodes to inspect projects.</span>
+            <span id="repoMapHint" class="muted">
+              <span class="desktop-hint" data-i18n="repo_map_hint">Hover projects to inspect their research mapping.</span>
+              <span class="touch-hint" data-i18n="repo_map_hint_touch">Tap a project to inspect its research mapping.</span>
+            </span>
           </div>
           <canvas id="repoMap" role="img" aria-label="repository research field map" aria-describedby="repoMapHint"></canvas>
         </div>
@@ -454,13 +461,13 @@
             <button id="managerDelete" class="btn btn-outline" type="button" data-i18n="manager_delete">Delete Category</button>
           </div>
           <label>
-            <span data-i18n="manager_token">GitHub token</span>
-            <input id="managerGitHubToken" type="password" autocomplete="off" placeholder="github_pat_..." />
+            <span data-i18n="manager_token">GitHub token (Actions only)</span>
+            <input id="managerGitHubToken" type="password" autocomplete="new-password" spellcheck="false" placeholder="github_pat_..." />
           </label>
           <div class="manager-actions">
-            <button id="managerSaveRemote" class="btn btn-primary" type="button" data-i18n="manager_save_remote">Save to GitHub</button>
+            <button id="managerSaveRemote" class="btn btn-primary" type="button" data-i18n="manager_save_remote">Start GitHub update</button>
           </div>
-          <p id="managerRemoteStatus" class="muted manager-status" data-i18n="manager_remote_hint">Token stays in this browser session.</p>
+          <p id="managerRemoteStatus" class="muted manager-status" data-i18n="manager_remote_hint">Use a single-repository token with Actions read/write only. It is cleared immediately after dispatch.</p>
           <h5 data-i18n="manager_projects">Projects</h5>
           <div id="managerProjects" class="manager-list"></div>
           <h5 data-i18n="manager_papers">Papers</h5>
@@ -499,6 +506,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="script.js?v=644018672784"></script>
+  <script type="module" src="script.js?v=c9ac8763d2a6"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const previewRoot = path.join(rootDir, 'output', 'preview');
 const host = '127.0.0.1';
 const port = Number.parseInt(process.env.PORT || '4173', 10);
+const allowedHosts = new Set([`${host}:${port}`, `localhost:${port}`]);
 
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -48,16 +49,31 @@ function safeRequestPath(requestUrl) {
 }
 
 await buildPreview();
+const previewRootReal = await fs.realpath(previewRoot);
+
+async function confinedRealPath(target) {
+  const realTarget = await fs.realpath(target).catch(() => null);
+  if (!realTarget) return null;
+  const relative = path.relative(previewRootReal, realTarget);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return null;
+  return realTarget;
+}
 
 const server = http.createServer(async (request, response) => {
+  const requestHost = String(request.headers.host || '').toLowerCase();
+  if (!allowedHosts.has(requestHost)) {
+    response.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }).end('Forbidden host');
+    return;
+  }
   let target = safeRequestPath(request.url || '/');
   if (!target) {
     response.writeHead(400).end('Bad request');
     return;
   }
-  const initialStats = await fs.stat(target).catch(() => null);
-  if (initialStats?.isDirectory()) target = path.join(target, 'index.html');
-  const stats = await fs.stat(target).catch(() => null);
+  target = await confinedRealPath(target);
+  const initialStats = target ? await fs.stat(target).catch(() => null) : null;
+  if (initialStats?.isDirectory()) target = await confinedRealPath(path.join(target, 'index.html'));
+  const stats = target ? await fs.stat(target).catch(() => null) : null;
   if (!stats?.isFile()) {
     response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }).end('Not found');
     return;
@@ -67,7 +83,11 @@ const server = http.createServer(async (request, response) => {
     'Content-Type': mimeTypes.get(path.extname(target).toLowerCase()) || 'application/octet-stream',
     'Content-Length': body.length,
     'Cache-Control': 'no-store',
-    'X-Content-Type-Options': 'nosniff'
+    'Content-Security-Policy': "frame-ancestors 'none'",
+    'Cross-Origin-Resource-Policy': 'same-origin',
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY'
   });
   response.end(body);
 });

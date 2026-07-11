@@ -164,7 +164,8 @@ test('single-post blog avoids duplicate discovery sections', async () => {
   assert.doesNotMatch(source, /section_featured_title/, 'one post should not be repeated in a featured section');
   assert.doesNotMatch(source, /id="blogSearch"/, 'search should wait until there is useful content breadth');
   assert.doesNotMatch(source, /data-blog-i18n="stat_search"/, 'hidden search must not be advertised as ready');
-  assert.match(source, /data-blog-i18n="stat_language"/, 'single-post blog should advertise its bilingual interface');
+  assert.doesNotMatch(source, /class="blog-stat-grid"/, 'single-post blog should lead directly into its only article');
+  assert.match(source, /class="blog-section blog-latest-section"/, 'the only article should remain immediately discoverable');
 });
 
 test('blog presents the agreed fieldnotes identity', async () => {
@@ -173,8 +174,12 @@ test('blog presents the agreed fieldnotes identity', async () => {
   const styleSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8');
   assert.match(indexSource, />Research Fieldnotes<\/h1>/);
   assert.match(clientSource, /hero_title:\s*'知研札记'/);
-  assert.match(clientSource, /hero_kicker:\s*'wcx12 的研究手记'/);
+  assert.match(clientSource, /page_title:\s*'知研札记 \| wcx12'/);
+  assert.match(clientSource, /hero_kicker:\s*'研究 · 工程 · 思考'/);
+  assert.match(clientSource, /hero_desc:\s*'记录研究问题如何被拆解、实验如何被验证，以及代码如何成为可复现的答案。'/);
+  assert.match(clientSource, /document\.title\s*=\s*t\('page_title'\)/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
+  assert.match(styleSource, /html\[data-ui-lang="zh"\] \.blog-hero h1/);
   assert.match(styleSource, /\.blog-content a\s*\{[^}]*overflow-wrap:\s*anywhere/s, 'long DOI links must wrap on mobile');
   assert.match(clientSource, /new URL\('\.\.\/search\.json', import\.meta\.url\)/, 'blog search must resolve from blog/assets/ to blog/search.json');
   assert.match(clientSource, /searchUrl\.searchParams\.set\('v', assetVersion\)/, 'blog search must inherit the release version');
@@ -202,8 +207,8 @@ test('generated code blocks and article contents remain keyboard reachable', asy
 });
 
 test('bundled post media is copied, fingerprinted, and rendered accessibly', async () => {
-  const sourcePath = path.join(rootDir, 'content', 'posts', '2026-07-10-building-a-research-writing-system', 'media', 'publishing-flow.svg');
-  const publicPath = path.join(rootDir, 'blog', 'posts', 'building-a-research-writing-system', 'media', 'publishing-flow.svg');
+  const sourcePath = path.join(rootDir, 'content', 'posts', '2026-07-10-building-a-research-writing-system', 'media', 'publishing-flow.png');
+  const publicPath = path.join(rootDir, 'blog', 'posts', 'building-a-research-writing-system', 'media', 'publishing-flow.png');
   const articlePath = path.join(rootDir, 'blog', 'posts', 'building-a-research-writing-system', 'index.html');
   const [source, published, article] = await Promise.all([
     fs.readFile(sourcePath),
@@ -212,8 +217,8 @@ test('bundled post media is copied, fingerprinted, and rendered accessibly', asy
   ]);
   assert.deepEqual(published, source, 'published media bytes differ from the validated source');
   const version = createHash('sha256').update(source).digest('hex').slice(0, 12);
-  assert.match(article, new RegExp(`src="media/publishing-flow\\.svg\\?v=${version}"`));
-  assert.match(article, /publishing-flow\.svg[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"/);
+  assert.match(article, new RegExp(`src="media/publishing-flow\\.png\\?v=${version}"`));
+  assert.match(article, /publishing-flow\.png[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"/);
 });
 
 test('all configured research and publication routes exist without stale generated HTML', async () => {
@@ -376,7 +381,7 @@ test('RSS declares itself and preserves post taxonomy', async () => {
   assert.match(rss, /<content:encoded><!\[CDATA\[[\s\S]+?<\/content:encoded>/);
   assert.match(
     rss,
-    /src="https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/media\/publishing-flow\.svg\?v=[a-f0-9]{12}"/
+    /src="https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/media\/publishing-flow\.png\?v=[a-f0-9]{12}"/
   );
 });
 
@@ -411,7 +416,49 @@ test('scheduled publishing builds before validating generated output', async () 
   const build = source.indexOf('- name: Build site');
   const generatedValidation = source.indexOf('- name: Validate generated site');
   const commit = source.indexOf('- name: Commit generated site');
-  assert.ok(sourceValidation < build && build < generatedValidation && generatedValidation < commit, 'scheduled publishing steps are in an unsafe order');
+  const pages = source.indexOf('- name: Request GitHub Pages build');
+  assert.ok(sourceValidation < build && build < generatedValidation && generatedValidation < commit && commit < pages, 'scheduled publishing steps are in an unsafe order');
+  assert.match(source, /persist-credentials: false/);
+  assert.match(source, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(source, /pages: write/);
+  assert.match(source, /gh api --method POST "repos\/\$\{GITHUB_REPOSITORY\}\/pages\/builds"/);
+});
+
+test('research mapping workflow validates, rebuilds, and deploys from the latest branch', async () => {
+  const workflow = await fs.readFile(path.join(rootDir, '.github', 'workflows', 'research-config-update.yml'), 'utf8');
+  const applyScript = await fs.readFile(path.join(rootDir, 'scripts', 'apply-research-config.mjs'), 'utf8');
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /ref: \$\{\{ github\.ref_name \}\}/);
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.doesNotMatch(workflow, /concurrency:/);
+  assert.match(workflow, /RESEARCH_CONFIG_BASE64: \$\{\{ inputs\.config_base64 \}\}/);
+  assert.match(workflow, /EXPECTED_CONFIG_SHA256: \$\{\{ inputs\.expected_sha256 \}\}/);
+  const sync = workflow.indexOf('name: Synchronize target branch');
+  const validate = workflow.indexOf('name: Validate submitted mapping');
+  const build = workflow.indexOf('name: Build site');
+  const generatedValidation = workflow.indexOf('name: Validate generated site');
+  const commit = workflow.indexOf('name: Commit mapping');
+  const pages = workflow.indexOf('name: Request GitHub Pages build');
+  assert.ok(sync < validate && validate < build && build < generatedValidation && generatedValidation < commit && commit < pages);
+  assert.ok(validate < workflow.indexOf('GH_TOKEN: ${{ github.token }}'));
+  assert.match(workflow, /git add research-config\.json index\.html blog research publications zh resume publications\.md rss\.xml sitemap\.xml package-lock\.json/);
+  assert.match(workflow, /pages: write/);
+  assert.match(workflow, /gh api --method POST "repos\/\$\{GITHUB_REPOSITORY\}\/pages\/builds"/);
+  assert.match(applyScript, /normalizeResearchConfigValue/);
+  assert.match(applyScript, /const configPath = path\.join\(rootDir, 'research-config\.json'\)/);
+  assert.match(applyScript, /currentHash !== expectedHash/);
+  assert.doesNotMatch(applyScript, /process\.env\.GH_TOKEN|github\.com/);
+});
+
+test('local draft preview rejects rebinding and symlink escapes', async () => {
+  const source = await fs.readFile(path.join(rootDir, 'scripts', 'serve-preview.mjs'), 'utf8');
+  assert.match(source, /allowedHosts = new Set\(\[`\$\{host\}:\$\{port\}`, `localhost:\$\{port\}`\]\)/);
+  assert.match(source, /const previewRootReal = await fs\.realpath\(previewRoot\)/);
+  assert.match(source, /async function confinedRealPath\(target\)/);
+  assert.match(source, /path\.relative\(previewRootReal, realTarget\)/);
+  assert.match(source, /if \(!allowedHosts\.has\(requestHost\)\)/);
+  assert.match(source, /'X-Frame-Options': 'DENY'/);
 });
 
 test('public publication source and generated profile contain every canonical DOI', async () => {

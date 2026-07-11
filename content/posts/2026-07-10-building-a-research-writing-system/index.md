@@ -17,7 +17,7 @@ lang: "en"
 
 This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material.
 
-![Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence.](media/publishing-flow.svg)
+![Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence.](media/publishing-flow.png)
 
 ## Authoring model
 

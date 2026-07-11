@@ -44,7 +44,7 @@ const writingList = document.getElementById('writingList');
 const themeSelect = document.getElementById('themeSelect');
 const langToggle = document.getElementById('langToggle');
 const openCommand = document.getElementById('openCommand');
-const openProjects = document.getElementById('openProjects');
+const openResearch = document.getElementById('openResearch');
 const modal = document.getElementById('detailModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
@@ -126,6 +126,7 @@ let readmeReturnFocusRepoName = null;
 let readmeRequestController = null;
 let readmeRequestSequence = 0;
 let githubSaveController = null;
+let remoteResearchConfigHash = '';
 let activeInterestPanel = 'animation';
 const initializedViews = new Set();
 const LAZY_VIEW_IDS = new Set(['research', 'projects', 'publications', 'writing']);
@@ -133,6 +134,8 @@ let activeInterestId = 'point-cloud-registration';
 let previewInterestId = null;
 let heroPreviewTick = 0;
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+const compactViewportQuery = window.matchMedia('(max-width: 720px)');
+const MAX_CANVAS_DPR = 2;
 const HERO_PREVIEW_FRAME_SKIP = 6;
 const STARFIELD_FRAME_SKIP = 6;
 let lastHeroPreviewFrame = 0;
@@ -268,10 +271,11 @@ let researchInterests = [
 
 const CONFIG_KEY = 'wcx12-research-config';
 const CONFIG_PATH = 'research-config.json';
-const GITHUB_CONFIG_PATH = 'research-config.json';
 const GITHUB_REPOSITORY = 'wcx12/wcx12';
 const GITHUB_BRANCH = 'main';
 const GITHUB_OWNER = 'wcx12';
+const GITHUB_CONFIG_WORKFLOW = 'research-config-update.yml';
+const GITHUB_RAW_CONFIG_URL = `https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_BRANCH}/${CONFIG_PATH}`;
 const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
 const LEGACY_GITHUB_TOKEN_KEY = 'wcx12-github-token';
 const REQUEST_TIMEOUT_MS = Object.freeze({
@@ -330,6 +334,11 @@ function fetchWithTimeout(resource, options = {}, timeoutMs = REQUEST_TIMEOUT_MS
 }
 
 function detectOwnerTools() {
+  if (window.top !== window.self) {
+    localStorage.removeItem(OWNER_TOOLS_KEY);
+    clearGitHubToken({ abortRequest: true });
+    return false;
+  }
   const params = new URLSearchParams(window.location.search);
   if (params.get('ownerTools') === '1') localStorage.setItem(OWNER_TOOLS_KEY, 'enabled');
   if (params.get('ownerTools') === '0') {
@@ -567,15 +576,22 @@ function applyResearchConfig(nextConfig) {
 
 async function loadRemoteResearchConfig() {
   try {
+    const configUrl = ownerToolsEnabled
+      ? `${GITHUB_RAW_CONFIG_URL}?t=${Date.now()}`
+      : versionedModuleUrl(CONFIG_PATH);
     const response = await fetchWithTimeout(
-      versionedModuleUrl(CONFIG_PATH),
+      configUrl,
       { cache: ownerToolsEnabled ? 'no-store' : 'default' },
       REQUEST_TIMEOUT_MS.config
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const remoteConfig = await response.json();
+    const source = await response.text();
+    const remoteConfig = JSON.parse(source);
     applyResearchConfig(remoteConfig);
-    if (ownerToolsEnabled) localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
+    if (ownerToolsEnabled) {
+      remoteResearchConfigHash = await sha256Hex(source);
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
+    }
     updateHeroStats();
     renderHeroPreview();
     refreshInitializedView('research');
@@ -602,10 +618,12 @@ function saveResearchConfig() {
 
 const repoState = {
   mode: 'pagination',
-  pageSize: 12,
+  pageSize: compactViewportQuery.matches ? 6 : 12,
   page: 1,
-  infiniteCount: 12
+  infiniteCount: compactViewportQuery.matches ? 6 : 12
 };
+
+repoPageSize.value = String(repoState.pageSize);
 
 const pubState = {
   mode: 'pagination',
@@ -642,16 +660,20 @@ const i18n = {
     btn_command: 'Command',
     btn_settings: 'Settings',
     btn_research: 'Research',
+    btn_publications: 'Publications',
+    btn_publications_hero: 'View Publications',
     btn_blog: 'Blog',
     btn_profile: 'Profile',
     btn_blog_hero: 'Read Blog',
+    btn_research_hero: 'Explore Research',
     btn_contact: 'Contact Me',
     btn_repos: 'Explore My Repos',
-    stat_focus: 'Focus Areas',
+    stat_focus: 'Research Domains',
     stat_grad: 'Graduation',
     stat_stack: 'Main Stack',
     stat_pubs: 'Publications',
     hints: 'Shortcut: Ctrl/⌘K command palette',
+    hints_touch: 'Use Command in Settings to search and navigate.',
     tab_about: 'about',
     tab_research: 'research',
     tab_projects: 'projects',
@@ -690,14 +712,15 @@ const i18n = {
     manager_add: 'Add',
     manager_assign_title: 'Assign Current Category',
     manager_save: 'Apply Mapping',
-    manager_token: 'GitHub token',
-    manager_save_remote: 'Save to GitHub',
-    manager_remote_hint: 'Token stays in this browser session.',
+    manager_token: 'GitHub token (Actions only)',
+    manager_save_remote: 'Start GitHub update',
+    manager_remote_hint: 'Use a single-repository token with Actions read/write only. It is cleared immediately after dispatch.',
     manager_remote_loaded: 'Remote config loaded.',
     manager_remote_load_fail: 'Using local defaults. Remote config was not loaded.',
-    manager_remote_need_token: 'Paste a GitHub token with Contents read/write permission.',
-    manager_remote_saving: 'Saving to GitHub...',
-    manager_remote_saved: 'Saved to GitHub. Pages may take about a minute to rebuild.',
+    manager_remote_need_token: 'Paste a single-repository GitHub token with Actions read/write permission.',
+    manager_remote_not_loaded: 'Remote config is not ready. Reload this owner page before saving.',
+    manager_remote_saving: 'Checking the latest config and starting the update workflow...',
+    manager_remote_saved: 'Update workflow started. GitHub Actions will validate, commit, and rebuild the site.',
     manager_remote_unchanged: 'GitHub config is already up to date.',
     manager_remote_conflict: 'GitHub config changed remotely. Reload the page before saving again.',
     manager_remote_failed: 'GitHub save failed. Check token permission and try again.',
@@ -712,6 +735,7 @@ const i18n = {
     project_desc: 'All public repositories are listed below with quick jump links.',
     repo_map_title: 'Research Field Map',
     repo_map_hint: 'Hover projects to inspect their research mapping.',
+    repo_map_hint_touch: 'Tap a project to inspect its research mapping.',
     fallback_profile_title: 'Profile',
     fallback_profile_label: 'Homepage',
     fallback_general_title: 'General',
@@ -828,9 +852,12 @@ const i18n = {
     btn_command: '命令',
     btn_settings: '设置',
     btn_research: '研究',
+    btn_publications: '论文',
+    btn_publications_hero: '查看论文',
     btn_blog: '博客',
     btn_profile: '履历',
     btn_blog_hero: '阅读博客',
+    btn_research_hero: '探索研究',
     btn_contact: '联系我',
     btn_repos: '查看我的仓库',
     stat_focus: '研究方向',
@@ -838,6 +865,7 @@ const i18n = {
     stat_stack: '主要技术栈',
     stat_pubs: '论文',
     hints: '快捷键：Ctrl/⌘K 打开命令面板',
+    hints_touch: '在设置中打开“命令”即可搜索和跳转。',
     tab_about: '关于',
     tab_research: '研究',
     tab_projects: '项目',
@@ -876,14 +904,15 @@ const i18n = {
     manager_add: '添加',
     manager_assign_title: '分配当前分类',
     manager_save: '应用映射',
-    manager_token: 'GitHub token',
-    manager_save_remote: '保存到 GitHub',
-    manager_remote_hint: 'Token 只保存在当前浏览器会话中。',
+    manager_token: 'GitHub token（仅 Actions 权限）',
+    manager_save_remote: '启动 GitHub 更新',
+    manager_remote_hint: '请使用仅限本仓库、只有 Actions 读写权限的 token；触发工作流后会立即清除。',
     manager_remote_loaded: '已加载远程配置。',
     manager_remote_load_fail: '未加载远程配置，正在使用本地默认值。',
-    manager_remote_need_token: '请输入具有 Contents 读写权限的 GitHub token。',
-    manager_remote_saving: '正在保存到 GitHub...',
-    manager_remote_saved: '已保存到 GitHub，Pages 可能需要约一分钟重新构建。',
+    manager_remote_need_token: '请输入仅限本仓库、具有 Actions 读写权限的 GitHub token。',
+    manager_remote_not_loaded: '远程配置尚未就绪，请重新加载管理页面后再保存。',
+    manager_remote_saving: '正在核对最新配置并启动更新工作流...',
+    manager_remote_saved: '更新工作流已启动，GitHub Actions 将验证、提交并重新构建站点。',
     manager_remote_unchanged: 'GitHub 配置已是最新。',
     manager_remote_conflict: 'GitHub 配置已在远程更新，请重新加载页面后再保存。',
     manager_remote_failed: '保存到 GitHub 失败，请检查 token 权限后重试。',
@@ -898,6 +927,7 @@ const i18n = {
     project_desc: '这里列出全部公开仓库，可直接跳转到对应项目。',
     repo_map_title: '研究领域地图',
     repo_map_hint: '悬停项目查看研究方向映射。',
+    repo_map_hint_touch: '轻触项目查看研究方向映射。',
     fallback_profile_title: '主页',
     fallback_profile_label: '个人主页',
     fallback_general_title: '通用',
@@ -1041,13 +1071,17 @@ function updateRoute(viewId, historyMode = 'push') {
 function updateViewDocumentTitle(viewId) {
   if (viewId === 'about') {
     document.title = currentLang === 'zh'
-      ? 'wcx12 | 机器学习研究与工程'
-      : 'wcx12 | Machine Learning Research & Engineering';
+      ? 'Chenxu Wang (wcx12) | 机器学习研究者'
+      : 'Chenxu Wang (wcx12) | Machine Learning Researcher';
     return;
   }
   const label = i18n[currentLang][`tab_${viewId}`] || viewId;
   const interest = viewId === 'research' ? interestLabel(activeInterestId) : '';
-  document.title = `${interest || label} | wcx12`;
+  const sectionTitle = interest || label;
+  const displayTitle = currentLang === 'en'
+    ? `${sectionTitle.charAt(0).toUpperCase()}${sectionTitle.slice(1)}`
+    : sectionTitle;
+  document.title = `${displayTitle} | Chenxu Wang (wcx12)`;
 }
 
 function lazyFeatureStatus(viewId, message, state = 'loading') {
@@ -1216,9 +1250,15 @@ function activateView(viewId, options = {}) {
   if (targetView) targetView.classList.add('active');
   if (LAZY_VIEW_IDS.has(resolvedViewId)) {
     initializedViews.add(resolvedViewId);
-    renderLazyView(resolvedViewId);
     void ensureViewData(resolvedViewId);
-    activateLazyFeature(resolvedViewId, generation, { scrollFeature });
+    requestAnimationFrame(() => {
+      if (!isCurrentActivation(resolvedViewId, generation)) return;
+      requestAnimationFrame(() => {
+        if (!isCurrentActivation(resolvedViewId, generation)) return;
+        renderLazyView(resolvedViewId);
+        void activateLazyFeature(resolvedViewId, generation, { scrollFeature });
+      });
+    });
   }
   if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
     requestAnimationFrame(() => {
@@ -1258,9 +1298,8 @@ function handleLocationNavigation() {
 commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view)));
 window.addEventListener('popstate', handleLocationNavigation);
 window.addEventListener('hashchange', handleLocationNavigation);
-openProjects.addEventListener('click', () => {
-  activateView('projects');
-  repoSearch.focus();
+openResearch.addEventListener('click', () => {
+  activateView('research');
 });
 
 function commandItems() {
@@ -1999,7 +2038,7 @@ function snapshotMotionCards(container) {
 }
 
 function animateGridTransition(container, previousCards = new Map()) {
-  if (!container || reducedMotionQuery.matches) return;
+  if (!container || reducedMotionQuery.matches || previousCards.size === 0) return;
   const cards = Array.from(container.querySelectorAll('[data-motion-card]'));
   cards.forEach((card, index) => {
     const key = card.dataset.motionKey || card.dataset.repo || card.dataset.paperCard || card.dataset.showcaseInterest || '';
@@ -2461,12 +2500,6 @@ function toBase64Utf8(value) {
   return btoa(binary);
 }
 
-function fromBase64Utf8(value) {
-  const binary = atob(value.replace(/\s/g, ''));
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
 function githubHeaders(token) {
   return {
     Authorization: `Bearer ${token}`,
@@ -2484,39 +2517,25 @@ async function readGitHubError(response) {
   }
 }
 
-async function fetchGitHubConfigFile(token, signal) {
-  const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
-  const current = await fetchWithTimeout(
-    `${apiUrl}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,
-    {
-      cache: 'no-store',
-      headers: githubHeaders(token),
-      signal
-    },
-    REQUEST_TIMEOUT_MS.github
-  );
-
-  if (!current.ok) {
-    const detail = await readGitHubError(current);
-    throw new Error(`read ${current.status}: ${detail}`);
-  }
-
-  const payload = await current.json();
-  if (!isPlainRecord(payload)
-    || typeof payload.sha !== 'string'
-    || !/^[0-9a-f]{40,64}$/i.test(payload.sha)
-    || payload.encoding !== 'base64'
-    || typeof payload.content !== 'string') {
-    throw new Error('Invalid GitHub config response');
-  }
-
-  const remoteConfig = JSON.parse(fromBase64Utf8(payload.content).replace(/^\uFEFF/, ''));
-  normalizeResearchConfig(remoteConfig);
-  return { sha: payload.sha };
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function writeGitHubConfigFile(token, sha, signal) {
-  const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${GITHUB_CONFIG_PATH}`;
+async function fetchCurrentGitHubConfig(signal) {
+  const response = await fetchWithTimeout(
+    `${GITHUB_RAW_CONFIG_URL}?t=${Date.now()}`,
+    { cache: 'no-store', signal },
+    REQUEST_TIMEOUT_MS.github
+  );
+  if (!response.ok) throw new Error(`config ${response.status}: ${response.statusText}`);
+  const source = await response.text();
+  normalizeResearchConfig(JSON.parse(source));
+  return { hash: await sha256Hex(source) };
+}
+
+async function dispatchResearchConfigUpdate(token, expectedHash, signal) {
+  const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${GITHUB_CONFIG_WORKFLOW}/dispatches`;
   const configToWrite = normalizeResearchConfig({
     ...researchConfig,
     interests: researchInterests
@@ -2524,16 +2543,17 @@ async function writeGitHubConfigFile(token, sha, signal) {
   const response = await fetchWithTimeout(
     apiUrl,
     {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         ...githubHeaders(token),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        message: 'Update research mapping config',
-        branch: GITHUB_BRANCH,
-        sha,
-        content: toBase64Utf8(`${JSON.stringify(configToWrite, null, 2)}\n`)
+        ref: GITHUB_BRANCH,
+        inputs: {
+          config_base64: toBase64Utf8(`${JSON.stringify(configToWrite, null, 2)}\n`),
+          expected_sha256: expectedHash
+        }
       }),
       signal
     },
@@ -2542,24 +2562,8 @@ async function writeGitHubConfigFile(token, sha, signal) {
 
   if (!response.ok) {
     const detail = await readGitHubError(response);
-    const error = new Error(`write ${response.status}: ${detail}`);
+    const error = new Error(`dispatch ${response.status}: ${detail}`);
     error.status = response.status;
-    throw error;
-  }
-
-  return response.json();
-}
-
-async function updateResearchConfigOnGitHub(token, signal) {
-  const currentFile = await fetchGitHubConfigFile(token, signal);
-
-  try {
-    return await writeGitHubConfigFile(token, currentFile.sha, signal);
-  } catch (error) {
-    if (error.status === 422 && error.message.toLowerCase().includes('content is unchanged')) {
-      return { unchanged: true };
-    }
-
     throw error;
   }
 }
@@ -2573,6 +2577,11 @@ async function saveResearchConfigToGitHub() {
     managerGitHubToken.focus();
     return;
   }
+  if (!remoteResearchConfigHash) {
+    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_not_loaded;
+    clearGitHubToken();
+    return;
+  }
 
   githubSaveController?.abort();
   const requestController = new AbortController();
@@ -2583,10 +2592,15 @@ async function saveResearchConfigToGitHub() {
   try {
     collectManagerAssignments();
     saveResearchConfig();
-    const result = await updateResearchConfigOnGitHub(token, requestController.signal);
-    managerRemoteStatus.textContent = result.unchanged
-      ? i18n[currentLang].manager_remote_unchanged
-      : i18n[currentLang].manager_remote_saved;
+    const current = await fetchCurrentGitHubConfig(requestController.signal);
+    if (current.hash !== remoteResearchConfigHash) {
+      const conflict = new Error('Remote research config changed');
+      conflict.status = 409;
+      throw conflict;
+    }
+    await dispatchResearchConfigUpdate(token, remoteResearchConfigHash, requestController.signal);
+    remoteResearchConfigHash = '';
+    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_saved;
   } catch (error) {
     if (!requestController.signal.aborted) {
       managerRemoteStatus.textContent = error.status === 409
@@ -3305,7 +3319,7 @@ function renderRepos(repos, preserveScroll = false) {
 
 function resizeDrawingCanvas(canvasElement, context) {
   const rect = canvasElement.getBoundingClientRect();
-  const scale = window.devicePixelRatio || 1;
+  const scale = Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
   const width = Math.max(1, Math.floor(rect.width * scale));
   const height = Math.max(1, Math.floor(rect.height * scale));
   if (canvasElement.width !== width || canvasElement.height !== height) {

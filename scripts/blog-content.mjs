@@ -5,6 +5,7 @@ import matter from 'gray-matter';
 import MarkdownIt from 'markdown-it';
 
 const validationMarkdown = new MarkdownIt({ html: false });
+const SAFE_MEDIA_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif']);
 
 export const SITE = {
   title: 'Research Fieldnotes',
@@ -171,7 +172,32 @@ function mediaReference(value, kind) {
     || !/^[a-z0-9][a-z0-9._/-]*$/.test(relativePath)) {
     return { error: `invalid media path "${raw}"; use lowercase portable names inside media/` };
   }
-  return { relativePath, publicPath: `media/${relativePath}` };
+  const extension = path.extname(relativePath);
+  if (!SAFE_MEDIA_EXTENSIONS.has(extension)) {
+    return { error: `unsupported media type "${extension || '(none)'}" in "${raw}"; use PNG, JPEG, GIF, WebP, or AVIF` };
+  }
+  return { relativePath, publicPath: `media/${relativePath}`, extension };
+}
+
+function mediaSignatureMatches(content, extension) {
+  const startsWith = (...bytes) => bytes.every((byte, index) => content[index] === byte);
+  if (extension === '.png') return content.length >= 8 && startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+  if (extension === '.jpg' || extension === '.jpeg') return content.length >= 3 && startsWith(0xff, 0xd8, 0xff);
+  if (extension === '.gif') {
+    const header = content.subarray(0, 6).toString('ascii');
+    return header === 'GIF87a' || header === 'GIF89a';
+  }
+  if (extension === '.webp') {
+    return content.length >= 12
+      && content.subarray(0, 4).toString('ascii') === 'RIFF'
+      && content.subarray(8, 12).toString('ascii') === 'WEBP';
+  }
+  if (extension === '.avif') {
+    return content.length >= 16
+      && content.subarray(4, 8).toString('ascii') === 'ftyp'
+      && /avi[fs]/.test(content.subarray(8, Math.min(content.length, 40)).toString('ascii'));
+  }
+  return false;
 }
 
 async function inspectMediaPath(root, relativePath) {
@@ -243,6 +269,10 @@ async function validatePostMedia(post, errors, warnings) {
       continue;
     }
     const content = await fs.readFile(sourcePath);
+    if (!mediaSignatureMatches(content, parsed.extension)) {
+      errors.push(`media file content does not match its ${parsed.extension} extension: "${parsed.publicPath}"`);
+      continue;
+    }
     mediaFiles.push({
       ...parsed,
       sourcePath,

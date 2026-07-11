@@ -7,7 +7,11 @@ export function createRepoMap(options) {
   const repoMap = document.getElementById('repoMap');
   const repoMapCtx = repoMap?.getContext('2d');
   const repoMapHint = document.getElementById('repoMapHint');
+  const compactRepoMapMotionQuery = window.matchMedia('(max-width: 720px), (hover: none), (pointer: coarse)');
   const themeColorCache = new Map();
+  const MAX_CANVAS_DPR = 2;
+  const REPO_MAP_DESKTOP_FRAME_MS = 96;
+  const REPO_MAP_MOBILE_IDLE_FRAME_MS = 200;
   let currentLang = 'en';
   let currentTheme = 'neon';
   let i18n = {};
@@ -19,6 +23,7 @@ export function createRepoMap(options) {
   let hoveredMapField = null;
   let repoMapTick = 0;
   let lastRepoMapFrame = 0;
+  let repoMapVisible = !('IntersectionObserver' in window);
 
   function syncContext() {
     const context = getContext();
@@ -62,9 +67,13 @@ export function createRepoMap(options) {
     openResearch(interestId);
   }
 
+  function isProjectsViewActive() {
+    return document.getElementById('projects')?.classList.contains('active');
+  }
+
   function resizeDrawingCanvas(canvasElement, context) {
     const rect = canvasElement.getBoundingClientRect();
-    const scale = window.devicePixelRatio || 1;
+    const scale = Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
     const width = Math.max(1, Math.floor(rect.width * scale));
     const height = Math.max(1, Math.floor(rect.height * scale));
     if (canvasElement.width !== width || canvasElement.height !== height) {
@@ -427,10 +436,14 @@ repoMap.addEventListener('click', (event) => {
     renderRepoMap(filteredRepos);
   }
 
+  function frameInterval() {
+    return compactRepoMapMotionQuery.matches ? REPO_MAP_MOBILE_IDLE_FRAME_MS : REPO_MAP_DESKTOP_FRAME_MS;
+  }
+
   function frame(timestamp = 0) {
     const context = getContext();
-    if (context.reducedMotion || document.visibilityState !== 'visible' || !document.getElementById('projects')?.classList.contains('active')) return false;
-    if (timestamp - lastRepoMapFrame < 96) return false;
+    if (context.reducedMotion || document.visibilityState !== 'visible' || !repoMapVisible || !isProjectsViewActive()) return false;
+    if (timestamp - lastRepoMapFrame < frameInterval()) return false;
     lastRepoMapFrame = timestamp;
     repoMapTick += 1;
     render();
@@ -442,14 +455,33 @@ repoMap.addEventListener('click', (event) => {
     themeColorCache.clear();
     lastRepoMapFrame = 0;
     if (!hoveredRepo && repoMapHint) repoMapHint.textContent = i18n[currentLang].repo_map_hint;
-    if (document.getElementById('projects')?.classList.contains('active')) renderRepoMap(filteredRepos);
+    if (isProjectsViewActive() && repoMapVisible) renderRepoMap(filteredRepos);
   }
 
   syncContext();
+
+  if ('IntersectionObserver' in window && repoMap) {
+    const observer = new IntersectionObserver(([entry]) => {
+      const nextVisible = Boolean(entry?.isIntersecting);
+      if (repoMapVisible === nextVisible) return;
+      repoMapVisible = nextVisible;
+      lastRepoMapFrame = 0;
+      if (nextVisible && isProjectsViewActive() && document.visibilityState === 'visible') render();
+      requestMotionFrame({ immediate: nextVisible });
+    }, { threshold: 0.05 });
+    observer.observe(repoMap);
+  }
+
+  compactRepoMapMotionQuery.addEventListener?.('change', () => {
+    lastRepoMapFrame = 0;
+    if (isProjectsViewActive() && repoMapVisible) requestMotionFrame({ immediate: true });
+  });
+
   repoMapInstance = {
-    cadence: () => 100,
+    cadence: frameInterval,
     contextChanged,
     frame,
+    isVisible: () => repoMapVisible,
     render,
     resize: render,
     scrollIntoView: () => repoMap?.scrollIntoView({ behavior: 'smooth', block: 'center' })

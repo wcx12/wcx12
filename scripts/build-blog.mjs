@@ -34,6 +34,15 @@ const sourceAssetsDir = path.join(rootDir, 'blog-src', 'assets');
 const outputAssetsDir = path.join(outputDir, 'assets');
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
 const researchChildren = researchConfig.interests.flatMap((interest) => interest.children);
+const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+for (const [kind, id] of [
+  ...researchConfig.interests.map((interest) => ['domain', interest.id]),
+  ...researchChildren.map((interest) => ['interest', interest.id])
+]) {
+  if (typeof id !== 'string' || !CONFIG_ID_PATTERN.test(id)) {
+    throw new Error(`Invalid research ${kind} id: ${JSON.stringify(id)}`);
+  }
+}
 const PORTFOLIO_TITLE = 'Chenxu Wang (wcx12)';
 let assetVersion = '';
 const markdownItKatex = typeof markdownItKatexModule === 'function'
@@ -165,10 +174,14 @@ const shellText = {
     nav_profile_title: 'Open the research profile',
     nav_research: 'Research',
     nav_research_title: 'Browse research topics and evidence',
-    nav_blog: 'Blog',
-    nav_blog_title: 'Open the blog index',
+    nav_publications: 'Publications',
+    nav_publications_title: 'Browse verified publications',
+    nav_blog: 'Writing',
+    nav_blog_title: 'Open Research Fieldnotes',
     nav_archive: 'Archive',
     nav_archive_title: 'Browse all posts by date',
+    nav_menu: 'Menu',
+    nav_menu_title: 'Open site navigation',
     lang_label: '中文',
     lang_title: '查看中文页面',
     theme_title: 'Switch color theme',
@@ -184,10 +197,14 @@ const shellText = {
     nav_profile_title: '打开研究履历',
     nav_research: '研究',
     nav_research_title: '浏览研究主题与成果',
-    nav_blog: '博客',
-    nav_blog_title: '打开博客首页',
+    nav_publications: '论文',
+    nav_publications_title: '浏览已核验论文',
+    nav_blog: '写作',
+    nav_blog_title: '打开知研札记',
     nav_archive: '归档',
     nav_archive_title: '按日期浏览所有文章',
+    nav_menu: '菜单',
+    nav_menu_title: '打开站点导航',
     lang_label: 'EN',
     lang_title: 'View this page in English',
     theme_title: '切换页面色调',
@@ -262,6 +279,15 @@ function renderShell({
   const documentLanguage = contentLang === 'zh' ? 'zh-CN' : contentLang;
   const text = shellText[routeLanguage];
   const researchPath = fixedLanguage === 'zh' ? 'zh/research/index.html' : 'research/index.html';
+  const publicationsPath = fixedLanguage === 'zh' ? 'zh/publications/index.html' : 'publications/index.html';
+  const currentSection = relativeFilePath.startsWith('resume/')
+    ? 'profile'
+    : /^(?:zh\/)?research\//.test(relativeFilePath)
+      ? 'research'
+      : /^(?:zh\/)?publications\//.test(relativeFilePath)
+        ? 'publications'
+        : (isBlogPage ? 'writing' : 'home');
+  const current = (section) => currentSection === section ? ' aria-current="page"' : '';
   const alternateLanguage = routeLanguage === 'zh' ? 'en' : 'zh-CN';
   const alternateHref = alternateUrl ? absoluteUrl(alternateUrl) : '';
   const englishHref = routeLanguage === 'en' ? canonicalUrl : alternateHref;
@@ -338,19 +364,22 @@ ${extraHead.trim()}
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
     <a class="blog-brand" href="${ctx.link('index.html')}">wcx12</a>
-    <nav class="blog-nav" aria-label="${routeLanguage === 'zh' ? '站点导航' : 'Site navigation'}">
-      <a href="${ctx.link('index.html')}" title="${escapeHtml(text.nav_home_title)}" aria-label="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}${i18n('nav_home_title', 'aria')}>${escapeHtml(text.nav_home)}</a>
-      <a href="${ctx.link('resume/index.html')}" title="${escapeHtml(text.nav_profile_title)}" aria-label="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}${i18n('nav_profile_title', 'aria')}>${escapeHtml(text.nav_profile)}</a>
-      <a href="${ctx.link(researchPath)}" title="${escapeHtml(text.nav_research_title)}" aria-label="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}${i18n('nav_research_title', 'aria')}>${escapeHtml(text.nav_research)}</a>
-      <a href="${ctx.link('blog/index.html')}" title="${escapeHtml(text.nav_blog_title)}" aria-label="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}${i18n('nav_blog_title', 'aria')}>${escapeHtml(text.nav_blog)}</a>
-      <a href="${ctx.link('blog/archive/index.html')}" title="${escapeHtml(text.nav_archive_title)}" aria-label="${escapeHtml(text.nav_archive_title)}"${i18n('nav_archive')}${i18n('nav_archive_title', 'title')}${i18n('nav_archive_title', 'aria')}>${escapeHtml(text.nav_archive)}</a>
-      ${languageControl}
-      <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
-        <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
-        <option value="warm"${i18n('theme_warm')}>${escapeHtml(text.theme_warm)}</option>
-        <option value="mono"${i18n('theme_mono')}>${escapeHtml(text.theme_mono)}</option>
-      </select>
-    </nav>
+    <div class="blog-menu">
+      <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}" aria-label="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}${i18n('nav_menu_title', 'aria')}>${escapeHtml(text.nav_menu)}</button>
+      <nav id="blogSiteNav" class="blog-nav" aria-label="${routeLanguage === 'zh' ? '站点导航' : 'Site navigation'}">
+        <a href="${ctx.link('index.html')}"${current('home')} title="${escapeHtml(text.nav_home_title)}" aria-label="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}${i18n('nav_home_title', 'aria')}>${escapeHtml(text.nav_home)}</a>
+        <a href="${ctx.link('resume/index.html')}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}" aria-label="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}${i18n('nav_profile_title', 'aria')}>${escapeHtml(text.nav_profile)}</a>
+        <a href="${ctx.link(researchPath)}"${current('research')} title="${escapeHtml(text.nav_research_title)}" aria-label="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}${i18n('nav_research_title', 'aria')}>${escapeHtml(text.nav_research)}</a>
+        <a href="${ctx.link(publicationsPath)}"${current('publications')} title="${escapeHtml(text.nav_publications_title)}" aria-label="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}${i18n('nav_publications_title', 'aria')}>${escapeHtml(text.nav_publications)}</a>
+        <a href="${ctx.link('blog/index.html')}"${current('writing')} title="${escapeHtml(text.nav_blog_title)}" aria-label="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}${i18n('nav_blog_title', 'aria')}>${escapeHtml(text.nav_blog)}</a>
+        ${languageControl}
+        <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
+          <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
+          <option value="warm"${i18n('theme_warm')}>${escapeHtml(text.theme_warm)}</option>
+          <option value="mono"${i18n('theme_mono')}>${escapeHtml(text.theme_mono)}</option>
+        </select>
+      </nav>
+    </div>
   </header>
   <main id="main-content" class="blog-shell">
 ${body.trim()}
@@ -576,31 +605,51 @@ async function renderIndex(posts) {
   const featured = posts.filter((post) => post.featured).slice(0, 3);
   const recent = posts.slice(0, 6);
   const showSearch = posts.length >= 3;
-  const showFeatured = posts.length > 1 && featured.length > 0;
+  const showFeatured = posts.length >= 3 && featured.length > 0;
+  const showArchive = posts.length > 1;
+  const showStats = posts.length >= 3;
   const latestHref = posts.length === 1 ? postHref(ctx, posts[0]) : '#recent-writing';
   const tagLinks = topicCounts(posts, 'tags')
+    .filter(([, count]) => count >= 2)
     .slice(0, 14)
     .map(([tag, count]) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)} (${count})</a>`)
     .join('');
 
+  const recentSection = `
+    <section id="recent-writing" class="blog-section blog-latest-section">
+      <div class="blog-section-head">
+        <div>
+          <p class="blog-section-label" data-blog-i18n="section_recent_label">Recent</p>
+          <h2 data-blog-i18n="section_recent_title">Latest writing</h2>
+        </div>
+        <div class="blog-section-tools">
+          ${hintHtml('hint_recent')}${showArchive ? `
+          <a class="blog-tag" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="nav_archive">Archive</a>` : ''}
+        </div>
+      </div>
+      <div class="blog-grid">${recent.map((post) => cardHtml(ctx, post)).join('')}</div>
+    </section>`;
+
   const body = `
-    <section class="blog-hero">
-      <p class="blog-kicker" data-blog-i18n="hero_kicker">A notebook by wcx12</p>
+    <section class="blog-hero${showStats ? '' : ' blog-hero-compact'}">
+      <p class="blog-kicker" data-blog-i18n="hero_kicker">Research · Engineering · Reflection</p>
       <h1 data-blog-i18n="hero_title">Research Fieldnotes</h1>
-      <p data-blog-i18n="hero_desc">A growing notebook for reproducible research workflows, experiment logs, paper reading, and engineering reflections.</p>
+      <p data-blog-i18n="hero_desc">Tracing how research questions are broken down, experiments are verified, and code becomes a reproducible answer.</p>
       ${hintHtml('hint_hero')}
       <div class="blog-hero-actions">
-        <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>
-        <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="hero_browse_archive">Browse archive</a>
-      </div>
+        <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>${showArchive ? `
+        <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="hero_browse_archive">Browse archive</a>` : ''}
+      </div>${showStats ? `
       <div class="blog-stat-grid">
         <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>${posts.length}</strong></article>
         <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
         ${showSearch
           ? '<article class="blog-stat"><span data-blog-i18n="stat_search">Search</span><strong data-blog-i18n="stat_ready">Ready</strong></article>'
           : '<article class="blog-stat"><span data-blog-i18n="stat_language">Languages</span><strong data-blog-i18n="stat_bilingual">EN / 中文</strong></article>'}
-      </div>
+      </div>` : ''}
     </section>
+
+${recentSection}
 
 ${showSearch ? `<section class="blog-section blog-search" aria-label="Search writing">
       <div class="blog-section-head">
@@ -625,7 +674,7 @@ ${showFeatured ? `<section class="blog-section">
       <div class="blog-grid">${featured.map((post) => cardHtml(ctx, post)).join('')}</div>
     </section>` : ''}
 
-    <section class="blog-section">
+${tagLinks ? `    <section class="blog-section">
       <div class="blog-section-head">
         <div>
           <p class="blog-section-label" data-blog-i18n="section_topics_label">Topics</p>
@@ -633,22 +682,8 @@ ${showFeatured ? `<section class="blog-section">
         </div>
         ${hintHtml('hint_topics')}
       </div>
-      <div class="blog-topic-grid">${tagLinks || '<p class="muted" data-blog-i18n="topics_empty">No tags yet.</p>'}</div>
-    </section>
-
-    <section id="recent-writing" class="blog-section">
-      <div class="blog-section-head">
-        <div>
-          <p class="blog-section-label" data-blog-i18n="section_recent_label">Recent</p>
-          <h2 data-blog-i18n="section_recent_title">Latest writing</h2>
-        </div>
-        <div class="blog-section-tools">
-          ${hintHtml('hint_recent')}
-          <a class="blog-tag" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="nav_archive">Archive</a>
-        </div>
-      </div>
-      <div class="blog-grid">${recent.map((post) => cardHtml(ctx, post)).join('')}</div>
-    </section>
+      <div class="blog-topic-grid">${tagLinks}</div>
+    </section>` : ''}
   `;
 
   await writePage('blog/index.html', renderShell({
@@ -859,7 +894,8 @@ async function renderArchive(posts) {
     title: 'Writing Archive',
     description: 'All technical writing by wcx12.',
     body,
-    schemaType: 'CollectionPage'
+    schemaType: 'CollectionPage',
+    robots: posts.length > 1 ? 'index,follow,max-image-preview:large' : 'noindex,follow'
   }));
 }
 
@@ -893,7 +929,8 @@ async function renderTagPages(posts) {
       title: `Tag: ${tag}`,
       description: `Writing tagged ${tag}.`,
       body,
-      schemaType: 'CollectionPage'
+      schemaType: 'CollectionPage',
+      robots: tagged.length >= 2 ? 'index,follow,max-image-preview:large' : 'noindex,follow'
     }));
   }
 }
@@ -987,7 +1024,15 @@ function publicationSchema(publication, language = 'en') {
     name: publication.title,
     url: publication.link,
     datePublished: publication.year,
-    author: authorsFor(publication).map((name) => ({ '@type': 'Person', name })),
+    author: authorsFor(publication).map((name) => name.toLowerCase() === SITE.author.toLowerCase()
+      ? {
+          '@type': 'Person',
+          '@id': absoluteUrl('#person'),
+          name,
+          url: absoluteUrl(),
+          sameAs: ['https://orcid.org/0009-0005-6139-4327', 'https://github.com/wcx12']
+        }
+      : { '@type': 'Person', name }),
     isPartOf: { '@type': 'Periodical', name: publication.venue },
     identifier: {
       '@type': 'PropertyValue',
@@ -1435,10 +1480,10 @@ async function renderSitemap(posts) {
     { route: '', lastmod: latestEvidenceDate },
     { route: 'resume/', lastmod: latestEvidenceDate },
     { route: 'blog/', lastmod: latestPostDate },
-    { route: 'blog/archive/', lastmod: latestPostDate },
+    ...(posts.length > 1 ? [{ route: 'blog/archive/', lastmod: latestPostDate }] : []),
     ...researchRoutes.map((route) => ({ route, lastmod: latestEvidenceDate })),
     ...posts.map((post) => ({ route: postUrl(post), lastmod: post.updated || post.date })),
-    ...topicCounts(posts, 'tags').map(([tag]) => ({
+    ...topicCounts(posts, 'tags').filter(([, count]) => count >= 2).map(([tag]) => ({
       route: `blog/tags/${slugify(tag)}/`,
       lastmod: posts.filter((post) => post.tags.includes(tag)).map((post) => post.updated || post.date).sort().at(-1)
     }))

@@ -67,6 +67,7 @@ test('research and repository visualizations are real lazy modules', async () =>
 });
 
 test('homepage prioritizes verified identity and defers optional data requests', async () => {
+  assert.match(indexSource, /<title>Chenxu Wang \(wcx12\) \| Machine Learning Researcher<\/title>/);
   assert.match(indexSource, /<h1>Chenxu Wang <span class="hero-alias">\(wcx12\)<\/span><\/h1>/);
   assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
   assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
@@ -76,11 +77,55 @@ test('homepage prioritizes verified identity and defers optional data requests',
   const initialization = scriptSource.slice(scriptSource.lastIndexOf('initCustomCursor();'));
   assert.doesNotMatch(initialization, /\bload(?:Repos|Publications|BlogPosts|RemoteResearchConfig)\(\);/);
   assert.match(scriptSource, /void ensureViewData\(resolvedViewId\)/);
+  assert.match(scriptSource, /'Chenxu Wang \(wcx12\) \| Machine Learning Researcher'/);
+  assert.match(scriptSource, /`\$\{displayTitle\} \| Chenxu Wang \(wcx12\)`/);
 
   for (const file of ['space-grotesk-latin.woff2', 'jetbrains-mono-latin.woff2', 'OFL-SpaceGrotesk.txt', 'OFL-JetBrainsMono.txt']) {
     const stats = await fs.stat(path.join(rootDir, 'assets', 'fonts', file));
     assert.ok(stats.size > 1000, `${file} is missing or unexpectedly small`);
   }
+});
+
+test('mobile utility controls stay above content and touch instructions avoid desktop-only gestures', () => {
+  assert.match(styleSource, /\.topbar\s*\{[^}]*z-index:\s*50\s*;/s, 'mobile settings need their own top-level stacking context');
+  assert.match(styleSource, /\.utility-menu-panel\s*\{[^}]*right:\s*auto\s*;[^}]*left:\s*0\s*;/s, 'mobile settings panel must open into the viewport');
+  assert.match(styleSource, /@media\s*\(hover:\s*none\),\s*\(pointer:\s*coarse\)[\s\S]*?\.touch-hint\s*\{[^}]*display:\s*inline/s);
+  assert.match(indexSource, /class="desktop-hint" data-i18n="hints"/);
+  assert.match(indexSource, /class="touch-hint" data-i18n="hints_touch"/);
+  assert.match(indexSource, /data-i18n="repo_map_hint_touch"/);
+});
+
+test('project view gives immediate feedback and limits first-render work on phones', () => {
+  assert.match(indexSource, /<option value="6">6<\/option>/);
+  assert.match(scriptSource, /const compactViewportQuery = window\.matchMedia\('\(max-width: 720px\)'\)/);
+  assert.match(scriptSource, /pageSize: compactViewportQuery\.matches \? 6 : 12/);
+  assert.match(scriptSource, /requestAnimationFrame\(\(\) => \{[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?renderLazyView\(resolvedViewId\)/);
+  assert.match(scriptSource, /previousCards\.size === 0/, 'first render must not animate every card from an empty layout');
+  assert.match(styleSource, /\.repo-card\s*\{[^}]*content-visibility:\s*auto;[^}]*contain-intrinsic-size:\s*360px;/s);
+});
+
+test('canvas motion respects mobile budgets and page visibility', () => {
+  assert.match(scriptSource, /Math\.min\(window\.devicePixelRatio \|\| 1, MAX_CANVAS_DPR\)/);
+  for (const source of [researchCanvasSource, repoMapSource]) {
+    assert.match(source, /const MAX_CANVAS_DPR = 2/);
+    assert.match(source, /Math\.min\(window\.devicePixelRatio \|\| 1, MAX_CANVAS_DPR\)/);
+    assert.match(source, /document\.visibilityState !== 'visible'/);
+    assert.match(source, /IntersectionObserver/);
+  }
+  assert.match(researchCanvasSource, /INTEREST_MOBILE_IDLE_FRAME_MS = 200/);
+  assert.match(researchCanvasSource, /if \(isInterestDragging\(\)\) return INTEREST_DESKTOP_FRAME_MS/);
+  assert.match(repoMapSource, /REPO_MAP_MOBILE_IDLE_FRAME_MS = 200/);
+});
+
+test('owner mapping uses a framed-safe Actions dispatch instead of a contents token', () => {
+  assert.match(scriptSource, /if \(window\.top !== window\.self\)/);
+  assert.match(scriptSource, /actions\/workflows\/\$\{GITHUB_CONFIG_WORKFLOW\}\/dispatches/);
+  assert.match(scriptSource, /method: 'POST'/);
+  assert.match(scriptSource, /expected_sha256: expectedHash/);
+  assert.match(scriptSource, /GitHub token \(Actions only\)/);
+  assert.doesNotMatch(scriptSource, /repos\/\$\{GITHUB_REPOSITORY\}\/contents\//);
+  assert.doesNotMatch(scriptSource, /method: 'PUT'/);
+  assert.doesNotMatch(scriptSource, /Contents read\/write/);
 });
 
 test('homepage source exposes crawlable research and publication routes', () => {

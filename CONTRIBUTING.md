@@ -25,10 +25,13 @@ content/posts/2026-07-11-example-note/
     result-figure.webp
 ```
 
-Reference local images or attachments as `media/result-figure.webp`. Media names
-must be lowercase and portable. The validator rejects missing files, path
-traversal, symbolic links, files over 10 MB, case mismatches, and published
-images without alternative text. Only referenced files are copied publicly.
+Reference local images as `media/result-figure.webp`. Media names must be
+lowercase and portable. The validator only accepts PNG, JPEG, GIF, WebP, and
+AVIF files whose signatures match their extensions. It rejects active formats
+such as SVG/HTML, missing files, path traversal, symbolic links, files over 10
+MB, case mismatches, and published images without alternative text. Only
+referenced files are copied publicly; link other attachments from a repository
+or release instead of serving them from the site origin.
 
 Publication state is determined in `Asia/Shanghai`: `draft: true` stays private;
 a non-draft post with a future `date` is scheduled; an eligible non-draft post

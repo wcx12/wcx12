@@ -10,6 +10,7 @@ import { loadPosts, publicationState, siteDate, summarizeDiagnostics } from './b
 const markdownItKatex = typeof markdownItKatexModule === 'function'
   ? markdownItKatexModule
   : markdownItKatexModule.default;
+const ONE_PIXEL_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
 
 function createRenderer() {
   return new MarkdownIt({
@@ -168,24 +169,24 @@ test('keeps drafts and future posts out of the public collection', async () => w
 test('validates bundled post media and fingerprints referenced files', async () => withContentRoot(async (root) => {
   const bundle = path.join(root, 'content', 'posts', 'fixture');
   await fs.mkdir(path.join(bundle, 'media'), { recursive: true });
-  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Registration correspondences](media/plot.svg)'));
-  await fs.writeFile(path.join(bundle, 'media', 'plot.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Registration correspondences](media/plot.png)'));
+  await fs.writeFile(path.join(bundle, 'media', 'plot.png'), ONE_PIXEL_PNG);
 
   const { posts, diagnostics } = await loadPosts(root, { today: '2026-07-10' });
   const { errors } = summarizeDiagnostics(diagnostics);
   assert.deepEqual(errors, []);
-  assert.equal(posts[0].mediaFiles[0].publicPath, 'media/plot.svg');
+  assert.equal(posts[0].mediaFiles[0].publicPath, 'media/plot.png');
   assert.match(posts[0].mediaFiles[0].version, /^[a-f0-9]{12}$/);
 }));
 
 test('rejects missing, mis-cased, unsafe, and unlabelled media', async () => withContentRoot(async (root) => {
   const bundle = path.join(root, 'content', 'posts', 'fixture');
   await fs.mkdir(path.join(bundle, 'media'), { recursive: true });
-  await fs.writeFile(path.join(bundle, 'media', 'Plot.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  await fs.writeFile(path.join(bundle, 'media', 'Plot.png'), ONE_PIXEL_PNG);
   await fs.writeFile(path.join(bundle, 'index.md'), postSource([
-    '![](media/missing.svg)',
-    '![Case mismatch](media/plot.svg)',
-    '![Traversal](media/%2e%2e/secret.svg)'
+    '![](media/missing.png)',
+    '![Case mismatch](media/plot.png)',
+    '![Traversal](media/%2e%2e/secret.png)'
   ].join('\n\n')));
 
   const { diagnostics } = await loadPosts(root, { today: '2026-07-10' });
@@ -196,18 +197,35 @@ test('rejects missing, mis-cased, unsafe, and unlabelled media', async () => wit
 }));
 
 test('requires media references to come from a bundled post', async () => {
-  const { errors } = await validateFixture('![Plot](media/plot.svg)');
+  const { errors } = await validateFixture('![Plot](media/plot.png)');
   assert.match(errors.join('\n'), /requires a bundled post with index\.md/);
 });
+
+test('rejects active media formats and files disguised as safe images', async () => withContentRoot(async (root) => {
+  const bundle = path.join(root, 'content', 'posts', 'fixture');
+  const media = path.join(bundle, 'media');
+  await fs.mkdir(media, { recursive: true });
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource([
+    '![Active payload](media/payload.svg)',
+    '![Disguised payload](media/fake.png)'
+  ].join('\n\n')));
+  await fs.writeFile(path.join(media, 'payload.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+  await fs.writeFile(path.join(media, 'fake.png'), '<script>alert(1)</script>');
+
+  const { diagnostics } = await loadPosts(root, { today: '2026-07-10' });
+  const { errors } = summarizeDiagnostics(diagnostics);
+  assert.match(errors.join('\n'), /unsupported media type "\.svg"/);
+  assert.match(errors.join('\n'), /does not match its \.png extension/);
+}));
 
 test('rejects symbolic links in article media', async (context) => withContentRoot(async (root) => {
   const bundle = path.join(root, 'content', 'posts', 'fixture');
   const media = path.join(bundle, 'media');
   await fs.mkdir(media, { recursive: true });
-  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Linked media](media/link.svg)'));
-  await fs.writeFile(path.join(bundle, 'real.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Linked media](media/link.png)'));
+  await fs.writeFile(path.join(bundle, 'real.png'), ONE_PIXEL_PNG);
   try {
-    await fs.symlink(path.join(bundle, 'real.svg'), path.join(media, 'link.svg'), 'file');
+    await fs.symlink(path.join(bundle, 'real.png'), path.join(media, 'link.png'), 'file');
   } catch (error) {
     if (['EPERM', 'EACCES', 'ENOSYS'].includes(error.code)) {
       context.skip(`symbolic links unavailable: ${error.code}`);
@@ -225,8 +243,8 @@ test('rejects a symbolic article media directory', async (context) => withConten
   const externalMedia = path.join(root, 'external-media');
   await fs.mkdir(bundle, { recursive: true });
   await fs.mkdir(externalMedia, { recursive: true });
-  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Linked media](media/link.svg)'));
-  await fs.writeFile(path.join(externalMedia, 'link.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Linked media](media/link.png)'));
+  await fs.writeFile(path.join(externalMedia, 'link.png'), ONE_PIXEL_PNG);
   try {
     await fs.symlink(externalMedia, path.join(bundle, 'media'), 'dir');
   } catch (error) {
