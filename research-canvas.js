@@ -20,7 +20,6 @@ export function createResearchCanvas(options) {
   const MAX_CANVAS_DPR = 2;
   const INTEREST_DESKTOP_FRAME_MS = 46;
   const INTEREST_MOBILE_IDLE_FRAME_MS = 200;
-  const LEGACY_RUNNER_SCENES_ENABLED = false;
   let currentLang = 'en';
   let interestTick = 0;
   let lastInterestFrame = 0;
@@ -140,15 +139,7 @@ const agentInteraction = {
   x: 0.54,
   y: 0.44,
   taskIndex: 0,
-  selectedStage: 'plan',
-  selectedTool: 'rag',
-  tools: {
-    memory: true,
-    rag: true,
-    code: true,
-    browser: false,
-    eval: true
-  },
+  selectedStage: 'request',
   hoverType: null,
   hoverId: null,
   pulse: 0,
@@ -161,7 +152,6 @@ const educationInteraction = {
   dragging: false,
   x: 0.5,
   y: 0.5,
-  selectedPath: 'learner',
   selectedConcept: 'functions',
   selectedSignal: 'hint',
   hoverType: null,
@@ -276,13 +266,11 @@ function bindItemToInterestAnimation(item, kind, interestId) {
   } else if (resolvedInterestId === 'agent') {
     agentInteraction.active = true;
     agentInteraction.taskIndex = hay.includes('readme') || kind === 'paper' ? 1 : 0;
-    agentInteraction.selectedTool = hay.includes('rag') || hay.includes('retrieval') ? 'rag' : 'code';
-    agentInteraction.selectedStage = agentInteraction.selectedTool === 'rag' ? 'retrieve' : 'act';
+    agentInteraction.selectedStage = 'work';
     agentInteraction.pulse = 1;
     agentInteraction.runBoost = 0.75;
   } else if (resolvedInterestId === 'ai4edu') {
     educationInteraction.active = true;
-    educationInteraction.selectedPath = hay.includes('crossword') || hay.includes('content') ? 'content' : 'learner';
     educationInteraction.selectedConcept = hay.includes('tetrahedron') || hay.includes('geometry') ? 'geometry' : 'functions';
     educationInteraction.selectedSignal = 'hint';
     educationInteraction.pulse = 1;
@@ -361,13 +349,13 @@ function vprStatusText() {
 }
 
 function agentStatusText() {
-  const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
-  const stage = agentStages.find((item) => item.id === agentInteraction.selectedStage) || agentStages[0];
-  const stageZh = { plan: '规划', retrieve: '检索', act: '执行', observe: '检查', evaluate: '评估' }[stage.id] || stage.label;
-  const result = agentInteraction.completed ? task.outcome : (task.trace?.[stage.id] || stage.detail);
+  const scenario = humanAiScenario();
+  const stage = humanAiStages.find((item) => item.id === agentInteraction.selectedStage) || humanAiStages[0];
+  const stageZh = { request: '提出任务', work: 'AI 协作', deliver: '交付结果' }[stage.id] || stage.label;
+  const result = stage.id === 'request' ? scenario.human : stage.id === 'work' ? scenario.ai : scenario.output;
   return currentLang === 'zh'
-    ? `任务 ${agentInteraction.taskIndex + 1}，阶段：${stageZh}。${agentInteraction.completed ? '结果' : '当前步骤'}：${result}。`
-    : `Task ${agentInteraction.taskIndex + 1}: ${task.title}. Stage: ${stage.label}. ${agentInteraction.completed ? 'Result' : 'Current step'}: ${result}.`;
+    ? `任务 ${agentInteraction.taskIndex + 1}：${scenario.task}。阶段：${stageZh}。${agentInteraction.completed ? '结果' : '当前状态'}：${result}。`
+    : `Task ${agentInteraction.taskIndex + 1}: ${scenario.task}. Stage: ${stage.label}. ${agentInteraction.completed ? 'Result' : 'Current state'}: ${result}.`;
 }
 
 function educationStatusText() {
@@ -480,8 +468,8 @@ function selectPreviousUncertainMedicalCase() {
 }
 
 function selectPreviousAgentTask() {
-  agentInteraction.taskIndex = (agentInteraction.taskIndex - 1 + agentTasks.length) % agentTasks.length;
-  agentInteraction.selectedStage = agentStages[0].id;
+  agentInteraction.taskIndex = (agentInteraction.taskIndex - 1 + humanAiCollabScenarios.length) % humanAiCollabScenarios.length;
+  agentInteraction.selectedStage = humanAiStages[0].id;
   agentInteraction.completed = false;
   agentInteraction.active = true;
   agentInteraction.pulse = 1;
@@ -489,14 +477,10 @@ function selectPreviousAgentTask() {
 }
 
 function runNextAgentStage() {
-  const currentIndex = Math.max(0, agentStages.findIndex((stage) => stage.id === agentInteraction.selectedStage));
-  if (currentIndex >= agentStages.length - 1) {
-    agentInteraction.selectedStage = agentStages[agentStages.length - 1].id;
-    agentInteraction.completed = true;
-  } else {
-    agentInteraction.selectedStage = agentStages[currentIndex + 1].id;
-    agentInteraction.completed = false;
-  }
+  const currentIndex = Math.max(0, humanAiStages.findIndex((stage) => stage.id === agentInteraction.selectedStage));
+  const nextIndex = Math.min(humanAiStages.length - 1, currentIndex + 1);
+  agentInteraction.selectedStage = humanAiStages[nextIndex].id;
+  agentInteraction.completed = nextIndex === humanAiStages.length - 1;
   agentInteraction.active = true;
   agentInteraction.pulse = 1;
   agentInteraction.runBoost = 1;
@@ -600,8 +584,7 @@ function resetInterestDemo() {
     agentInteraction.active = false;
     agentInteraction.dragging = false;
     agentInteraction.taskIndex = 0;
-    agentInteraction.selectedStage = 'plan';
-    agentInteraction.selectedTool = 'rag';
+    agentInteraction.selectedStage = 'request';
     agentInteraction.hoverType = null;
     agentInteraction.hoverId = null;
     agentInteraction.pulse = 0;
@@ -610,7 +593,6 @@ function resetInterestDemo() {
   } else if (type === 'education') {
     educationInteraction.active = false;
     educationInteraction.dragging = false;
-    educationInteraction.selectedPath = 'learner';
     educationInteraction.selectedConcept = 'functions';
     educationInteraction.selectedSignal = 'hint';
     educationInteraction.hoverType = null;
@@ -670,100 +652,6 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-const agentTasks = [
-  {
-    title: 'Map research repos',
-    compactTitle: 'MAP',
-    prompt: 'Assign projects to research interests',
-    outcome: 'Mapping config ready',
-    trace: {
-      plan: 'Goal parsed -> organize projects by research area',
-      retrieve: 'Sources retrieved -> repo metadata and README signals',
-      act: 'Analysis run -> compare project topics with category rules',
-      observe: 'Evidence checked -> ambiguous repositories flagged',
-      evaluate: 'Quality check -> mapping confidence updated',
-      revise: 'Revise -> repair uncertain mapping before saving'
-    }
-  },
-  {
-    title: 'Read project README',
-    compactTitle: 'README',
-    prompt: 'Summarize one project before opening it',
-    outcome: 'Traceable project summary',
-    trace: {
-      plan: 'Goal parsed -> summarize scope, usage, and relevance',
-      retrieve: 'Sources retrieved -> README sections loaded',
-      act: 'Analysis run -> extract purpose and implementation notes',
-      observe: 'Evidence checked -> summary compared with repo topic',
-      evaluate: 'Quality check -> missing context noted',
-      revise: 'Revise -> tighten summary with project evidence'
-    }
-  },
-  {
-    title: 'Verify page update',
-    compactTitle: 'CHECK',
-    prompt: 'Verify an experiment or page update',
-    outcome: 'Verified result report',
-    trace: {
-      plan: 'Goal parsed -> choose validation path',
-      retrieve: 'State collected -> latest page and config loaded',
-      act: 'Browser check -> inspect rendered interaction',
-      observe: 'Evidence checked -> mismatch or success detected',
-      evaluate: 'Quality check -> confidence and risk reported',
-      revise: 'Revise -> retry the failing branch'
-    }
-  }
-];
-
-const agentWorkbenchScenarios = [
-  {
-    verb: 'Classify',
-    result: 'Point Cloud / Registration',
-    stamp: 'MAPPED',
-    evidence: [
-      { id: 'readme', title: 'README.md', lines: ['registration pipeline', 'point cloud alignment'], x: 0.38, y: 0.38, r: -0.08 },
-      { id: 'repo', title: 'Repo topic', lines: ['geometry', 'tracking thesis'], x: 0.56, y: 0.31, r: 0.06 },
-      { id: 'label', title: 'Research label', lines: ['robust matching', '3D vision'], x: 0.74, y: 0.47, r: -0.04 }
-    ]
-  },
-  {
-    verb: 'Summarize',
-    result: 'Traceable project brief',
-    stamp: 'SUMMARY',
-    evidence: [
-      { id: 'purpose', title: 'Purpose', lines: ['what it builds', 'why it matters'], x: 0.38, y: 0.34, r: 0.05 },
-      { id: 'usage', title: 'Usage', lines: ['commands', 'workflow'], x: 0.56, y: 0.44, r: -0.06 },
-      { id: 'scope', title: 'Scope', lines: ['research fit', 'limits'], x: 0.75, y: 0.33, r: 0.04 }
-    ]
-  },
-  {
-    verb: 'Verify',
-    result: 'Page update verified',
-    stamp: 'CHECKED',
-    evidence: [
-      { id: 'site', title: 'Live page', lines: ['rendered view', 'theme state'], x: 0.38, y: 0.42, r: -0.05 },
-      { id: 'config', title: 'Config', lines: ['mapping json', 'category tree'], x: 0.56, y: 0.32, r: 0.04 },
-      { id: 'proof', title: 'Proof', lines: ['browser check', 'no console errors'], x: 0.75, y: 0.48, r: 0.08 }
-    ]
-  }
-];
-
-const agentTools = [
-  { id: 'memory', label: 'Memory', compact: 'MEM', detail: 'Past context', stage: 'retrieve' },
-  { id: 'rag', label: 'RAG', compact: 'RAG', detail: 'Grounded search', stage: 'retrieve' },
-  { id: 'code', label: 'Code', compact: 'CODE', detail: 'Run analysis', stage: 'act' },
-  { id: 'browser', label: 'Web', compact: 'WEB', detail: 'Web evidence', stage: 'observe' },
-  { id: 'eval', label: 'Eval', compact: 'EVAL', detail: 'Quality check', stage: 'evaluate' }
-];
-
-const agentStages = [
-  { id: 'plan', label: 'Plan', compact: 'Plan', detail: 'Split the research goal into steps' },
-  { id: 'retrieve', label: 'Search', compact: 'Search', detail: 'Ground the answer in notes, repos, or papers' },
-  { id: 'act', label: 'Act', compact: 'Act', detail: 'Call tools such as code or browser checks' },
-  { id: 'observe', label: 'Check', compact: 'Check', detail: 'Read tool results and evidence' },
-  { id: 'evaluate', label: 'Eval', compact: 'Eval', detail: 'Score quality and trigger revision when needed' }
-];
-
 function truncatedCanvasText(ctx, text, maxWidth) {
   if (ctx.measureText(text).width <= maxWidth) return text;
   let output = text;
@@ -775,140 +663,6 @@ function truncatedCanvasText(ctx, text, maxWidth) {
 
 function fillTruncatedText(ctx, text, x, y, maxWidth) {
   ctx.fillText(truncatedCanvasText(ctx, text, maxWidth), x, y);
-}
-
-function agentRunnerLayout(width, height) {
-  const compact = width < 440 || height < 210;
-  if (compact) {
-    const taskW = Math.max(68, (width - 36) / 3);
-    const toolW = Math.max(42, Math.min(52, (width - 36) / 5));
-    const stageW = Math.max(48, Math.min(60, (width - 30) / 5));
-    return {
-      compact,
-      hint: { x: 12, y: 10, text: 'Tap task, tool, or stage' },
-      taskCards: agentTasks.map((task, index) => ({
-        ...task,
-        index,
-        x: 12 + index * (taskW + 6),
-        y: 22,
-        w: taskW,
-        h: 24
-      })),
-      toolCards: agentTools.map((tool, index) => ({
-        ...tool,
-        x: 12 + index * (toolW + 5),
-        y: 54,
-        w: toolW,
-        h: 22
-      })),
-      stageCards: agentStages.map((stage, index) => ({
-        ...stage,
-        x: 12 + index * (stageW + 5),
-        y: 86,
-        w: stageW,
-        h: 26
-      })),
-      trace: { x: 12, y: 121, w: width - 24, h: Math.max(28, height - 151) },
-      outcome: { x: 12, y: height - 23, w: width - 24, h: 13 },
-      meter: { x: 12, y: height - 8, w: width - 24, h: 4 }
-    };
-  }
-
-  const taskW = Math.min(160, width * 0.27);
-  const workX = taskW + 34;
-  const workW = width - workX - 16;
-  const toolW = Math.max(62, Math.min(78, (workW - 24) / 5));
-  const stageW = Math.max(68, Math.min(92, (workW - 34) / 5));
-  return {
-    compact,
-    hint: { x: 16, y: 16, text: 'Hover to inspect · Click to pin tools and tasks' },
-    taskCards: agentTasks.map((task, index) => ({
-      ...task,
-      index,
-      x: 16,
-      y: 34 + index * 40,
-      w: taskW,
-      h: 34
-    })),
-    toolCards: agentTools.map((tool, index) => ({
-      ...tool,
-      x: workX + index * (toolW + 6),
-      y: 36,
-      w: toolW,
-      h: 34
-    })),
-    stageCards: agentStages.map((stage, index) => ({
-      ...stage,
-      x: workX + index * (stageW + 7),
-      y: 88 + (index % 2) * 16,
-      w: stageW,
-      h: 34
-    })),
-    trace: { x: workX, y: height - 83, w: workW, h: 54 },
-    outcome: { x: workX, y: height - 24, w: workW, h: 18 },
-    meter: { x: 16, y: height - 72, w: taskW, h: 54 }
-  };
-}
-
-function agentTraceFor(task, verification) {
-  const retrievalTool = agentInteraction.tools.rag ? 'rag' : agentInteraction.tools.memory ? 'memory' : null;
-  const actionTool = agentInteraction.tools[agentInteraction.selectedTool] && !['memory', 'rag', 'eval'].includes(agentInteraction.selectedTool)
-    ? agentInteraction.selectedTool
-    : agentInteraction.tools.code
-      ? 'code'
-      : agentInteraction.tools.browser
-        ? 'browser'
-        : null;
-  const observeTool = agentInteraction.tools.browser ? 'browser' : agentInteraction.tools.eval ? 'eval' : null;
-  const trace = [
-    { stage: 'plan', label: task.trace.plan },
-    {
-      stage: 'retrieve',
-      toolId: retrievalTool,
-      label: retrievalTool ? task.trace.retrieve : 'Prompt-only context -> retrieval disabled'
-    },
-    {
-      stage: 'act',
-      toolId: actionTool,
-      label: actionTool ? task.trace.act : 'No external tool call -> reason from context only'
-    },
-    {
-      stage: 'observe',
-      toolId: observeTool,
-      label: observeTool ? task.trace.observe : 'Manual observation -> no browser or eval tool'
-    },
-    {
-      stage: 'evaluate',
-      toolId: agentInteraction.tools.eval ? 'eval' : null,
-      label: agentInteraction.tools.eval ? task.trace.evaluate : 'Light check -> eval disabled'
-    }
-  ];
-  if (agentInteraction.tools.eval && verification > 0.58) {
-    trace.push({ stage: 'evaluate', toolId: 'eval', label: task.trace.revise, retry: true });
-  }
-  return trace;
-}
-
-function agentOutcomeText(task, confidence) {
-  const level = confidence > 0.78 ? 'High' : confidence > 0.62 ? 'Medium' : 'Low';
-  return `Outcome: ${task.outcome} · Confidence ${level}`;
-}
-
-function agentInspectText(task, activeTrace, confidence) {
-  if (agentInteraction.hoverType === 'tool') {
-    const tool = agentTools.find((item) => item.id === agentInteraction.hoverId);
-    if (tool) return `${tool.label}: ${tool.detail} · ${agentInteraction.tools[tool.id] ? 'enabled' : 'disabled'}`;
-  }
-  if (agentInteraction.hoverType === 'stage') {
-    const stage = agentStages.find((item) => item.id === agentInteraction.hoverId);
-    if (stage) return `${stage.label}: ${stage.detail}`;
-  }
-  if (agentInteraction.hoverType === 'task') {
-    const hoveredTask = agentTasks[agentInteraction.hoverId];
-    if (hoveredTask) return `Task: ${hoveredTask.prompt}`;
-  }
-  if (activeTrace) return activeTrace.label;
-  return agentOutcomeText(task, confidence);
 }
 
 function agentHitRegion(event) {
@@ -928,37 +682,6 @@ function agentHitRegion(event) {
   ));
 }
 
-const educationPaths = [
-  {
-    id: 'learner',
-    label: 'Learner',
-    compact: 'Learner',
-    title: 'Learner profile',
-    detail: 'Diagnose mastery, confidence, engagement, and misconceptions.'
-  },
-  {
-    id: 'content',
-    label: 'Content',
-    compact: 'Content',
-    title: 'Targeted content',
-    detail: 'Generate hints, examples, quizzes, and challenge tasks from weak concepts.'
-  },
-  {
-    id: 'teacher',
-    label: 'Teacher',
-    compact: 'Teacher',
-    title: 'Teacher insight',
-    detail: 'Surface intervention opportunities and reduce feedback workload.'
-  },
-  {
-    id: 'evidence',
-    label: 'Evidence',
-    compact: 'Evidence',
-    title: 'Research evidence',
-    detail: 'Track retention, transfer, fairness, and learning efficiency.'
-  }
-];
-
 const educationConcepts = [
   { id: 'algebra', label: 'Algebra', compact: 'Alg', mastery: 0.74, x: 0.16, y: 0.36 },
   { id: 'functions', label: 'Functions', compact: 'Func', mastery: 0.42, x: 0.3, y: 0.22 },
@@ -973,99 +696,12 @@ const educationSignals = [
   { id: 'incorrect', label: 'Incorrect', compact: 'Miss', detail: 'System lowers confidence and selects a scaffold.' }
 ];
 
-const educationLoop = [
-  { id: 'diagnose', label: 'Diagnose', compact: 'Dx' },
-  { id: 'generate', label: 'Generate', compact: 'Gen' },
-  { id: 'practice', label: 'Practice', compact: 'Try' },
-  { id: 'feedback', label: 'Feedback', compact: 'Fb' },
-  { id: 'update', label: 'Update', compact: 'Up' },
-  { id: 'evaluate', label: 'Evaluate', compact: 'Eval' }
-];
-
-function educationPathForSelected() {
-  return educationPaths.find((path) => path.id === educationInteraction.selectedPath) || educationPaths[0];
-}
-
 function educationConceptForSelected() {
   return educationConcepts.find((concept) => concept.id === educationInteraction.selectedConcept) || educationConcepts[1];
 }
 
 function educationSignalForSelected() {
   return educationSignals.find((signal) => signal.id === educationInteraction.selectedSignal) || educationSignals[1];
-}
-
-function educationRunnerLayout(width, height) {
-  const compact = width < 440 || height < 220;
-  if (compact) {
-    const chipW = Math.max(60, (width - 42) / 4);
-    const conceptW = Math.max(42, (width - 36) / educationConcepts.length);
-    const signalW = Math.max(64, (width - 36) / 3);
-    return {
-      compact,
-      hint: { x: 12, y: 10, text: 'Tap to change path, concept, or feedback' },
-      pathCards: educationPaths.map((path, index) => ({
-        ...path,
-        x: 12 + index * (chipW + 6),
-        y: 22,
-        w: chipW,
-        h: 24
-      })),
-      conceptCards: educationConcepts.map((concept, index) => ({
-        ...concept,
-        x: 12 + index * (conceptW + 3),
-        y: 56,
-        w: conceptW,
-        h: 30
-      })),
-      learner: { x: 12, y: 96, w: width * 0.34, h: 48 },
-      practice: { x: width * 0.42, y: 96, w: width * 0.26, h: 48 },
-      insight: { x: width * 0.7, y: 96, w: width * 0.26 - 10, h: 48 },
-      signalCards: educationSignals.map((signal, index) => ({
-        ...signal,
-        x: 12 + index * (signalW + 6),
-        y: 151,
-        w: signalW,
-        h: 24
-      })),
-      loop: { x: 12, y: height - 18, w: width - 24, h: 10 }
-    };
-  }
-
-  const leftW = Math.min(160, width * 0.28);
-  const rightW = Math.min(172, width * 0.3);
-  const centerX = leftW + (width - leftW - rightW) * 0.48;
-  const centerY = height * 0.48;
-  const graphX = leftW + 24;
-  const graphW = Math.max(120, centerX - graphX + 38);
-  return {
-    compact,
-    hint: { x: 16, y: 16, text: 'Hover to inspect · Click to change path, concept, or feedback signal' },
-    pathCards: educationPaths.map((path, index) => ({
-      ...path,
-      x: 16,
-      y: 36 + index * 31,
-      w: leftW,
-      h: 25
-    })),
-    conceptCards: educationConcepts.map((concept) => ({
-      ...concept,
-      x: graphX + concept.x * graphW,
-      y: height * concept.y,
-      w: 72,
-      h: 28
-    })),
-    learner: { x: centerX - 46, y: centerY - 43, w: 92, h: 86 },
-    practice: { x: width - rightW - 16, y: 38, w: rightW, h: 78 },
-    insight: { x: width - rightW - 16, y: 128, w: rightW, h: 58 },
-    signalCards: educationSignals.map((signal, index) => ({
-      ...signal,
-      x: centerX - 112 + index * 76,
-      y: height - 65,
-      w: 70,
-      h: 24
-    })),
-    loop: { x: centerX - 138, y: height - 28, w: 276, h: 16 }
-  };
 }
 
 function educationHitRegion(event) {
@@ -1083,24 +719,6 @@ function educationHitRegion(event) {
     && y >= item.y
     && y <= item.y + item.h
   ));
-}
-
-function educationInspectText(path, concept, signal) {
-  if (educationInteraction.hoverType === 'path') {
-    const hovered = educationPaths.find((item) => item.id === educationInteraction.hoverId);
-    if (hovered) return `${hovered.title}: ${hovered.detail}`;
-  }
-  if (educationInteraction.hoverType === 'concept') {
-    const hovered = educationConcepts.find((item) => item.id === educationInteraction.hoverId);
-    if (hovered) return `${hovered.label}: mastery ${Math.round(hovered.mastery * 100)}%, targeted next.`;
-  }
-  if (educationInteraction.hoverType === 'signal') {
-    const hovered = educationSignals.find((item) => item.id === educationInteraction.hoverId);
-    if (hovered) return `${hovered.label}: ${hovered.detail}`;
-  }
-  if (educationInteraction.hoverType === 'practice') return `Practice: adaptive ${concept.label} task with hint and explanation.`;
-  if (educationInteraction.hoverType === 'insight') return 'Teacher insight: intervention, fairness, and learning efficiency signals.';
-  return `${path.title}: ${concept.label} -> ${signal.label} -> mastery update.`;
 }
 
 function educationMastery(concept) {
@@ -1139,16 +757,24 @@ const humanAiCollabScenarios = [
   }
 ];
 
+const humanAiStages = [
+  { id: 'request', label: 'Human request' },
+  { id: 'work', label: 'AI working' },
+  { id: 'deliver', label: 'Result delivered' }
+];
+
 function humanAiScenario() {
   return humanAiCollabScenarios[agentInteraction.taskIndex % humanAiCollabScenarios.length] || humanAiCollabScenarios[0];
 }
 
 function humanAiCollabLayout(width, height) {
   const compact = width < 460 || height < 220;
+  const veryCompact = width < 340;
   const centerY = height * (compact ? 0.5 : 0.54);
   const buttonW = compact ? Math.max(74, (width - 46) / 3) : 118;
   return {
     compact,
+    veryCompact,
     taskCards: humanAiCollabScenarios.map((task, index) => ({
       ...task,
       index,
@@ -1161,20 +787,20 @@ function humanAiCollabLayout(width, height) {
       id: 'human',
       x: compact ? width * 0.18 : width * 0.22,
       y: centerY,
-      w: compact ? 82 : 104,
-      h: compact ? 112 : 132
+      w: veryCompact ? 64 : compact ? 82 : 104,
+      h: veryCompact ? 92 : compact ? 112 : 132
     },
     ai: {
       id: 'ai',
       x: compact ? width * 0.5 : width * 0.51,
       y: centerY - (compact ? 6 : 2),
-      r: compact ? 38 : 48
+      r: veryCompact ? 30 : compact ? 38 : 48
     },
     output: {
       id: 'output',
-      x: compact ? width * 0.7 : width * 0.73,
+      x: veryCompact ? width - Math.max(68, width * 0.27) - 6 : compact ? width * 0.7 : width * 0.73,
       y: centerY - (compact ? 48 : 54),
-      w: compact ? 104 : 138,
+      w: veryCompact ? Math.max(68, width * 0.27) : compact ? 104 : 138,
       h: compact ? 94 : 112
     }
   };
@@ -1268,6 +894,7 @@ function drawAiAssistant(ctx, ai, primary, secondary, textColor, activePulse) {
 
 function drawOutputArtifact(ctx, output, scenario, primary, secondary, muted, textColor, active) {
   ctx.save();
+  const narrow = output.w < 90;
   drawRoundedRect(ctx, output.x, output.y, output.w, output.h, 12);
   ctx.fillStyle = active ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.075)';
   ctx.fill();
@@ -1276,7 +903,7 @@ function drawOutputArtifact(ctx, output, scenario, primary, secondary, muted, te
   ctx.stroke();
   ctx.fillStyle = secondary;
   ctx.font = '10px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, scenario.output, output.x + 12, output.y + 20, output.w - 24);
+  fillTruncatedText(ctx, narrow ? 'Done' : scenario.output, output.x + 12, output.y + 20, output.w - 24);
   ctx.strokeStyle = primary;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -1286,9 +913,9 @@ function drawOutputArtifact(ctx, output, scenario, primary, secondary, muted, te
   ctx.stroke();
   ctx.fillStyle = textColor;
   ctx.font = '9px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, scenario.detail, output.x + 12, output.y + 67, output.w - 24);
+  fillTruncatedText(ctx, narrow ? 'Ready' : scenario.detail, output.x + 12, output.y + 67, output.w - 24);
   ctx.fillStyle = muted;
-  fillTruncatedText(ctx, 'Delivered by AI', output.x + 12, output.y + 84, output.w - 24);
+  fillTruncatedText(ctx, narrow ? 'by AI' : 'Delivered by AI', output.x + 12, output.y + 84, output.w - 24);
   ctx.restore();
 }
 
@@ -1351,14 +978,15 @@ function drawHumanAiCollab(width, height, t, primary, secondary, muted) {
     interestCtx.stroke();
   });
 
-  drawRoundedRect(interestCtx, tokenX - 34, tokenY - 15, 68, 30, 9);
+  const tokenWidth = layout.veryCompact ? 48 : 68;
+  drawRoundedRect(interestCtx, tokenX - tokenWidth / 2, tokenY - 15, tokenWidth, 30, 9);
   interestCtx.fillStyle = 'rgba(3,7,18,0.72)';
   interestCtx.fill();
   interestCtx.strokeStyle = phase === 'thinking' ? primary : secondary;
   interestCtx.lineWidth = 2;
   interestCtx.stroke();
   interestCtx.fillStyle = textColor;
-  interestCtx.font = '9px JetBrains Mono, monospace';
+  interestCtx.font = layout.veryCompact ? '8px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
   interestCtx.textAlign = 'center';
   interestCtx.fillText(phase === 'thinking' ? 'working' : scenario.shortTask, tokenX, tokenY + 3);
   interestCtx.textAlign = 'left';
@@ -1373,9 +1001,6 @@ function drawHumanAiCollab(width, height, t, primary, secondary, muted) {
     }
   }
 
-  interestCtx.fillStyle = muted;
-  interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
-  fillTruncatedText(interestCtx, layout.compact ? 'Tap a task. AI helps. Result returns.' : `${scenario.human} -> ${scenario.ai} -> ${scenario.output}`, 16, height - 15, width - 32);
 }
 
 function robotTeacherLayout(width, height) {
@@ -1402,13 +1027,13 @@ function robotTeacherLayout(width, height) {
     robot: {
       id: 'robot',
       x: compact ? width * 0.3 : width * 0.28,
-      y: Math.min(compact ? height * 0.5 : height * 0.5, feedbackY - (compact ? 74 : 80)),
+      y: Math.min(compact ? height * 0.54 : height * 0.5, feedbackY - (compact ? 66 : 80)),
       w: compact ? 96 : 122,
       h: compact ? 126 : 148
     },
     student: {
       id: 'student',
-      x: compact ? width * 0.13 : width * 0.15,
+      x: compact ? Math.max(40, width * 0.15) : width * 0.15,
       y: compact ? feedbackY - 66 : feedbackY - 70,
       w: compact ? 78 : 92,
       h: compact ? 86 : 94
@@ -1726,6 +1351,7 @@ function drawStudentFigure(ctx, student, primary, muted, active) {
 
 function drawClassroomBoard(ctx, board, concept, signal, mastery, primary, secondary, muted, textColor) {
   const narrow = board.w < 230;
+  const short = board.h < 116;
   const title = signal.id === 'correct'
     ? 'Next: challenge'
     : signal.id === 'hint'
@@ -1774,20 +1400,22 @@ function drawClassroomBoard(ctx, board, concept, signal, mastery, primary, secon
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  const pad = narrow ? 14 : 18;
+  const pad = narrow || short ? 14 : 18;
   ctx.fillStyle = primary;
-  ctx.font = narrow ? '12.5px JetBrains Mono, monospace' : '14px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, displayTitle, board.x + pad, board.y + 28, board.w - pad * 2);
+  ctx.font = short ? '11.5px JetBrains Mono, monospace' : narrow ? '12.5px JetBrains Mono, monospace' : '14px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, displayTitle, board.x + pad, board.y + (short ? 22 : 28), board.w - pad * 2);
   ctx.fillStyle = textColor;
-  ctx.font = narrow ? '9.5px JetBrains Mono, monospace' : '10.5px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, displayLine1, board.x + pad, board.y + 56, board.w - pad * 2);
-  ctx.fillStyle = muted;
-  fillTruncatedText(ctx, displayLine2, board.x + pad, board.y + 78, board.w - pad * 2);
+  ctx.font = short ? '9px JetBrains Mono, monospace' : narrow ? '9.5px JetBrains Mono, monospace' : '10.5px JetBrains Mono, monospace';
+  fillTruncatedText(ctx, displayLine1, board.x + pad, board.y + (short ? 44 : 56), board.w - pad * 2);
+  if (!short) {
+    ctx.fillStyle = muted;
+    fillTruncatedText(ctx, displayLine2, board.x + pad, board.y + 78, board.w - pad * 2);
+  }
 
   ctx.globalAlpha = 0.45;
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 1;
-  for (let i = 0; i < 3; i += 1) {
+  for (let i = 0; !short && i < 3; i += 1) {
     const y = board.y + 96 + i * 14;
     if (y > board.y + board.h - 42) break;
     ctx.beginPath();
@@ -1798,19 +1426,20 @@ function drawClassroomBoard(ctx, board, concept, signal, mastery, primary, secon
   ctx.globalAlpha = 1;
 
   ctx.beginPath();
-  ctx.moveTo(board.x + pad, board.y + board.h - 30);
-  ctx.lineTo(board.x + board.w - pad, board.y + board.h - 30);
+  const meterY = board.y + board.h - (short ? 24 : 30);
+  ctx.moveTo(board.x + pad, meterY);
+  ctx.lineTo(board.x + board.w - pad, meterY);
   ctx.strokeStyle = 'rgba(255,255,255,0.14)';
   ctx.lineWidth = 7;
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(board.x + pad, board.y + board.h - 30);
-  ctx.lineTo(board.x + pad + (board.w - pad * 2) * mastery, board.y + board.h - 30);
+  ctx.moveTo(board.x + pad, meterY);
+  ctx.lineTo(board.x + pad + (board.w - pad * 2) * mastery, meterY);
   ctx.strokeStyle = mastery > 0.68 ? primary : mastery > 0.48 ? secondary : 'rgba(255,255,255,0.55)';
   ctx.stroke();
   ctx.fillStyle = secondary;
   ctx.font = '9px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, `Mastery ${Math.round(mastery * 100)}%`, board.x + pad, board.y + board.h - 12, board.w - pad * 2);
+  fillTruncatedText(ctx, `Mastery ${Math.round(mastery * 100)}%`, board.x + pad, board.y + board.h - (short ? 7 : 12), board.w - pad * 2);
 }
 
 function drawEducationFeedbackSegment(ctx, button, selected, hovered, layout, primary, secondary, textColor) {
@@ -1921,421 +1550,6 @@ function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) 
     interestCtx.arc(pointerX, pointerY, 7 + educationInteraction.pulse * 8, 0, Math.PI * 2);
     interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
     interestCtx.lineWidth = 1.2;
-    interestCtx.stroke();
-  }
-}
-
-function agentWorkbenchScenario() {
-  return agentWorkbenchScenarios[agentInteraction.taskIndex % agentWorkbenchScenarios.length] || agentWorkbenchScenarios[0];
-}
-
-function agentWorkbenchLayout(width, height) {
-  const compact = width < 460 || height < 220;
-  const scenario = agentWorkbenchScenario();
-  const taskW = compact ? Math.max(70, (width - 38) / 3) : Math.min(138, width * 0.22);
-  const taskY = compact ? 14 : 24;
-  const paperW = compact ? Math.min(96, width * 0.25) : Math.min(124, width * 0.2);
-  const paperH = compact ? 58 : 76;
-  const desk = {
-    x: compact ? 10 : 22,
-    y: compact ? 48 : 58,
-    w: width - (compact ? 20 : 44),
-    h: height - (compact ? 76 : 88)
-  };
-  return {
-    compact,
-    desk,
-    taskCards: agentTasks.map((task, index) => ({
-      ...task,
-      index,
-      x: compact ? 12 + index * (taskW + 7) : 18,
-      y: compact ? taskY : 28 + index * 38,
-      w: taskW,
-      h: compact ? 24 : 30
-    })),
-    evidenceSheets: scenario.evidence.map((sheet) => ({
-      ...sheet,
-      x: desk.x + desk.w * sheet.x - paperW / 2,
-      y: desk.y + desk.h * sheet.y - paperH / 2,
-      w: paperW,
-      h: paperH
-    })),
-    lens: {
-      x: desk.x + desk.w * (agentInteraction.active ? agentInteraction.x : 0.46 + Math.sin(interestTick * 0.026) * 0.16),
-      y: desk.y + desk.h * (agentInteraction.active ? agentInteraction.y : 0.4 + Math.cos(interestTick * 0.022) * 0.11),
-      r: compact ? 22 : 30
-    },
-    stamp: {
-      id: 'stamp',
-      x: desk.x + desk.w * (compact ? 0.61 : 0.73),
-      y: desk.y + desk.h * (compact ? 0.72 : 0.69),
-      w: compact ? 102 : 132,
-      h: compact ? 34 : 42
-    },
-    result: {
-      x: desk.x + desk.w * (compact ? 0.5 : 0.66),
-      y: desk.y + desk.h * (compact ? 0.66 : 0.58),
-      w: compact ? 146 : 178,
-      h: compact ? 52 : 66
-    }
-  };
-}
-
-function drawRotatedSheet(ctx, sheet, options = {}) {
-  ctx.save();
-  ctx.translate(sheet.x + sheet.w / 2, sheet.y + sheet.h / 2);
-  ctx.rotate(sheet.r || 0);
-  drawRoundedRect(ctx, -sheet.w / 2, -sheet.h / 2, sheet.w, sheet.h, 8);
-  ctx.fillStyle = options.fill || 'rgba(255,255,255,0.1)';
-  ctx.fill();
-  ctx.strokeStyle = options.stroke || 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = options.lineWidth || 1;
-  ctx.stroke();
-  ctx.fillStyle = options.titleColor || options.textColor || '#f5f5f5';
-  ctx.font = options.titleFont || '10px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, sheet.title, -sheet.w / 2 + 10, -sheet.h / 2 + 17, sheet.w - 20);
-  ctx.fillStyle = options.lineColor || 'rgba(255,255,255,0.62)';
-  ctx.font = options.lineFont || '8.5px JetBrains Mono, monospace';
-  (sheet.lines || []).slice(0, 2).forEach((line, index) => {
-    fillTruncatedText(ctx, line, -sheet.w / 2 + 10, -sheet.h / 2 + 34 + index * 13, sheet.w - 20);
-  });
-  ctx.restore();
-}
-
-function drawAgentWorkbench(width, height, t, primary, secondary, muted) {
-  const layout = agentWorkbenchLayout(width, height);
-  const scenario = agentWorkbenchScenario();
-  const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
-  const textColor = themeColor('--text') || '#f5f5f5';
-  const desk = layout.desk;
-  const activeEvidenceIndex = Math.floor((t * (0.42 + agentInteraction.runBoost * 0.5)) % scenario.evidence.length);
-  const activeEvidence = layout.evidenceSheets[activeEvidenceIndex] || layout.evidenceSheets[0];
-
-  agentInteraction.pulse *= 0.86;
-  agentInteraction.runBoost *= 0.88;
-
-  interestCtx.save();
-  interestCtx.beginPath();
-  interestCtx.moveTo(desk.x + 16, desk.y + 6);
-  interestCtx.lineTo(desk.x + desk.w - 12, desk.y);
-  interestCtx.lineTo(desk.x + desk.w, desk.y + desk.h);
-  interestCtx.lineTo(desk.x, desk.y + desk.h - 2);
-  interestCtx.closePath();
-  interestCtx.fillStyle = 'rgba(255,255,255,0.045)';
-  interestCtx.fill();
-  interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
-  interestCtx.stroke();
-
-  const grainCount = layout.compact ? 5 : 8;
-  for (let i = 0; i < grainCount; i += 1) {
-    const y = desk.y + 22 + i * (desk.h - 40) / grainCount;
-    interestCtx.beginPath();
-    interestCtx.moveTo(desk.x + 18, y);
-    interestCtx.quadraticCurveTo(width * 0.52, y + Math.sin(t + i) * 4, desk.x + desk.w - 18, y + Math.cos(t + i) * 2);
-    interestCtx.strokeStyle = 'rgba(255,255,255,0.045)';
-    interestCtx.lineWidth = 1;
-    interestCtx.stroke();
-  }
-
-  layout.taskCards.forEach((card) => {
-    const selected = card.index === agentInteraction.taskIndex;
-    const hovered = agentInteraction.hoverType === 'task' && agentInteraction.hoverId === card.index;
-    drawRotatedSheet(interestCtx, {
-      ...card,
-      r: layout.compact ? 0 : -0.035 + card.index * 0.025,
-      title: layout.compact ? card.compactTitle : card.title,
-      lines: layout.compact ? [] : [card.prompt]
-    }, {
-      fill: selected || hovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.075)',
-      stroke: selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.16)',
-      lineWidth: selected || hovered ? 2 : 1,
-      titleColor: selected ? secondary : hovered ? primary : textColor,
-      lineColor: muted,
-      titleFont: layout.compact ? '9px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace'
-    });
-  });
-
-  layout.evidenceSheets.forEach((sheet, index) => {
-    const active = index === activeEvidenceIndex;
-    const hovered = agentInteraction.hoverType === 'evidence' && agentInteraction.hoverId === sheet.id;
-    const selected = agentInteraction.selectedStage === sheet.id;
-    drawRotatedSheet(interestCtx, sheet, {
-      fill: active || hovered || selected ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.085)',
-      stroke: selected ? secondary : active || hovered ? primary : 'rgba(255,255,255,0.17)',
-      lineWidth: active || hovered || selected ? 2 : 1,
-      titleColor: active || hovered ? primary : textColor,
-      lineColor: active ? textColor : muted
-    });
-
-    if (active || selected) {
-      const cx = sheet.x + sheet.w / 2;
-      const cy = sheet.y + sheet.h / 2;
-      interestCtx.beginPath();
-      interestCtx.arc(cx, cy, Math.max(sheet.w, sheet.h) * 0.48 + agentInteraction.pulse * 8, 0, Math.PI * 2);
-      interestCtx.strokeStyle = `rgba(255,255,255,${active ? 0.2 : 0.12})`;
-      interestCtx.lineWidth = 1.2;
-      interestCtx.stroke();
-    }
-  });
-
-  const lens = layout.lens;
-  const scanX = activeEvidence.x + activeEvidence.w / 2;
-  const scanY = activeEvidence.y + activeEvidence.h / 2;
-  interestCtx.beginPath();
-  interestCtx.arc(agentInteraction.active ? lens.x : scanX, agentInteraction.active ? lens.y : scanY, lens.r, 0, Math.PI * 2);
-  interestCtx.fillStyle = 'rgba(255,255,255,0.035)';
-  interestCtx.fill();
-  interestCtx.strokeStyle = primary;
-  interestCtx.lineWidth = 2.2;
-  interestCtx.stroke();
-  interestCtx.beginPath();
-  interestCtx.moveTo((agentInteraction.active ? lens.x : scanX) + lens.r * 0.62, (agentInteraction.active ? lens.y : scanY) + lens.r * 0.62);
-  interestCtx.lineTo((agentInteraction.active ? lens.x : scanX) + lens.r * 1.18, (agentInteraction.active ? lens.y : scanY) + lens.r * 1.18);
-  interestCtx.strokeStyle = secondary;
-  interestCtx.lineWidth = 4;
-  interestCtx.lineCap = 'round';
-  interestCtx.stroke();
-  interestCtx.lineCap = 'butt';
-
-  const result = layout.result;
-  drawRotatedSheet(interestCtx, {
-    ...result,
-    r: -0.035,
-    title: `${scenario.verb} result`,
-    lines: [scenario.result, task.outcome]
-  }, {
-    fill: 'rgba(255,255,255,0.11)',
-    stroke: agentInteraction.hoverType === 'stamp' ? secondary : 'rgba(255,255,255,0.22)',
-    lineWidth: agentInteraction.hoverType === 'stamp' ? 2 : 1,
-    titleColor: secondary,
-    lineColor: textColor,
-    titleFont: '10px JetBrains Mono, monospace'
-  });
-
-  const stamp = layout.stamp;
-  interestCtx.save();
-  interestCtx.translate(stamp.x + stamp.w / 2, stamp.y + stamp.h / 2);
-  interestCtx.rotate(-0.13);
-  drawRoundedRect(interestCtx, -stamp.w / 2, -stamp.h / 2, stamp.w, stamp.h, 7);
-  interestCtx.strokeStyle = secondary;
-  interestCtx.lineWidth = 2.4 + agentInteraction.pulse * 2.2;
-  interestCtx.stroke();
-  interestCtx.fillStyle = `rgba(255,255,255,${0.04 + agentInteraction.pulse * 0.04})`;
-  interestCtx.fill();
-  interestCtx.fillStyle = secondary;
-  interestCtx.font = layout.compact ? '13px JetBrains Mono, monospace' : '16px JetBrains Mono, monospace';
-  interestCtx.textAlign = 'center';
-  interestCtx.fillText(scenario.stamp, 0, 5);
-  interestCtx.textAlign = 'left';
-  interestCtx.restore();
-
-  interestCtx.fillStyle = muted;
-  interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
-  fillTruncatedText(interestCtx, layout.compact ? 'Tap a note. Scan evidence. Stamp a result.' : 'Research workbench: click a note, scan the evidence, then stamp the conclusion.', desk.x + 10, height - 14, desk.w - 20);
-  interestCtx.restore();
-}
-
-function educationGardenLayout(width, height) {
-  const compact = width < 460 || height < 220;
-  const soilY = height * (compact ? 0.72 : 0.76);
-  const plantArea = {
-    x: compact ? 20 : 36,
-    y: compact ? 42 : 44,
-    w: width - (compact ? 40 : 72),
-    h: soilY - (compact ? 46 : 52)
-  };
-  const visibleConcepts = educationConcepts.slice(0, compact ? 4 : educationConcepts.length);
-  return {
-    compact,
-    soilY,
-    plantArea,
-    plants: visibleConcepts.map((concept, index) => {
-      const gap = plantArea.w / Math.max(1, visibleConcepts.length - 1);
-      const x = plantArea.x + gap * index;
-      const selectedGrowth = concept.id === educationInteraction.selectedConcept ? educationMastery(concept) : concept.mastery;
-      const h = (compact ? 44 : 70) + selectedGrowth * (compact ? 34 : 54);
-      return {
-        ...concept,
-        x,
-        y: soilY - h,
-        w: compact ? 54 : 68,
-        h,
-        growth: selectedGrowth
-      };
-    }),
-    feedbackStones: educationSignals.map((signal, index) => ({
-      ...signal,
-      x: width * 0.16 + index * Math.min(106, width * 0.23),
-      y: height - (compact ? 34 : 38),
-      w: compact ? 74 : 92,
-      h: compact ? 24 : 28
-    })),
-    signpost: {
-      id: 'signpost',
-      x: width - (compact ? 128 : 178),
-      y: compact ? 18 : 30,
-      w: compact ? 112 : 154,
-      h: compact ? 48 : 58
-    }
-  };
-}
-
-function drawLeaf(ctx, x, y, size, angle, color) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(size * 0.55, -size * 0.55, size * 1.2, -size * 0.2, size * 1.35, 0);
-  ctx.bezierCurveTo(size * 0.82, size * 0.42, size * 0.28, size * 0.44, 0, 0);
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawEducationGarden(width, height, t, primary, secondary, muted) {
-  const layout = educationGardenLayout(width, height);
-  const concept = educationConceptForSelected();
-  const signal = educationSignalForSelected();
-  const mastery = educationMastery(concept);
-  const textColor = themeColor('--text') || '#f5f5f5';
-  const violet = themeColor('--violet') || '#9b5cff';
-  const signalShift = signal.id === 'correct' ? 'grows stronger' : signal.id === 'hint' ? 'adds a guide light' : 'gets a simpler next step';
-
-  educationInteraction.pulse *= 0.86;
-  educationInteraction.masteryBoost *= 0.9;
-
-  const skyGlow = interestCtx.createRadialGradient(width * 0.25, height * 0.18, 0, width * 0.25, height * 0.18, width * 0.75);
-  skyGlow.addColorStop(0, 'rgba(255,255,255,0.08)');
-  skyGlow.addColorStop(1, 'rgba(255,255,255,0)');
-  interestCtx.fillStyle = skyGlow;
-  interestCtx.fillRect(0, 0, width, height);
-
-  interestCtx.beginPath();
-  interestCtx.moveTo(0, layout.soilY);
-  for (let x = 0; x <= width; x += 24) {
-    interestCtx.lineTo(x, layout.soilY + Math.sin(t + x * 0.03) * 3);
-  }
-  interestCtx.lineTo(width, height);
-  interestCtx.lineTo(0, height);
-  interestCtx.closePath();
-  interestCtx.fillStyle = 'rgba(255,255,255,0.055)';
-  interestCtx.fill();
-  interestCtx.strokeStyle = 'rgba(255,255,255,0.13)';
-  interestCtx.stroke();
-
-  for (let i = 0; i < 16; i += 1) {
-    const x = (i * 57 + interestTick * 0.2) % width;
-    const y = layout.soilY + 9 + (i % 4) * 12;
-    interestCtx.beginPath();
-    interestCtx.arc(x, y, 1.2, 0, Math.PI * 2);
-    interestCtx.fillStyle = i % 3 === 0 ? secondary : primary;
-    interestCtx.globalAlpha = 0.24;
-    interestCtx.fill();
-    interestCtx.globalAlpha = 1;
-  }
-
-  layout.plants.forEach((plant, index) => {
-    const selected = plant.id === educationInteraction.selectedConcept;
-    const hovered = educationInteraction.hoverType === 'concept' && educationInteraction.hoverId === plant.id;
-    const droop = selected && signal.id === 'incorrect' ? 0.22 : 0;
-    const sway = Math.sin(t * 1.2 + index) * (selected ? 3.2 : 1.6);
-    const baseX = plant.x;
-    const baseY = layout.soilY + 2;
-    const topX = baseX + sway + droop * 14;
-    const topY = baseY - plant.h * (0.72 + plant.growth * 0.18);
-    const stemColor = selected ? primary : 'rgba(255,255,255,0.52)';
-
-    interestCtx.beginPath();
-    interestCtx.moveTo(baseX, baseY);
-    interestCtx.quadraticCurveTo(baseX + sway * 0.7, (baseY + topY) / 2, topX, topY);
-    interestCtx.strokeStyle = stemColor;
-    interestCtx.lineWidth = selected || hovered ? 3.2 : 2;
-    interestCtx.stroke();
-
-    const leafColor = selected ? `rgba(255,255,255,${0.32 + plant.growth * 0.28})` : 'rgba(255,255,255,0.22)';
-    drawLeaf(interestCtx, baseX - 2, baseY - plant.h * 0.28, 11 + plant.growth * 8, -0.82, leafColor);
-    drawLeaf(interestCtx, baseX + 3, baseY - plant.h * 0.48, 10 + plant.growth * 7, 0.42, leafColor);
-    if (!layout.compact) drawLeaf(interestCtx, baseX - 1, baseY - plant.h * 0.63, 8 + plant.growth * 5, -0.58, leafColor);
-
-    const bloom = 7 + plant.growth * 13 + (selected ? educationInteraction.pulse * 7 : 0);
-    const petals = selected ? 7 : 5;
-    for (let p = 0; p < petals; p += 1) {
-      const a = (Math.PI * 2 / petals) * p + t * 0.12;
-      interestCtx.beginPath();
-      interestCtx.ellipse(topX + Math.cos(a) * bloom * 0.55, topY + Math.sin(a) * bloom * 0.42, bloom * 0.33, bloom * 0.18, a, 0, Math.PI * 2);
-      interestCtx.fillStyle = selected ? (p % 2 ? secondary : primary) : 'rgba(255,255,255,0.22)';
-      interestCtx.globalAlpha = selected ? 0.76 : 0.42;
-      interestCtx.fill();
-      interestCtx.globalAlpha = 1;
-    }
-    interestCtx.beginPath();
-    interestCtx.arc(topX, topY, bloom * 0.34, 0, Math.PI * 2);
-    interestCtx.fillStyle = selected ? textColor : 'rgba(255,255,255,0.38)';
-    interestCtx.fill();
-
-    if (selected && signal.id === 'hint') {
-      for (let i = 0; i < 5; i += 1) {
-        const a = t * 0.8 + i * 1.25;
-        interestCtx.beginPath();
-        interestCtx.arc(topX + Math.cos(a) * (bloom + 13), topY + Math.sin(a) * (bloom + 9), 2.2, 0, Math.PI * 2);
-        interestCtx.fillStyle = secondary;
-        interestCtx.fill();
-      }
-    }
-
-    interestCtx.fillStyle = selected || hovered ? textColor : muted;
-    interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
-    interestCtx.textAlign = 'center';
-    interestCtx.fillText(layout.compact ? plant.compact : plant.label, baseX, Math.min(height - 9, layout.soilY + 20));
-    interestCtx.textAlign = 'left';
-  });
-
-  layout.feedbackStones.forEach((stone) => {
-    const selected = stone.id === educationInteraction.selectedSignal;
-    const hovered = educationInteraction.hoverType === 'signal' && educationInteraction.hoverId === stone.id;
-    interestCtx.beginPath();
-    interestCtx.ellipse(stone.x + stone.w / 2, stone.y + stone.h / 2, stone.w / 2, stone.h / 2, -0.05, 0, Math.PI * 2);
-    interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.065)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.15)';
-    interestCtx.lineWidth = selected || hovered ? 2 : 1;
-    interestCtx.stroke();
-    interestCtx.fillStyle = selected ? secondary : textColor;
-    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
-    interestCtx.textAlign = 'center';
-    interestCtx.fillText(layout.compact ? stone.compact : stone.label, stone.x + stone.w / 2, stone.y + stone.h / 2 + 3);
-    interestCtx.textAlign = 'left';
-  });
-
-  const sign = layout.signpost;
-  interestCtx.beginPath();
-  interestCtx.moveTo(sign.x + 16, sign.y + sign.h);
-  interestCtx.lineTo(sign.x + 16, layout.soilY - 4);
-  interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
-  interestCtx.lineWidth = 3;
-  interestCtx.stroke();
-  drawRoundedRect(interestCtx, sign.x, sign.y, sign.w, sign.h, 9);
-  interestCtx.fillStyle = 'rgba(3, 7, 18, 0.52)';
-  interestCtx.fill();
-  interestCtx.strokeStyle = educationInteraction.hoverType === 'insight' ? primary : 'rgba(255,255,255,0.18)';
-  interestCtx.stroke();
-  interestCtx.fillStyle = primary;
-  interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
-  fillTruncatedText(interestCtx, 'Next practice', sign.x + 10, sign.y + 16, sign.w - 20);
-  interestCtx.fillStyle = textColor;
-  interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
-  fillTruncatedText(interestCtx, `${concept.label}: ${signalShift}`, sign.x + 10, sign.y + 31, sign.w - 20);
-  interestCtx.fillStyle = mastery > 0.68 ? primary : mastery > 0.48 ? violet : secondary;
-  fillTruncatedText(interestCtx, `Mastery ${Math.round(mastery * 100)}%`, sign.x + 10, sign.y + 46, sign.w - 20);
-
-  if (educationInteraction.active) {
-    const pointerX = educationInteraction.x * width;
-    const pointerY = educationInteraction.y * height;
-    interestCtx.beginPath();
-    interestCtx.arc(pointerX, pointerY, 12 + educationInteraction.pulse * 14, 0, Math.PI * 2);
-    interestCtx.strokeStyle = `rgba(255,255,255,${educationInteraction.dragging ? 0.42 : 0.22})`;
-    interestCtx.lineWidth = educationInteraction.dragging ? 2 : 1.1;
     interestCtx.stroke();
   }
 }
@@ -2865,456 +2079,8 @@ function drawInterestAnimation() {
     drawMedicalActiveLearning(width, height, t, primary, secondary, muted);
   } else if (type === 'agent') {
     drawHumanAiCollab(width, height, t, primary, secondary, muted);
-    if (!LEGACY_RUNNER_SCENES_ENABLED) return;
-    const layout = agentRunnerLayout(width, height);
-    const task = agentTasks[agentInteraction.taskIndex % agentTasks.length];
-    const autonomy = clamp01(agentInteraction.active ? agentInteraction.x : 0.52 + Math.sin(t * 0.52) * 0.18);
-    const verification = clamp01(agentInteraction.active ? 1 - agentInteraction.y : 0.58 + Math.cos(t * 0.48) * 0.18);
-    const trace = agentTraceFor(task, verification);
-    const flowSpeed = 0.42 + autonomy * 0.28 + agentInteraction.runBoost * 0.36;
-    const flow = (t * flowSpeed) % trace.length;
-    const activeTraceIndex = Math.floor(flow);
-    const activeTrace = trace[activeTraceIndex] || trace[0];
-    const enabledRatio = agentTools.filter((tool) => agentInteraction.tools[tool.id]).length / agentTools.length;
-    const confidence = clamp01(0.42 + enabledRatio * 0.22 + verification * 0.2 + (agentInteraction.tools.eval ? 0.1 : -0.08));
-    const textColor = themeColor('--text') || '#f5f5f5';
-    const stageMap = Object.fromEntries(layout.stageCards.map((stage) => [stage.id, stage]));
-    const activeToolId = activeTrace?.toolId || null;
-    const inspectText = agentInspectText(task, activeTrace, confidence);
-
-    agentInteraction.pulse *= 0.86;
-    agentInteraction.runBoost *= 0.88;
-
-    interestCtx.fillStyle = muted;
-    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
-    fillTruncatedText(interestCtx, layout.hint.text, layout.hint.x, layout.hint.y, width - layout.hint.x * 2);
-
-    layout.taskCards.forEach((card) => {
-      const selected = card.index === agentInteraction.taskIndex;
-      const hovered = agentInteraction.hoverType === 'task' && agentInteraction.hoverId === card.index;
-      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
-      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.54)';
-      interestCtx.fill();
-      interestCtx.strokeStyle = hovered ? primary : selected ? secondary : 'rgba(255,255,255,0.16)';
-      interestCtx.lineWidth = selected || hovered ? 2 : 1;
-      interestCtx.stroke();
-      interestCtx.fillStyle = hovered ? primary : selected ? secondary : textColor;
-      interestCtx.font = '10px JetBrains Mono, monospace';
-      fillTruncatedText(interestCtx, layout.compact ? card.compactTitle : card.title, card.x + 9, card.y + 14, card.w - 18);
-      if (!layout.compact) {
-        interestCtx.fillStyle = muted;
-        interestCtx.font = '9px JetBrains Mono, monospace';
-        fillTruncatedText(interestCtx, card.prompt, card.x + 9, card.y + 27, card.w - 18);
-      }
-    });
-
-    layout.toolCards.forEach((tool) => {
-      const enabled = agentInteraction.tools[tool.id];
-      const selected = agentInteraction.selectedTool === tool.id;
-      const active = activeToolId === tool.id;
-      const hovered = agentInteraction.hoverType === 'tool' && agentInteraction.hoverId === tool.id;
-      drawRoundedRect(interestCtx, tool.x, tool.y, tool.w, tool.h, 7);
-      interestCtx.fillStyle = active || hovered ? 'rgba(255,255,255,0.14)' : enabled ? 'rgba(255,255,255,0.1)' : 'rgba(3, 7, 18, 0.48)';
-      interestCtx.fill();
-      interestCtx.strokeStyle = active ? secondary : hovered ? primary : selected ? secondary : enabled ? primary : 'rgba(255,255,255,0.16)';
-      interestCtx.lineWidth = active || selected || hovered ? 2 : 1;
-      interestCtx.stroke();
-      interestCtx.beginPath();
-      interestCtx.arc(tool.x + 8, tool.y + (layout.compact ? tool.h / 2 : 10), 3.2, 0, Math.PI * 2);
-      interestCtx.fillStyle = enabled ? active ? secondary : primary : 'rgba(255,255,255,0.18)';
-      interestCtx.fill();
-      interestCtx.fillStyle = enabled ? textColor : muted;
-      interestCtx.font = '9px JetBrains Mono, monospace';
-      fillTruncatedText(interestCtx, layout.compact ? tool.compact : tool.label, tool.x + 15, tool.y + (layout.compact ? tool.h / 2 + 3 : 13), tool.w - 18);
-      if (!layout.compact) {
-        interestCtx.fillStyle = enabled ? muted : 'rgba(255,255,255,0.26)';
-        interestCtx.font = '8px JetBrains Mono, monospace';
-        fillTruncatedText(interestCtx, tool.detail, tool.x + 9, tool.y + 27, tool.w - 16);
-      }
-    });
-
-    if (!layout.compact) {
-      layout.toolCards.forEach((tool) => {
-        const stage = stageMap[tool.stage];
-        if (!stage) return;
-        const active = activeToolId === tool.id || (agentInteraction.hoverType === 'tool' && agentInteraction.hoverId === tool.id);
-        interestCtx.beginPath();
-        interestCtx.moveTo(tool.x + tool.w / 2, tool.y + tool.h);
-        interestCtx.lineTo(stage.x + stage.w / 2, stage.y);
-        interestCtx.strokeStyle = active ? `rgba(255,255,255,0.42)` : 'rgba(255,255,255,0.08)';
-        interestCtx.lineWidth = active ? 1.6 : 0.8;
-        interestCtx.stroke();
-      });
-    }
-
-    layout.stageCards.forEach((stage, index) => {
-      if (index > 0) {
-        const previous = layout.stageCards[index - 1];
-        const y1 = previous.y + previous.h / 2;
-        const y2 = stage.y + stage.h / 2;
-        interestCtx.beginPath();
-        interestCtx.moveTo(previous.x + previous.w, y1);
-        interestCtx.lineTo(stage.x, y2);
-        interestCtx.strokeStyle = activeTrace?.stage === stage.id ? secondary : 'rgba(255,255,255,0.18)';
-        interestCtx.lineWidth = activeTrace?.stage === stage.id ? 2.4 : 1.2;
-        interestCtx.stroke();
-      }
-    });
-
-    layout.stageCards.forEach((stage) => {
-      const active = activeTrace?.stage === stage.id;
-      const selected = agentInteraction.selectedStage === stage.id;
-      const hovered = agentInteraction.hoverType === 'stage' && agentInteraction.hoverId === stage.id;
-      const pulse = active || selected ? agentInteraction.pulse : 0;
-      drawRoundedRect(interestCtx, stage.x - pulse * 5, stage.y - pulse * 4, stage.w + pulse * 10, stage.h + pulse * 8, 8);
-      interestCtx.fillStyle = active || hovered ? 'rgba(255,255,255,0.13)' : 'rgba(3, 7, 18, 0.62)';
-      interestCtx.fill();
-      interestCtx.strokeStyle = selected ? secondary : active || hovered ? primary : 'rgba(255,255,255,0.2)';
-      interestCtx.lineWidth = selected || hovered ? 2.4 : 1.2;
-      interestCtx.stroke();
-      interestCtx.beginPath();
-      interestCtx.arc(stage.x + 10, stage.y + 11, 6, 0, Math.PI * 2);
-      interestCtx.fillStyle = active ? secondary : 'rgba(255,255,255,0.14)';
-      interestCtx.fill();
-      interestCtx.fillStyle = active ? '#050505' : textColor;
-      interestCtx.font = '8px JetBrains Mono, monospace';
-      interestCtx.textAlign = 'center';
-      interestCtx.fillText(String(layout.stageCards.indexOf(stage) + 1), stage.x + 10, stage.y + 14);
-      interestCtx.textAlign = 'left';
-      interestCtx.fillStyle = active || hovered ? primary : textColor;
-      interestCtx.font = '10px JetBrains Mono, monospace';
-      fillTruncatedText(interestCtx, layout.compact ? stage.compact : stage.label, stage.x + 20, stage.y + 14, stage.w - 24);
-      if (!layout.compact) {
-        interestCtx.fillStyle = muted;
-        interestCtx.font = '8px JetBrains Mono, monospace';
-        fillTruncatedText(interestCtx, stage.detail, stage.x + 9, stage.y + 27, stage.w - 16);
-      }
-    });
-
-    if (activeTrace?.retry) {
-      const from = stageMap.evaluate;
-      const to = stageMap.plan;
-      interestCtx.beginPath();
-      interestCtx.moveTo(from.x + from.w * 0.5, from.y);
-      interestCtx.quadraticCurveTo(width * 0.55, from.y - 34, to.x + to.w * 0.5, to.y);
-      interestCtx.strokeStyle = secondary;
-      interestCtx.lineWidth = 2.2;
-      interestCtx.stroke();
-    }
-
-    drawRoundedRect(interestCtx, layout.trace.x, layout.trace.y, layout.trace.w, layout.trace.h, 8);
-    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = 'rgba(255,255,255,0.16)';
-    interestCtx.lineWidth = 1;
-    interestCtx.stroke();
-    const traceWindow = layout.compact ? 2 : 4;
-    const traceStart = Math.max(0, Math.min(activeTraceIndex - (layout.compact ? 1 : 2), Math.max(0, trace.length - traceWindow)));
-    const visibleTrace = trace.slice(traceStart, traceStart + traceWindow);
-    visibleTrace.forEach((item, index) => {
-      const absoluteIndex = traceStart + index;
-      const active = absoluteIndex === activeTraceIndex;
-      const y = layout.trace.y + 17 + index * (layout.compact ? 12 : 11);
-      interestCtx.beginPath();
-      interestCtx.arc(layout.trace.x + 12, y - 3, active ? 4.2 : 2.6, 0, Math.PI * 2);
-      interestCtx.fillStyle = active ? secondary : item.retry ? primary : 'rgba(255,255,255,0.32)';
-      interestCtx.fill();
-      interestCtx.fillStyle = active ? textColor : muted;
-      interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
-      const status = active ? 'running' : absoluteIndex < activeTraceIndex ? 'done' : item.retry ? 'retry' : 'queued';
-      fillTruncatedText(interestCtx, `${status}: ${item.label}`, layout.trace.x + 22, y, layout.trace.w - 32);
-    });
-
-    const outcome = layout.outcome;
-    drawRoundedRect(interestCtx, outcome.x, outcome.y, outcome.w, outcome.h, 7);
-    interestCtx.fillStyle = 'rgba(255,255,255,0.07)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = activeTrace?.retry ? secondary : 'rgba(255,255,255,0.14)';
-    interestCtx.lineWidth = 1;
-    interestCtx.stroke();
-    interestCtx.fillStyle = activeTrace?.retry ? secondary : primary;
-    interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
-    fillTruncatedText(interestCtx, layout.compact ? agentOutcomeText(task, confidence) : inspectText, outcome.x + 8, outcome.y + (layout.compact ? 9 : 12), outcome.w - 16);
-
-    const meter = layout.meter;
-    drawRoundedRect(interestCtx, meter.x, meter.y, meter.w, meter.h, 8);
-    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.42)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
-    interestCtx.stroke();
-    if (layout.compact) {
-      interestCtx.beginPath();
-      interestCtx.moveTo(meter.x + 8, meter.y + 7);
-      interestCtx.lineTo(meter.x + meter.w - 8, meter.y + 7);
-      interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
-      interestCtx.lineWidth = 4;
-      interestCtx.stroke();
-      interestCtx.beginPath();
-      interestCtx.moveTo(meter.x + 8, meter.y + 7);
-      interestCtx.lineTo(meter.x + 8 + (meter.w - 16) * confidence, meter.y + 7);
-      interestCtx.strokeStyle = primary;
-      interestCtx.stroke();
-    } else {
-      [
-        ['confidence', confidence, primary],
-        ['verification', verification, secondary]
-      ].forEach(([label, value, color], index) => {
-        const y = meter.y + 18 + index * 22;
-        interestCtx.fillStyle = muted;
-        interestCtx.font = '9.5px JetBrains Mono, monospace';
-        interestCtx.fillText(label, meter.x + 10, y - 2);
-        interestCtx.beginPath();
-        interestCtx.moveTo(meter.x + 82, y - 5);
-        interestCtx.lineTo(meter.x + meter.w - 12, y - 5);
-        interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
-        interestCtx.lineWidth = 5;
-        interestCtx.stroke();
-        interestCtx.beginPath();
-        interestCtx.moveTo(meter.x + 82, y - 5);
-        interestCtx.lineTo(meter.x + 82 + (meter.w - 94) * value, y - 5);
-        interestCtx.strokeStyle = color;
-        interestCtx.stroke();
-      });
-    }
-
-    if (agentInteraction.active) {
-      const pointerX = agentInteraction.x * width;
-      const pointerY = agentInteraction.y * height;
-      interestCtx.beginPath();
-      interestCtx.arc(pointerX, pointerY, 18 + agentInteraction.pulse * 18, 0, Math.PI * 2);
-      interestCtx.strokeStyle = `rgba(255,255,255,${agentInteraction.dragging ? 0.52 : 0.28})`;
-      interestCtx.lineWidth = agentInteraction.dragging ? 2 : 1.2;
-      interestCtx.stroke();
-      interestCtx.beginPath();
-      interestCtx.moveTo(pointerX - 8, pointerY);
-      interestCtx.lineTo(pointerX + 8, pointerY);
-      interestCtx.moveTo(pointerX, pointerY - 8);
-      interestCtx.lineTo(pointerX, pointerY + 8);
-      interestCtx.strokeStyle = secondary;
-      interestCtx.stroke();
-    }
   } else if (type === 'education') {
     drawRobotTeacherClassroom(width, height, t, primary, secondary, muted);
-    if (!LEGACY_RUNNER_SCENES_ENABLED) return;
-    const layout = educationRunnerLayout(width, height);
-    const path = educationPathForSelected();
-    const concept = educationConceptForSelected();
-    const signal = educationSignalForSelected();
-    const mastery = educationMastery(concept);
-    const textColor = themeColor('--text') || '#f5f5f5';
-    const violet = themeColor('--violet') || '#9b5cff';
-    const flow = (t * 0.42) % educationLoop.length;
-    const activeLoopIndex = Math.floor(flow);
-    const activeLoop = educationLoop[activeLoopIndex];
-    const inspectText = educationInspectText(path, concept, signal);
-
-    educationInteraction.pulse *= 0.86;
-    educationInteraction.masteryBoost *= 0.9;
-
-    interestCtx.fillStyle = muted;
-    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
-    fillTruncatedText(interestCtx, layout.hint.text, layout.hint.x, layout.hint.y, width - layout.hint.x * 2);
-
-    layout.pathCards.forEach((card) => {
-      const selected = card.id === educationInteraction.selectedPath;
-      const hovered = educationInteraction.hoverType === 'path' && educationInteraction.hoverId === card.id;
-      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
-      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.52)';
-      interestCtx.fill();
-      interestCtx.strokeStyle = hovered ? primary : selected ? secondary : 'rgba(255,255,255,0.16)';
-      interestCtx.lineWidth = selected || hovered ? 2 : 1;
-      interestCtx.stroke();
-      interestCtx.fillStyle = hovered ? primary : selected ? secondary : textColor;
-      interestCtx.font = '10px JetBrains Mono, monospace';
-      fillTruncatedText(interestCtx, layout.compact ? card.compact : card.label, card.x + 9, card.y + 14, card.w - 18);
-      if (!layout.compact) {
-        interestCtx.fillStyle = muted;
-        interestCtx.font = '8px JetBrains Mono, monospace';
-        fillTruncatedText(interestCtx, card.title, card.x + 9, card.y + 22, card.w - 18);
-      }
-    });
-
-    if (!layout.compact) {
-      layout.conceptCards.forEach((from, index) => {
-        const to = layout.conceptCards[(index + 1) % layout.conceptCards.length];
-        interestCtx.beginPath();
-        interestCtx.moveTo(from.x + from.w / 2, from.y + from.h / 2);
-        interestCtx.lineTo(to.x + to.w / 2, to.y + to.h / 2);
-        interestCtx.strokeStyle = from.id === educationInteraction.selectedConcept || to.id === educationInteraction.selectedConcept
-          ? `rgba(255,255,255,0.26)`
-          : 'rgba(255,255,255,0.08)';
-        interestCtx.lineWidth = from.id === educationInteraction.selectedConcept || to.id === educationInteraction.selectedConcept ? 1.6 : 0.8;
-        interestCtx.stroke();
-      });
-    }
-
-    layout.conceptCards.forEach((card) => {
-      const selected = card.id === educationInteraction.selectedConcept;
-      const hovered = educationInteraction.hoverType === 'concept' && educationInteraction.hoverId === card.id;
-      const value = selected ? mastery : card.mastery;
-      const weak = value < 0.5;
-      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
-      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.6)';
-      interestCtx.fill();
-      interestCtx.strokeStyle = selected ? secondary : hovered ? primary : weak ? 'rgba(255,177,93,0.62)' : 'rgba(255,255,255,0.18)';
-      interestCtx.lineWidth = selected || hovered ? 2 : 1;
-      interestCtx.stroke();
-      interestCtx.beginPath();
-      interestCtx.arc(card.x + 9, card.y + 11, 3.2 + (weak ? Math.sin(t * 1.4) * 0.8 : 0), 0, Math.PI * 2);
-      interestCtx.fillStyle = weak ? secondary : primary;
-      interestCtx.fill();
-      interestCtx.fillStyle = textColor;
-      interestCtx.font = '9px JetBrains Mono, monospace';
-      fillTruncatedText(interestCtx, layout.compact ? card.compact : card.label, card.x + 16, card.y + 12, card.w - 22);
-      interestCtx.beginPath();
-      interestCtx.moveTo(card.x + 10, card.y + card.h - 7);
-      interestCtx.lineTo(card.x + card.w - 10, card.y + card.h - 7);
-      interestCtx.strokeStyle = 'rgba(255,255,255,0.14)';
-      interestCtx.lineWidth = 3;
-      interestCtx.stroke();
-      interestCtx.beginPath();
-      interestCtx.moveTo(card.x + 10, card.y + card.h - 7);
-      interestCtx.lineTo(card.x + 10 + (card.w - 20) * value, card.y + card.h - 7);
-      interestCtx.strokeStyle = value > 0.68 ? primary : value > 0.48 ? violet : secondary;
-      interestCtx.stroke();
-    });
-
-    const learner = layout.learner;
-    drawRoundedRect(interestCtx, learner.x, learner.y, learner.w, learner.h, 12);
-    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = educationInteraction.hoverType === 'learner' ? primary : 'rgba(255,255,255,0.18)';
-    interestCtx.lineWidth = educationInteraction.hoverType === 'learner' ? 2 : 1;
-    interestCtx.stroke();
-    const learnerCx = learner.x + learner.w / 2;
-    const learnerCy = learner.y + (layout.compact ? 18 : 28);
-    interestCtx.beginPath();
-    interestCtx.arc(learnerCx, learnerCy, layout.compact ? 11 : 15, 0, Math.PI * 2);
-    interestCtx.fillStyle = primary;
-    interestCtx.fill();
-    interestCtx.strokeStyle = secondary;
-    interestCtx.stroke();
-    const rings = [
-      ['Mastery', mastery],
-      ['Confidence', signal.id === 'correct' ? 0.78 : signal.id === 'hint' ? 0.58 : 0.38],
-      ['Engage', path.id === 'learner' ? 0.72 : 0.62]
-    ];
-    rings.forEach(([label, value], index) => {
-      if (layout.compact && index > 1) return;
-      const y = learner.y + (layout.compact ? 38 : 51 + index * 10);
-      interestCtx.fillStyle = muted;
-      interestCtx.font = '8px JetBrains Mono, monospace';
-      interestCtx.fillText(layout.compact ? label.slice(0, 4) : label, learner.x + 8, y);
-      interestCtx.beginPath();
-      interestCtx.moveTo(learner.x + (layout.compact ? 42 : 76), y - 3);
-      interestCtx.lineTo(learner.x + learner.w - 8, y - 3);
-      interestCtx.strokeStyle = 'rgba(255,255,255,0.12)';
-      interestCtx.lineWidth = 3;
-      interestCtx.stroke();
-      interestCtx.beginPath();
-      interestCtx.moveTo(learner.x + (layout.compact ? 42 : 76), y - 3);
-      interestCtx.lineTo(learner.x + (layout.compact ? 42 : 76) + (learner.w - (layout.compact ? 50 : 84)) * value, y - 3);
-      interestCtx.strokeStyle = index === 0 ? primary : index === 1 ? secondary : violet;
-      interestCtx.stroke();
-    });
-
-    const selectedConceptCard = layout.conceptCards.find((item) => item.id === concept.id) || layout.conceptCards[1];
-    const practice = layout.practice;
-    interestCtx.beginPath();
-    interestCtx.moveTo(selectedConceptCard.x + selectedConceptCard.w, selectedConceptCard.y + selectedConceptCard.h / 2);
-    interestCtx.lineTo(practice.x, practice.y + practice.h / 2);
-    interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
-    interestCtx.lineWidth = 1.4;
-    interestCtx.stroke();
-
-    drawRoundedRect(interestCtx, practice.x, practice.y, practice.w, practice.h, 10);
-    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = educationInteraction.hoverType === 'practice' ? primary : secondary;
-    interestCtx.lineWidth = educationInteraction.hoverType === 'practice' ? 2 : 1.3;
-    interestCtx.stroke();
-    interestCtx.fillStyle = secondary;
-    interestCtx.font = '9px JetBrains Mono, monospace';
-    fillTruncatedText(interestCtx, layout.compact ? 'Practice' : 'Generated practice', practice.x + 9, practice.y + 14, practice.w - 18);
-    interestCtx.fillStyle = textColor;
-    interestCtx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
-    fillTruncatedText(interestCtx, `${concept.label}: ${mastery < 0.55 ? 'scaffold' : 'challenge'}`, practice.x + 9, practice.y + 30, practice.w - 18);
-    if (!layout.compact) {
-      interestCtx.fillStyle = muted;
-      fillTruncatedText(interestCtx, 'Hint · example · next step', practice.x + 9, practice.y + 48, practice.w - 18);
-      interestCtx.fillStyle = primary;
-      fillTruncatedText(interestCtx, 'Difficulty adapts', practice.x + 9, practice.y + 64, practice.w - 18);
-    }
-
-    const insight = layout.insight;
-    drawRoundedRect(interestCtx, insight.x, insight.y, insight.w, insight.h, 10);
-    interestCtx.fillStyle = 'rgba(3, 7, 18, 0.55)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = educationInteraction.hoverType === 'insight' || path.id === 'teacher' || path.id === 'evidence'
-      ? primary
-      : 'rgba(255,255,255,0.16)';
-    interestCtx.stroke();
-    interestCtx.fillStyle = primary;
-    interestCtx.font = '9px JetBrains Mono, monospace';
-    fillTruncatedText(interestCtx, path.id === 'teacher' ? 'Teacher insight' : path.id === 'evidence' ? 'Research metrics' : 'Learning evidence', insight.x + 9, insight.y + 14, insight.w - 18);
-    interestCtx.fillStyle = muted;
-    interestCtx.font = layout.compact ? '8px JetBrains Mono, monospace' : '8.5px JetBrains Mono, monospace';
-    const metric = path.id === 'evidence' ? 'Retention · fairness' : path.id === 'teacher' ? 'Intervention queued' : `Mastery +${Math.round((mastery - concept.mastery) * 100)}%`;
-    fillTruncatedText(interestCtx, metric, insight.x + 9, insight.y + 30, insight.w - 18);
-    if (!layout.compact) {
-      fillTruncatedText(interestCtx, 'Explainable next action', insight.x + 9, insight.y + 45, insight.w - 18);
-    }
-
-    layout.signalCards.forEach((card) => {
-      const selected = card.id === educationInteraction.selectedSignal;
-      const hovered = educationInteraction.hoverType === 'signal' && educationInteraction.hoverId === card.id;
-      drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 8);
-      interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.12)' : 'rgba(3, 7, 18, 0.52)';
-      interestCtx.fill();
-      interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.16)';
-      interestCtx.lineWidth = selected || hovered ? 2 : 1;
-      interestCtx.stroke();
-      interestCtx.fillStyle = selected ? secondary : textColor;
-      interestCtx.font = '9px JetBrains Mono, monospace';
-      fillTruncatedText(interestCtx, layout.compact ? card.compact : card.label, card.x + 8, card.y + 14, card.w - 16);
-    });
-
-    const loop = layout.loop;
-    educationLoop.forEach((step, index) => {
-      const x = loop.x + (loop.w / Math.max(1, educationLoop.length - 1)) * index;
-      const y = loop.y + loop.h / 2;
-      if (index > 0) {
-        const px = loop.x + (loop.w / Math.max(1, educationLoop.length - 1)) * (index - 1);
-        interestCtx.beginPath();
-        interestCtx.moveTo(px, y);
-        interestCtx.lineTo(x, y);
-        interestCtx.strokeStyle = index <= activeLoopIndex ? `rgba(255,255,255,0.34)` : 'rgba(255,255,255,0.12)';
-        interestCtx.lineWidth = 2;
-        interestCtx.stroke();
-      }
-      const active = index === activeLoopIndex;
-      interestCtx.beginPath();
-      interestCtx.arc(x, y, active ? 5.2 : 3.6, 0, Math.PI * 2);
-      interestCtx.fillStyle = active ? secondary : index < activeLoopIndex ? primary : 'rgba(255,255,255,0.22)';
-      interestCtx.fill();
-      if (!layout.compact || index % 2 === 0) {
-        interestCtx.fillStyle = active ? textColor : muted;
-        interestCtx.font = layout.compact ? '7.5px JetBrains Mono, monospace' : '8px JetBrains Mono, monospace';
-        interestCtx.textAlign = 'center';
-        interestCtx.fillText(layout.compact ? step.compact : step.label, x, y - 8);
-        interestCtx.textAlign = 'left';
-      }
-    });
-
-    if (educationInteraction.active) {
-      const pointerX = educationInteraction.x * width;
-      const pointerY = educationInteraction.y * height;
-      interestCtx.beginPath();
-      interestCtx.arc(pointerX, pointerY, 14 + educationInteraction.pulse * 15, 0, Math.PI * 2);
-      interestCtx.strokeStyle = `rgba(255,255,255,${educationInteraction.dragging ? 0.5 : 0.25})`;
-      interestCtx.lineWidth = educationInteraction.dragging ? 2 : 1.1;
-      interestCtx.stroke();
-    }
   }
 }
 
@@ -3348,20 +2114,21 @@ function updateAgentPointer(event) {
   agentInteraction.hoverId = hit?.type === 'task' ? hit.item.index : hit?.item.id || null;
 }
 
-function interactWithAgentRunner(event) {
+function interactWithAgentCollab(event) {
   const hit = agentHitRegion(event);
   if (hit?.type === 'task') {
     agentInteraction.taskIndex = hit.item.index;
-    agentInteraction.selectedStage = 'plan';
+    agentInteraction.selectedStage = 'request';
+    agentInteraction.completed = false;
   } else if (hit?.type === 'human') {
     agentInteraction.selectedStage = 'request';
-    agentInteraction.selectedTool = 'memory';
+    agentInteraction.completed = false;
   } else if (hit?.type === 'ai') {
     agentInteraction.selectedStage = 'work';
-    agentInteraction.selectedTool = 'rag';
+    agentInteraction.completed = false;
   } else if (hit?.type === 'output') {
     agentInteraction.selectedStage = 'deliver';
-    agentInteraction.selectedTool = 'eval';
+    agentInteraction.completed = true;
   } else {
     agentInteraction.pulse = 0.35;
     agentInteraction.runBoost = 0.24;
@@ -3383,24 +2150,12 @@ function updateEducationPointer(event) {
 
 function interactWithEducationStudio(event) {
   const hit = educationHitRegion(event);
-  if (hit?.type === 'path') {
-    educationInteraction.selectedPath = hit.item.id;
-  } else if (hit?.type === 'concept') {
-    educationInteraction.selectedConcept = hit.item.id;
-  } else if (hit?.type === 'signal') {
+  if (hit?.type === 'signal') {
     educationInteraction.selectedSignal = hit.item.id;
-  } else if (hit?.type === 'learner') {
-    educationInteraction.selectedPath = 'learner';
-  } else if (hit?.type === 'practice') {
-    educationInteraction.selectedPath = 'content';
-  } else if (hit?.type === 'insight') {
-    educationInteraction.selectedPath = educationInteraction.selectedPath === 'teacher' ? 'evidence' : 'teacher';
   } else if (hit?.type === 'robot' || hit?.type === 'board') {
     educationInteraction.selectedSignal = 'hint';
-    educationInteraction.selectedPath = 'teacher';
   } else if (hit?.type === 'student') {
     educationInteraction.selectedSignal = 'incorrect';
-    educationInteraction.selectedPath = 'learner';
   } else {
     educationInteraction.pulse = 0.3;
     educationInteraction.masteryBoost = 0.2;
@@ -3514,7 +2269,7 @@ interestCanvas.addEventListener('pointerup', (event) => {
     medicalInteraction.dragging = false;
   } else if (isAgentInterestActive()) {
     updateAgentPointer(event);
-    interactWithAgentRunner(event);
+      interactWithAgentCollab(event);
     agentInteraction.dragging = false;
   } else {
     updateEducationPointer(event);

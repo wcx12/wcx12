@@ -33,6 +33,11 @@ MB, case mismatches, and published images without alternative text. Only
 referenced files are copied publicly; link other attachments from a repository
 or release instead of serving them from the site origin.
 
+For a page-specific share preview, add a 1200 x 630 PNG to the article's
+`media/` directory and set `socialImage: "media/social-card.png"` plus a concise
+`socialImageAlt`. The social card goes through the same signature, path, size,
+and symlink checks as images embedded in the article.
+
 Publication state is determined in `Asia/Shanghai`: `draft: true` stays private;
 a non-draft post with a future `date` is scheduled; an eligible non-draft post
 is published. The scheduled GitHub workflow rebuilds shortly after local

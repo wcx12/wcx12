@@ -75,6 +75,21 @@ function evidenceKeyFromSchema(item) {
   return '';
 }
 
+function metaContent(source, property) {
+  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return source.match(new RegExp(`<meta\\s+(?:property|name)="${escaped}"\\s+content="([^"]*)"`, 'i'))?.[1] || '';
+}
+
+function structuredImageUrl(metadata) {
+  const nodes = metadata['@graph'] || [metadata];
+  for (const node of nodes) {
+    const image = node.primaryImageOfPage || node.image;
+    if (typeof image === 'string') return image;
+    if (image?.url) return image.url;
+  }
+  return '';
+}
+
 async function expectedAssetVersion() {
   const { posts } = await loadPosts(rootDir);
   const files = [
@@ -135,6 +150,40 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
       assert.doesNotThrow(() => JSON.parse(json), `${relative}: invalid JSON-LD`);
     }
   }
+});
+
+test('major pages use representative social cards in metadata and structured data', async () => {
+  const cases = [
+    ['blog/index.html', '/assets/og-blog.png'],
+    ['resume/index.html', '/assets/og-profile.png'],
+    ['research/index.html', '/assets/og-research.png'],
+    ['projects/index.html', '/assets/og-projects.png'],
+    ['publications/index.html', '/assets/og-publications.png'],
+    ['blog/posts/building-a-research-writing-system/index.html', '/blog/posts/building-a-research-writing-system/media/social-card.png']
+  ];
+  const socialImages = new Set();
+
+  for (const [relative, expectedSuffix] of cases) {
+    const source = await fs.readFile(path.join(rootDir, relative), 'utf8');
+    const socialImage = metaContent(source, 'og:image');
+    const twitterImage = metaContent(source, 'twitter:image');
+    const socialAlt = metaContent(source, 'og:image:alt');
+    assert.ok(socialImage.endsWith(expectedSuffix) || new URL(socialImage).pathname.endsWith(expectedSuffix), `${relative}: wrong social card`);
+    assert.equal(twitterImage, socialImage, `${relative}: Open Graph and Twitter cards differ`);
+    assert.ok(socialAlt.trim(), `${relative}: social card needs alternative text`);
+    assert.equal(metaContent(source, 'twitter:image:alt'), socialAlt, `${relative}: social card alt text differs`);
+    assert.equal(structuredImageUrl(jsonLdFor(source)), socialImage, `${relative}: structured image differs from visible metadata`);
+    socialImages.add(new URL(socialImage).pathname);
+
+    const imageUrl = new URL(socialImage);
+    const relativeImage = decodeURIComponent(imageUrl.pathname.replace(/^\/wcx12\//, ''));
+    const image = await fs.readFile(path.join(rootDir, relativeImage));
+    assert.equal(image.subarray(1, 4).toString('ascii'), 'PNG', `${relative}: social card is not a PNG`);
+    assert.equal(image.readUInt32BE(16), 1200, `${relative}: social card width must be 1200`);
+    assert.equal(image.readUInt32BE(20), 630, `${relative}: social card height must be 630`);
+  }
+
+  assert.equal(socialImages.size, cases.length, 'major page types must not reuse one generic social card');
 });
 
 test('all executable and stylesheet assets share the current release version', async () => {
@@ -412,12 +461,20 @@ test('sitemap covers every configured fixed-language route', async () => {
     assert.match(sitemap, new RegExp(`<loc>${`${SITE.url}/${route}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`), `${route}: missing from sitemap`);
   }
 
-  const entries = matches(sitemap, /<url><loc>([^<]+)<\/loc><lastmod>([^<]+)<\/lastmod><\/url>/g);
-  assert.equal(entries.length, matches(sitemap, /<url>/g).length, 'every sitemap URL needs a lastmod value');
+  const entries = matches(sitemap, /<url><loc>([^<]+)<\/loc>(?:<lastmod>([^<]+)<\/lastmod>)?<\/url>/g);
+  assert.equal(entries.length, matches(sitemap, /<url>/g).length, 'every sitemap URL must be well formed');
   for (const [, location, lastmod] of entries) {
+    if (!lastmod) continue;
     assert.match(lastmod, /^\d{4}-\d{2}-\d{2}$/, `${location}: invalid lastmod`);
     assert.ok(Number.isFinite(Date.parse(`${lastmod}T00:00:00Z`)), `${location}: unparseable lastmod`);
   }
+  const lastmodByUrl = new Map(entries.map(([, location, lastmod = '']) => [location, lastmod]));
+  assert.equal(lastmodByUrl.get(`${SITE.url}/projects/`), '2026-07-10');
+  assert.equal(lastmodByUrl.get(`${SITE.url}/publications/`), '2026-07-11');
+  assert.equal(lastmodByUrl.get(`${SITE.url}/research/point-cloud-registration/`), '2026-06-02');
+  assert.equal(lastmodByUrl.get(`${SITE.url}/research/agent/`), '2026-06-18');
+  assert.equal(lastmodByUrl.get(`${SITE.url}/research/ai4edu/`), '', 'empty research topics must not inherit unrelated repository dates');
+  assert.equal(lastmodByUrl.get(`${SITE.url}/resume/`), '', 'profile lastmod must be omitted without a reliable source date');
   assert.match(
     sitemap,
     /<loc>https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/<\/loc><lastmod>2026-07-11<\/lastmod>/

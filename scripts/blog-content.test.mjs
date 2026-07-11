@@ -179,6 +179,33 @@ test('validates bundled post media and fingerprints referenced files', async () 
   assert.match(posts[0].mediaFiles[0].version, /^[a-f0-9]{12}$/);
 }));
 
+test('validates and publishes a front-matter social image from the article bundle', async () => withContentRoot(async (root) => {
+  const bundle = path.join(root, 'content', 'posts', 'fixture');
+  await fs.mkdir(path.join(bundle, 'media'), { recursive: true });
+  const source = postSource('Article body.')
+    .replace('lang: "en"', 'lang: "en"\nsocialImage: "media/social-card.png"\nsocialImageAlt: "A concise article preview"');
+  await fs.writeFile(path.join(bundle, 'index.md'), source);
+  await fs.writeFile(path.join(bundle, 'media', 'social-card.png'), ONE_PIXEL_PNG);
+
+  const { posts, diagnostics } = await loadPosts(root, { today: '2026-07-10' });
+  const { errors } = summarizeDiagnostics(diagnostics);
+  assert.deepEqual(errors, []);
+  assert.equal(posts[0].socialImage, 'media/social-card.png');
+  assert.equal(posts[0].socialImageAlt, 'A concise article preview');
+  assert.equal(posts[0].mediaFiles[0].publicPath, 'media/social-card.png');
+}));
+
+test('requires social image metadata to be typed and accessible', async () => {
+  const missingAlt = postSource('Article body.')
+    .replace('lang: "en"', 'lang: "en"\nsocialImage: "media/social-card.png"');
+  const invalidType = postSource('Article body.')
+    .replace('lang: "en"', 'lang: "en"\nsocialImage: 42\nsocialImageAlt: "Preview"');
+  const missingAltResult = await validateSource(missingAlt);
+  const invalidTypeResult = await validateSource(invalidType);
+  assert.match(missingAltResult.errors.join('\n'), /socialImage requires non-empty socialImageAlt/);
+  assert.match(invalidTypeResult.errors.join('\n'), /socialImage must be a string/);
+});
+
 test('rejects missing, mis-cased, unsafe, and unlabelled media', async () => withContentRoot(async (root) => {
   const bundle = path.join(root, 'content', 'posts', 'fixture');
   await fs.mkdir(path.join(bundle, 'media'), { recursive: true });

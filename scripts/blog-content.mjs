@@ -223,6 +223,13 @@ async function inspectMediaPath(root, relativePath) {
 
 async function validatePostMedia(post, errors, warnings) {
   const references = markdownResourceReferences(post.content);
+  if (post.data.socialImage) {
+    references.push({
+      kind: 'image',
+      url: post.data.socialImage,
+      alt: post.data.socialImageAlt || ''
+    });
+  }
   const mediaByPath = new Map();
   for (const reference of references) {
     if (reference.kind === 'image' && !reference.alt.trim()) {
@@ -305,6 +312,15 @@ async function validatePost(post, seenSlugs) {
   } else if (!data.description.trim()) {
     if (data.draft) warnings.push('draft description is empty');
     else errors.push('published posts must include a description');
+  }
+  if (Object.hasOwn(rawData, 'socialImage') && typeof data.socialImage !== 'string') {
+    errors.push('socialImage must be a string');
+  }
+  if (Object.hasOwn(rawData, 'socialImageAlt') && typeof data.socialImageAlt !== 'string') {
+    errors.push('socialImageAlt must be a string');
+  }
+  if (data.socialImage && !String(data.socialImageAlt || '').trim()) {
+    errors.push('socialImage requires non-empty socialImageAlt text');
   }
   if (!['en', 'zh'].includes(data.lang)) errors.push('lang must be "en" or "zh"');
 
@@ -409,6 +425,8 @@ export async function loadPosts(rootDir, options = {}) {
         math: data.math,
         lang: data.lang,
         toc: data.toc !== false,
+        socialImage: data.socialImage || '',
+        socialImageAlt: data.socialImageAlt || '',
         readingMinutes: estimateReadingMinutes(parsed.content),
         draft: data.draft,
         publicationState: state,

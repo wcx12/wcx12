@@ -31,6 +31,8 @@ draft: true
 math: false
 toc: true
 lang: "en"
+socialImage: ""
+socialImageAlt: ""
 ---
 
 Write the opening summary here.

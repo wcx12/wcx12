@@ -244,3 +244,12 @@ test('retired sandbox code and taxonomy drift do not return', () => {
     assert.doesNotMatch(source, /\banomal(?:y|ies|ous|y-detection)\b/i, `${name} still advertises an unsupported anomaly-detection focus`);
   }
 });
+
+test('agent and education canvases expose only the current human-facing scenes', () => {
+  assert.match(researchCanvasSource, /function drawHumanAiCollab\(/);
+  assert.match(researchCanvasSource, /function drawRobotTeacherClassroom\(/);
+  assert.match(researchCanvasSource, /const humanAiStages = \[/);
+  assert.match(researchCanvasSource, /\{ id: 'request', label: 'Human request' \}/);
+  assert.doesNotMatch(researchCanvasSource, /LEGACY_RUNNER_SCENES_ENABLED|agentRunnerLayout|educationRunnerLayout/);
+  assert.doesNotMatch(researchCanvasSource, /agentWorkbench|drawEducationGarden|selectedTool|selectedPath/);
+});

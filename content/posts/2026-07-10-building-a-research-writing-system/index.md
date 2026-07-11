@@ -13,6 +13,8 @@ draft: false
 math: false
 toc: true
 lang: "en"
+socialImage: "media/social-card.png"
+socialImageAlt: "Research Fieldnotes article on a validated Markdown publishing workflow"
 ---
 
 This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material.

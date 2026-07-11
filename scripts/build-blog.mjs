@@ -288,6 +288,33 @@ function renderTags(ctx, tags) {
   return tags.map((tag) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)}</a>`).join('');
 }
 
+function resolveSocialImage(value) {
+  const image = String(value || 'assets/og-home.png').trim();
+  return /^https?:\/\//i.test(image) ? image : absoluteUrl(image);
+}
+
+function socialImageMimeType(value) {
+  const pathname = String(value || '').split(/[?#]/, 1)[0].toLowerCase();
+  if (pathname.endsWith('.jpg') || pathname.endsWith('.jpeg')) return 'image/jpeg';
+  if (pathname.endsWith('.webp')) return 'image/webp';
+  if (pathname.endsWith('.avif')) return 'image/avif';
+  if (pathname.endsWith('.gif')) return 'image/gif';
+  return 'image/png';
+}
+
+function metadataWithSocialImage(jsonLd, fallback, image) {
+  const metadata = jsonLd ? JSON.parse(jsonLd) : fallback;
+  const nodes = metadata['@graph'] || [metadata];
+  const typeList = (node) => Array.isArray(node?.['@type']) ? node['@type'] : [node?.['@type']].filter(Boolean);
+  const page = nodes.find((node) => typeList(node).some((type) => ['WebPage', 'ProfilePage', 'CollectionPage'].includes(type)));
+  const article = nodes.find((node) => typeList(node).includes('BlogPosting'));
+  const blog = nodes.find((node) => typeList(node).includes('Blog'));
+  if (page && !page.primaryImageOfPage) page.primaryImageOfPage = image;
+  if (article && !article.image) article.image = image;
+  if (blog && !blog.image) blog.image = image;
+  return metadata;
+}
+
 function renderShell({
   filePath,
   title,
@@ -303,6 +330,10 @@ function renderShell({
   fixedLanguage = '',
   alternateUrl = '',
   canonicalUrlOverride = '',
+  socialImagePath = 'assets/og-home.png',
+  socialImageAlt = 'wcx12 research portfolio and fieldnotes',
+  socialImageWidth = 1200,
+  socialImageHeight = 630,
   robots = 'index,follow,max-image-preview:large',
   blogPage = null,
   siteRoot = rootDir
@@ -315,7 +346,15 @@ function renderShell({
   const siteName = isBlogPage ? SITE.title : 'wcx12 Research Portfolio';
   const pageDescription = description || SITE.description;
   const canonicalUrl = canonicalUrlOverride || canonicalUrlForFile(filePath);
-  const socialImage = absoluteUrl('assets/og-home.png');
+  const socialImage = resolveSocialImage(socialImagePath);
+  const socialImageType = socialImageMimeType(socialImage);
+  const imageEntity = {
+    '@type': 'ImageObject',
+    url: socialImage,
+    width: socialImageWidth,
+    height: socialImageHeight,
+    caption: socialImageAlt
+  };
   const routeLanguage = fixedLanguage === 'zh' ? 'zh' : 'en';
   const documentLanguage = contentLang === 'zh' ? 'zh-CN' : contentLang;
   const text = shellText[routeLanguage];
@@ -346,7 +385,7 @@ function renderShell({
   const languageControl = fixedLanguage
     ? `<a id="blogLangLink" class="blog-nav-button" href="${ctx.link(`${alternateUrl}index.html`)}" hreflang="${alternateLanguage}" lang="${alternateLanguage}" title="${escapeHtml(text.lang_title)}" aria-label="${escapeHtml(text.lang_title)}">${escapeHtml(text.lang_label)}</a>`
     : `<button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" aria-label="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>`;
-  const metadata = jsonLd || JSON.stringify({
+  const metadata = metadataWithSocialImage(jsonLd, {
     '@context': 'https://schema.org',
     '@type': schemaType,
     name: pageTitle,
@@ -354,8 +393,8 @@ function renderShell({
     url: canonicalUrl,
     inLanguage: documentLanguage,
     author: personReference()
-  });
-  const safeMetadata = String(metadata).replace(/</g, '\\u003c');
+  }, imageEntity);
+  const safeMetadata = JSON.stringify(metadata).replace(/</g, '\\u003c');
   const articleMetadata = [
     publishedTime ? `<meta property="article:published_time" content="${escapeHtml(publishedTime)}" />` : '',
     modifiedTime ? `<meta property="article:modified_time" content="${escapeHtml(modifiedTime)}" />` : ''
@@ -382,14 +421,15 @@ ${languageAlternates}
   <meta property="og:site_name" content="${escapeHtml(siteName)}" />
   <meta property="og:locale" content="${routeLanguage === 'zh' ? 'zh_CN' : 'en_US'}" />
   <meta property="og:image" content="${escapeHtml(socialImage)}" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="wcx12 research portfolio and fieldnotes" />
+  <meta property="og:image:type" content="${escapeHtml(socialImageType)}" />
+  <meta property="og:image:width" content="${escapeHtml(socialImageWidth)}" />
+  <meta property="og:image:height" content="${escapeHtml(socialImageHeight)}" />
+  <meta property="og:image:alt" content="${escapeHtml(socialImageAlt)}" />
 ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(pageTitle)}" />
   <meta name="twitter:description" content="${escapeHtml(pageDescription)}" />
   <meta name="twitter:image" content="${escapeHtml(socialImage)}" />
-  <meta name="twitter:image:alt" content="wcx12 research portfolio and fieldnotes" />
+  <meta name="twitter:image:alt" content="${escapeHtml(socialImageAlt)}" />
   <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${escapeHtml(absoluteUrl('rss.xml'))}" />
   <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'styles.css')}" />
@@ -524,11 +564,30 @@ function postJsonLd(post) {
     dateModified: post.updated,
     inLanguage: post.lang,
     url,
-    image: absoluteUrl('assets/og-home.png'),
     author: personReference(),
     mainEntityOfPage: url,
     keywords: post.tags
   });
+}
+
+function postSocialImage(post) {
+  const configured = String(post.socialImage || '').trim();
+  if (!configured) {
+    return {
+      path: 'assets/og-blog.png',
+      alt: `${post.title} on ${SITE.title}`
+    };
+  }
+  if (/^https?:\/\//i.test(configured)) {
+    return { path: configured, alt: post.socialImageAlt };
+  }
+  const normalized = configured.replace(/^\.\//, '');
+  const media = post.mediaFiles.find((item) => item.publicPath === normalized);
+  const suffix = media ? `?v=${media.version}` : '';
+  return {
+    path: absoluteUrl(`${postUrl(post)}${normalized}${suffix}`),
+    alt: post.socialImageAlt
+  };
 }
 
 async function writePage(relativeFile, html, siteRoot = rootDir) {
@@ -730,7 +789,9 @@ ${tagLinks ? `    <section class="blog-section">
     title: SITE.title,
     description: SITE.description,
     body,
-    schemaType: 'Blog'
+    schemaType: 'Blog',
+    socialImagePath: 'assets/og-blog.png',
+    socialImageAlt: 'Research Fieldnotes writing index by Chenxu Wang'
   }));
 }
 
@@ -764,6 +825,7 @@ async function renderPost(post, posts, renderer, options = {}) {
   const tagRow = renderTags(ctx, post.tags);
   const mathCss = post.math ? `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />` : '';
   const renderedToc = post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>';
+  const socialImage = postSocialImage(post);
 
   const body = `
     <div class="blog-post-layout">
@@ -827,6 +889,8 @@ ${html}
     pageType: 'article',
     publishedTime: post.date,
     modifiedTime: post.updated,
+    socialImagePath: socialImage.path,
+    socialImageAlt: socialImage.alt,
     contentLang: post.lang,
     canonicalUrlOverride: preview ? absoluteUrl(postUrl(post)) : '',
     robots: preview ? 'noindex,nofollow' : 'index,follow,max-image-preview:large',
@@ -934,6 +998,8 @@ async function renderArchive(posts) {
     description: 'All technical writing by wcx12.',
     body,
     schemaType: 'CollectionPage',
+    socialImagePath: 'assets/og-blog.png',
+    socialImageAlt: 'Research Fieldnotes chronological writing archive',
     robots: posts.length > 1 ? 'index,follow,max-image-preview:large' : 'noindex,follow'
   }));
 }
@@ -969,6 +1035,8 @@ async function renderTagPages(posts) {
       description: `Writing tagged ${tag}.`,
       body,
       schemaType: 'CollectionPage',
+      socialImagePath: 'assets/og-blog.png',
+      socialImageAlt: `Research Fieldnotes tagged ${tag}`,
       robots: tagged.length >= 2 ? 'index,follow,max-image-preview:large' : 'noindex,follow'
     }));
   }
@@ -1016,7 +1084,9 @@ ${html}
     description: 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
     body,
     jsonLd: metadata,
-    schemaType: 'ProfilePage'
+    schemaType: 'ProfilePage',
+    socialImagePath: 'assets/og-profile.png',
+    socialImageAlt: 'Chenxu Wang research profile and publication record'
   }));
 }
 
@@ -1264,6 +1334,8 @@ async function renderProjects(language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
+    socialImagePath: 'assets/og-projects.png',
+    socialImageAlt: isZh ? 'wcx12 项目与公开仓库索引' : 'wcx12 projects and public repository index',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
     alternateUrl: alternateRoute
@@ -1331,6 +1403,8 @@ async function renderResearchIndex(posts, language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
+    socialImagePath: 'assets/og-research.png',
+    socialImageAlt: isZh ? 'wcx12 研究方向与公开成果索引' : 'wcx12 research topics and public evidence index',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
     alternateUrl: alternateRoute
@@ -1392,6 +1466,8 @@ async function renderResearchTopic(posts, child, language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
+    socialImagePath: 'assets/og-research.png',
+    socialImageAlt: isZh ? `${title}研究与公开成果` : `${title} research and public evidence`,
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
     alternateUrl: alternateRoute
@@ -1449,6 +1525,8 @@ async function renderPublications(language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
+    socialImagePath: 'assets/og-publications.png',
+    socialImageAlt: isZh ? 'Chenxu Wang 论文与出版记录' : 'Chenxu Wang publications and publisher-linked records',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
     alternateUrl: alternateRoute
@@ -1568,30 +1646,48 @@ ${items}
 }
 
 async function renderSitemap(posts) {
+  const dateOnly = (value) => {
+    const date = String(value || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
+  };
+  const latestDate = (values) => values.map(dateOnly).filter(Boolean).sort().at(-1) || '';
+  const evidenceDate = (item) => {
+    if (item.type === 'SoftwareSourceCode') return dateOnly(item.value.updated_at || item.value.pushed_at);
+    if (item.type === 'ScholarlyArticle') return dateOnly(item.value.updated_at);
+    if (item.type === 'BlogPosting') return dateOnly(item.value.updated || item.value.date);
+    return '';
+  };
+  const latestPostDate = latestDate(posts.map((post) => post.updated || post.date));
+  const latestProjectDate = latestDate(localRepos.map((repo) => repo.updated_at || repo.pushed_at));
+  const latestPublicationDate = latestDate(staticPublications.map((publication) => publication.updated_at));
+  const topicDates = new Map(researchChildren.map((child) => [
+    child.id,
+    latestDate(evidenceForTopic(child.id, posts).map(evidenceDate))
+  ]));
+  const latestResearchDate = latestDate([...topicDates.values()]);
+  const latestHomeDate = latestDate([latestPostDate, latestProjectDate, latestPublicationDate, latestResearchDate]);
   const researchRoutes = ['en', 'zh'].flatMap((language) => [
-    researchRoute(language),
-    ...researchChildren.map((child) => researchRoute(language, `${child.id}/`)),
-    projectsRoute(language),
-    publicationsRoute(language)
+    { route: researchRoute(language), lastmod: latestResearchDate },
+    ...researchChildren.map((child) => ({
+      route: researchRoute(language, `${child.id}/`),
+      lastmod: topicDates.get(child.id)
+    })),
+    { route: projectsRoute(language), lastmod: latestProjectDate },
+    { route: publicationsRoute(language), lastmod: latestPublicationDate }
   ]);
-  const latestPostDate = posts.map((post) => post.updated || post.date).sort().at(-1) || '2026-01-01';
-  const latestEvidenceDate = [
-    latestPostDate,
-    ...localRepos.map((repo) => String(repo.updated_at || repo.pushed_at || '').slice(0, 10))
-  ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort().at(-1) || latestPostDate;
   const urls = [
-    { route: '', lastmod: latestEvidenceDate },
-    { route: 'resume/', lastmod: latestEvidenceDate },
+    { route: '', lastmod: latestHomeDate },
+    { route: 'resume/', lastmod: '' },
     { route: 'blog/', lastmod: latestPostDate },
     ...(posts.length > 1 ? [{ route: 'blog/archive/', lastmod: latestPostDate }] : []),
-    ...researchRoutes.map((route) => ({ route, lastmod: latestEvidenceDate })),
+    ...researchRoutes,
     ...posts.map((post) => ({ route: postUrl(post), lastmod: post.updated || post.date })),
     ...topicCounts(posts, 'tags').filter(([, count]) => count >= 2).map(([tag]) => ({
       route: `blog/tags/${slugify(tag)}/`,
       lastmod: posts.filter((post) => post.tags.includes(tag)).map((post) => post.updated || post.date).sort().at(-1)
     }))
   ];
-  const body = urls.map(({ route, lastmod }) => `  <url><loc>${escapeXml(absoluteUrl(route))}</loc><lastmod>${escapeXml(lastmod)}</lastmod></url>`).join('\n');
+  const body = urls.map(({ route, lastmod }) => `  <url><loc>${escapeXml(absoluteUrl(route))}</loc>${lastmod ? `<lastmod>${escapeXml(lastmod)}</lastmod>` : ''}</url>`).join('\n');
   await fs.writeFile(path.join(rootDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${body}
