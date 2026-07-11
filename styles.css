@@ -326,7 +326,12 @@ footer { position: relative; z-index: 1; }
   padding: 20px 24px;
 }
 
-.top-actions { display: flex; gap: 8px; align-items: center; }
+.top-actions,
+.top-actions-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 
 .utility-menu,
 .utility-menu-panel {
@@ -2016,6 +2021,10 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
   }
 
   .top-actions {
+    flex-wrap: wrap;
+  }
+
+  .top-actions-nav {
     flex-wrap: wrap;
   }
 

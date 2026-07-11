@@ -53,6 +53,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      - name: Synchronize public repository metadata
+        id: repository_sync
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/sync-github-repos.mjs
+
+      - name: Report repository sync fallback
+        if: steps.repository_sync.outcome == 'failure'
+        run: echo "::warning::GitHub repository synchronization failed; building from the last committed snapshot."
+
       - name: Validate source content
         run: node scripts/validate-content.mjs && npm run test:content
 
@@ -69,12 +81,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html blog research publications zh resume publications.md rss.xml sitemap.xml package-lock.json
+          git add site-data.js index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml package-lock.json
           if git diff --cached --quiet; then
             echo "No generated site changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "Build site [skip ci]"
+            git commit -m "Sync repository data and build site [skip ci]"
             git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi

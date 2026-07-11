@@ -8,9 +8,10 @@
   },
   "scripts": {
     "new:post": "node scripts/new-post.mjs",
+    "sync:repos": "node scripts/sync-github-repos.mjs",
     "build:preview": "node scripts/build-blog.mjs --preview-drafts",
     "preview:blog": "node scripts/serve-preview.mjs",
-    "test:content": "node --test scripts/blog-content.test.mjs scripts/research-config-schema.test.mjs",
+    "test:content": "node --test scripts/blog-content.test.mjs scripts/research-config-schema.test.mjs scripts/sync-github-repos.test.mjs",
     "test:homepage": "node --test scripts/homepage-runtime.test.mjs",
     "test:site": "node --test scripts/site-output.test.mjs",
     "validate": "node scripts/validate-content.mjs && npm run test:content && npm run test:homepage && npm run test:site",

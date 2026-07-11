@@ -64,6 +64,14 @@ exposes the generated `output/preview/` tree, which is ignored by Git.
 The owner mapping interface can update `research-config.json`, but canonical
 repository and publication metadata still belongs in `site-data.js`.
 
+Public GitHub repository metadata is synchronized shortly after midnight in
+`Asia/Shanghai`, and can be refreshed locally with `npm run sync:repos`. The
+sync updates API-owned fields such as repository availability, stars, language,
+default branch, and update time. It preserves curated descriptions, maturity,
+public-evidence notes, demos, and research mappings. New repositories are added
+as unclassified public records; they are never assigned to a research area
+without an explicit mapping. New forks retain upstream attribution.
+
 ## Generated output
 
 `npm run build:site` writes `blog/`, `research/`, `publications/`, `zh/`,

@@ -148,6 +148,14 @@ test('homepage source exposes crawlable research and publication routes', () => 
   assert.match(indexSource, /<noscript>[\s\S]*?\.\/zh\/research\/[\s\S]*?<\/noscript>/i, 'no-JavaScript navigation must include the Chinese research index');
 });
 
+test('homepage exposes navigation and hero meaning without runtime-only semantics', () => {
+  assert.match(indexSource, /<nav\s+class="top-actions-nav"[^>]+aria-label="Primary navigation"/i);
+  assert.match(indexSource, /id="typeTarget">Applying for Master\/PhD programs<\/span>/i);
+  assert.match(indexSource, /<canvas\s+id="heroPreviewCanvas"\s+aria-hidden="true"><\/canvas>/i);
+  assert.match(indexSource, /id="heroPreviewMeta"[\s\S]*?\.\/research\/point-cloud-registration\/[\s\S]*?Robust point set registration/i);
+  assert.doesNotMatch(scriptSource, /heroPreviewCanvas\?\.setAttribute\('aria-label'/);
+});
+
 test('canonical repository and publication data stays unique and classifiable', () => {
   assert.ok(localRepos.length >= 9, 'repository snapshot unexpectedly lost records');
   assert.equal(new Set(localRepos.map((repo) => repo.name)).size, localRepos.length, 'repository names must be unique');

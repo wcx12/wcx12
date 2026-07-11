@@ -469,7 +469,13 @@ test('sitemap covers every configured fixed-language route', async () => {
     assert.ok(Number.isFinite(Date.parse(`${lastmod}T00:00:00Z`)), `${location}: unparseable lastmod`);
   }
   const lastmodByUrl = new Map(entries.map(([, location, lastmod = '']) => [location, lastmod]));
-  assert.equal(lastmodByUrl.get(`${SITE.url}/projects/`), '2026-07-10');
+  const latestProjectDate = localRepos
+    .map((repo) => repo.updated_at || repo.pushed_at)
+    .filter(Boolean)
+    .sort()
+    .at(-1)
+    .slice(0, 10);
+  assert.equal(lastmodByUrl.get(`${SITE.url}/projects/`), latestProjectDate);
   assert.equal(lastmodByUrl.get(`${SITE.url}/publications/`), '2026-07-11');
   assert.equal(lastmodByUrl.get(`${SITE.url}/research/point-cloud-registration/`), '2026-06-02');
   assert.equal(lastmodByUrl.get(`${SITE.url}/research/agent/`), '2026-06-18');
@@ -522,12 +528,19 @@ test('scheduled publishing builds before validating generated output', async () 
   assert.match(source, /SITE_TIME_ZONE: Asia\/Shanghai/);
   assert.match(source, /actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/);
   assert.match(source, /actions\/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e/);
+  const repositorySync = source.indexOf('- name: Synchronize public repository metadata');
   const sourceValidation = source.indexOf('- name: Validate source content');
   const build = source.indexOf('- name: Build site');
   const generatedValidation = source.indexOf('- name: Validate generated site');
   const commit = source.indexOf('- name: Commit generated site');
   const pages = source.indexOf('- name: Request GitHub Pages build');
-  assert.ok(sourceValidation < build && build < generatedValidation && generatedValidation < commit && commit < pages, 'scheduled publishing steps are in an unsafe order');
+  assert.ok(repositorySync < sourceValidation && sourceValidation < build && build < generatedValidation && generatedValidation < commit && commit < pages, 'scheduled publishing steps are in an unsafe order');
+  assert.match(source, /if: github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'/);
+  assert.match(source, /id: repository_sync\s*\n\s*if:[^\n]+\n\s*continue-on-error: true/);
+  assert.match(source, /run: node scripts\/sync-github-repos\.mjs/);
+  assert.match(source, /if: steps\.repository_sync\.outcome == 'failure'/);
+  assert.match(source, /building from the last committed snapshot/);
+  assert.match(source, /git add site-data\.js index\.html blog research projects publications zh resume/);
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(source, /pages: write/);

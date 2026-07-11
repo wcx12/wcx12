@@ -43,6 +43,7 @@ jobs:
           node --check repo-map.js
           node --check blog-src/assets/blog.js
           node --check scripts/build-blog.mjs
+          node --check scripts/sync-github-repos.mjs
 
       - name: Rebuild generated site
         run: npm run build:site

@@ -34,7 +34,7 @@
   <meta name="twitter:description" content="Interactive portfolio for point-cloud, visual perception, medical imaging, agents, and AI for Education research." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <link rel="stylesheet" href="styles.css?v=c44671e00195" />
+  <link rel="stylesheet" href="styles.css?v=3c6b6669da3a" />
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -103,11 +103,13 @@
   <header class="topbar">
     <div class="brand">wcx12</div>
     <div class="top-actions">
-      <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
-      <a class="ghost-btn" href="./projects/" data-i18n="btn_projects">Projects</a>
-      <a class="ghost-btn" href="./publications/" data-i18n="btn_publications">Publications</a>
-      <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
-      <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
+      <nav class="top-actions-nav" aria-label="Primary navigation" data-i18n-aria="aria_primary_navigation">
+        <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
+        <a class="ghost-btn" href="./projects/" data-i18n="btn_projects">Projects</a>
+        <a class="ghost-btn" href="./publications/" data-i18n="btn_publications">Publications</a>
+        <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
+        <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
+      </nav>
       <div class="utility-menu">
         <button class="ghost-btn utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Settings</button>
         <div id="utilityMenuPanel" class="utility-menu-panel">
@@ -129,7 +131,7 @@
         <p class="kicker" data-i18n="hero_kicker">Machine Learning Researcher</p>
         <h1>Chenxu Wang <span class="hero-alias">(wcx12)</span></h1>
         <p class="hero-affiliation" data-i18n="hero_affiliation">Beijing Institute of Technology</p>
-        <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget"></span></p>
+        <p class="type-line"><span data-i18n="hero_status">Status</span>: <span id="typeTarget">Applying for Master/PhD programs</span></p>
         <p class="subtitle" data-i18n="hero_subtitle_html">
           Reliable visual intelligence under imperfect observations and limited labels.<br />
           Research spanning 3D geometry, visual localization, medical imaging, and evidence-grounded AI systems.
@@ -153,8 +155,14 @@
           <span class="panel-eyebrow" data-i18n="hero_preview_label">Research Preview</span>
           <span id="heroPreviewStatus" class="hero-preview-status">concept</span>
         </div>
-        <canvas id="heroPreviewCanvas" role="img" aria-label="Featured research concept" aria-describedby="heroPreviewStatus heroPreviewMeta" data-i18n-aria="aria_hero_canvas"></canvas>
-        <div id="heroPreviewMeta" class="hero-preview-meta"></div>
+        <canvas id="heroPreviewCanvas" aria-hidden="true"></canvas>
+        <div id="heroPreviewMeta" class="hero-preview-meta">
+          <a class="hero-preview-title" href="./research/point-cloud-registration/">
+            <span>Point Cloud</span>
+            <strong>Registration</strong>
+          </a>
+          <p>Robust point set registration under noisy, partial, and imperfect observations.</p>
+        </div>
       </aside>
     </section>
 
@@ -519,6 +527,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="script.js?v=c44671e00195"></script>
+  <script type="module" src="script.js?v=3c6b6669da3a"></script>
 </body>
 </html>

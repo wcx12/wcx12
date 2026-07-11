@@ -647,6 +647,7 @@ const i18n = {
     theme_warm: 'Warm',
     theme_mono: 'Black & White',
     aria_theme: 'Color theme',
+    aria_primary_navigation: 'Primary navigation',
     aria_hero_preview: 'Research concept preview',
     aria_hero_canvas: 'Featured research concept',
     aria_interactive_portfolio: 'Interactive portfolio',
@@ -873,6 +874,7 @@ const i18n = {
     theme_warm: '暖色',
     theme_mono: '黑白极简',
     aria_theme: '页面色调',
+    aria_primary_navigation: '主要导航',
     aria_hero_preview: '研究概念预览',
     aria_hero_canvas: '精选研究概念',
     aria_interactive_portfolio: '互动个人主页',
@@ -2226,7 +2228,6 @@ function renderHeroPreview() {
   const domainTitle = textFor(entry.domain.title);
   const childTitle = textFor(entry.child.title);
   if (heroPreviewStatus) heroPreviewStatus.textContent = i18n[currentLang].hero_preview_live;
-  heroPreviewCanvas?.setAttribute('aria-label', `${i18n[currentLang].aria_hero_canvas}: ${domainTitle}, ${childTitle}`);
   heroPreviewMeta.innerHTML = `
     <a class="hero-preview-title" href="${researchPageHref(entry.child.id)}" data-hero-interest="${escapeHtml(entry.child.id)}">
       <span>${escapeHtml(domainTitle)}</span>
