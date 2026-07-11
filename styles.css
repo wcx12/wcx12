@@ -1597,13 +1597,20 @@ button.research-badge:hover {
 }
 
 .manager-grid input,
-.manager-grid select {
+.manager-grid select,
+.manager-grid textarea {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--field-bg);
   color: var(--text);
   padding: 10px 12px;
   font: inherit;
+}
+
+.manager-grid textarea {
+  min-height: 82px;
+  resize: vertical;
+  overflow-wrap: anywhere;
 }
 
 .manager-actions {

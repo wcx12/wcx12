@@ -45,7 +45,7 @@ Full author lists and research mappings are available in the [publication index]
 ## Resources
 - Research index: [research/](./research/)
 - Publications: [publications/](./publications/) (generated from the canonical records in [site-data.js](./site-data.js))
-- Research profile: [resume/](./resume/) (generated from [resume.md](./resume.md))
+- Research profile: [resume/](./resume/) and [zh/resume/](./zh/resume/) (generated from [resume.md](./resume.md) and [resume.zh.md](./resume.zh.md))
 - Writing: [blog/](./blog/)
 - Site maintenance and authoring: [CONTRIBUTING.md](./CONTRIBUTING.md)
 

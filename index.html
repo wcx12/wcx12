@@ -19,6 +19,9 @@
   <link rel="me" href="https://orcid.org/0009-0005-6139-4327" />
   <link rel="sitemap" type="application/xml" href="./sitemap.xml" />
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="./rss.xml" />
+  <link rel="modulepreload" href="./site-data.js?v=6e9a0e40a92b" />
+  <link rel="modulepreload" href="./homepage-i18n.js?v=6e9a0e40a92b" />
+  <link rel="modulepreload" href="./scripts/research-config-schema.js?v=6e9a0e40a92b" />
   <meta property="og:title" content="Chenxu Wang (wcx12) | Machine Learning Researcher" />
   <meta property="og:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta property="og:type" content="profile" />
@@ -38,7 +41,7 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <link rel="stylesheet" href="styles.css?v=31318173fdc2" />
+  <link rel="stylesheet" href="styles.css?v=6e9a0e40a92b" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -250,12 +253,12 @@
             </div>
             <p id="interestDescription" class="muted"></p>
             <div class="interest-section-tabs" role="tablist" aria-label="Research detail sections" data-i18n-aria="aria_research_sections">
-              <button class="active" type="button" role="tab" aria-selected="true" data-interest-panel="animation" data-i18n="section_animation">Concept Demo</button>
-              <button type="button" role="tab" aria-selected="false" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
-              <button type="button" role="tab" aria-selected="false" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
-              <button type="button" role="tab" aria-selected="false" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
+              <button id="interestTabAnimation" class="active" type="button" role="tab" aria-selected="true" aria-controls="interestPanelAnimation" data-interest-panel="animation" data-i18n="section_animation">Concept Demo</button>
+              <button id="interestTabProjects" type="button" role="tab" aria-selected="false" aria-controls="interestPanelProjects" data-interest-panel="projects" data-i18n="section_projects">Projects</button>
+              <button id="interestTabPapers" type="button" role="tab" aria-selected="false" aria-controls="interestPanelPapers" data-interest-panel="papers" data-i18n="section_papers">Papers</button>
+              <button id="interestTabWriting" type="button" role="tab" aria-selected="false" aria-controls="interestPanelWriting" data-interest-panel="writing" data-i18n="section_writing">Writing</button>
             </div>
-            <div class="interest-demo">
+            <div id="interestPanelAnimation" class="interest-demo" role="tabpanel" aria-labelledby="interestTabAnimation" data-interest-tabpanel="animation">
               <canvas id="interestCanvas" role="img" tabindex="-1" aria-label="Research interest concept demo" aria-describedby="interestCanvasStatus" data-i18n-aria="aria_research_demo"></canvas>
               <div id="interestCanvasControls" class="interest-canvas-controls" role="group" aria-label="Research demo controls" data-i18n-aria="aria_research_demo_controls">
                 <button id="interestDemoPrevious" class="btn btn-outline" type="button">Previous</button>
@@ -265,15 +268,15 @@
               <p id="interestCanvasStatus" class="interest-canvas-status" role="status" aria-live="polite"></p>
             </div>
             <div class="interest-related">
-              <article class="interest-project-panel">
+              <article id="interestPanelProjects" class="interest-project-panel" role="tabpanel" aria-labelledby="interestTabProjects" data-interest-tabpanel="projects">
                 <h4 data-i18n="related_projects">Related Projects</h4>
                 <div id="interestProjects" class="related-list"></div>
               </article>
-              <article class="interest-paper-panel">
+              <article id="interestPanelPapers" class="interest-paper-panel" role="tabpanel" aria-labelledby="interestTabPapers" data-interest-tabpanel="papers">
                 <h4 data-i18n="related_papers">Related Papers</h4>
                 <div id="interestPapers" class="related-list"></div>
               </article>
-              <article class="interest-writing-panel">
+              <article id="interestPanelWriting" class="interest-writing-panel" role="tabpanel" aria-labelledby="interestTabWriting" data-interest-tabpanel="writing">
                 <h4 data-i18n="related_writing">Related Writing</h4>
                 <div id="interestPosts" class="related-list"></div>
               </article>
@@ -471,6 +474,7 @@
             <select id="managerAnimation">
               <option value="point-cloud">Point Cloud</option>
               <option value="vpr">VPR</option>
+              <option value="medical-image">Medical Image</option>
               <option value="agent">Agent</option>
               <option value="education">Education</option>
             </select>
@@ -485,14 +489,18 @@
             <button id="managerSave" class="btn btn-outline" type="button" data-i18n="manager_save">Apply Mapping</button>
             <button id="managerDelete" class="btn btn-outline" type="button" data-i18n="manager_delete">Delete Category</button>
           </div>
-          <label>
-            <span data-i18n="manager_token">GitHub token (Actions only)</span>
-            <input id="managerGitHubToken" type="password" autocomplete="new-password" spellcheck="false" placeholder="github_pat_..." />
-          </label>
-          <div class="manager-actions">
-            <button id="managerSaveRemote" class="btn btn-primary" type="button" data-i18n="manager_save_remote">Start GitHub update</button>
+          <div class="manager-update-panel">
+            <label>
+              <span data-i18n="manager_payload">GitHub Actions update payload</span>
+              <textarea id="managerUpdatePayload" rows="3" readonly spellcheck="false" aria-describedby="managerRemoteStatus"></textarea>
+            </label>
+            <div class="manager-actions">
+              <button id="managerPrepareRemote" class="btn btn-primary" type="button" data-i18n="manager_prepare_remote">Prepare update</button>
+              <button id="managerCopyRemote" class="btn btn-outline" type="button" data-i18n="manager_copy_remote" disabled>Copy payload</button>
+              <a class="btn btn-outline" href="https://github.com/wcx12/wcx12/actions/workflows/research-config-update.yml" target="_blank" rel="noreferrer" data-i18n="manager_open_actions">Open GitHub Actions</a>
+            </div>
+            <p id="managerRemoteStatus" class="muted manager-status" role="status" aria-live="polite" data-i18n="manager_remote_hint">Prepare and copy the payload, then paste it into the official GitHub Actions workflow. This page never reads a repository token.</p>
           </div>
-          <p id="managerRemoteStatus" class="muted manager-status" role="status" aria-live="polite" data-i18n="manager_remote_hint">Use a single-repository token with Actions read/write only. It is cleared immediately after dispatch.</p>
           <h5 data-i18n="manager_projects">Projects</h5>
           <div id="managerProjects" class="manager-list"></div>
           <h5 data-i18n="manager_papers">Papers</h5>
@@ -532,6 +540,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="script.js?v=31318173fdc2"></script>
+  <script type="module" src="script.js?v=6e9a0e40a92b"></script>
 </body>
 </html>

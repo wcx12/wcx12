@@ -27,7 +27,7 @@
 ## Selected Projects
 
 - FusionTrack: graduation thesis and point-set registration research artifacts.
-- major-intel: a trusted retrieval-augmented system for college-major intelligence.
+- major-intel: a SQL-first retrieval and agent prototype for college-major information with evidence-gap tracking.
 - shuxuepeiyou: mathematics enrichment notes and education resources.
 
 ## Technical Skills

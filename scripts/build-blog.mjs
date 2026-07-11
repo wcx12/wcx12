@@ -412,10 +412,11 @@ function renderShell({
   const documentLanguage = contentLang === 'zh' ? 'zh-CN' : contentLang;
   const text = shellText[routeLanguage];
   const homePath = fixedLanguage === 'zh' ? 'zh/index.html' : 'index.html';
+  const resumePath = fixedLanguage === 'zh' ? 'zh/resume/index.html' : 'resume/index.html';
   const researchPath = fixedLanguage === 'zh' ? 'zh/research/index.html' : 'research/index.html';
   const projectsPath = fixedLanguage === 'zh' ? 'zh/projects/index.html' : 'projects/index.html';
   const publicationsPath = fixedLanguage === 'zh' ? 'zh/publications/index.html' : 'publications/index.html';
-  const currentSection = relativeFilePath.startsWith('resume/')
+  const currentSection = /^(?:zh\/)?resume\//.test(relativeFilePath)
     ? 'profile'
     : /^(?:zh\/)?projects\//.test(relativeFilePath)
       ? 'projects'
@@ -500,7 +501,7 @@ ${extraHead.trim()}
       <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}" aria-label="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}${i18n('nav_menu_title', 'aria')}>${escapeHtml(text.nav_menu)}</button>
       <nav id="blogSiteNav" class="blog-nav" aria-label="${escapeHtml(text.nav_landmark)}"${i18n('nav_landmark', 'aria')}>
         <a href="${ctx.link(homePath)}"${current('home')} title="${escapeHtml(text.nav_home_title)}" aria-label="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}${i18n('nav_home_title', 'aria')}>${escapeHtml(text.nav_home)}</a>
-        <a href="${ctx.link('resume/index.html')}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}" aria-label="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}${i18n('nav_profile_title', 'aria')}>${escapeHtml(text.nav_profile)}</a>
+        <a href="${ctx.link(resumePath)}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}" aria-label="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}${i18n('nav_profile_title', 'aria')}>${escapeHtml(text.nav_profile)}</a>
         <a href="${ctx.link(researchPath)}"${current('research')} title="${escapeHtml(text.nav_research_title)}" aria-label="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}${i18n('nav_research_title', 'aria')}>${escapeHtml(text.nav_research)}</a>
         <a href="${ctx.link(projectsPath)}"${current('projects')} title="${escapeHtml(text.nav_projects_title)}" aria-label="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}${i18n('nav_projects_title', 'aria')}>${escapeHtml(text.nav_projects)}</a>
         <a href="${ctx.link(publicationsPath)}"${current('publications')} title="${escapeHtml(text.nav_publications_title)}" aria-label="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}${i18n('nav_publications_title', 'aria')}>${escapeHtml(text.nav_publications)}</a>
@@ -716,7 +717,9 @@ async function computeAssetVersion(posts) {
     'blog/assets/katex.min.css',
     'research-config.json',
     'resume.md',
+    'resume.zh.md',
     'scripts/blog-content.mjs',
+    'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
     ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
   ].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
@@ -742,7 +745,15 @@ async function stampHomepageAssets() {
     {
       pattern: /(<script\s+type="module"\s+src="script\.js)(?:\?v=[a-f0-9]{12})?("\s*><\/script>)/,
       replacement: `$1?v=${assetVersion}$2`
-    }
+    },
+    ...[
+      './site-data.js',
+      './homepage-i18n.js',
+      './scripts/research-config-schema.js'
+    ].map((assetPath) => ({
+      pattern: new RegExp(`(<link\\s+rel="modulepreload"\\s+href="${escapeRegExp(assetPath)})(?:\\?v=[a-f0-9]{12})?("\\s*\\/?>)`),
+      replacement: `$1?v=${assetVersion}$2`
+    }))
   ];
   let stamped = source;
   for (const { pattern, replacement } of replacements) {
@@ -853,12 +864,14 @@ async function renderChineseHomepage() {
     ['href="./sitemap.xml"', 'href="../sitemap.xml"', 'Chinese sitemap path'],
     ['href="./rss.xml"', 'href="../rss.xml"', 'Chinese RSS path'],
     ['href="styles.css', 'href="../styles.css', 'Chinese stylesheet path'],
-    ['src="script.js', 'src="../script.js', 'Chinese script path']
+    ['src="script.js', 'src="../script.js', 'Chinese script path'],
+    ['href="./site-data.js', 'href="../site-data.js', 'Chinese site data preload path'],
+    ['href="./homepage-i18n.js', 'href="../homepage-i18n.js', 'Chinese translations preload path'],
+    ['href="./scripts/research-config-schema.js', 'href="../scripts/research-config-schema.js', 'Chinese research schema preload path']
   ]) {
     localized = replaceRequired(localized, search, replacement, label);
   }
   localized = replaceAllRequired(localized, 'href="./blog/"', 'href="../blog/"', 'Chinese blog paths');
-  localized = replaceAllRequired(localized, 'href="./resume/"', 'href="../resume/"', 'Chinese profile paths');
   localized = replaceRequired(
     localized,
     /<a id="langToggle"[^>]*>/,
@@ -1218,26 +1231,34 @@ async function renderTagPages(posts) {
   }
 }
 
-async function renderResume(renderer) {
-  const source = await fs.readFile(path.join(rootDir, 'resume.md'), 'utf8');
-  const publicationList = staticPublications.map((publication, index) => {
-    const status = publication.status === 'In press' ? 'in press, ' : '';
-    return `${index + 1}. ${readableAuthors(publication)}. "${publication.title}." ${publication.venue}, ${status}${publication.year}. ${publication.link}`;
-  }).join('\n');
-  if (!source.includes('{{PUBLICATIONS}}')) throw new Error('resume.md must contain {{PUBLICATIONS}}');
-  const hydratedSource = source.replace('{{PUBLICATIONS}}', publicationList);
+async function renderResume(renderer, language) {
+  const isZh = language === 'zh';
+  const relativeRoute = resumeRoute(language);
+  const alternateRoute = resumeRoute(isZh ? 'en' : 'zh');
+  const sourceFile = isZh ? 'resume.zh.md' : 'resume.md';
+  const source = await fs.readFile(path.join(rootDir, sourceFile), 'utf8');
+  const publicationMarker = 'RESUME_PUBLICATIONS_PLACEHOLDER';
+  const publicationList = `<ol class="resume-publications">${staticPublications.map((publication) => {
+    const status = isZh ? publication.statusZh : publication.status;
+    return `<li><span lang="en">${escapeHtml(readableAuthors(publication))}. &ldquo;${escapeHtml(publication.title)}.&rdquo; <cite>${escapeHtml(publication.venue)}</cite>.</span> ${escapeHtml(status)}, ${escapeHtml(publication.year)}. <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer">DOI</a></li>`;
+  }).join('')}</ol>`;
+  if (!source.includes('{{PUBLICATIONS}}')) throw new Error(`${sourceFile} must contain {{PUBLICATIONS}}`);
+  const hydratedSource = source.replace('{{PUBLICATIONS}}', publicationMarker);
   const withoutDocumentTitle = hydratedSource.replace(/^#\s+[^\r\n]+\r?\n+/, '');
-  const { html } = renderer.render(withoutDocumentTitle);
-  const filePath = path.join(rootDir, 'resume', 'index.html');
+  const rendered = renderer.render(withoutDocumentTitle).html;
+  const markerMarkup = `<p>${publicationMarker}</p>`;
+  if (!rendered.includes(markerMarkup)) throw new Error(`${sourceFile} publication placeholder did not render predictably`);
+  const html = rendered.replace(markerMarkup, publicationList);
+  const filePath = path.join(rootDir, relativeRoute, 'index.html');
   const body = `
-    <article class="blog-post-card research-profile" lang="en">
+    <article class="blog-post-card research-profile" lang="${isZh ? 'zh-CN' : 'en'}">
       <header class="blog-post-header">
-        <p class="blog-kicker" data-blog-i18n="profile_kicker">Research Profile</p>
+        <p class="blog-kicker">${isZh ? '研究履历' : 'Research Profile'}</p>
         <h1 class="blog-post-title">Chenxu Wang <span class="profile-handle">(wcx12)</span></h1>
-        <p class="blog-post-subtitle" data-blog-i18n="profile_desc">A concise, verifiable snapshot of education, research, publications, projects, and technical skills.</p>
+        <p class="blog-post-subtitle">${isZh ? '集中展示教育背景、研究方向、论文、项目与技术能力的可核验摘要。' : 'A concise, verifiable snapshot of education, research, publications, projects, and technical skills.'}</p>
         <div class="blog-hero-actions profile-actions">
-          <button id="printProfile" class="btn btn-primary" type="button" data-blog-i18n="profile_print">Print / Save as PDF</button>
-          <a class="btn btn-outline" href="mailto:c2675668@gmail.com" data-blog-i18n="profile_contact">Contact</a>
+          <button id="printProfile" class="btn btn-primary" type="button">${isZh ? '打印 / 保存为 PDF' : 'Print / Save as PDF'}</button>
+          <a class="btn btn-outline" href="mailto:c2675668@gmail.com">${isZh ? '联系我' : 'Contact'}</a>
         </div>
       </header>
       <div class="blog-content">
@@ -1248,21 +1269,25 @@ ${html}
   const metadata = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
-    name: 'Chenxu Wang (wcx12) Research Profile',
-    description: 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
-    url: absoluteUrl('resume/'),
+    name: isZh ? 'Chenxu Wang（wcx12）研究履历' : 'Chenxu Wang (wcx12) Research Profile',
+    description: isZh ? 'Chenxu Wang（wcx12）的研究履历，涵盖教育背景、研究方向、论文、项目与技术能力。' : 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
+    url: absoluteUrl(relativeRoute),
+    inLanguage: isZh ? 'zh-CN' : 'en',
     mainEntity: personEntity()
   });
 
-  await writePage('resume/index.html', renderShell({
+  await writePage(`${relativeRoute}index.html`, renderShell({
     filePath,
-    title: 'Research Profile',
-    description: 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
+    title: isZh ? '研究履历' : 'Research Profile',
+    description: isZh ? 'Chenxu Wang（wcx12）的研究履历，涵盖教育背景、研究方向、论文、项目与技术能力。' : 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
     body,
     jsonLd: metadata,
     schemaType: 'ProfilePage',
     socialImagePath: 'assets/og-profile.png',
-    socialImageAlt: 'Chenxu Wang research profile and publication record'
+    socialImageAlt: isZh ? 'Chenxu Wang 研究履历与论文记录' : 'Chenxu Wang research profile and publication record',
+    contentLang: isZh ? 'zh-CN' : 'en',
+    fixedLanguage: language,
+    alternateUrl: alternateRoute
   }));
 }
 
@@ -1449,6 +1474,10 @@ function evidenceSections(ctx, evidence, language) {
 
 function researchRoute(language, suffix = '') {
   return `${language === 'zh' ? 'zh/' : ''}research/${suffix}`;
+}
+
+function resumeRoute(language) {
+  return `${language === 'zh' ? 'zh/' : ''}resume/`;
 }
 
 function publicationsRoute(language) {
@@ -1646,7 +1675,8 @@ async function renderResearchTopic(posts, child, language) {
     socialImageAlt: isZh ? `${title}研究与公开成果` : `${title} research and public evidence`,
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
-    alternateUrl: alternateRoute
+    alternateUrl: alternateRoute,
+    robots: evidence.length ? 'index,follow,max-image-preview:large' : 'noindex,follow'
   }));
 }
 
@@ -1844,7 +1874,7 @@ async function renderSitemap(posts) {
   const latestHomeDate = latestDate([latestPostDate, latestProjectDate, latestPublicationDate, latestResearchDate]);
   const researchRoutes = ['en', 'zh'].flatMap((language) => [
     { route: researchRoute(language), lastmod: latestResearchDate },
-    ...researchChildren.map((child) => ({
+    ...researchChildren.filter((child) => evidenceForTopic(child.id, posts).length).map((child) => ({
       route: researchRoute(language, `${child.id}/`),
       lastmod: topicDates.get(child.id)
     })),
@@ -1854,7 +1884,7 @@ async function renderSitemap(posts) {
   const urls = [
     { route: '', lastmod: latestHomeDate },
     { route: 'zh/', lastmod: latestHomeDate },
-    { route: 'resume/', lastmod: '' },
+    ...['en', 'zh'].map((language) => ({ route: resumeRoute(language), lastmod: '' })),
     { route: 'blog/', lastmod: latestPostDate },
     ...(posts.length > 1 ? [{ route: 'blog/archive/', lastmod: latestPostDate }] : []),
     ...researchRoutes,
@@ -1896,7 +1926,7 @@ async function main() {
   for (const post of posts) {
     await renderPost(post, posts, renderer);
   }
-  await renderResume(renderer);
+  for (const language of ['en', 'zh']) await renderResume(renderer, language);
   await renderResearchPages(posts);
   await renderIndex(posts);
   await renderArchive(posts);

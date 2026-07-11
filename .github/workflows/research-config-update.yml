@@ -3,27 +3,24 @@ name: Update research mapping
 on:
   workflow_dispatch:
     inputs:
-      config_base64:
-        description: Validated research configuration encoded as UTF-8 Base64
-        required: true
-        type: string
-      expected_sha256:
-        description: SHA-256 of research-config.json when editing began
+      update_payload_base64:
+        description: Versioned update payload copied from the owner mapping interface
         required: true
         type: string
 
 permissions:
   contents: write
-  pages: write
 
 jobs:
   update-config:
+    if: ${{ github.repository_owner == 'wcx12' && github.ref_name == github.event.repository.default_branch }}
     runs-on: ubuntu-latest
+    environment: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -37,14 +34,15 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Synchronize target branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          git fetch origin "${GITHUB_REF_NAME}"
-          git merge --ff-only "origin/${GITHUB_REF_NAME}"
+          git fetch origin "${DEFAULT_BRANCH}"
+          git merge --ff-only "origin/${DEFAULT_BRANCH}"
 
       - name: Validate submitted mapping
         env:
-          RESEARCH_CONFIG_BASE64: ${{ inputs.config_base64 }}
-          EXPECTED_CONFIG_SHA256: ${{ inputs.expected_sha256 }}
+          RESEARCH_CONFIG_UPDATE_BASE64: ${{ inputs.update_payload_base64 }}
         run: node scripts/apply-research-config.mjs
 
       - name: Build site
@@ -57,6 +55,7 @@ jobs:
         id: commit
         env:
           GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           git add research-config.json index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml package-lock.json
           if git diff --cached --quiet; then
@@ -67,11 +66,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update research mapping and rebuild site"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${DEFAULT_BRANCH}"
           echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Request GitHub Pages build
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"

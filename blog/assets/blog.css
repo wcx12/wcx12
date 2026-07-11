@@ -314,8 +314,8 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 }
 
 .blog-hint summary:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 18%, transparent);
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
 }
 
 .blog-hint p {

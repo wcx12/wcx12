@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import MarkdownIt from 'markdown-it';
 import markdownItKatexModule from 'markdown-it-katex';
-import { loadPosts, publicationState, siteDate, summarizeDiagnostics } from './blog-content.mjs';
+import { loadPosts, publicationState, siteDate, slugify, summarizeDiagnostics } from './blog-content.mjs';
 
 const markdownItKatex = typeof markdownItKatexModule === 'function'
   ? markdownItKatexModule
@@ -25,6 +25,11 @@ function assertNoExecutableMarkup(html) {
   assert.doesNotMatch(html, /<[^>]+\son(?:error|load)\s*=/i);
   assert.doesNotMatch(html, /<[^>]+(?:href|src)\s*=\s*["']?\s*javascript\s*:/i);
 }
+
+test('keeps non-Latin heading text in stable slugs', () => {
+  assert.equal(slugify('研究兴趣'), '研究兴趣');
+  assert.equal(slugify('Café / 研究 Notes'), 'cafe-研究-notes');
+});
 
 test('renders inline and block dollar-delimited formulas with KaTeX', () => {
   const html = createRenderer().render(String.raw`Inline: $E=mc^2$.

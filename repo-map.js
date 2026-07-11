@@ -515,7 +515,7 @@ repoMap.addEventListener('click', (event) => {
     isVisible: () => repoMapVisible,
     render,
     resize,
-    scrollIntoView: () => repoMap?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    scrollIntoView: () => repoMap?.scrollIntoView({ behavior: context.reducedMotion ? 'auto' : 'smooth', block: 'center' })
   };
   requestMotionFrame({ immediate: true });
   return repoMapInstance;

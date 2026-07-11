@@ -15,6 +15,10 @@ function researchRoute(language, suffix = '') {
   return `${language === 'zh' ? 'zh/' : ''}research/${suffix}`;
 }
 
+function resumeRoute(language) {
+  return `${language === 'zh' ? 'zh/' : ''}resume/`;
+}
+
 function publicationsRoute(language) {
   return `${language === 'zh' ? 'zh/' : ''}publications/`;
 }
@@ -24,6 +28,7 @@ function projectsRoute(language) {
 }
 
 const staticRoutes = ['en', 'zh'].flatMap((language) => [
+  resumeRoute(language),
   researchRoute(language),
   ...researchChildren.map((child) => researchRoute(language, `${child.id}/`)),
   projectsRoute(language),
@@ -104,7 +109,9 @@ async function expectedAssetVersion() {
     'blog/assets/katex.min.css',
     'research-config.json',
     'resume.md',
+    'resume.zh.md',
     'scripts/blog-content.mjs',
+  'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
     ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
   ].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
@@ -322,9 +329,10 @@ test('bundled post media is copied, fingerprinted, and rendered accessibly', asy
   assert.match(article, /publishing-flow\.png[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"/);
 });
 
-test('all configured research, project, and publication routes exist without stale generated HTML', async () => {
-  assert.equal(staticRoutes.length, 16, 'five topics plus three index routes must have English and Chinese pages');
+test('all configured fixed-language portfolio routes exist without stale generated HTML', async () => {
+  assert.equal(staticRoutes.length, 18, 'the profile, five topics, and three index routes must have English and Chinese pages');
   const generated = [
+    ...await walk(path.join(rootDir, 'resume'), (file) => file.endsWith('.html')),
     ...await walk(path.join(rootDir, 'research'), (file) => file.endsWith('.html')),
     ...await walk(path.join(rootDir, 'projects'), (file) => file.endsWith('.html')),
     ...await walk(path.join(rootDir, 'publications'), (file) => file.endsWith('.html')),
@@ -440,6 +448,29 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
   }
 });
 
+test('research profile has complete English and Chinese fixed-language records', async () => {
+  const [english, chinese, chineseHome] = await Promise.all([
+    fs.readFile(path.join(rootDir, 'resume', 'index.html'), 'utf8'),
+    fs.readFile(path.join(rootDir, 'zh', 'resume', 'index.html'), 'utf8'),
+    fs.readFile(path.join(rootDir, 'zh', 'index.html'), 'utf8')
+  ]);
+  assert.match(english, /<h2 id="research-interests">Research Interests<\/h2>/);
+  assert.match(chinese, /<h2 id="研究兴趣">研究兴趣<\/h2>/);
+  assert.match(chinese, /预计毕业时间：2026 年/);
+  assert.match(chinese, /申请硕士与博士项目机会/);
+  assert.doesNotMatch(chinese, />Research Interests</);
+  assert.doesNotMatch(chinese, />Current Goal</);
+  assert.match(chinese, /<span lang="en">[^<]+TF-VPR/);
+  for (const publication of staticPublications) {
+    assert.match(english, new RegExp(publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(chinese, new RegExp(publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.equal(jsonLdFor(english).inLanguage, 'en');
+  assert.equal(jsonLdFor(chinese).inLanguage, 'zh-CN');
+  assert.match(chineseHome, /href="\.\/resume\/"/);
+  assert.doesNotMatch(chineseHome, /href="\.\.\/resume\/"/);
+});
+
 test('homepage language mirrors are self-canonical and mutually discoverable', async () => {
   const english = await fs.readFile(path.join(rootDir, 'index.html'), 'utf8');
   const chinese = await fs.readFile(path.join(rootDir, 'zh', 'index.html'), 'utf8');
@@ -478,8 +509,11 @@ test('project indexes expose every repository with maturity and public evidence'
     );
     for (const item of list.itemListElement) {
       const repo = localRepos.find((entry) => entry.name === item.name);
+      const expectedDescription = language === 'zh' ? repo.descriptionZh : repo.description;
+      assert.equal(item.description, expectedDescription, `${route}: localized description drifted for ${repo.name}`);
       assert.equal(item.creativeWorkStatus, repo.stage[language]);
       assert.match(source, new RegExp(repo.html_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(source, new RegExp(expectedDescription.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     }
   }
 });
@@ -526,8 +560,29 @@ test('publication pages expose every canonical DOI record with ordered authors',
 
 test('sitemap covers every configured fixed-language route', async () => {
   const sitemap = await fs.readFile(path.join(rootDir, 'sitemap.xml'), 'utf8');
-  for (const route of staticRoutes) {
+  const posts = JSON.parse(await fs.readFile(path.join(rootDir, 'blog', 'posts.json'), 'utf8'));
+  const topicHasEvidence = (topicId) => localRepos.some((repo) => new Set([
+    ...(repo.interests || []),
+    ...(researchConfig.repoAssignments[repo.name] || [])
+  ]).has(topicId)) || staticPublications.some((publication) => new Set([
+    ...(publication.interests || []),
+    ...(researchConfig.paperAssignments[publication.title] || [])
+  ]).has(topicId)) || posts.some((post) => (post.research || []).includes(topicId));
+  const indexableRoutes = ['en', 'zh'].flatMap((language) => [
+    resumeRoute(language),
+    researchRoute(language),
+    ...researchChildren.filter((child) => topicHasEvidence(child.id)).map((child) => researchRoute(language, `${child.id}/`)),
+    projectsRoute(language),
+    publicationsRoute(language)
+  ]);
+  for (const route of indexableRoutes) {
     assert.match(sitemap, new RegExp(`<loc>${`${SITE.url}/${route}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`), `${route}: missing from sitemap`);
+  }
+  for (const language of ['en', 'zh']) {
+    const emptyRoute = researchRoute(language, 'ai4edu/');
+    assert.doesNotMatch(sitemap, new RegExp(`<loc>${`${SITE.url}/${emptyRoute}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`));
+    const source = await fs.readFile(path.join(rootDir, emptyRoute, 'index.html'), 'utf8');
+    assert.match(source, /<meta name="robots" content="noindex,follow"/);
   }
 
   const entries = matches(sitemap, /<url><loc>([^<]+)<\/loc>(?:<lastmod>([^<]+)<\/lastmod>)?<\/url>/g);
@@ -549,8 +604,9 @@ test('sitemap covers every configured fixed-language route', async () => {
   assert.equal(lastmodByUrl.get(`${SITE.url}/publications/`), '2026-07-11');
   assert.equal(lastmodByUrl.get(`${SITE.url}/research/point-cloud-registration/`), '2026-06-02');
   assert.equal(lastmodByUrl.get(`${SITE.url}/research/agent/`), '2026-06-18');
-  assert.equal(lastmodByUrl.get(`${SITE.url}/research/ai4edu/`), '', 'empty research topics must not inherit unrelated repository dates');
+  assert.equal(lastmodByUrl.get(`${SITE.url}/research/ai4edu/`), undefined, 'empty research topics must stay out of the sitemap');
   assert.equal(lastmodByUrl.get(`${SITE.url}/resume/`), '', 'profile lastmod must be omitted without a reliable source date');
+  assert.equal(lastmodByUrl.get(`${SITE.url}/zh/resume/`), '', 'Chinese profile lastmod must be omitted without a reliable source date');
   assert.match(
     sitemap,
     /<loc>https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/<\/loc><lastmod>2026-07-11<\/lastmod>/
@@ -572,11 +628,18 @@ test('RSS declares itself and preserves post taxonomy', async () => {
 });
 
 test('fixed routes ignore stored language while preserving theme selection', async () => {
-  const source = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
+  const [source, styles] = await Promise.all([
+    fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8'),
+    fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8')
+  ]);
   assert.match(source, /const fixedLanguage = document\.documentElement\.dataset\.fixedLanguage/);
   assert.match(source, /normalizeLang\(fixedLanguage \|\| localStorage\.getItem\(LANG_KEY\)/);
+  assert.match(source, /if \(fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
   assert.match(source, /if \(!fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
   assert.match(source, /applyTheme\(localStorage\.getItem\(THEME_KEY\) \|\| 'neon'\)/);
+  assert.match(source, /blogMenu\?\.addEventListener\('focusout',[\s\S]*?!blogMenu\.contains\(event\.relatedTarget\)[\s\S]*?setBlogMenuOpen\(false\)/);
+  assert.match(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*3px solid var\(--pink\);[^}]*outline-offset:\s*3px;/s);
+  assert.doesNotMatch(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*none/s);
 });
 
 test('GitHub Actions are pinned and do not expose a long-lived metrics token', async () => {
@@ -602,9 +665,17 @@ test('scheduled publishing builds before validating generated output', async () 
   const sourceValidation = source.indexOf('- name: Validate source content');
   const build = source.indexOf('- name: Build site');
   const generatedValidation = source.indexOf('- name: Validate generated site');
+  const packageArtifact = source.indexOf('- name: Package public Pages artifact');
+  const validateArtifact = source.indexOf('- name: Validate public Pages artifact');
+  const uploadArtifact = source.indexOf('- name: Upload GitHub Pages artifact');
   const commit = source.indexOf('- name: Commit generated site');
-  const pages = source.indexOf('- name: Request GitHub Pages build');
-  assert.ok(repositorySync < sourceValidation && sourceValidation < build && build < generatedValidation && generatedValidation < commit && commit < pages, 'scheduled publishing steps are in an unsafe order');
+  assert.ok(repositorySync < sourceValidation
+    && sourceValidation < build
+    && build < generatedValidation
+    && generatedValidation < packageArtifact
+    && packageArtifact < validateArtifact
+    && validateArtifact < uploadArtifact
+    && uploadArtifact < commit, 'scheduled publishing steps are in an unsafe order');
   assert.match(source, /if: github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'/);
   assert.match(source, /id: repository_sync\s*\n\s*if:[^\n]+\n\s*continue-on-error: true/);
   assert.match(source, /run: node scripts\/sync-github-repos\.mjs/);
@@ -615,31 +686,47 @@ test('scheduled publishing builds before validating generated output', async () 
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(source, /pages: write/);
-  assert.match(source, /gh api --method POST "repos\/\$\{GITHUB_REPOSITORY\}\/pages\/builds"/);
+  assert.match(source, /id-token: write/);
+  assert.match(source, /github\.repository_owner == 'wcx12'/);
+  assert.match(source, /github\.ref_name == github\.event\.repository\.default_branch/);
+  assert.match(source, /- "projects\/\*\*"/);
+  assert.match(source, /- "resume\.zh\.md"/);
+  assert.match(source, /actions\/configure-pages@[a-f0-9]{40}/);
+  assert.match(source, /actions\/upload-pages-artifact@[a-f0-9]{40}/);
+  assert.match(source, /actions\/deploy-pages@[a-f0-9]{40}/);
+  assert.match(source, /path: output\/pages/);
+  assert.match(source, /include-hidden-files: true/);
+  const quality = await fs.readFile(path.join(rootDir, '.github', 'workflows', 'quality.yml'), 'utf8');
+  assert.match(quality, /- name: Validate rebuilt site\s*\n\s*run: npm run validate/);
+  assert.match(quality, /npm run package:pages && npm run test:pages/);
+  assert.match(quality, /git diff --exit-code -- index\.html blog research projects publications zh resume/);
 });
 
-test('research mapping workflow validates, rebuilds, and deploys from the latest branch', async () => {
+test('research mapping workflow validates, rebuilds, and commits to the protected default branch', async () => {
   const workflow = await fs.readFile(path.join(rootDir, '.github', 'workflows', 'research-config-update.yml'), 'utf8');
   const applyScript = await fs.readFile(path.join(rootDir, 'scripts', 'apply-research-config.mjs'), 'utf8');
+  const schema = await fs.readFile(path.join(rootDir, 'scripts', 'research-config-schema.js'), 'utf8');
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /persist-credentials: false/);
-  assert.match(workflow, /ref: \$\{\{ github\.ref_name \}\}/);
+  assert.match(workflow, /if: \$\{\{ github\.repository_owner == 'wcx12' && github\.ref_name == github\.event\.repository\.default_branch \}\}/);
+  assert.match(workflow, /environment: github-pages/);
+  assert.match(workflow, /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/);
   assert.match(workflow, /fetch-depth: 0/);
   assert.doesNotMatch(workflow, /concurrency:/);
-  assert.match(workflow, /RESEARCH_CONFIG_BASE64: \$\{\{ inputs\.config_base64 \}\}/);
-  assert.match(workflow, /EXPECTED_CONFIG_SHA256: \$\{\{ inputs\.expected_sha256 \}\}/);
+  assert.match(workflow, /RESEARCH_CONFIG_UPDATE_BASE64: \$\{\{ inputs\.update_payload_base64 \}\}/);
   const sync = workflow.indexOf('name: Synchronize target branch');
   const validate = workflow.indexOf('name: Validate submitted mapping');
   const build = workflow.indexOf('name: Build site');
   const generatedValidation = workflow.indexOf('name: Validate generated site');
   const commit = workflow.indexOf('name: Commit mapping');
-  const pages = workflow.indexOf('name: Request GitHub Pages build');
-  assert.ok(sync < validate && validate < build && build < generatedValidation && generatedValidation < commit && commit < pages);
+  assert.ok(sync < validate && validate < build && build < generatedValidation && generatedValidation < commit);
   assert.ok(validate < workflow.indexOf('GH_TOKEN: ${{ github.token }}'));
   assert.match(workflow, /git add research-config\.json index\.html blog research projects publications zh resume publications\.md rss\.xml sitemap\.xml package-lock\.json/);
-  assert.match(workflow, /pages: write/);
-  assert.match(workflow, /gh api --method POST "repos\/\$\{GITHUB_REPOSITORY\}\/pages\/builds"/);
-  assert.match(applyScript, /normalizeResearchConfigValue/);
+  assert.doesNotMatch(workflow, /pages: write|pages\/builds/);
+  assert.match(applyScript, /normalizeResearchConfigUpdatePayload/);
+  assert.match(schema, /payload\.version !== 1/);
+  assert.match(schema, /payload\.expected_sha256/);
+  assert.match(schema, /config: normalizeResearchConfigValue\(payload\.config\)/);
   assert.match(applyScript, /const configPath = path\.join\(rootDir, 'research-config\.json'\)/);
   assert.match(applyScript, /currentHash !== expectedHash/);
   assert.doesNotMatch(applyScript, /process\.env\.GH_TOKEN|github\.com/);

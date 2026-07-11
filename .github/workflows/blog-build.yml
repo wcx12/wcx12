@@ -19,14 +19,23 @@ on:
       - "site-data.js"
       - "research-config.json"
       - "resume.md"
+      - "resume.zh.md"
+      - "blog/**"
+      - "research/**"
+      - "projects/**"
+      - "publications/**"
+      - "resume/**"
+      - "zh/**"
+      - "publications.md"
+      - "rss.xml"
+      - "sitemap.xml"
       - "package.json"
       - "package-lock.json"
       - ".nvmrc"
       - ".github/workflows/blog-build.yml"
 
 permissions:
-  contents: write
-  pages: write
+  contents: read
 
 concurrency:
   group: build-site-${{ github.ref }}
@@ -34,15 +43,20 @@ concurrency:
 
 jobs:
   build-site:
-    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    if: ${{ github.repository_owner == 'wcx12' && github.ref_name == github.event.repository.default_branch && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: read
     env:
       SITE_URL: https://wcx12.github.io/wcx12
       SITE_TIME_ZONE: Asia/Shanghai
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
+          ref: ${{ github.event_name == 'push' && github.sha || github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Setup Node
@@ -75,6 +89,21 @@ jobs:
       - name: Validate generated site
         run: npm run validate
 
+      - name: Package public Pages artifact
+        run: npm run package:pages
+
+      - name: Validate public Pages artifact
+        run: npm run test:pages
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: output/pages
+          include-hidden-files: true
+
       - name: Commit generated site
         id: commit
         env:
@@ -88,12 +117,23 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "Sync repository data and build site [skip ci]"
-            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${DEFAULT_BRANCH}"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Request GitHub Pages build
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"
+
+  deploy-pages:
+    if: ${{ github.repository_owner == 'wcx12' && github.ref_name == github.event.repository.default_branch }}
+    needs: build-site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

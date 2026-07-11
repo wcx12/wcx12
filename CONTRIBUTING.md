@@ -57,12 +57,15 @@ exposes the generated `output/preview/` tree, which is ignored by Git.
 
 - Add or update repository and publication records in `site-data.js`.
 - Map records to research topics in `research-config.json`.
-- Keep profile facts that are not generated from canonical data in `resume.md`.
-- Leave the `{{PUBLICATIONS}}` marker in `resume.md`; the build replaces it with
+- Keep profile facts that are not generated from canonical data synchronized in
+  `resume.md` and `resume.zh.md`.
+- Leave the `{{PUBLICATIONS}}` marker in both resume source files; the build replaces it with
   every canonical publication.
 
-The owner mapping interface can update `research-config.json`, but canonical
-repository and publication metadata still belongs in `site-data.js`.
+The owner mapping interface prepares a token-free update payload for the
+`Update research mapping` GitHub Actions workflow. Repository write access is
+handled only by the authenticated GitHub workflow UI; canonical repository and
+publication metadata still belongs in `site-data.js`.
 
 Public GitHub repository metadata is synchronized shortly after midnight in
 `Asia/Shanghai`, and can be refreshed locally with `npm run sync:repos`. The
@@ -74,16 +77,23 @@ without an explicit mapping. New forks retain upstream attribution.
 
 ## Generated output
 
-`npm run build:site` writes `blog/`, `research/`, `publications/`, `zh/`,
-`resume/`, `publications.md`, `rss.xml`, and `sitemap.xml`. Commit source and
-generated changes together so pull-request quality checks can verify that the
-public output is current. The build fingerprints executable, stylesheet, data,
-and article-media requests so one deployment cannot reuse stale browser assets.
+`npm run build:site` writes `blog/`, `research/`, `projects/`, `publications/`,
+`zh/`, `resume/`, `publications.md`, `rss.xml`, and `sitemap.xml`. Commit source
+and generated changes together so pull-request quality checks can verify that
+the public output is current. The build fingerprints executable, stylesheet,
+data, and article-media requests so one deployment cannot reuse stale browser
+assets.
+
+`npm run build:pages` additionally creates and validates `output/pages/`. GitHub
+Pages deploys only this explicit artifact allowlist; source Markdown, workflows,
+authoring scripts, dependencies, drafts, and scheduled posts are never uploaded
+to the public site.
 
 ## Verification
 
 ```bash
 npm run validate
+npm run build:pages
 npm audit
 ```
 

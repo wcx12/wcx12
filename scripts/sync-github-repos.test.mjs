@@ -5,6 +5,7 @@ import { mergeGitHubRepos, renderSiteData } from './sync-github-repos.mjs';
 const curated = [{
   name: 'Existing',
   description: 'Curated description.',
+  descriptionZh: '人工整理的项目简介。',
   language: 'JavaScript',
   stargazers_count: 1,
   updated_at: '2026-01-01T00:00:00Z',
@@ -32,6 +33,7 @@ test('refreshes API-owned fields without overwriting curated evidence', () => {
   }], curated, { owner: 'wcx12' });
 
   assert.equal(repo.description, 'Curated description.');
+  assert.equal(repo.descriptionZh, '人工整理的项目简介。');
   assert.equal(repo.language, 'TypeScript');
   assert.equal(repo.stargazers_count, 7);
   assert.equal(repo.updated_at, '2026-07-12T00:00:00Z');

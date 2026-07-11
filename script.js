@@ -10,10 +10,19 @@ function versionedModuleUrl(relativePath, parameters = {}) {
 
 const [
   { ORCID_ID, localRepos, staticPublications },
-  { homepageI18n }
+  { homepageI18n },
+  {
+    CONFIG_ID_PATTERN,
+    RESEARCH_CONFIG_LIMITS,
+    RESEARCH_CONFIG_VERSION,
+    SUPPORTED_ANIMATIONS,
+    normalizeResearchConfigValue: normalizeSharedResearchConfig,
+    normalizeResearchConfigUpdatePayload
+  }
 ] = await Promise.all([
   import(versionedModuleUrl('./site-data.js')),
-  import(versionedModuleUrl('./homepage-i18n.js'))
+  import(versionedModuleUrl('./homepage-i18n.js')),
+  import(versionedModuleUrl('./scripts/research-config-schema.js'))
 ]);
 
 const views = document.querySelectorAll('.view');
@@ -67,8 +76,9 @@ const managerAdd = document.getElementById('managerAdd');
 const managerAddStatus = document.getElementById('managerAddStatus');
 const managerSave = document.getElementById('managerSave');
 const managerDelete = document.getElementById('managerDelete');
-const managerGitHubToken = document.getElementById('managerGitHubToken');
-const managerSaveRemote = document.getElementById('managerSaveRemote');
+const managerUpdatePayload = document.getElementById('managerUpdatePayload');
+const managerPrepareRemote = document.getElementById('managerPrepareRemote');
+const managerCopyRemote = document.getElementById('managerCopyRemote');
 const managerRemoteStatus = document.getElementById('managerRemoteStatus');
 const managerActive = document.getElementById('managerActive');
 const managerProjects = document.getElementById('managerProjects');
@@ -101,6 +111,7 @@ const interestTag = document.getElementById('interestTag');
 const interestDescription = document.getElementById('interestDescription');
 const interestDetail = document.querySelector('.interest-detail');
 const interestSectionTabs = document.querySelectorAll('[data-interest-panel]');
+const interestTabPanels = document.querySelectorAll('[data-interest-tabpanel]');
 const interestProjects = document.getElementById('interestProjects');
 const interestPapers = document.getElementById('interestPapers');
 const interestPosts = document.getElementById('interestPosts');
@@ -137,7 +148,6 @@ let readmeReturnFocus = null;
 let readmeReturnFocusRepoName = null;
 let readmeRequestController = null;
 let readmeRequestSequence = 0;
-let githubSaveController = null;
 let remoteResearchConfigHash = '';
 let activeInterestPanel = 'animation';
 const initializedViews = new Set();
@@ -287,30 +297,16 @@ const CONFIG_PATH = 'research-config.json';
 const GITHUB_REPOSITORY = 'wcx12/wcx12';
 const GITHUB_BRANCH = 'main';
 const GITHUB_OWNER = 'wcx12';
-const GITHUB_CONFIG_WORKFLOW = 'research-config-update.yml';
 const GITHUB_RAW_CONFIG_URL = `https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_BRANCH}/${CONFIG_PATH}`;
 const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
-const LEGACY_GITHUB_TOKEN_KEY = 'wcx12-github-token';
 const REQUEST_TIMEOUT_MS = Object.freeze({
   config: 8000,
   github: 10000,
   orcid: 10000,
   readme: 12000
 });
-
-function clearGitHubToken(options = {}) {
-  const { abortRequest = false } = options;
-  if (managerGitHubToken) managerGitHubToken.value = '';
-  if (abortRequest && githubSaveController) {
-    githubSaveController.abort();
-    githubSaveController = null;
-  }
-  try {
-    sessionStorage.removeItem(LEGACY_GITHUB_TOKEN_KEY);
-  } catch {
-    // Ignore storage restrictions while still clearing the in-memory input.
-  }
-}
+const MAX_README_BYTES = 1024 * 1024;
+const README_IMAGE_HOSTS = new Set(['github.com', 'img.shields.io']);
 
 function timeoutSignal(timeoutMs) {
   if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
@@ -346,40 +342,56 @@ function fetchWithTimeout(resource, options = {}, timeoutMs = REQUEST_TIMEOUT_MS
   });
 }
 
+async function responseTextWithLimit(response, maxBytes) {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new Error(`Response exceeds ${maxBytes} bytes`);
+  }
+  if (!response.body?.getReader) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes) throw new Error(`Response exceeds ${maxBytes} bytes`);
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error(`Response exceeds ${maxBytes} bytes`);
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  chunks.forEach((chunk) => {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  });
+  return new TextDecoder().decode(bytes);
+}
+
 function detectOwnerTools() {
   if (window.top !== window.self) {
     localStorage.removeItem(OWNER_TOOLS_KEY);
-    clearGitHubToken({ abortRequest: true });
     return false;
   }
   const params = new URLSearchParams(window.location.search);
   if (params.get('ownerTools') === '1') localStorage.setItem(OWNER_TOOLS_KEY, 'enabled');
   if (params.get('ownerTools') === '0') {
     localStorage.removeItem(OWNER_TOOLS_KEY);
-    clearGitHubToken({ abortRequest: true });
-  } else {
-    clearGitHubToken();
   }
   return localStorage.getItem(OWNER_TOOLS_KEY) === 'enabled';
 }
 
 const ownerToolsEnabled = detectOwnerTools();
-const RESEARCH_CONFIG_VERSION = 2;
-const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const CONFIG_LIMITS = Object.freeze({
-  domains: 64,
-  childrenPerDomain: 64,
-  assignments: 1000,
-  idLength: 80,
-  keyLength: 500,
-  shortTextLength: 240,
-  descriptionLength: 2000
-});
+const CONFIG_LIMITS = RESEARCH_CONFIG_LIMITS;
 
 const defaultResearchInterests = JSON.parse(JSON.stringify(researchInterests));
-const ALLOWED_RESEARCH_ANIMATIONS = new Set(
-  defaultResearchInterests.flatMap((domain) => domain.children.map((child) => child.animation))
-);
 
 function cloneConfigValue(value) {
   return JSON.parse(JSON.stringify(value));
@@ -480,22 +492,22 @@ function validateResearchInterests(value) {
       const childId = validateConfigId(child.id, `${childPath}.id`);
       if (childIds.has(childId)) throw configValidationError(`${childPath}.id`, 'duplicate child id');
       childIds.add(childId);
-      if (!ALLOWED_RESEARCH_ANIMATIONS.has(child.animation)) {
+      if (!SUPPORTED_ANIMATIONS.has(child.animation)) {
         throw configValidationError(`${childPath}.animation`, 'unsupported animation');
       }
       return {
         id: childId,
-        title: validateLocalizedConfigText(child.title, `${childPath}.title`, CONFIG_LIMITS.shortTextLength),
-        label: validateLocalizedConfigText(child.label, `${childPath}.label`, CONFIG_LIMITS.shortTextLength),
+        title: validateLocalizedConfigText(child.title, `${childPath}.title`, CONFIG_LIMITS.localizedTextLength),
+        label: validateLocalizedConfigText(child.label, `${childPath}.label`, CONFIG_LIMITS.localizedTextLength),
         animation: child.animation,
-        description: validateLocalizedConfigText(child.description, `${childPath}.description`, CONFIG_LIMITS.descriptionLength)
+        description: validateLocalizedConfigText(child.description, `${childPath}.description`, CONFIG_LIMITS.localizedTextLength)
       };
     });
 
     return {
       id,
-      title: validateLocalizedConfigText(domain.title, `${domainPath}.title`, CONFIG_LIMITS.shortTextLength),
-      label: validateLocalizedConfigText(domain.label, `${domainPath}.label`, CONFIG_LIMITS.shortTextLength),
+      title: validateLocalizedConfigText(domain.title, `${domainPath}.title`, CONFIG_LIMITS.localizedTextLength),
+      label: validateLocalizedConfigText(domain.label, `${domainPath}.label`, CONFIG_LIMITS.localizedTextLength),
       children
     };
   });
@@ -513,12 +525,12 @@ function validateAssignments(value, path, childIds) {
   const assignments = {};
   entries.forEach(([key, ids]) => {
     if (!key
-      || key.length > CONFIG_LIMITS.keyLength
+      || key.length > CONFIG_LIMITS.itemNameLength
       || ['__proto__', 'prototype', 'constructor'].includes(key)
       || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(key)) {
       throw configValidationError(`${path}.${key}`, 'invalid assignment key');
     }
-    if (!Array.isArray(ids) || ids.length > childIds.size) {
+    if (!Array.isArray(ids) || ids.length > CONFIG_LIMITS.idsPerAssignment) {
       throw configValidationError(`${path}.${key}`, 'expected an id list');
     }
     const uniqueIds = new Set();
@@ -582,7 +594,7 @@ let researchConfig = loadResearchConfig();
 researchInterests = researchConfig.interests;
 
 function applyResearchConfig(nextConfig) {
-  researchConfig = normalizeResearchConfig(nextConfig);
+  researchConfig = normalizeResearchConfig(normalizeSharedResearchConfig(nextConfig));
   researchInterests = researchConfig.interests;
   if (!activeInterestEntry()) activeInterestId = allInterestChildren()[0]?.child.id || '';
 }
@@ -873,8 +885,19 @@ function scheduleViewDataRefresh(viewId) {
   }
 }
 
+function focusViewHeading(targetView) {
+  const heading = targetView?.querySelector('h1, h2');
+  if (!(heading instanceof HTMLElement)) return;
+  heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
+}
+
+function preferredScrollBehavior() {
+  return compactViewportQuery.matches || reducedMotionQuery.matches ? 'auto' : 'smooth';
+}
+
 function activateView(viewId, options = {}) {
-  const { historyMode = 'push', scroll = true, scrollFeature = false } = options;
+  const { focusHeading = false, historyMode = 'push', scroll = true, scrollFeature = false } = options;
   const resolvedViewId = VALID_VIEW_IDS.has(viewId) ? viewId : 'about';
   const generation = ++activationGeneration;
   commands.forEach((command) => {
@@ -901,11 +924,17 @@ function activateView(viewId, options = {}) {
       });
     });
   }
-  if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
+  if (focusHeading && targetView) {
+    requestAnimationFrame(() => {
+      if (!isCurrentActivation(resolvedViewId, generation)) return;
+      targetView.closest('.console')?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      focusViewHeading(targetView);
+    });
+  } else if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
     requestAnimationFrame(() => {
       if (isCurrentActivation(resolvedViewId, generation)) {
         targetView.closest('.console')?.scrollIntoView({
-          behavior: compactViewportQuery.matches ? 'auto' : 'smooth',
+          behavior: preferredScrollBehavior(),
           block: 'start'
         });
       }
@@ -939,11 +968,11 @@ function handleLocationNavigation() {
   applyLocationRoute({ scroll: false, finalize: true });
 }
 
-commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view)));
+commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view, { focusHeading: true })));
 window.addEventListener('popstate', handleLocationNavigation);
 window.addEventListener('hashchange', handleLocationNavigation);
 openResearch.addEventListener('click', () => {
-  activateView('research');
+  activateView('research', { focusHeading: true });
 });
 
 function commandItems() {
@@ -953,7 +982,7 @@ function commandItems() {
     type: i18n[currentLang].command_palette,
     kind: 'view',
     viewId: btn.dataset.view,
-    action: () => activateView(btn.dataset.view)
+    action: () => activateView(btn.dataset.view, { focusHeading: true })
   }));
 
   const utilityItems = [
@@ -972,14 +1001,14 @@ function commandItems() {
       detail: i18n[currentLang].featured_research_label,
       type: i18n[currentLang].command_search,
       kind: 'utility',
-      action: () => activateView('research')
+      action: () => activateView('research', { focusHeading: true })
     },
     {
       title: i18n[currentLang].command_search_papers,
       detail: i18n[currentLang].tab_publications,
       type: i18n[currentLang].command_search,
       kind: 'utility',
-      action: () => activateView('publications')
+      action: () => activateView('publications', { focusHeading: true })
     },
     {
       title: i18n[currentLang].command_search_writing,
@@ -1055,7 +1084,7 @@ function commandItems() {
 
   const repoItems = allRepos.map((repo) => ({
     title: repo.name,
-    detail: repo.description || i18n[currentLang].no_desc,
+    detail: repoDescription(repo),
     type: i18n[currentLang].command_repo,
     kind: 'repo',
     repoName: repo.name,
@@ -1097,7 +1126,7 @@ function renderCommandPreview(item) {
   } else if (item.kind === 'repo') {
     const repo = allRepos.find((entry) => entry.name === item.repoName);
     if (repo) {
-      detail = repo.description || i18n[currentLang].no_desc;
+      detail = repoDescription(repo);
       tags.push(repoMappingLabel(repo));
       tags.push(repo.language || i18n[currentLang].mixed);
       tags.push(`${i18n[currentLang].star} ${repo.stargazers_count || 0}`);
@@ -1105,7 +1134,7 @@ function renderCommandPreview(item) {
   } else if (item.kind === 'paper') {
     const paper = currentPublications().find((entry) => entry.title === item.paperTitle);
     if (paper) {
-      detail = paper.summary || item.detail;
+      detail = paperSummary(paper) || item.detail;
       tags.push(paper.venue || i18n[currentLang].tab_publications);
       tags.push(String(paper.year || ''));
       const paperInterest = primaryInterestId(paper, 'paper');
@@ -1282,6 +1311,18 @@ function textFor(value) {
   return value?.[currentLang] || value?.en || '';
 }
 
+function repoDescription(repo) {
+  if (!repo) return i18n[currentLang].no_desc;
+  return currentLang === 'zh'
+    ? (repo.descriptionZh || repo.description || i18n[currentLang].no_desc)
+    : (repo.description || i18n[currentLang].no_desc);
+}
+
+function paperSummary(paper) {
+  if (!paper) return '';
+  return currentLang === 'zh' ? (paper.summaryZh || paper.summary || '') : (paper.summary || '');
+}
+
 function researchPageHref(interestId) {
   return `./research/${encodeURIComponent(interestId)}/`;
 }
@@ -1455,6 +1496,9 @@ function setInterestPanel(panel) {
     button.setAttribute('aria-selected', String(active));
     button.tabIndex = active ? 0 : -1;
   });
+  interestTabPanels.forEach((tabPanel) => {
+    tabPanel.hidden = compactViewportQuery.matches && tabPanel.dataset.interestTabpanel !== activeInterestPanel;
+  });
 }
 
 function bindItemToInterestAnimation(item, kind, interestId) {
@@ -1478,7 +1522,7 @@ function jumpToResearchInterest(interestId, repoName = null) {
   const repo = repoName ? allRepos.find((item) => item.name === repoName) : null;
   if (repo) bindRepoToInterestAnimation(repo, interestId);
   setInterestPanel('animation');
-  activateView('research', { scrollFeature: true });
+  activateView('research', { focusHeading: true, scrollFeature: true });
 }
 
 function focusRepoInProjects(repoName) {
@@ -1493,7 +1537,7 @@ function focusRepoInProjects(repoName) {
   requestAnimationFrame(() => {
     if (!isCurrentActivation('projects', generation)) return;
     const card = Array.from(document.querySelectorAll('[data-repo]')).find((node) => node.dataset.repo === repoName);
-    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
     repoMapFeature?.scrollIntoView();
   });
 }
@@ -1507,7 +1551,7 @@ function focusPaperInPublications(title) {
   renderPublications();
   requestAnimationFrame(() => {
     const card = Array.from(document.querySelectorAll('[data-paper-card]')).find((node) => node.dataset.paperCard === title);
-    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
   });
 }
 
@@ -2083,13 +2127,19 @@ interestSectionTabs.forEach((button, index) => {
     next.focus();
   });
 });
+compactViewportQuery.addEventListener?.('change', () => setInterestPanel(activeInterestPanel));
+
+function clearManagerUpdatePayload() {
+  managerUpdatePayload.value = '';
+  managerCopyRemote.disabled = true;
+}
 
 function openResearchManager() {
   if (!ownerToolsEnabled) return;
   if (!researchManager.classList.contains('open') && document.activeElement instanceof HTMLElement) {
     researchManagerReturnFocus = document.activeElement;
   }
-  clearGitHubToken();
+  clearManagerUpdatePayload();
   renderResearchManager();
   researchManager.classList.add('open');
   researchManager.setAttribute('aria-hidden', 'false');
@@ -2099,7 +2149,7 @@ function openResearchManager() {
 
 function closeResearchManager() {
   const wasOpen = researchManager.classList.contains('open');
-  clearGitHubToken({ abortRequest: true });
+  clearManagerUpdatePayload();
   researchManager.classList.remove('open');
   researchManager.setAttribute('aria-hidden', 'true');
   setOverlayActive(researchManager, false);
@@ -2153,17 +2203,14 @@ function collectManagerAssignments() {
 
 function saveManagerAssignments() {
   if (!ownerToolsEnabled) return;
-  try {
-    collectManagerAssignments();
-    saveResearchConfig();
-    renderResearchInterest();
-    renderResearchManager();
-    updateViewDocumentTitle('research');
-    updateRoute('research', 'replace');
-    managerActive.textContent = `${i18n[currentLang].manager_saved} ${managerActive.textContent}`;
-  } finally {
-    clearGitHubToken();
-  }
+  collectManagerAssignments();
+  saveResearchConfig();
+  clearManagerUpdatePayload();
+  renderResearchInterest();
+  renderResearchManager();
+  updateViewDocumentTitle('research');
+  updateRoute('research', 'replace');
+  managerActive.textContent = `${i18n[currentLang].manager_saved} ${managerActive.textContent}`;
 }
 
 function toBase64Utf8(value) {
@@ -2173,23 +2220,6 @@ function toBase64Utf8(value) {
     binary += String.fromCharCode(byte);
   });
   return btoa(binary);
-}
-
-function githubHeaders(token) {
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28'
-  };
-}
-
-async function readGitHubError(response) {
-  try {
-    const payload = await response.json();
-    return payload.message || response.statusText;
-  } catch {
-    return response.statusText;
-  }
 }
 
 async function sha256Hex(value) {
@@ -2209,84 +2239,57 @@ async function fetchCurrentGitHubConfig(signal) {
   return { hash: await sha256Hex(source) };
 }
 
-async function dispatchResearchConfigUpdate(token, expectedHash, signal) {
-  const apiUrl = `https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${GITHUB_CONFIG_WORKFLOW}/dispatches`;
-  const configToWrite = normalizeResearchConfig({
-    ...researchConfig,
-    interests: researchInterests
-  });
-  const response = await fetchWithTimeout(
-    apiUrl,
-    {
-      method: 'POST',
-      headers: {
-        ...githubHeaders(token),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ref: GITHUB_BRANCH,
-        inputs: {
-          config_base64: toBase64Utf8(`${JSON.stringify(configToWrite, null, 2)}\n`),
-          expected_sha256: expectedHash
-        }
-      }),
-      signal
-    },
-    REQUEST_TIMEOUT_MS.github
-  );
-
-  if (!response.ok) {
-    const detail = await readGitHubError(response);
-    const error = new Error(`dispatch ${response.status}: ${detail}`);
-    error.status = response.status;
-    throw error;
-  }
-}
-
-async function saveResearchConfigToGitHub() {
+async function prepareResearchConfigUpdate() {
   if (!ownerToolsEnabled) return;
-  let token = managerGitHubToken.value.trim();
-  if (!token) {
-    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_need_token;
-    clearGitHubToken();
-    managerGitHubToken.focus();
-    return;
-  }
   if (!remoteResearchConfigHash) {
     managerRemoteStatus.textContent = i18n[currentLang].manager_remote_not_loaded;
-    clearGitHubToken();
     return;
   }
 
-  githubSaveController?.abort();
-  const requestController = new AbortController();
-  githubSaveController = requestController;
-  managerRemoteStatus.textContent = i18n[currentLang].manager_remote_saving;
-  managerSaveRemote.disabled = true;
+  managerRemoteStatus.textContent = i18n[currentLang].manager_remote_preparing;
+  managerPrepareRemote.disabled = true;
+  clearManagerUpdatePayload();
 
   try {
     collectManagerAssignments();
     saveResearchConfig();
-    const current = await fetchCurrentGitHubConfig(requestController.signal);
+    const current = await fetchCurrentGitHubConfig(timeoutSignal(REQUEST_TIMEOUT_MS.github));
     if (current.hash !== remoteResearchConfigHash) {
       const conflict = new Error('Remote research config changed');
       conflict.status = 409;
       throw conflict;
     }
-    await dispatchResearchConfigUpdate(token, remoteResearchConfigHash, requestController.signal);
-    remoteResearchConfigHash = '';
-    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_saved;
+    const config = normalizeSharedResearchConfig(normalizeResearchConfig({
+      ...researchConfig,
+      interests: researchInterests
+    }));
+    const updatePayload = normalizeResearchConfigUpdatePayload({
+      version: 1,
+      expected_sha256: remoteResearchConfigHash,
+      config
+    });
+    managerUpdatePayload.value = toBase64Utf8(JSON.stringify(updatePayload));
+    managerCopyRemote.disabled = false;
+    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_ready;
   } catch (error) {
-    if (!requestController.signal.aborted) {
-      managerRemoteStatus.textContent = error.status === 409
-        ? i18n[currentLang].manager_remote_conflict
-        : `${i18n[currentLang].manager_remote_failed} (${error.message})`;
-    }
+    managerRemoteStatus.textContent = error.status === 409
+      ? i18n[currentLang].manager_remote_conflict
+      : `${i18n[currentLang].manager_remote_failed} (${error.message})`;
   } finally {
-    token = '';
-    clearGitHubToken();
-    if (githubSaveController === requestController) githubSaveController = null;
-    managerSaveRemote.disabled = false;
+    managerPrepareRemote.disabled = false;
+  }
+}
+
+async function copyResearchConfigUpdate() {
+  const payload = managerUpdatePayload.value.trim();
+  if (!payload) return;
+  try {
+    await navigator.clipboard.writeText(payload);
+    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_copied;
+  } catch {
+    managerUpdatePayload.focus();
+    managerUpdatePayload.select();
+    managerRemoteStatus.textContent = i18n[currentLang].manager_remote_copy_failed;
   }
 }
 
@@ -2332,6 +2335,7 @@ function addResearchCategory() {
   managerInterest.value = '';
   managerLabel.value = '';
   saveResearchConfig();
+  clearManagerUpdatePayload();
   renderResearchInterest();
   renderResearchManager();
   updateViewDocumentTitle('research');
@@ -2354,6 +2358,7 @@ function deleteActiveResearchCategory() {
   });
   activeInterestId = allInterestChildren()[0]?.child.id || '';
   saveResearchConfig();
+  clearManagerUpdatePayload();
   renderResearchInterest();
   renderResearchManager();
   updateViewDocumentTitle('research');
@@ -2368,9 +2373,13 @@ researchManager.addEventListener('click', (event) => {
   if (event.target === researchManager) closeResearchManager();
 });
 managerSave.addEventListener('click', saveManagerAssignments);
-managerSaveRemote.addEventListener('click', saveResearchConfigToGitHub);
+managerPrepareRemote.addEventListener('click', () => { void prepareResearchConfigUpdate(); });
+managerCopyRemote.addEventListener('click', () => { void copyResearchConfigUpdate(); });
 managerAdd.addEventListener('click', addResearchCategory);
 managerDelete.addEventListener('click', deleteActiveResearchCategory);
+[managerProjects, managerPapers].forEach((list) => {
+  list.addEventListener('change', clearManagerUpdatePayload);
+});
 [managerDomain, managerInterest].forEach((input) => {
   input?.addEventListener('input', () => {
     input.removeAttribute('aria-invalid');
@@ -2451,7 +2460,7 @@ function sortedRepos(repos) {
 function applyRepoFilter() {
   const q = repoSearch.value.trim().toLowerCase();
   filteredRepos = allRepos.filter((repo) => {
-    const hay = `${repo.name} ${repo.description || ''} ${repo.language || ''}`.toLowerCase();
+    const hay = `${repo.name} ${repo.description || ''} ${repo.descriptionZh || ''} ${repo.language || ''}`.toLowerCase();
     return hay.includes(q);
   });
   repoState.page = 1;
@@ -2519,7 +2528,13 @@ function validatedReadmeUrl(candidate, kind = 'link') {
   try {
     const parsed = new URL(candidate, window.location.href);
     const allowedProtocols = new Set(['http:', 'https:']);
-    return allowedProtocols.has(parsed.protocol) ? parsed.href : '#';
+    if (!allowedProtocols.has(parsed.protocol)) return '#';
+    if (kind === 'image') {
+      const host = parsed.hostname.toLowerCase();
+      const githubImage = host.endsWith('.githubusercontent.com') || host.endsWith('.githubassets.com');
+      if (parsed.protocol !== 'https:' || (!README_IMAGE_HOSTS.has(host) && !githubImage)) return '#';
+    }
+    return parsed.href;
   } catch {
     return '#';
   }
@@ -2567,7 +2582,7 @@ function sanitizeMarkdownHtml(rawHtml, repo) {
   const template = document.createElement('template');
   template.innerHTML = String(rawHtml || '');
   const allowedTags = new Set(['A', 'B', 'BR', 'CODE', 'EM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'I', 'IMG', 'P', 'SPAN', 'STRONG', 'SUB', 'SUP']);
-  const allowedAttrs = new Set(['align', 'alt', 'height', 'href', 'src', 'target', 'title', 'width', 'rel', 'loading']);
+  const allowedAttrs = new Set(['align', 'alt', 'decoding', 'height', 'href', 'referrerpolicy', 'src', 'target', 'title', 'width', 'rel', 'loading']);
   template.content.querySelectorAll('*').forEach((node) => {
     if (!allowedTags.has(node.tagName)) {
       node.replaceWith(document.createTextNode(node.textContent || ''));
@@ -2591,6 +2606,8 @@ function sanitizeMarkdownHtml(rawHtml, repo) {
     }
     if (node.tagName === 'IMG') {
       node.setAttribute('loading', 'lazy');
+      node.setAttribute('decoding', 'async');
+      node.setAttribute('referrerpolicy', 'no-referrer');
       if (!node.hasAttribute('alt')) node.setAttribute('alt', '');
     }
   });
@@ -2623,7 +2640,7 @@ function renderInlineMarkdown(text, repo) {
     return `\u0000${index}\u0000`;
   };
   const withLinks = String(text || '')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => stash(`<img src="${safeMarkdownUrl(url, repo, 'image')}" alt="${escapeHtml(alt)}" loading="lazy" />`))
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => stash(`<img src="${safeMarkdownUrl(url, repo, 'image')}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" />`))
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => stash(`<a href="${safeMarkdownUrl(url, repo)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`));
   return escapeHtml(withLinks)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -2817,7 +2834,7 @@ async function openRepoReadme(repoName) {
   const overview = () => `
     <div class="project-overview">
       <span class="panel-eyebrow">${i18n[currentLang].project_overview}</span>
-      <p>${languageAwareHtml(repo.description || i18n[currentLang].no_desc)}</p>
+      <p>${languageAwareHtml(repoDescription(repo))}</p>
       ${repoForkAttributionHtml(repo)}
       ${repoEvidenceSummaryHtml(repo)}
       ${repoDemoLinkHtml(repo)}
@@ -2843,7 +2860,7 @@ async function openRepoReadme(repoName) {
       REQUEST_TIMEOUT_MS.readme
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const markdown = await response.text();
+    const markdown = await responseTextWithLimit(response, MAX_README_BYTES);
     if (requestSequence !== readmeRequestSequence) return;
     readmeDrawerBody.innerHTML = `${overview()}<div class="readme-box readme-content">${markdownToHtml(markdown, repo)}</div>`;
     readmeDrawerBody.setAttribute('aria-busy', 'false');
@@ -2935,7 +2952,7 @@ function openPaperDetail(title) {
   ` : '';
   openModal({
     title: paper.title,
-    html: `<div class="readme-box"><p class="muted">${escapeHtml(paper.venue || '')} · ${escapeHtml(paper.year || '')}</p>${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${escapeHtml(paper.summary || '')}</p>${codeEvidence}</div>`,
+    html: `<div class="readme-box"><p class="muted">${escapeHtml(paper.venue || '')} · ${escapeHtml(paper.year || '')}</p>${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${languageAwareHtml(paperSummary(paper))}</p>${codeEvidence}</div>`,
     linkText: i18n[currentLang].pub_open_article,
     link: paper.link
   });
@@ -2964,7 +2981,7 @@ function renderRepoPreviewCard(repo) {
   const mappingLabel = repoMappingLabel(repo);
   const accent = repoColor(repo.language);
   const safeName = escapeHtml(repo.name);
-  const desc = languageAwareHtml(repo.description || i18n[currentLang].no_desc);
+  const desc = languageAwareHtml(repoDescription(repo));
   const stage = textFor(repo.stage);
   const repoHref = safeExternalHref(repo.html_url);
   const demoHref = validatedExternalHttpUrl(repo.demo_url);
@@ -3175,6 +3192,8 @@ function currentPublications() {
         authors: override.authors,
         doi: override.doi,
         link: override.link,
+        summary: override.summary,
+        summaryZh: override.summaryZh,
         code_url: override.code_url,
         code_note: override.code_note,
         status: currentLang === 'zh' ? override.statusZh : override.status,
@@ -3336,6 +3355,7 @@ function normalizeGitHubRepo(repo, localByName) {
   return {
     name,
     description: local?.description || externalText(repo.description, '', 1000),
+    descriptionZh: local?.descriptionZh || '',
     language: externalText(repo.language, '', 100) || local?.language || null,
     stargazers_count: stars,
     updated_at: externalText(repo.updated_at, local?.updated_at || '', 100),

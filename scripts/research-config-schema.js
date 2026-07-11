@@ -1,8 +1,9 @@
+// Shared by the browser and repository update workflow.
 export const RESEARCH_CONFIG_VERSION = 2;
 export const SUPPORTED_ANIMATIONS = new Set(['point-cloud', 'vpr', 'medical-image', 'agent', 'education']);
 export const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const LIMITS = Object.freeze({
+export const RESEARCH_CONFIG_LIMITS = Object.freeze({
   domains: 64,
   childrenPerDomain: 64,
   assignments: 512,
@@ -22,7 +23,7 @@ function addConfigError(errors, location, message) {
   errors.push(`research-config.json: ${location ? `${location} ` : ''}${message}`);
 }
 
-function validateNonEmptyString(value, location, errors, maxLength = LIMITS.localizedTextLength) {
+function validateNonEmptyString(value, location, errors, maxLength = RESEARCH_CONFIG_LIMITS.localizedTextLength) {
   if (typeof value !== 'string' || !value.trim()) {
     addConfigError(errors, location, 'must be a non-empty string');
     return false;
@@ -44,7 +45,7 @@ function validateLocalizedText(value, location, errors) {
 }
 
 function validateConfigId(value, location, errors) {
-  if (!validateNonEmptyString(value, location, errors, LIMITS.idLength)) return false;
+  if (!validateNonEmptyString(value, location, errors, RESEARCH_CONFIG_LIMITS.idLength)) return false;
   if (!CONFIG_ID_PATTERN.test(value)) {
     addConfigError(errors, location, 'must use lowercase letters, numbers, and single hyphens');
     return false;
@@ -74,17 +75,17 @@ function validateAssignments(assignments, location, interestIds, errors) {
     return;
   }
   const entries = Object.entries(assignments);
-  if (entries.length > LIMITS.assignments) addConfigError(errors, location, `must not exceed ${LIMITS.assignments} entries`);
+  if (entries.length > RESEARCH_CONFIG_LIMITS.assignments) addConfigError(errors, location, `must not exceed ${RESEARCH_CONFIG_LIMITS.assignments} entries`);
 
   for (const [itemName, ids] of entries) {
     const itemLocation = `${location}[${JSON.stringify(itemName)}]`;
-    validateNonEmptyString(itemName, itemLocation, errors, LIMITS.itemNameLength);
+    validateNonEmptyString(itemName, itemLocation, errors, RESEARCH_CONFIG_LIMITS.itemNameLength);
     if (!Array.isArray(ids)) {
       addConfigError(errors, itemLocation, 'must be an array of interest ids');
       continue;
     }
-    if (ids.length > LIMITS.idsPerAssignment) {
-      addConfigError(errors, itemLocation, `must not exceed ${LIMITS.idsPerAssignment} interest ids`);
+    if (ids.length > RESEARCH_CONFIG_LIMITS.idsPerAssignment) {
+      addConfigError(errors, itemLocation, `must not exceed ${RESEARCH_CONFIG_LIMITS.idsPerAssignment} interest ids`);
     }
     const seenIds = new Set();
     ids.forEach((id, index) => {
@@ -112,7 +113,7 @@ export function validateResearchConfigValue(config) {
   if (!Array.isArray(config.interests) || !config.interests.length) {
     addConfigError(errors, 'interests', 'must be a non-empty array');
   } else {
-    if (config.interests.length > LIMITS.domains) addConfigError(errors, 'interests', `must not exceed ${LIMITS.domains} domains`);
+    if (config.interests.length > RESEARCH_CONFIG_LIMITS.domains) addConfigError(errors, 'interests', `must not exceed ${RESEARCH_CONFIG_LIMITS.domains} domains`);
     config.interests.forEach((domain, domainIndex) => {
       const domainLocation = `interests[${domainIndex}]`;
       if (!isPlainObject(domain)) {
@@ -129,8 +130,8 @@ export function validateResearchConfigValue(config) {
         addConfigError(errors, `${domainLocation}.children`, 'must be a non-empty array');
         return;
       }
-      if (domain.children.length > LIMITS.childrenPerDomain) {
-        addConfigError(errors, `${domainLocation}.children`, `must not exceed ${LIMITS.childrenPerDomain} interests`);
+      if (domain.children.length > RESEARCH_CONFIG_LIMITS.childrenPerDomain) {
+        addConfigError(errors, `${domainLocation}.children`, `must not exceed ${RESEARCH_CONFIG_LIMITS.childrenPerDomain} interests`);
       }
       domain.children.forEach((interest, interestIndex) => {
         const interestLocation = `${domainLocation}.children[${interestIndex}]`;
@@ -145,7 +146,7 @@ export function validateResearchConfigValue(config) {
         validateLocalizedText(interest.title, `${interestLocation}.title`, errors);
         validateLocalizedText(interest.label, `${interestLocation}.label`, errors);
         validateLocalizedText(interest.description, `${interestLocation}.description`, errors);
-        if (validateNonEmptyString(interest.animation, `${interestLocation}.animation`, errors, LIMITS.idLength)
+        if (validateNonEmptyString(interest.animation, `${interestLocation}.animation`, errors, RESEARCH_CONFIG_LIMITS.idLength)
           && !SUPPORTED_ANIMATIONS.has(interest.animation)) {
           addConfigError(errors, `${interestLocation}.animation`, `must be one of: ${[...SUPPORTED_ANIMATIONS].join(', ')}; received "${interest.animation}"`);
         }
@@ -191,5 +192,20 @@ export function normalizeResearchConfigValue(config) {
     })),
     repoAssignments: cleanAssignments(config.repoAssignments),
     paperAssignments: cleanAssignments(config.paperAssignments)
+  };
+}
+
+export function normalizeResearchConfigUpdatePayload(payload) {
+  if (!isPlainObject(payload) || payload.version !== 1) {
+    throw new TypeError('Research config update payload must be a version 1 object.');
+  }
+  const expectedHash = String(payload.expected_sha256 || '').trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(expectedHash)) {
+    throw new TypeError('expected_sha256 must be a lowercase SHA-256 value.');
+  }
+  return {
+    version: 1,
+    expected_sha256: expectedHash,
+    config: normalizeResearchConfigValue(payload.config)
   };
 }

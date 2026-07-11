@@ -194,6 +194,7 @@ function normalizeLang(lang) {
 
 const fixedLanguage = document.documentElement.dataset.fixedLanguage;
 let currentLang = normalizeLang(fixedLanguage || localStorage.getItem(LANG_KEY) || 'en');
+if (fixedLanguage) localStorage.setItem(LANG_KEY, currentLang);
 
 function t(key) {
   return blogI18n[currentLang]?.[key] || blogI18n.en[key] || '';
@@ -228,6 +229,12 @@ blogMenuToggle?.addEventListener('click', () => {
 
 blogMenu?.querySelectorAll('a').forEach((link) => {
   link.addEventListener('click', () => setBlogMenuOpen(false));
+});
+
+blogMenu?.addEventListener('focusout', (event) => {
+  if (blogMenu.classList.contains('open') && !blogMenu.contains(event.relatedTarget)) {
+    setBlogMenuOpen(false);
+  }
 });
 
 document.addEventListener('pointerdown', (event) => {

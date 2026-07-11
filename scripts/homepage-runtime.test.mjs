@@ -5,6 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { homepageI18n } from '../homepage-i18n.js';
 import { localRepos, staticPublications } from '../site-data.js';
+import { RESEARCH_CONFIG_LIMITS } from './research-config-schema.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -54,9 +55,18 @@ test('every literal DOM lookup used by the homepage modules exists', () => {
 });
 
 test('research and repository visualizations are real lazy modules', async () => {
-  assert.match(indexSource, /<script\s+type="module"\s+src="script\.js\?v=[a-f0-9]{12}"><\/script>/i);
+  const releaseVersion = indexSource.match(/<script\s+type="module"\s+src="script\.js\?v=([a-f0-9]{12})"><\/script>/i)?.[1];
+  assert.ok(releaseVersion, 'homepage entry module must include a release version');
+  for (const assetPath of ['./site-data.js', './homepage-i18n.js', './scripts/research-config-schema.js']) {
+    assert.match(
+      indexSource,
+      new RegExp(`<link\\s+rel="modulepreload"\\s+href="${assetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?v=${releaseVersion}"\\s*\\/?>`, 'i'),
+      `${assetPath} must be preloaded with the entry module release version`
+    );
+  }
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/site-data\.js'\)\)/);
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/homepage-i18n\.js'\)\)/);
+  assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/scripts\/research-config-schema\.js'\)\)/);
   assert.match(scriptSource, /import\(researchCanvasModuleUrl\(\)\)/);
   assert.match(scriptSource, /import\(repoMapModuleUrl\(\)\)/);
   assert.match(scriptSource, /versionedModuleUrl\('\.\/research-canvas\.js', attempt \? \{ retry: attempt \} : \{\}\)/);
@@ -71,9 +81,10 @@ test('research and repository visualizations are real lazy modules', async () =>
 
   const eagerBytes = (await fs.stat(path.join(rootDir, 'script.js'))).size;
   const translationBytes = (await fs.stat(path.join(rootDir, 'homepage-i18n.js'))).size;
+  const schemaBytes = (await fs.stat(path.join(rootDir, 'scripts', 'research-config-schema.js'))).size;
   assert.ok(eagerBytes < 150 * 1024, `eager homepage script grew to ${eagerBytes} bytes`);
   assert.ok(translationBytes < 26 * 1024, `homepage translations grew to ${translationBytes} bytes`);
-  assert.ok(eagerBytes + translationBytes < 180 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
+  assert.ok(eagerBytes + translationBytes + schemaBytes < 190 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
 });
 
 test('homepage prioritizes verified identity and defers optional data requests', async () => {
@@ -108,6 +119,22 @@ test('mobile utility controls stay above content and touch instructions avoid de
   assert.match(indexSource, /data-i18n="repo_map_hint_touch"/);
 });
 
+test('view navigation and research tabs preserve visible keyboard focus and ARIA relationships', () => {
+  assert.match(scriptSource, /function focusViewHeading\(targetView\)/);
+  assert.match(scriptSource, /activateView\(btn\.dataset\.view, \{ focusHeading: true \}\)/);
+  assert.match(scriptSource, /targetView\.closest\('\.console'\)\?\.scrollIntoView\(\{ behavior: 'auto'/);
+  for (const [suffix, panel] of [
+    ['Animation', 'animation'],
+    ['Projects', 'projects'],
+    ['Papers', 'papers'],
+    ['Writing', 'writing']
+  ]) {
+    assert.match(indexSource, new RegExp(`id="interestTab${suffix}"[^>]+aria-controls="interestPanel${suffix}"`));
+    assert.match(indexSource, new RegExp(`id="interestPanel${suffix}"[^>]+role="tabpanel"[^>]+aria-labelledby="interestTab${suffix}"[^>]+data-interest-tabpanel="${panel}"`));
+  }
+  assert.match(scriptSource, /tabPanel\.hidden = compactViewportQuery\.matches && tabPanel\.dataset\.interestTabpanel !== activeInterestPanel/);
+});
+
 test('project view gives immediate feedback and limits first-render work on phones', () => {
   assert.match(indexSource, /<option value="6">6<\/option>/);
   assert.match(scriptSource, /const compactViewportQuery = window\.matchMedia\('\(max-width: 720px\)'\)/);
@@ -128,18 +155,36 @@ test('canvas motion respects mobile budgets and page visibility', () => {
   assert.match(researchCanvasSource, /INTEREST_MOBILE_IDLE_FRAME_MS = 200/);
   assert.match(researchCanvasSource, /if \(isInterestDragging\(\)\) return INTEREST_DESKTOP_FRAME_MS/);
   assert.match(repoMapSource, /REPO_MAP_MOBILE_IDLE_FRAME_MS = 200/);
+  assert.match(scriptSource, /compactViewportQuery\.matches \|\| reducedMotionQuery\.matches \? 'auto' : 'smooth'/);
+  assert.match(researchCanvasSource, /getContext\(\)\.reducedMotion \? 'auto' : 'smooth'/);
+  assert.match(repoMapSource, /context\.reducedMotion \? 'auto' : 'smooth'/);
+  assert.doesNotMatch(scriptSource, /scrollIntoView\(\{ behavior: 'smooth'/);
   assert.match(researchCanvasSource, /addEventListener\('pointerup'[\s\S]*?updateInterestCanvasAccessibility\(\);[\s\S]*?releasePointerCapture/);
 });
 
-test('owner mapping uses a framed-safe Actions dispatch instead of a contents token', () => {
+test('owner mapping hands a token-free payload to GitHub Actions', () => {
+  assert.match(indexSource, /<textarea id="managerUpdatePayload"[^>]+readonly[^>]+aria-describedby="managerRemoteStatus"/);
+  assert.match(indexSource, /<button id="managerPrepareRemote"[^>]+type="button"/);
+  assert.match(indexSource, /<button id="managerCopyRemote"[^>]+disabled/);
+  assert.match(indexSource, /href="https:\/\/github\.com\/wcx12\/wcx12\/actions\/workflows\/research-config-update\.yml"[^>]+rel="noreferrer"/);
   assert.match(scriptSource, /if \(window\.top !== window\.self\)/);
-  assert.match(scriptSource, /actions\/workflows\/\$\{GITHUB_CONFIG_WORKFLOW\}\/dispatches/);
-  assert.match(scriptSource, /method: 'POST'/);
-  assert.match(scriptSource, /expected_sha256: expectedHash/);
-  assert.match(homepageI18nSource, /GitHub token \(Actions only\)/);
+  assert.match(scriptSource, /version: 1,[\s\S]*?expected_sha256: remoteResearchConfigHash,[\s\S]*?config/);
+  assert.match(scriptSource, /navigator\.clipboard\.writeText\(payload\)/);
+  assert.match(homepageI18nSource, /This page never reads a repository token/);
+  assert.doesNotMatch(indexSource, /type="password"|github_pat_/);
+  assert.doesNotMatch(scriptSource, /Authorization: `Bearer|api\.github\.com\/repos\/.*dispatches/);
   assert.doesNotMatch(scriptSource, /repos\/\$\{GITHUB_REPOSITORY\}\/contents\//);
-  assert.doesNotMatch(scriptSource, /method: 'PUT'/);
-  assert.doesNotMatch(scriptSource, /Contents read\/write/);
+});
+
+test('owner mapping reuses the workflow schema and its exact limits', () => {
+  assert.equal(RESEARCH_CONFIG_LIMITS.assignments, 512);
+  assert.equal(RESEARCH_CONFIG_LIMITS.idsPerAssignment, 64);
+  assert.equal(RESEARCH_CONFIG_LIMITS.itemNameLength, 300);
+  assert.equal(RESEARCH_CONFIG_LIMITS.localizedTextLength, 1200);
+  assert.match(scriptSource, /const CONFIG_LIMITS = RESEARCH_CONFIG_LIMITS/);
+  assert.match(scriptSource, /normalizeSharedResearchConfig\(nextConfig\)/);
+  assert.match(scriptSource, /normalizeSharedResearchConfig\(normalizeResearchConfig\(/);
+  assert.doesNotMatch(scriptSource, /const RESEARCH_CONFIG_VERSION = 2|const CONFIG_LIMITS = Object\.freeze/);
 });
 
 test('homepage source exposes crawlable research and publication routes', () => {
@@ -170,9 +215,18 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
   assert.match(chineseIndexSource, /<a\b[^>]*id="langToggle"[^>]*href="\.\.\/"[^>]*hreflang="en"/i);
   assert.match(chineseIndexSource, /src="\.\.\/script\.js\?v=[a-f0-9]{12}"/);
   assert.match(chineseIndexSource, /href="\.\.\/styles\.css\?v=[a-f0-9]{12}"/);
+  const chineseReleaseVersion = chineseIndexSource.match(/src="\.\.\/script\.js\?v=([a-f0-9]{12})"/)?.[1];
+  assert.ok(chineseReleaseVersion, 'Chinese homepage entry module must include a release version');
+  for (const assetPath of ['../site-data.js', '../homepage-i18n.js', '../scripts/research-config-schema.js']) {
+    assert.match(
+      chineseIndexSource,
+      new RegExp(`rel="modulepreload"\\s+href="${assetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?v=${chineseReleaseVersion}"`),
+      `${assetPath} must use the Chinese route and matching release version`
+    );
+  }
   assert.match(chineseIndexSource, /href="\.\/research\/"[^>]*>研究<\/a>/);
   assert.match(chineseIndexSource, /href="\.\.\/blog\/"[^>]*>博客<\/a>/);
-  assert.match(chineseIndexSource, /href="\.\.\/resume\/"[^>]*>履历<\/a>/);
+  assert.match(chineseIndexSource, /href="\.\/resume\/"[^>]*>履历<\/a>/);
   assert.match(chineseIndexSource, /<noscript>[\s\S]*无需 JavaScript 也可以浏览研究主页[\s\S]*href="\.\.\/"[\s\S]*<\/noscript>/);
 
   for (const key of ['hero_kicker', 'hero_status_value', 'hero_preview_description', 'about_line1', 'writing_title', 'timeline_2026']) {
@@ -200,6 +254,7 @@ test('canonical repository and publication data stays unique and classifiable', 
   assert.equal(new Set(localRepos.map((repo) => repo.name)).size, localRepos.length, 'repository names must be unique');
   assert.equal(new Set(localRepos.map((repo) => repo.html_url)).size, localRepos.length, 'repository URLs must be unique');
   for (const repo of localRepos) {
+    assert.ok(repo.descriptionZh, `${repo.name} is missing a curated Chinese description`);
     assert.ok(repo.stage?.en && repo.stage?.zh, `${repo.name} is missing a bilingual maturity stage`);
     assert.ok(repo.evidence?.en && repo.evidence?.zh, `${repo.name} is missing a bilingual public-evidence note`);
   }
@@ -214,6 +269,9 @@ test('canonical repository and publication data stays unique and classifiable', 
   assert.match(scriptSource, /evidence: local\?\.evidence \|\| null/);
   assert.match(scriptSource, /demo_url: validatedExternalHttpUrl\(local\?\.demo_url\)/);
   assert.match(scriptSource, /description: local\?\.description \|\| externalText\(repo\.description/);
+  assert.match(scriptSource, /descriptionZh: local\?\.descriptionZh \|\| ''/);
+  assert.match(scriptSource, /function repoDescription\(repo\)/);
+  assert.match(scriptSource, /summaryZh: override\.summaryZh/);
 
   assert.ok(staticPublications.length >= 2, 'canonical publication data unexpectedly lost verified papers');
   assert.equal(new Set(staticPublications.map((publication) => publication.doi)).size, staticPublications.length, 'publication DOIs must be unique');
@@ -221,6 +279,7 @@ test('canonical repository and publication data stays unique and classifiable', 
     assert.ok(staticPublications.some((publication) => publication.doi === doi), `verified publication is missing: ${doi}`);
   }
   for (const publication of staticPublications) {
+    assert.ok(publication.summaryZh, `${publication.doi} is missing a Chinese summary`);
     assert.match(publication.code_url || '', /^https:\/\/github\.com\/ddfs430\//);
     assert.ok(publication.code_note?.en && publication.code_note?.zh, `${publication.doi} is missing a bilingual code-hosting note`);
   }
@@ -270,6 +329,17 @@ test('homepage localizes accessible names and avoids per-frame canvas layout rea
     repoMapSource.match(/function renderRepoMap\([^)]*\)[\s\S]*?\n}/)?.[0] || '',
     /getBoundingClientRect|resizeDrawingCanvas/
   );
+});
+
+test('README previews bound response work and block arbitrary tracking images', () => {
+  assert.match(scriptSource, /const MAX_README_BYTES = 1024 \* 1024/);
+  assert.match(scriptSource, /responseTextWithLimit\(response, MAX_README_BYTES\)/);
+  assert.match(scriptSource, /response\.body\.getReader\(\)/);
+  assert.match(scriptSource, /total > maxBytes[\s\S]*?reader\.cancel\(\)/);
+  assert.match(scriptSource, /README_IMAGE_HOSTS = new Set\(\['github\.com', 'img\.shields\.io'\]\)/);
+  assert.match(scriptSource, /host\.endsWith\('\.githubusercontent\.com'\)/);
+  assert.match(scriptSource, /node\.setAttribute\('referrerpolicy', 'no-referrer'\)/);
+  assert.match(scriptSource, /node\.setAttribute\('decoding', 'async'\)/);
 });
 
 test('retired sandbox code and taxonomy drift do not return', () => {

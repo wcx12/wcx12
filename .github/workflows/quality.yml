@@ -45,9 +45,17 @@ jobs:
           node --check blog-src/assets/blog.js
           node --check scripts/build-blog.mjs
           node --check scripts/sync-github-repos.mjs
+          node --check scripts/apply-research-config.mjs
+          node --check scripts/research-config-schema.js
 
       - name: Rebuild generated site
         run: npm run build:site
 
+      - name: Validate rebuilt site
+        run: npm run validate
+
+      - name: Package and validate Pages artifact
+        run: npm run package:pages && npm run test:pages
+
       - name: Verify generated files are current
-        run: git diff --exit-code -- index.html blog research publications zh resume publications.md rss.xml sitemap.xml
+        run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml

@@ -2403,7 +2403,7 @@ interestCanvas.addEventListener('pointerleave', () => {
     isVisible: () => interestCanvasVisible,
     render,
     resize,
-    scrollIntoView: () => interestCanvas?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    scrollIntoView: () => interestCanvas?.scrollIntoView({ behavior: getContext().reducedMotion ? 'auto' : 'smooth', block: 'center' })
   };
   return researchCanvasInstance;
 }

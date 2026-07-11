@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadPosts, summarizeDiagnostics } from './blog-content.mjs';
-import { validateResearchConfigValue } from './research-config-schema.mjs';
+import { validateResearchConfigValue } from './research-config-schema.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

@@ -72,6 +72,7 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
       const description = String(existing.description || '').trim()
         || remoteDescription
         || 'Public GitHub repository.';
+      const descriptionZh = String(existing.descriptionZh || '').trim();
       const htmlUrl = validHttpUrl(remote.html_url) || `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(remote.name)}`;
       const existingDemo = validHttpUrl(existing.demo_url);
       const pageDemo = !isCurated && remote.has_pages
@@ -83,6 +84,7 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
       return {
         name: remote.name,
         description,
+        ...(descriptionZh ? { descriptionZh } : {}),
         language: remote.language ?? null,
         stargazers_count: Number.isFinite(remote.stargazers_count) ? remote.stargazers_count : 0,
         updated_at: remote.updated_at || existing.updated_at || '',

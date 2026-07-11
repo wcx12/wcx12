@@ -4,6 +4,7 @@ export const localRepos = [
   {
     "name": "wcx12",
     "description": "Interactive GitHub profile and research homepage.",
+    "descriptionZh": "交互式 GitHub 个人资料与研究主页。",
     "language": "JavaScript",
     "stargazers_count": 2,
     "updated_at": "2026-07-11T16:58:28Z",
@@ -23,6 +24,7 @@ export const localRepos = [
   {
     "name": "shuxuepeiyou",
     "description": "Mathematics enrichment notes and education resources.",
+    "descriptionZh": "数学培优讲义、教学资源与交互式可视化。",
     "language": "TeX",
     "stargazers_count": 0,
     "updated_at": "2026-07-05T06:45:22Z",
@@ -43,6 +45,7 @@ export const localRepos = [
   {
     "name": "major-intel",
     "description": "SQL-first retrieval and agent prototype with evidence-gap tracking for college-major information.",
+    "descriptionZh": "面向高校专业信息的 SQL 优先检索与智能体原型，支持证据缺口追踪。",
     "language": "Python",
     "stargazers_count": 2,
     "updated_at": "2026-06-18T06:54:19Z",
@@ -64,6 +67,7 @@ export const localRepos = [
   {
     "name": "FusionTrack",
     "description": "A broader graduation-thesis repository; this portfolio maps its code/registration module to point-cloud registration.",
+    "descriptionZh": "综合毕业论文仓库；本主页将其中的 code/registration 模块归入点云配准。",
     "language": "Python",
     "stargazers_count": 0,
     "updated_at": "2026-06-02T16:16:58Z",
@@ -86,6 +90,7 @@ export const localRepos = [
   {
     "name": "hlpp-crossword",
     "description": "Interactive learning/game project for classroom selection and practice.",
+    "descriptionZh": "面向课堂选择与练习的交互式学习游戏项目。",
     "language": "TypeScript",
     "stargazers_count": 1,
     "updated_at": "2026-05-13T11:45:15Z",
@@ -105,6 +110,7 @@ export const localRepos = [
   {
     "name": "codex-pet-battle",
     "description": "Planning documents for an agent-style companion concept with leveling, skills, and battles.",
+    "descriptionZh": "智能体式伙伴概念的规划文档，包含等级、技能与对战系统设计。",
     "language": null,
     "stargazers_count": 0,
     "updated_at": "2026-05-06T14:30:11Z",
@@ -124,6 +130,7 @@ export const localRepos = [
   {
     "name": "TrendRadar",
     "description": "AI-assisted public-opinion and trend monitoring with multi-platform feeds.",
+    "descriptionZh": "汇集多平台信息流的 AI 辅助舆情与趋势监测项目。",
     "language": null,
     "stargazers_count": 0,
     "updated_at": "2026-04-27T05:04:51Z",
@@ -148,6 +155,7 @@ export const localRepos = [
   {
     "name": "tetrahedron-visualizer",
     "description": "Geometry visualization for mathematical intuition.",
+    "descriptionZh": "帮助建立数学直觉的几何可视化工具。",
     "language": "JavaScript",
     "stargazers_count": 0,
     "updated_at": "2026-04-18T15:51:40Z",
@@ -168,6 +176,7 @@ export const localRepos = [
   {
     "name": "BIT-The-mathematical-foundation-of-big-Data",
     "description": "Course notes for mathematical foundations of big data.",
+    "descriptionZh": "大数据数学基础课程笔记与实验材料。",
     "language": "TeX",
     "stargazers_count": 0,
     "updated_at": "2024-10-05T11:04:02Z",
@@ -195,6 +204,7 @@ export const staticPublications = [
     "status": "Published",
     "statusZh": "已发表",
     "summary": "Benchmark work connected to visual place recognition and visual localization.",
+    "summaryZh": "面向视觉地点识别与视觉定位的免训练基准研究。",
     "authors": "Chenxu Wang; Qingtong Meng; Bonan Zhang; Fusen Guo",
     "doi": "10.1016/j.neucom.2026.133399",
     "link": "https://doi.org/10.1016/j.neucom.2026.133399",
@@ -215,6 +225,7 @@ export const staticPublications = [
     "status": "In press",
     "statusZh": "录用待刊",
     "summary": "A unified training objective for sample-efficient active learning in medical image classification.",
+    "summaryZh": "面向医学影像分类的样本高效主动学习统一训练目标。",
     "authors": "Chenxu Wang; QingTong Meng; Qianxun Lin; Bonan Zhang; Fusen Guo",
     "doi": "10.1016/j.neucom.2026.134314",
     "link": "https://doi.org/10.1016/j.neucom.2026.134314",

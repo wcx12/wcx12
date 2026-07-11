@@ -3,7 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { normalizeResearchConfigValue, validateResearchConfigValue } from './research-config-schema.mjs';
+import {
+  normalizeResearchConfigUpdatePayload,
+  normalizeResearchConfigValue,
+  validateResearchConfigValue
+} from './research-config-schema.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const currentConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
@@ -45,4 +49,23 @@ test('normalization strips unrecognized fields from workflow input', () => {
   assert.equal(Object.hasOwn(normalized, 'untrusted'), false);
   assert.equal(Object.hasOwn(normalized.interests[0], 'untrusted'), false);
   assert.equal(Object.hasOwn(normalized.interests[0].children[0], 'untrusted'), false);
+});
+
+test('update payload normalization binds a valid config to its source hash', () => {
+  const expectedHash = 'a'.repeat(64);
+  const normalized = normalizeResearchConfigUpdatePayload({
+    version: 1,
+    expected_sha256: expectedHash.toUpperCase(),
+    config: { ...clone(currentConfig), untrusted: true }
+  });
+  assert.equal(normalized.expected_sha256, expectedHash);
+  assert.deepEqual(normalized.config, currentConfig);
+  assert.throws(
+    () => normalizeResearchConfigUpdatePayload({ version: 2, expected_sha256: expectedHash, config: currentConfig }),
+    /version 1 object/
+  );
+  assert.throws(
+    () => normalizeResearchConfigUpdatePayload({ version: 1, expected_sha256: 'invalid', config: currentConfig }),
+    /lowercase SHA-256/
+  );
 });
