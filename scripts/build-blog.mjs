@@ -18,6 +18,7 @@ import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
+import { homepageI18n, homepageSeo } from '../homepage-i18n.js';
 import { localRepos, ORCID_ID, staticPublications } from '../site-data.js';
 import {
   SITE,
@@ -118,6 +119,58 @@ function postUrl(post) {
 
 function absoluteUrl(relativePath = '') {
   return `${SITE.url}/${relativePath.replace(/^\/+/, '')}`;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function setHtmlAttribute(tag, attribute, value) {
+  const encoded = escapeHtml(value);
+  const pattern = new RegExp(`\\s${escapeRegExp(attribute)}="[^"]*"`, 'i');
+  if (pattern.test(tag)) return tag.replace(pattern, ` ${attribute}="${encoded}"`);
+  return tag.replace(/(\s*\/?>)$/, ` ${attribute}="${encoded}"$1`);
+}
+
+function translateHomepageMarkup(source, language) {
+  const translations = homepageI18n[language];
+  if (!translations) throw new Error(`Unsupported homepage language: ${language}`);
+  let output = source;
+  const rawHtmlKeys = new Set(['hero_subtitle_html']);
+  const textKeys = [...new Set([...source.matchAll(/\bdata-i18n="([^"]+)"/g)].map((match) => match[1]))];
+
+  for (const key of textKeys) {
+    const value = translations[key];
+    if (typeof value !== 'string') throw new Error(`Homepage translation ${language}.${key} must be a string`);
+    const pattern = new RegExp(`(<([a-z][\\w:-]*)\\b(?=[^>]*\\bdata-i18n="${escapeRegExp(key)}")[^>]*>)([\\s\\S]*?)(<\\/\\2>)`, 'gi');
+    let replacements = 0;
+    output = output.replace(pattern, (match, opening, tagName, body, closing) => {
+      replacements += 1;
+      return `${opening}${rawHtmlKeys.has(key) ? value : escapeHtml(value)}${closing}`;
+    });
+    if (!replacements) throw new Error(`Unable to render homepage translation ${language}.${key}`);
+  }
+
+  for (const [dataAttribute, targetAttribute] of [
+    ['data-i18n-ph', 'placeholder'],
+    ['data-i18n-aria', 'aria-label'],
+    ['data-i18n-title', 'title']
+  ]) {
+    const keys = [...new Set([...source.matchAll(new RegExp(`\\b${dataAttribute}="([^"]+)"`, 'g'))].map((match) => match[1]))];
+    for (const key of keys) {
+      const value = translations[key];
+      if (typeof value !== 'string') throw new Error(`Homepage translation ${language}.${key} must be a string`);
+      const pattern = new RegExp(`<([a-z][\\w:-]*)\\b(?=[^>]*\\b${dataAttribute}="${escapeRegExp(key)}")[^>]*>`, 'gi');
+      let replacements = 0;
+      output = output.replace(pattern, (tag) => {
+        replacements += 1;
+        return setHtmlAttribute(tag, targetAttribute, value);
+      });
+      if (!replacements) throw new Error(`Unable to render homepage attribute ${language}.${key}`);
+    }
+  }
+
+  return output;
 }
 
 function personReference() {
@@ -358,6 +411,7 @@ function renderShell({
   const routeLanguage = fixedLanguage === 'zh' ? 'zh' : 'en';
   const documentLanguage = contentLang === 'zh' ? 'zh-CN' : contentLang;
   const text = shellText[routeLanguage];
+  const homePath = fixedLanguage === 'zh' ? 'zh/index.html' : 'index.html';
   const researchPath = fixedLanguage === 'zh' ? 'zh/research/index.html' : 'research/index.html';
   const projectsPath = fixedLanguage === 'zh' ? 'zh/projects/index.html' : 'projects/index.html';
   const publicationsPath = fixedLanguage === 'zh' ? 'zh/publications/index.html' : 'publications/index.html';
@@ -441,11 +495,11 @@ ${extraHead.trim()}
   <a class="skip-link" href="#main-content"${i18n('skip_main')}>${escapeHtml(text.skip_main)}</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
-    <a class="blog-brand" href="${ctx.link('index.html')}">wcx12</a>
+    <a class="blog-brand" href="${ctx.link(homePath)}">wcx12</a>
     <div class="blog-menu">
       <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}" aria-label="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}${i18n('nav_menu_title', 'aria')}>${escapeHtml(text.nav_menu)}</button>
       <nav id="blogSiteNav" class="blog-nav" aria-label="${escapeHtml(text.nav_landmark)}"${i18n('nav_landmark', 'aria')}>
-        <a href="${ctx.link('index.html')}"${current('home')} title="${escapeHtml(text.nav_home_title)}" aria-label="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}${i18n('nav_home_title', 'aria')}>${escapeHtml(text.nav_home)}</a>
+        <a href="${ctx.link(homePath)}"${current('home')} title="${escapeHtml(text.nav_home_title)}" aria-label="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}${i18n('nav_home_title', 'aria')}>${escapeHtml(text.nav_home)}</a>
         <a href="${ctx.link('resume/index.html')}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}" aria-label="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}${i18n('nav_profile_title', 'aria')}>${escapeHtml(text.nav_profile)}</a>
         <a href="${ctx.link(researchPath)}"${current('research')} title="${escapeHtml(text.nav_research_title)}" aria-label="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}${i18n('nav_research_title', 'aria')}>${escapeHtml(text.nav_research)}</a>
         <a href="${ctx.link(projectsPath)}"${current('projects')} title="${escapeHtml(text.nav_projects_title)}" aria-label="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}${i18n('nav_projects_title', 'aria')}>${escapeHtml(text.nav_projects)}</a>
@@ -466,7 +520,7 @@ ${body.trim()}
   <footer class="blog-footer">
     <span>&copy; ${SITE.copyrightYear} wcx12</span>
     <nav aria-label="${escapeHtml(text.profile_links)}"${i18n('profile_links', 'aria')}>
-      <a href="${ctx.link('index.html')}"${i18n('nav_home')}>${escapeHtml(text.nav_home)}</a>
+      <a href="${ctx.link(homePath)}"${i18n('nav_home')}>${escapeHtml(text.nav_home)}</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
       <a href="https://orcid.org/${ORCID_ID}" target="_blank" rel="me noreferrer" aria-label="${escapeHtml(text.orcid_title)}"${i18n('orcid_title', 'aria')}>ORCID</a>
     </nav>
@@ -653,6 +707,7 @@ async function computeAssetVersion(posts) {
   const files = [
     'styles.css',
     'script.js',
+    'homepage-i18n.js',
     'site-data.js',
     'research-canvas.js',
     'repo-map.js',
@@ -694,7 +749,127 @@ async function stampHomepageAssets() {
     if (!pattern.test(stamped)) throw new Error(`Unable to stamp homepage asset using ${pattern}.`);
     stamped = stamped.replace(pattern, replacement);
   }
+  stamped = replaceRequired(stamped, /<noscript>[\s\S]*?<\/noscript>/, renderHomepageNoscript('en'), 'English no-script navigation');
+  stamped = translateHomepageMarkup(stamped, 'en');
+  stamped = localizeHomepageMetadata(stamped, 'en');
+  stamped = localizeHomepageStructuredData(stamped, 'en');
+  stamped = stamped.replace(/\r\n?/g, '\n');
   if (stamped !== source) await fs.writeFile(filePath, stamped);
+}
+
+function replaceHomepageMeta(source, attribute, key, content) {
+  const pattern = new RegExp(`(<meta\\s+${escapeRegExp(attribute)}="${escapeRegExp(key)}"\\s+content=")[^"]*("\\s*\\/?>)`);
+  if (!pattern.test(source)) throw new Error(`Unable to localize homepage metadata ${attribute}=${key}`);
+  return source.replace(pattern, `$1${escapeHtml(content)}$2`);
+}
+
+function replaceRequired(source, pattern, replacement, label) {
+  const found = pattern instanceof RegExp ? pattern.test(source) : source.includes(pattern);
+  if (!found) throw new Error(`Unable to render homepage ${label}`);
+  return source.replace(pattern, replacement);
+}
+
+function replaceAllRequired(source, search, replacement, label) {
+  if (!source.includes(search)) throw new Error(`Unable to render homepage ${label}`);
+  return source.replaceAll(search, replacement);
+}
+
+function renderHomepageNoscript(language) {
+  const copy = homepageSeo[language]?.noscript;
+  if (!copy) throw new Error(`Missing homepage noscript copy for ${language}`);
+  const links = copy.links.map(([href, label, linkLanguage = '']) => {
+    const languageAttributes = linkLanguage
+      ? ` hreflang="${escapeHtml(linkLanguage)}" lang="${escapeHtml(linkLanguage)}"`
+      : '';
+    return `          <a href="${escapeHtml(href)}"${languageAttributes}>${escapeHtml(label)}</a>`;
+  }).join('\n');
+  return `<noscript>
+      <section class="noscript-notice" aria-labelledby="noscriptTitle">
+        <p class="panel-eyebrow">${escapeHtml(copy.label)}</p>
+        <h2 id="noscriptTitle">${escapeHtml(copy.title)}</h2>
+        <p>${escapeHtml(copy.description)}</p>
+        <nav aria-label="${escapeHtml(copy.navigationLabel)}">
+${links}
+        </nav>
+      </section>
+    </noscript>`;
+}
+
+function localizeHomepageMetadata(source, language) {
+  const seo = homepageSeo[language];
+  if (!seo) throw new Error(`Missing homepage SEO metadata for ${language}`);
+  const pageUrl = absoluteUrl(language === 'zh' ? 'zh/' : '');
+  let localized = replaceRequired(source, /<title>[^<]*<\/title>/, `<title>${escapeHtml(seo.title)}</title>`, `${language} title`);
+  localized = replaceRequired(localized, /(<link\s+rel="canonical"\s+href=")[^"]*("\s*\/?>)/, `$1${pageUrl}$2`, `${language} canonical`);
+  localized = replaceHomepageMeta(localized, 'name', 'description', seo.description);
+  localized = replaceHomepageMeta(localized, 'property', 'og:title', seo.title);
+  localized = replaceHomepageMeta(localized, 'property', 'og:description', seo.description);
+  localized = replaceHomepageMeta(localized, 'property', 'og:url', pageUrl);
+  localized = replaceHomepageMeta(localized, 'property', 'og:site_name', seo.siteName);
+  localized = replaceHomepageMeta(localized, 'property', 'og:locale', seo.locale);
+  localized = replaceHomepageMeta(localized, 'property', 'og:locale:alternate', seo.alternateLocale);
+  localized = replaceHomepageMeta(localized, 'property', 'og:image:alt', seo.imageAlt);
+  localized = replaceHomepageMeta(localized, 'name', 'twitter:title', seo.title);
+  localized = replaceHomepageMeta(localized, 'name', 'twitter:description', seo.description);
+  localized = replaceHomepageMeta(localized, 'name', 'twitter:image:alt', seo.imageAlt);
+  return localized;
+}
+
+function localizeHomepageStructuredData(source, language) {
+  const seo = homepageSeo[language];
+  const pageUrl = absoluteUrl(language === 'zh' ? 'zh/' : '');
+  let profilePages = 0;
+  const localized = source.replace(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g, (match, json) => {
+    const metadata = JSON.parse(json);
+    if (metadata['@type'] === 'ProfilePage') {
+      profilePages += 1;
+      metadata['@id'] = `${pageUrl}#profile`;
+      metadata.url = pageUrl;
+      metadata.name = seo.profileName;
+      metadata.description = seo.description;
+      metadata.inLanguage = language === 'zh' ? 'zh-CN' : 'en';
+      metadata.mainEntity.knowsAbout = seo.knowsAbout;
+    } else if (metadata['@type'] === 'WebSite') {
+      metadata.alternateName = seo.websiteName;
+      metadata.inLanguage = ['en', 'zh-CN'];
+    }
+    const safeJson = JSON.stringify(metadata, null, 2).replace(/</g, '\\u003c');
+    return `<script type="application/ld+json">\n${safeJson}\n  </script>`;
+  });
+  if (profilePages !== 1) throw new Error(`Expected one homepage ProfilePage, found ${profilePages}`);
+  return localized;
+}
+
+async function renderChineseHomepage() {
+  const rootSource = await fs.readFile(path.join(rootDir, 'index.html'), 'utf8');
+  let localized = replaceRequired(
+    rootSource,
+    '<html lang="en" data-fixed-language="en">',
+    '<html lang="zh-CN" data-fixed-language="zh">',
+    'Chinese document language'
+  );
+  for (const [search, replacement, label] of [
+    ['href="./favicon.svg"', 'href="../favicon.svg"', 'Chinese favicon path'],
+    ['href="./sitemap.xml"', 'href="../sitemap.xml"', 'Chinese sitemap path'],
+    ['href="./rss.xml"', 'href="../rss.xml"', 'Chinese RSS path'],
+    ['href="styles.css', 'href="../styles.css', 'Chinese stylesheet path'],
+    ['src="script.js', 'src="../script.js', 'Chinese script path']
+  ]) {
+    localized = replaceRequired(localized, search, replacement, label);
+  }
+  localized = replaceAllRequired(localized, 'href="./blog/"', 'href="../blog/"', 'Chinese blog paths');
+  localized = replaceAllRequired(localized, 'href="./resume/"', 'href="../resume/"', 'Chinese profile paths');
+  localized = replaceRequired(
+    localized,
+    /<a id="langToggle"[^>]*>/,
+    `<a id="langToggle" class="ghost-btn" href="../" hreflang="en" lang="en" title="${escapeHtml(homepageI18n.zh.lang_link_aria)}" aria-label="${escapeHtml(homepageI18n.zh.lang_link_aria)}" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">`,
+    'Chinese language link'
+  );
+  localized = replaceRequired(localized, /<noscript>[\s\S]*?<\/noscript>/, renderHomepageNoscript('zh'), 'Chinese no-script navigation');
+  localized = translateHomepageMarkup(localized, 'zh');
+  localized = localizeHomepageMetadata(localized, 'zh');
+  localized = localizeHomepageStructuredData(localized, 'zh');
+  await writePage('zh/index.html', localized);
 }
 
 async function renderIndex(posts) {
@@ -911,6 +1086,7 @@ async function renderDraftPreviews(posts, renderer) {
     '404.html',
     'styles.css',
     'script.js',
+    'homepage-i18n.js',
     'site-data.js',
     'research-canvas.js',
     'repo-map.js',
@@ -1428,7 +1604,7 @@ async function renderResearchTopic(posts, child, language) {
       <div class="blog-hero-actions">
         <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '全部研究方向' : 'All research topics'}</a>
         <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '论文列表' : 'Publications'}</a>
-        <a class="btn btn-outline research-demo-link" href="${ctx.link('index.html')}#research/${escapeHtml(child.id)}">${isZh ? '打开概念演示' : 'Open concept demo'}</a>
+        <a class="btn btn-outline research-demo-link" href="${ctx.link(`${isZh ? 'zh/' : ''}index.html`)}#research/${escapeHtml(child.id)}">${isZh ? '打开概念演示' : 'Open concept demo'}</a>
       </div>
     </header>
     ${evidenceSections(ctx, evidence, language)}`;
@@ -1677,6 +1853,7 @@ async function renderSitemap(posts) {
   ]);
   const urls = [
     { route: '', lastmod: latestHomeDate },
+    { route: 'zh/', lastmod: latestHomeDate },
     { route: 'resume/', lastmod: '' },
     { route: 'blog/', lastmod: latestPostDate },
     ...(posts.length > 1 ? [{ route: 'blog/archive/', lastmod: latestPostDate }] : []),
@@ -1713,6 +1890,7 @@ async function main() {
   await copyAssets();
   assetVersion = await computeAssetVersion(posts);
   await stampHomepageAssets();
+  await renderChineseHomepage();
 
   const renderer = createMarkdownRenderer();
   for (const post of posts) {

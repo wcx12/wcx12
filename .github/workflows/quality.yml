@@ -39,6 +39,7 @@ jobs:
         run: |
           node --check site-data.js
           node --check script.js
+          node --check homepage-i18n.js
           node --check research-canvas.js
           node --check repo-map.js
           node --check blog-src/assets/blog.js

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { homepageI18n } from '../homepage-i18n.js';
 import { localRepos, staticPublications } from '../site-data.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -16,7 +17,9 @@ const [
   repoMapSource,
   styleSource,
   readmeSource,
-  researchConfigSource
+  researchConfigSource,
+  homepageI18nSource,
+  chineseIndexSource
 ] = await Promise.all([
   read('index.html'),
   read('script.js'),
@@ -24,7 +27,9 @@ const [
   read('repo-map.js'),
   read('styles.css'),
   read('README.md'),
-  read('research-config.json')
+  read('research-config.json'),
+  read('homepage-i18n.js'),
+  read('zh/index.html')
 ]);
 
 const researchConfig = JSON.parse(researchConfigSource);
@@ -45,11 +50,13 @@ test('every literal DOM lookup used by the homepage modules exists', () => {
     .filter((id, index, values) => !ids.has(id) && values.indexOf(id) === index);
 
   assert.deepEqual(missing, [], `missing homepage elements: ${missing.join(', ')}`);
+  assert.deepEqual([...htmlIds(chineseIndexSource)].sort(), [...ids].sort(), 'Chinese homepage DOM ids drifted from the English homepage');
 });
 
 test('research and repository visualizations are real lazy modules', async () => {
   assert.match(indexSource, /<script\s+type="module"\s+src="script\.js\?v=[a-f0-9]{12}"><\/script>/i);
-  assert.match(scriptSource, /await import\(versionedModuleUrl\('\.\/site-data\.js'\)\)/);
+  assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/site-data\.js'\)\)/);
+  assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/homepage-i18n\.js'\)\)/);
   assert.match(scriptSource, /import\(researchCanvasModuleUrl\(\)\)/);
   assert.match(scriptSource, /import\(repoMapModuleUrl\(\)\)/);
   assert.match(scriptSource, /versionedModuleUrl\('\.\/research-canvas\.js', attempt \? \{ retry: attempt \} : \{\}\)/);
@@ -63,11 +70,16 @@ test('research and repository visualizations are real lazy modules', async () =>
   assert.match(scriptSource, /function fillTruncatedText\(/, 'eager hero preview lost its text helper');
 
   const eagerBytes = (await fs.stat(path.join(rootDir, 'script.js'))).size;
-  assert.ok(eagerBytes < 180 * 1024, `eager homepage script grew to ${eagerBytes} bytes`);
+  const translationBytes = (await fs.stat(path.join(rootDir, 'homepage-i18n.js'))).size;
+  assert.ok(eagerBytes < 150 * 1024, `eager homepage script grew to ${eagerBytes} bytes`);
+  assert.ok(translationBytes < 26 * 1024, `homepage translations grew to ${translationBytes} bytes`);
+  assert.ok(eagerBytes + translationBytes < 180 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
 });
 
 test('homepage prioritizes verified identity and defers optional data requests', async () => {
   assert.match(indexSource, /<title>Chenxu Wang \(wcx12\) \| Machine Learning Researcher<\/title>/);
+  assert.match(indexSource, /<html lang="en" data-fixed-language="en">/);
+  assert.match(indexSource, /hreflang="zh-CN" href="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
   assert.match(indexSource, /<h1>Chenxu Wang <span class="hero-alias">\(wcx12\)<\/span><\/h1>/);
   assert.match(indexSource, /"propertyID": "ORCID"/);
   assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
@@ -124,7 +136,7 @@ test('owner mapping uses a framed-safe Actions dispatch instead of a contents to
   assert.match(scriptSource, /actions\/workflows\/\$\{GITHUB_CONFIG_WORKFLOW\}\/dispatches/);
   assert.match(scriptSource, /method: 'POST'/);
   assert.match(scriptSource, /expected_sha256: expectedHash/);
-  assert.match(scriptSource, /GitHub token \(Actions only\)/);
+  assert.match(homepageI18nSource, /GitHub token \(Actions only\)/);
   assert.doesNotMatch(scriptSource, /repos\/\$\{GITHUB_REPOSITORY\}\/contents\//);
   assert.doesNotMatch(scriptSource, /method: 'PUT'/);
   assert.doesNotMatch(scriptSource, /Contents read\/write/);
@@ -145,12 +157,39 @@ test('homepage source exposes crawlable research and publication routes', () => 
   for (const href of expectedHrefs) {
     assert.match(indexSource, new RegExp(`<a\\b[^>]*href="${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'i'), `${href} must be an ordinary link`);
   }
-  assert.match(indexSource, /<noscript>[\s\S]*?\.\/zh\/research\/[\s\S]*?<\/noscript>/i, 'no-JavaScript navigation must include the Chinese research index');
+  assert.match(indexSource, /<a\b[^>]*id="langToggle"[^>]*href="\.\/zh\/"[^>]*hreflang="zh-CN"/i);
+  assert.match(indexSource, /<noscript>[\s\S]*?\.\/zh\/[\s\S]*?<\/noscript>/i, 'no-JavaScript navigation must include the Chinese homepage');
+});
+
+test('Chinese homepage is a complete fixed-language mirror with stable deep links', () => {
+  assert.match(chineseIndexSource, /<html lang="zh-CN" data-fixed-language="zh">/);
+  assert.match(chineseIndexSource, /<link rel="canonical" href="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
+  assert.match(chineseIndexSource, /hreflang="en" href="https:\/\/wcx12\.github\.io\/wcx12\/"/);
+  assert.match(chineseIndexSource, /hreflang="zh-CN" href="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
+  assert.match(chineseIndexSource, /hreflang="x-default" href="https:\/\/wcx12\.github\.io\/wcx12\/"/);
+  assert.match(chineseIndexSource, /<a\b[^>]*id="langToggle"[^>]*href="\.\.\/"[^>]*hreflang="en"/i);
+  assert.match(chineseIndexSource, /src="\.\.\/script\.js\?v=[a-f0-9]{12}"/);
+  assert.match(chineseIndexSource, /href="\.\.\/styles\.css\?v=[a-f0-9]{12}"/);
+  assert.match(chineseIndexSource, /href="\.\/research\/"[^>]*>研究<\/a>/);
+  assert.match(chineseIndexSource, /href="\.\.\/blog\/"[^>]*>博客<\/a>/);
+  assert.match(chineseIndexSource, /href="\.\.\/resume\/"[^>]*>履历<\/a>/);
+  assert.match(chineseIndexSource, /<noscript>[\s\S]*无需 JavaScript 也可以浏览研究主页[\s\S]*href="\.\.\/"[\s\S]*<\/noscript>/);
+
+  for (const key of ['hero_kicker', 'hero_status_value', 'hero_preview_description', 'about_line1', 'writing_title', 'timeline_2026']) {
+    assert.ok(chineseIndexSource.includes(homepageI18n.zh[key]), `Chinese homepage is missing static translation ${key}`);
+  }
+  assert.doesNotMatch(chineseIndexSource, /Machine Learning Researcher|View Publications|Research Interests|Technical notes and research logs/);
+  assert.doesNotMatch(chineseIndexSource, /href="\.\/zh\//, 'Chinese homepage must not generate nested /zh/ routes');
+  assert.match(homepageI18nSource, /export const homepageI18n = \{/);
+  assert.match(scriptSource, /const fixedLanguage = document\.documentElement\.dataset\.fixedLanguage/);
+  assert.match(scriptSource, /if \(fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
+  assert.match(scriptSource, /target\.search = window\.location\.search/, 'language links must preserve management and preview parameters');
+  assert.match(scriptSource, /target\.hash = window\.location\.hash/, 'language links must preserve the active homepage section');
 });
 
 test('homepage exposes navigation and hero meaning without runtime-only semantics', () => {
   assert.match(indexSource, /<nav\s+class="top-actions-nav"[^>]+aria-label="Primary navigation"/i);
-  assert.match(indexSource, /id="typeTarget">Applying for Master\/PhD programs<\/span>/i);
+  assert.match(indexSource, /id="typeTarget"[^>]*>Applying for Master\/PhD programs<\/span>/i);
   assert.match(indexSource, /<canvas\s+id="heroPreviewCanvas"\s+aria-hidden="true"><\/canvas>/i);
   assert.match(indexSource, /id="heroPreviewMeta"[\s\S]*?\.\/research\/point-cloud-registration\/[\s\S]*?Robust point set registration/i);
   assert.doesNotMatch(scriptSource, /heroPreviewCanvas\?\.setAttribute\('aria-label'/);

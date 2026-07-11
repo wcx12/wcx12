@@ -95,6 +95,7 @@ async function expectedAssetVersion() {
   const files = [
     'styles.css',
     'script.js',
+    'homepage-i18n.js',
     'site-data.js',
     'research-canvas.js',
     'repo-map.js',
@@ -121,6 +122,7 @@ async function expectedAssetVersion() {
 test('public HTML has stable document structure and valid JSON-LD', async () => {
   const pages = [
     path.join(rootDir, 'index.html'),
+    path.join(rootDir, 'zh', 'index.html'),
     path.join(rootDir, '404.html'),
     path.join(rootDir, 'resume', 'index.html'),
     ...staticRouteFiles,
@@ -148,6 +150,40 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
 
     for (const [, json] of matches(source, /<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/gi)) {
       assert.doesNotThrow(() => JSON.parse(json), `${relative}: invalid JSON-LD`);
+    }
+  }
+});
+
+test('all generated local links and assets resolve inside the published tree', async () => {
+  const pages = [
+    path.join(rootDir, 'index.html'),
+    path.join(rootDir, '404.html'),
+    path.join(rootDir, 'resume', 'index.html'),
+    ...await walk(path.join(rootDir, 'research'), (file) => file.endsWith('.html')),
+    ...await walk(path.join(rootDir, 'projects'), (file) => file.endsWith('.html')),
+    ...await walk(path.join(rootDir, 'publications'), (file) => file.endsWith('.html')),
+    ...await walk(path.join(rootDir, 'zh'), (file) => file.endsWith('.html')),
+    ...await walk(path.join(rootDir, 'blog'), (file) => file.endsWith('.html'))
+  ];
+
+  for (const file of pages) {
+    const source = await fs.readFile(file, 'utf8');
+    const relative = path.relative(rootDir, file).replace(/\\/g, '/');
+    for (const [, attribute, rawValue] of matches(source, /\b(href|src)="([^"]+)"/gi)) {
+      if (/^(?:https?:|mailto:|tel:|data:|#|\/\/)/i.test(rawValue)) continue;
+      const cleanValue = decodeURIComponent(rawValue.split(/[?#]/, 1)[0]);
+      if (!cleanValue) continue;
+      let target = cleanValue.startsWith('/wcx12/')
+        ? path.resolve(rootDir, cleanValue.slice('/wcx12/'.length))
+        : path.resolve(path.dirname(file), cleanValue);
+      if (cleanValue.startsWith('/') && !cleanValue.startsWith('/wcx12/')) {
+        assert.fail(`${relative}: unsupported root-absolute ${attribute} target ${rawValue}`);
+      }
+      if (/[\\/]$/.test(cleanValue)) target = path.join(target, 'index.html');
+      const withinRoot = path.relative(rootDir, target);
+      assert.ok(withinRoot && !withinRoot.startsWith('..') && !path.isAbsolute(withinRoot), `${relative}: ${attribute} escapes the published tree: ${rawValue}`);
+      const exists = await fs.stat(target).then(() => true, () => false);
+      assert.ok(exists, `${relative}: missing local ${attribute} target ${rawValue}`);
     }
   }
 });
@@ -190,6 +226,7 @@ test('all executable and stylesheet assets share the current release version', a
   const version = await expectedAssetVersion();
   const pages = [
     path.join(rootDir, 'index.html'),
+    path.join(rootDir, 'zh', 'index.html'),
     path.join(rootDir, 'resume', 'index.html'),
     ...staticRouteFiles,
     ...await walk(path.join(rootDir, 'blog'), (file) => file.endsWith('.html'))
@@ -293,8 +330,11 @@ test('all configured research, project, and publication routes exist without sta
     ...await walk(path.join(rootDir, 'publications'), (file) => file.endsWith('.html')),
     ...await walk(path.join(rootDir, 'zh'), (file) => file.endsWith('.html'))
   ].map((file) => path.relative(rootDir, file).replace(/\\/g, '/')).sort();
-  const expected = staticRouteFiles.map((file) => path.relative(rootDir, file).replace(/\\/g, '/')).sort();
-  assert.deepEqual(generated, expected, 'generated static route set must follow research-config.json exactly');
+  const expected = [
+    'zh/index.html',
+    ...staticRouteFiles.map((file) => path.relative(rootDir, file).replace(/\\/g, '/'))
+  ].sort();
+  assert.deepEqual(generated, expected, 'generated static route set must include the Chinese homepage and follow research-config.json exactly');
 });
 
 test('fixed-language routes have unique metadata and reciprocal language links', async () => {
@@ -323,6 +363,11 @@ test('fixed-language routes have unique metadata and reciprocal language links',
     assert.equal(linkHref(source, 'alternate', 'x-default'), isZh ? alternate : canonical, `${route}: x-default must select English`);
     assert.match(source, new RegExp(`data-fixed-language="${isZh ? 'zh' : 'en'}"`), `${route}: missing fixed route language`);
     assert.match(source, new RegExp(`<html[^>]+lang="${isZh ? 'zh-CN' : 'en'}"`), `${route}: document language does not match route`);
+    const expectedHome = `${SITE.url}/${isZh ? 'zh/' : ''}`;
+    const brandHome = source.match(/<a class="blog-brand" href="([^"]+)">wcx12<\/a>/i)?.[1];
+    const footerHome = source.match(/<footer class="blog-footer">[\s\S]*?<a href="([^"]+)"/i)?.[1];
+    assert.equal(new URL(brandHome, canonical).href, expectedHome, `${route}: brand must return to the matching language homepage`);
+    assert.equal(new URL(footerHome, canonical).href, expectedHome, `${route}: footer must return to the matching language homepage`);
     assert.doesNotMatch(source, /id="blogLangToggle"/, `${route}: fixed routes must not use the localStorage language button`);
     const switchHref = source.match(/<a id="blogLangLink"[^>]+href="([^"]+)"/i)?.[1];
     assert.ok(switchHref, `${route}: missing ordinary language link`);
@@ -369,7 +414,11 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
       assert.equal(page.about.termCode, child.id, `${route}: incorrect DefinedTerm`);
       assert.ok(demoLink, `${route}: missing interactive demo link`);
       assert.equal(demoLink[2], language === 'zh' ? '打开概念演示' : 'Open concept demo');
-      assert.equal(new URL(demoLink[1], `${SITE.url}/${route}`).href, `${SITE.url}/#research/${child.id}`, `${route}: interactive demo link targets the wrong homepage state`);
+      assert.equal(
+        new URL(demoLink[1], `${SITE.url}/${route}`).href,
+        `${SITE.url}/${language === 'zh' ? 'zh/' : ''}#research/${child.id}`,
+        `${route}: interactive demo link targets the wrong homepage state`
+      );
       assert.deepEqual(visibleKeys, expectedKeys, `${route}: visible evidence differs from configured sources`);
       assert.deepEqual(schemaKeys, visibleKeys, `${route}: JSON-LD evidence differs from visible evidence`);
       assert.deepEqual([...evidenceTypes].filter((type) => !['SoftwareSourceCode', 'ScholarlyArticle', 'BlogPosting'].includes(type)), [], `${route}: unsupported evidence type`);
@@ -389,6 +438,26 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
       }
     }
   }
+});
+
+test('homepage language mirrors are self-canonical and mutually discoverable', async () => {
+  const english = await fs.readFile(path.join(rootDir, 'index.html'), 'utf8');
+  const chinese = await fs.readFile(path.join(rootDir, 'zh', 'index.html'), 'utf8');
+  const englishUrl = `${SITE.url}/`;
+  const chineseUrl = `${SITE.url}/zh/`;
+
+  assert.equal(linkHref(english, 'canonical'), englishUrl);
+  assert.equal(linkHref(chinese, 'canonical'), chineseUrl);
+  for (const source of [english, chinese]) {
+    assert.equal(linkHref(source, 'alternate', 'en'), englishUrl);
+    assert.equal(linkHref(source, 'alternate', 'zh-CN'), chineseUrl);
+    assert.equal(linkHref(source, 'alternate', 'x-default'), englishUrl);
+  }
+  assert.match(english, /<a id="langToggle"[^>]+href="\.\/zh\/"[^>]+hreflang="zh-CN"/);
+  assert.match(chinese, /<a id="langToggle"[^>]+href="\.\.\/"[^>]+hreflang="en"/);
+  assert.match(chinese, /<meta property="og:url" content="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
+  assert.match(chinese, /"@id": "https:\/\/wcx12\.github\.io\/wcx12\/zh\/#profile"/);
+  assert.match(chinese, /"inLanguage": "zh-CN"/);
 });
 
 test('project indexes expose every repository with maturity and public evidence', async () => {
@@ -469,6 +538,7 @@ test('sitemap covers every configured fixed-language route', async () => {
     assert.ok(Number.isFinite(Date.parse(`${lastmod}T00:00:00Z`)), `${location}: unparseable lastmod`);
   }
   const lastmodByUrl = new Map(entries.map(([, location, lastmod = '']) => [location, lastmod]));
+  assert.equal(lastmodByUrl.get(`${SITE.url}/zh/`), lastmodByUrl.get(`${SITE.url}/`));
   const latestProjectDate = localRepos
     .map((repo) => repo.updated_at || repo.pushed_at)
     .filter(Boolean)
@@ -541,6 +611,7 @@ test('scheduled publishing builds before validating generated output', async () 
   assert.match(source, /if: steps\.repository_sync\.outcome == 'failure'/);
   assert.match(source, /building from the last committed snapshot/);
   assert.match(source, /git add site-data\.js index\.html blog research projects publications zh resume/);
+  assert.match(source, /- "homepage-i18n\.js"/);
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(source, /pages: write/);
@@ -576,12 +647,14 @@ test('research mapping workflow validates, rebuilds, and deploys from the latest
 
 test('local draft preview rejects rebinding and symlink escapes', async () => {
   const source = await fs.readFile(path.join(rootDir, 'scripts', 'serve-preview.mjs'), 'utf8');
+  const buildSource = await fs.readFile(path.join(rootDir, 'scripts', 'build-blog.mjs'), 'utf8');
   assert.match(source, /allowedHosts = new Set\(\[`\$\{host\}:\$\{port\}`, `localhost:\$\{port\}`\]\)/);
   assert.match(source, /const previewRootReal = await fs\.realpath\(previewRoot\)/);
   assert.match(source, /async function confinedRealPath\(target\)/);
   assert.match(source, /path\.relative\(previewRootReal, realTarget\)/);
   assert.match(source, /if \(!allowedHosts\.has\(requestHost\)\)/);
   assert.match(source, /'X-Frame-Options': 'DENY'/);
+  assert.match(buildSource, /const scaffold = \[[\s\S]*?'script\.js',[\s\S]*?'homepage-i18n\.js',[\s\S]*?'site-data\.js'/, 'draft preview must include the homepage translation module');
 });
 
 test('public publication source and generated profile contain every canonical DOI', async () => {
