@@ -48,11 +48,15 @@ test('every literal DOM lookup used by the homepage modules exists', () => {
 });
 
 test('research and repository visualizations are real lazy modules', async () => {
-  assert.match(indexSource, /<script\s+type="module"\s+src="script\.js"><\/script>/i);
+  assert.match(indexSource, /<script\s+type="module"\s+src="script\.js\?v=[a-f0-9]{12}"><\/script>/i);
+  assert.match(scriptSource, /await import\(versionedModuleUrl\('\.\/site-data\.js'\)\)/);
   assert.match(scriptSource, /import\(researchCanvasModuleUrl\(\)\)/);
   assert.match(scriptSource, /import\(repoMapModuleUrl\(\)\)/);
-  assert.match(scriptSource, /research-canvas\.js\?retry=/, 'research module retries need a fresh module URL');
-  assert.match(scriptSource, /repo-map\.js\?retry=/, 'repo-map retries need a fresh module URL');
+  assert.match(scriptSource, /versionedModuleUrl\('\.\/research-canvas\.js', attempt \? \{ retry: attempt \} : \{\}\)/);
+  assert.match(scriptSource, /versionedModuleUrl\('\.\/repo-map\.js', attempt \? \{ retry: attempt \} : \{\}\)/);
+  assert.match(scriptSource, /url\.searchParams\.set\('v', assetVersion\)/, 'lazy modules must inherit the release version');
+  assert.match(scriptSource, /versionedModuleUrl\(CONFIG_PATH\)/, 'research config must inherit the release version');
+  assert.match(scriptSource, /versionedModuleUrl\('\.\/blog\/posts\.json'\)/, 'blog metadata must inherit the release version');
   assert.doesNotMatch(scriptSource, /\bfrom\s+['"]\.\/(?:research-canvas|repo-map)\.js['"]/);
   assert.doesNotMatch(indexSource, /<script\b[^>]+src="(?:\.\/)?(?:research-canvas|repo-map)\.js"/i);
   assert.match(scriptSource, /function drawRoundedRect\(/, 'eager hero preview lost its rounded-rectangle helper');

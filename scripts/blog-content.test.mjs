@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import MarkdownIt from 'markdown-it';
 import markdownItKatexModule from 'markdown-it-katex';
-import { loadPosts, summarizeDiagnostics } from './blog-content.mjs';
+import { loadPosts, publicationState, siteDate, summarizeDiagnostics } from './blog-content.mjs';
 
 const markdownItKatex = typeof markdownItKatexModule === 'function'
   ? markdownItKatexModule
@@ -91,6 +91,16 @@ async function validateFixture(body) {
   return validateSource(postSource(body));
 }
 
+async function withContentRoot(callback) {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'wcx12-content-'));
+  try {
+    await fs.mkdir(path.join(root, 'content', 'posts'), { recursive: true });
+    return await callback(root);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+}
+
 test('rejects Setext level-one headings supplied inside post bodies', async () => {
   const { errors } = await validateFixture('Duplicate title\n===============');
   assert.match(errors.join('\n'), /heading level 2/);
@@ -126,3 +136,107 @@ test('requires math metadata when prose contains formulas', async () => {
   const codeOnly = await validateFixture('`$E=mc^2$`\n\n```sh\necho "$HOME"\n```');
   assert.doesNotMatch(codeOnly.errors.join('\n'), /math content requires/);
 });
+
+test('uses the configured site timezone for publication dates', () => {
+  assert.equal(siteDate('2026-07-10T15:59:59Z', 'Asia/Shanghai'), '2026-07-10');
+  assert.equal(siteDate('2026-07-10T16:00:00Z', 'Asia/Shanghai'), '2026-07-11');
+  assert.equal(publicationState({ draft: true, date: '2026-07-01' }, '2026-07-10'), 'draft');
+  assert.equal(publicationState({ draft: false, date: '2026-07-11' }, '2026-07-10'), 'scheduled');
+  assert.equal(publicationState({ draft: false, date: '2026-07-10' }, '2026-07-10'), 'published');
+});
+
+test('keeps drafts and future posts out of the public collection', async () => withContentRoot(async (root) => {
+  const postsDir = path.join(root, 'content', 'posts');
+  await fs.writeFile(path.join(postsDir, 'published.md'), postSource('Published body'));
+  await fs.writeFile(path.join(postsDir, 'scheduled.md'), postSource('Scheduled body')
+    .replaceAll('heading-validation', 'scheduled-post')
+    .replace('Heading validation', 'Scheduled post')
+    .replaceAll('2026-07-10', '2026-07-11'));
+  await fs.writeFile(path.join(postsDir, 'draft.md'), postSource('Draft body')
+    .replaceAll('heading-validation', 'draft-post')
+    .replace('Heading validation', 'Draft post')
+    .replace('draft: false', 'draft: true'));
+
+  const publicResult = await loadPosts(root, { today: '2026-07-10' });
+  assert.deepEqual(publicResult.posts.map((post) => post.slug), ['heading-validation']);
+  assert.deepEqual(publicResult.publicationCounts, { published: 1, scheduled: 1, draft: 1 });
+
+  const previewResult = await loadPosts(root, { today: '2026-07-10', includeDrafts: true, includeFuture: true });
+  assert.deepEqual(new Set(previewResult.posts.map((post) => post.publicationState)), new Set(['published', 'scheduled', 'draft']));
+}));
+
+test('validates bundled post media and fingerprints referenced files', async () => withContentRoot(async (root) => {
+  const bundle = path.join(root, 'content', 'posts', 'fixture');
+  await fs.mkdir(path.join(bundle, 'media'), { recursive: true });
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Registration correspondences](media/plot.svg)'));
+  await fs.writeFile(path.join(bundle, 'media', 'plot.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+
+  const { posts, diagnostics } = await loadPosts(root, { today: '2026-07-10' });
+  const { errors } = summarizeDiagnostics(diagnostics);
+  assert.deepEqual(errors, []);
+  assert.equal(posts[0].mediaFiles[0].publicPath, 'media/plot.svg');
+  assert.match(posts[0].mediaFiles[0].version, /^[a-f0-9]{12}$/);
+}));
+
+test('rejects missing, mis-cased, unsafe, and unlabelled media', async () => withContentRoot(async (root) => {
+  const bundle = path.join(root, 'content', 'posts', 'fixture');
+  await fs.mkdir(path.join(bundle, 'media'), { recursive: true });
+  await fs.writeFile(path.join(bundle, 'media', 'Plot.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource([
+    '![](media/missing.svg)',
+    '![Case mismatch](media/plot.svg)',
+    '![Traversal](media/%2e%2e/secret.svg)'
+  ].join('\n\n')));
+
+  const { diagnostics } = await loadPosts(root, { today: '2026-07-10' });
+  const { errors } = summarizeDiagnostics(diagnostics);
+  assert.match(errors.join('\n'), /must include alt text/);
+  assert.match(errors.join('\n'), /does not exist with exact casing/);
+  assert.match(errors.join('\n'), /invalid media path/);
+}));
+
+test('requires media references to come from a bundled post', async () => {
+  const { errors } = await validateFixture('![Plot](media/plot.svg)');
+  assert.match(errors.join('\n'), /requires a bundled post with index\.md/);
+});
+
+test('rejects symbolic links in article media', async (context) => withContentRoot(async (root) => {
+  const bundle = path.join(root, 'content', 'posts', 'fixture');
+  const media = path.join(bundle, 'media');
+  await fs.mkdir(media, { recursive: true });
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Linked media](media/link.svg)'));
+  await fs.writeFile(path.join(bundle, 'real.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  try {
+    await fs.symlink(path.join(bundle, 'real.svg'), path.join(media, 'link.svg'), 'file');
+  } catch (error) {
+    if (['EPERM', 'EACCES', 'ENOSYS'].includes(error.code)) {
+      context.skip(`symbolic links unavailable: ${error.code}`);
+      return;
+    }
+    throw error;
+  }
+  const { diagnostics } = await loadPosts(root, { today: '2026-07-10' });
+  const { errors } = summarizeDiagnostics(diagnostics);
+  assert.match(errors.join('\n'), /must not contain symbolic links/);
+}));
+
+test('rejects a symbolic article media directory', async (context) => withContentRoot(async (root) => {
+  const bundle = path.join(root, 'content', 'posts', 'fixture');
+  const externalMedia = path.join(root, 'external-media');
+  await fs.mkdir(bundle, { recursive: true });
+  await fs.mkdir(externalMedia, { recursive: true });
+  await fs.writeFile(path.join(bundle, 'index.md'), postSource('![Linked media](media/link.svg)'));
+  await fs.writeFile(path.join(externalMedia, 'link.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  try {
+    await fs.symlink(externalMedia, path.join(bundle, 'media'), 'dir');
+  } catch (error) {
+    if (['EPERM', 'EACCES', 'ENOSYS'].includes(error.code)) {
+      context.skip(`symbolic links unavailable: ${error.code}`);
+      return;
+    }
+    throw error;
+  }
+  const { diagnostics } = await loadPosts(root, { today: '2026-07-10' });
+  const { errors } = summarizeDiagnostics(diagnostics);
+  assert.match(errors.join('\n'), /must not contain symbolic links/);
+}));

@@ -7,14 +7,43 @@ and technical notes from one set of source files.
 
 ```bash
 npm run new:post "Post Title"
-npm run validate
 npm run build:site
+npm run validate
 ```
 
 Posts live in `content/posts/`. Keep `draft: true` until a post is ready. Set
 `math: true` whenever prose contains KaTeX formulas. Research mappings must use
 an ID from `research-config.json` and should only be added when the article
 actually concerns that research area.
+
+New posts use a self-contained bundle:
+
+```text
+content/posts/2026-07-11-example-note/
+  index.md
+  media/
+    result-figure.webp
+```
+
+Reference local images or attachments as `media/result-figure.webp`. Media names
+must be lowercase and portable. The validator rejects missing files, path
+traversal, symbolic links, files over 10 MB, case mismatches, and published
+images without alternative text. Only referenced files are copied publicly.
+
+Publication state is determined in `Asia/Shanghai`: `draft: true` stays private;
+a non-draft post with a future `date` is scheduled; an eligible non-draft post
+is published. The scheduled GitHub workflow rebuilds shortly after local
+midnight. Drafts and scheduled posts remain excluded from pages, search, RSS,
+the sitemap, and research evidence.
+
+Preview unpublished writing locally:
+
+```bash
+npm run preview:blog
+```
+
+Open `http://127.0.0.1:4173/` and stop the server with `Ctrl+C`. The server only
+exposes the generated `output/preview/` tree, which is ignored by Git.
 
 ## Update research evidence
 
@@ -32,7 +61,8 @@ repository and publication metadata still belongs in `site-data.js`.
 `npm run build:site` writes `blog/`, `research/`, `publications/`, `zh/`,
 `resume/`, `publications.md`, `rss.xml`, and `sitemap.xml`. Commit source and
 generated changes together so pull-request quality checks can verify that the
-public output is current.
+public output is current. The build fingerprints executable, stylesheet, data,
+and article-media requests so one deployment cannot reuse stale browser assets.
 
 ## Verification
 

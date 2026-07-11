@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import MarkdownIt from 'markdown-it';
@@ -34,6 +35,7 @@ const outputAssetsDir = path.join(outputDir, 'assets');
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
 const researchChildren = researchConfig.interests.flatMap((interest) => interest.children);
 const PORTFOLIO_TITLE = 'Chenxu Wang (wcx12)';
+let assetVersion = '';
 const markdownItKatex = typeof markdownItKatexModule === 'function'
   ? markdownItKatexModule
   : markdownItKatexModule.default;
@@ -115,11 +117,11 @@ function canonicalUrlForFile(filePath) {
   return absoluteUrl(relative);
 }
 
-function createPageContext(filePath) {
+function createPageContext(filePath, siteRoot = rootDir) {
   const pageDir = path.dirname(filePath);
   return {
     link(target) {
-      const absoluteTarget = path.join(rootDir, target);
+      const absoluteTarget = path.join(siteRoot, target);
       let relative = path.relative(pageDir, absoluteTarget).replace(/\\/g, '/');
       if (!relative) return './';
       relative = relative.replace(/\/index\.html$/, '/');
@@ -241,16 +243,20 @@ function renderShell({
   modifiedTime = '',
   contentLang = SITE.lang,
   fixedLanguage = '',
-  alternateUrl = ''
+  alternateUrl = '',
+  canonicalUrlOverride = '',
+  robots = 'index,follow,max-image-preview:large',
+  blogPage = null,
+  siteRoot = rootDir
 }) {
-  const ctx = createPageContext(filePath);
-  const relativeFilePath = path.relative(rootDir, filePath).replace(/\\/g, '/');
-  const isBlogPage = relativeFilePath.startsWith('blog/');
+  const ctx = createPageContext(filePath, siteRoot);
+  const relativeFilePath = path.relative(siteRoot, filePath).replace(/\\/g, '/');
+  const isBlogPage = blogPage ?? relativeFilePath.startsWith('blog/');
   const titleSuffix = isBlogPage ? SITE.title : PORTFOLIO_TITLE;
   const pageTitle = title === SITE.title ? title : `${title} | ${titleSuffix}`;
   const siteName = isBlogPage ? SITE.title : 'wcx12 Research Portfolio';
   const pageDescription = description || SITE.description;
-  const canonicalUrl = canonicalUrlForFile(filePath);
+  const canonicalUrl = canonicalUrlOverride || canonicalUrlForFile(filePath);
   const socialImage = absoluteUrl('assets/og-home.png');
   const routeLanguage = fixedLanguage === 'zh' ? 'zh' : 'en';
   const documentLanguage = contentLang === 'zh' ? 'zh-CN' : contentLang;
@@ -298,7 +304,7 @@ function renderShell({
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeHtml(pageDescription)}" />
   <meta name="author" content="${escapeHtml(SITE.author)}" />
-  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="robots" content="${escapeHtml(robots)}" />
   <meta name="theme-color" content="#070914" />
   <meta name="color-scheme" content="dark" />
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
@@ -322,8 +328,8 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${escapeHtml(absoluteUrl('rss.xml'))}" />
   <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
   <link rel="preload" href="${ctx.link('assets/fonts/space-grotesk-latin.woff2')}" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="${ctx.link('styles.css')}" />
-  <link rel="stylesheet" href="${ctx.link('blog/assets/blog.css')}" />
+  <link rel="stylesheet" href="${versionedAssetLink(ctx, 'styles.css')}" />
+  <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/blog.css')}" />
 ${extraHead.trim()}
   <script type="application/ld+json">${safeMetadata}</script>
 </head>
@@ -350,14 +356,14 @@ ${extraHead.trim()}
 ${body.trim()}
   </main>
   <footer class="blog-footer">
-    <span>&copy; ${new Date().getUTCFullYear()} wcx12</span>
+    <span>&copy; ${SITE.copyrightYear} wcx12</span>
     <nav aria-label="Profile links">
       <a href="${ctx.link('index.html')}"${i18n('nav_home')}>${escapeHtml(text.nav_home)}</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327">ORCID</a>
     </nav>
   </footer>
-  <script type="module" src="${ctx.link('blog/assets/blog.js')}"></script>
+  <script type="module" src="${versionedAssetLink(ctx, 'blog/assets/blog.js')}"></script>
 </body>
 </html>
 `;
@@ -375,9 +381,36 @@ function createMarkdownRenderer() {
   md.renderer.rules.fence = (tokens, idx) => renderCodeFence(tokens[idx].content, tokens[idx].info);
   md.renderer.rules.code_block = (tokens, idx) => renderCodeFence(tokens[idx].content, 'text');
 
+  const versionPostMedia = (value, post) => {
+    if (!post?.mediaFiles?.length) return value;
+    const raw = String(value || '');
+    const fragmentIndex = raw.indexOf('#');
+    const fragment = fragmentIndex >= 0 ? raw.slice(fragmentIndex) : '';
+    const withoutFragment = fragmentIndex >= 0 ? raw.slice(0, fragmentIndex) : raw;
+    const pathPart = withoutFragment.split('?', 1)[0];
+    let normalized;
+    try {
+      normalized = decodeURIComponent(pathPart).replace(/^\.\//, '');
+    } catch {
+      return value;
+    }
+    const media = post.mediaFiles.find((item) => item.publicPath === normalized);
+    return media ? `${media.publicPath}?v=${media.version}${fragment}` : value;
+  };
+
+  const defaultImage = md.renderer.rules.image || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+  md.renderer.rules.image = (tokens, idx, options, env, self) => {
+    const source = tokens[idx].attrGet('src') || '';
+    tokens[idx].attrSet('src', versionPostMedia(source, env.post));
+    tokens[idx].attrSet('loading', 'lazy');
+    tokens[idx].attrSet('decoding', 'async');
+    return defaultImage(tokens, idx, options, env, self);
+  };
+
   const defaultLinkOpen = md.renderer.rules.link_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
-    const href = tokens[idx].attrGet('href') || '';
+    const href = versionPostMedia(tokens[idx].attrGet('href') || '', env.post);
+    tokens[idx].attrSet('href', href);
     if (/^https?:\/\//i.test(href)) {
       tokens[idx].attrSet('target', '_blank');
       tokens[idx].attrSet('rel', 'noreferrer');
@@ -399,8 +432,8 @@ function createMarkdownRenderer() {
   };
 
   return {
-    render(markdown) {
-      const env = { toc: [], headingCounts: new Map() };
+    render(markdown, post = null) {
+      const env = { toc: [], headingCounts: new Map(), post };
       const html = md.render(markdown, env);
       return { html, toc: env.toc };
     }
@@ -430,8 +463,8 @@ function postJsonLd(post) {
   });
 }
 
-async function writePage(relativeFile, html) {
-  const filePath = path.join(rootDir, relativeFile);
+async function writePage(relativeFile, html, siteRoot = rootDir) {
+  const filePath = path.join(siteRoot, relativeFile);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, html);
 }
@@ -474,6 +507,67 @@ async function copyAssets() {
     await fs.mkdir(path.dirname(outputFontPath), { recursive: true });
     await fs.copyFile(path.join(katexDistDir, 'fonts', fontPath), outputFontPath);
   }
+}
+
+async function copyPostMedia(post, articleDirectory) {
+  for (const media of post.mediaFiles || []) {
+    const destination = path.join(articleDirectory, media.publicPath);
+    await fs.mkdir(path.dirname(destination), { recursive: true });
+    await fs.copyFile(media.sourcePath, destination);
+  }
+}
+
+function versionedAssetLink(ctx, relativePath) {
+  if (!assetVersion) throw new Error('Asset version must be computed before rendering pages.');
+  return `${ctx.link(relativePath)}?v=${assetVersion}`;
+}
+
+async function computeAssetVersion(posts) {
+  const files = [
+    'styles.css',
+    'script.js',
+    'site-data.js',
+    'research-canvas.js',
+    'repo-map.js',
+    'blog/assets/blog.css',
+    'blog/assets/blog.js',
+    'blog/assets/katex.min.css',
+    'research-config.json',
+    'resume.md',
+    'scripts/blog-content.mjs',
+    'scripts/build-blog.mjs',
+    ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
+  ].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+  const hash = createHash('sha256');
+  for (const relativePath of files) {
+    hash.update(relativePath);
+    hash.update('\0');
+    const content = await fs.readFile(path.join(rootDir, relativePath), 'utf8');
+    hash.update(content.replace(/\r\n?/g, '\n'));
+    hash.update('\0');
+  }
+  return hash.digest('hex').slice(0, 12);
+}
+
+async function stampHomepageAssets() {
+  const filePath = path.join(rootDir, 'index.html');
+  const source = await fs.readFile(filePath, 'utf8');
+  const replacements = [
+    {
+      pattern: /(<link\s+rel="stylesheet"\s+href="styles\.css)(?:\?v=[a-f0-9]{12})?("\s*\/?>)/,
+      replacement: `$1?v=${assetVersion}$2`
+    },
+    {
+      pattern: /(<script\s+type="module"\s+src="script\.js)(?:\?v=[a-f0-9]{12})?("\s*><\/script>)/,
+      replacement: `$1?v=${assetVersion}$2`
+    }
+  ];
+  let stamped = source;
+  for (const { pattern, replacement } of replacements) {
+    if (!pattern.test(stamped)) throw new Error(`Unable to stamp homepage asset using ${pattern}.`);
+    stamped = stamped.replace(pattern, replacement);
+  }
+  if (stamped !== source) await fs.writeFile(filePath, stamped);
 }
 
 async function renderIndex(posts) {
@@ -582,22 +676,25 @@ function relatedPostsFor(post, posts) {
     .map((item) => item.candidate);
 }
 
-async function renderPost(post, posts, renderer) {
+async function renderPost(post, posts, renderer, options = {}) {
+  const preview = options.preview === true;
+  const siteRoot = preview ? path.join(rootDir, 'output', 'preview') : rootDir;
   const relativeFile = `blog/posts/${post.slug}/index.html`;
-  const filePath = path.join(rootDir, relativeFile);
-  const ctx = createPageContext(filePath);
-  const { html, toc } = renderer.render(post.content);
+  const filePath = path.join(siteRoot, relativeFile);
+  const ctx = createPageContext(filePath, siteRoot);
+  const { html, toc } = renderer.render(post.content, post);
   const index = posts.findIndex((item) => item.slug === post.slug);
-  const newer = index > 0 ? posts[index - 1] : null;
-  const older = index < posts.length - 1 ? posts[index + 1] : null;
-  const related = relatedPostsFor(post, posts);
+  const newer = !preview && index > 0 ? posts[index - 1] : null;
+  const older = !preview && index < posts.length - 1 ? posts[index + 1] : null;
+  const related = preview ? [] : relatedPostsFor(post, posts);
   const tagRow = renderTags(ctx, post.tags);
-  const mathCss = post.math ? `<link rel="stylesheet" href="${ctx.link('blog/assets/katex.min.css')}" />` : '';
+  const mathCss = post.math ? `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />` : '';
   const renderedToc = post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>';
 
   const body = `
     <div class="blog-post-layout">
       <article class="blog-post-card" lang="${escapeHtml(post.lang || SITE.lang)}">
+${preview ? `        <div class="blog-preview-banner" role="status">${post.publicationState === 'scheduled' ? `Scheduled for ${escapeHtml(post.date)}` : 'Draft preview'} - not part of the public site</div>\n` : ''}
         <header class="blog-post-header">
           <p class="blog-kicker">${escapeHtml(post.category)}</p>
           <h1 class="blog-post-title">${escapeHtml(post.title)}</h1>
@@ -656,10 +753,72 @@ ${html}
     pageType: 'article',
     publishedTime: post.date,
     modifiedTime: post.updated,
-    contentLang: post.lang
-  }));
+    contentLang: post.lang,
+    canonicalUrlOverride: preview ? absoluteUrl(postUrl(post)) : '',
+    robots: preview ? 'noindex,nofollow' : 'index,follow,max-image-preview:large',
+    blogPage: preview ? true : null,
+    siteRoot
+  }), siteRoot);
+  await copyPostMedia(post, path.dirname(filePath));
 
   post.renderedText = stripHtml(html);
+  post.renderedHtml = html;
+}
+
+async function renderDraftPreviews(posts, renderer) {
+  const previewRoot = path.join(rootDir, 'output', 'preview');
+  await fs.rm(previewRoot, { recursive: true, force: true });
+  await fs.mkdir(previewRoot, { recursive: true });
+  const scaffold = [
+    '404.html',
+    'styles.css',
+    'script.js',
+    'site-data.js',
+    'research-canvas.js',
+    'repo-map.js',
+    'research-config.json',
+    'favicon.svg',
+    'rss.xml',
+    'sitemap.xml',
+    'assets',
+    'blog',
+    'resume',
+    'research',
+    'publications',
+    'zh'
+  ];
+  for (const relativePath of scaffold) {
+    await fs.cp(path.join(rootDir, relativePath), path.join(previewRoot, relativePath), { recursive: true });
+  }
+  for (const post of posts) await renderPost(post, posts, renderer, { preview: true });
+
+  const filePath = path.join(previewRoot, 'index.html');
+  const items = posts.map((post) => `
+    <a class="blog-card" href="blog/posts/${encodeURIComponent(post.slug)}/">
+      <div class="blog-card-meta"><span>${post.publicationState === 'scheduled' ? `Scheduled ${escapeHtml(post.date)}` : 'Draft'}</span><span>${escapeHtml(post.category)}</span></div>
+      <h2>${escapeHtml(post.title)}</h2>
+      <p>${escapeHtml(post.description)}</p>
+    </a>`).join('');
+  const body = `
+    <section class="blog-hero">
+      <p class="blog-kicker">Local author preview</p>
+      <h1>Drafts and scheduled writing</h1>
+      <p>This private build includes unpublished articles for visual review. Nothing under <code>output/</code> is deployed.</p>
+    </section>
+    <section class="blog-section" aria-labelledby="preview-list-title">
+      <div class="blog-section-head"><h2 id="preview-list-title">Unpublished articles</h2><span>${posts.length}</span></div>
+      <div class="blog-grid">${items || '<p class="muted">No drafts or scheduled posts.</p>'}</div>
+    </section>`;
+  await writePage('index.html', renderShell({
+    filePath,
+    title: 'Writing Preview',
+    description: 'Local preview of draft and scheduled writing.',
+    body,
+    canonicalUrlOverride: absoluteUrl('blog/'),
+    robots: 'noindex,nofollow',
+    blogPage: true,
+    siteRoot: previewRoot
+  }), previewRoot);
 }
 
 async function renderArchive(posts) {
@@ -1225,20 +1384,28 @@ async function renderRss(posts) {
     const categories = [post.category, ...post.tags]
       .map((category) => `      <category>${escapeXml(category)}</category>`)
       .join('\n');
+    const itemUrl = absoluteUrl(postUrl(post));
+    const content = String(post.renderedHtml || '')
+      .replace(/\b(href|src)="([^"]+)"/g, (match, attribute, value) => {
+        if (/^(?:https?:|mailto:|tel:|data:|#)/i.test(value)) return match;
+        return `${attribute}="${escapeHtml(new URL(value, itemUrl).href)}"`;
+      })
+      .replace(/]]>/g, ']]]]><![CDATA[>');
     return `
     <item>
       <title>${escapeXml(post.title)}</title>
-      <link>${escapeXml(absoluteUrl(postUrl(post)))}</link>
-      <guid>${escapeXml(absoluteUrl(postUrl(post)))}</guid>
+      <link>${escapeXml(itemUrl)}</link>
+      <guid>${escapeXml(itemUrl)}</guid>
       <pubDate>${new Date(`${post.date}T00:00:00Z`).toUTCString()}</pubDate>
       <description>${escapeXml(post.description)}</description>
 ${categories}
+      <content:encoded><![CDATA[${content}]]></content:encoded>
     </item>
   `;
   }).join('');
 
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>${escapeXml(SITE.title)}</title>
     <link>${escapeXml(absoluteUrl('blog/'))}</link>
@@ -1259,16 +1426,24 @@ async function renderSitemap(posts) {
     ...researchChildren.map((child) => researchRoute(language, `${child.id}/`)),
     publicationsRoute(language)
   ]);
+  const latestPostDate = posts.map((post) => post.updated || post.date).sort().at(-1) || '2026-01-01';
+  const latestEvidenceDate = [
+    latestPostDate,
+    ...localRepos.map((repo) => String(repo.updated_at || repo.pushed_at || '').slice(0, 10))
+  ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort().at(-1) || latestPostDate;
   const urls = [
-    '',
-    'resume/',
-    'blog/',
-    'blog/archive/',
-    ...researchRoutes,
-    ...posts.map((post) => postUrl(post)),
-    ...topicCounts(posts, 'tags').map(([tag]) => `blog/tags/${slugify(tag)}/`)
+    { route: '', lastmod: latestEvidenceDate },
+    { route: 'resume/', lastmod: latestEvidenceDate },
+    { route: 'blog/', lastmod: latestPostDate },
+    { route: 'blog/archive/', lastmod: latestPostDate },
+    ...researchRoutes.map((route) => ({ route, lastmod: latestEvidenceDate })),
+    ...posts.map((post) => ({ route: postUrl(post), lastmod: post.updated || post.date })),
+    ...topicCounts(posts, 'tags').map(([tag]) => ({
+      route: `blog/tags/${slugify(tag)}/`,
+      lastmod: posts.filter((post) => post.tags.includes(tag)).map((post) => post.updated || post.date).sort().at(-1)
+    }))
   ];
-  const body = urls.map((url) => `  <url><loc>${escapeXml(absoluteUrl(url))}</loc></url>`).join('\n');
+  const body = urls.map(({ route, lastmod }) => `  <url><loc>${escapeXml(absoluteUrl(route))}</loc><lastmod>${escapeXml(lastmod)}</lastmod></url>`).join('\n');
   await fs.writeFile(path.join(rootDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${body}
@@ -1277,7 +1452,7 @@ ${body}
 }
 
 async function main() {
-  const { posts, diagnostics } = await loadPosts(rootDir);
+  const { posts, diagnostics, publicationCounts, today } = await loadPosts(rootDir);
   const { errors, warnings } = summarizeDiagnostics(diagnostics);
   warnings.forEach((warning) => console.warn(`warning: ${warning}`));
   if (errors.length) {
@@ -1292,6 +1467,8 @@ async function main() {
   await fs.rm(path.join(rootDir, 'zh'), { recursive: true, force: true });
   await fs.mkdir(outputDir, { recursive: true });
   await copyAssets();
+  assetVersion = await computeAssetVersion(posts);
+  await stampHomepageAssets();
 
   const renderer = createMarkdownRenderer();
   for (const post of posts) {
@@ -1306,7 +1483,14 @@ async function main() {
   await renderRss(posts);
   await renderSitemap(posts);
 
-  console.log(`Built ${posts.length} blog post(s).`);
+  if (process.argv.includes('--preview-drafts')) {
+    const previewResult = await loadPosts(rootDir, { includeDrafts: true, includeFuture: true, today });
+    const unpublished = previewResult.posts.filter((post) => post.publicationState !== 'published');
+    await renderDraftPreviews(unpublished, renderer);
+    console.log(`Built local preview with ${unpublished.length} unpublished post(s).`);
+  }
+
+  console.log(`Built ${posts.length} public blog post(s) for ${today}; ${publicationCounts.scheduled} scheduled, ${publicationCounts.draft} draft.`);
 }
 
 await main();

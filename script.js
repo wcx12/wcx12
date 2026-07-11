@@ -1,4 +1,14 @@
-import { ORCID_ID, localRepos, staticPublications } from './site-data.js';
+const entryModuleUrl = new URL(import.meta.url);
+const assetVersion = entryModuleUrl.searchParams.get('v') || '';
+
+function versionedModuleUrl(relativePath, parameters = {}) {
+  const url = new URL(relativePath, entryModuleUrl);
+  if (assetVersion) url.searchParams.set('v', assetVersion);
+  Object.entries(parameters).forEach(([key, value]) => url.searchParams.set(key, String(value)));
+  return url.href;
+}
+
+const { ORCID_ID, localRepos, staticPublications } = await import(versionedModuleUrl('./site-data.js'));
 
 const views = document.querySelectorAll('.view');
 const commands = document.querySelectorAll('.cmd');
@@ -558,7 +568,7 @@ function applyResearchConfig(nextConfig) {
 async function loadRemoteResearchConfig() {
   try {
     const response = await fetchWithTimeout(
-      CONFIG_PATH,
+      versionedModuleUrl(CONFIG_PATH),
       { cache: ownerToolsEnabled ? 'no-store' : 'default' },
       REQUEST_TIMEOUT_MS.config
     );
@@ -1060,12 +1070,12 @@ function currentFeatureContext() {
 
 function researchCanvasModuleUrl() {
   const attempt = researchCanvasImportAttempt++;
-  return attempt ? `./research-canvas.js?retry=${attempt}` : './research-canvas.js';
+  return versionedModuleUrl('./research-canvas.js', attempt ? { retry: attempt } : {});
 }
 
 function repoMapModuleUrl() {
   const attempt = repoMapImportAttempt++;
-  return attempt ? `./repo-map.js?retry=${attempt}` : './repo-map.js';
+  return versionedModuleUrl('./repo-map.js', attempt ? { retry: attempt } : {});
 }
 
 function ensureResearchCanvasFeature() {
@@ -3637,7 +3647,7 @@ async function loadBlogPosts() {
     writingList.innerHTML = `<p class="muted">${i18n[currentLang].writing_loading}</p>`;
   }
   try {
-    const response = await fetch('./blog/posts.json', { cache: 'default' });
+    const response = await fetch(versionedModuleUrl('./blog/posts.json'), { cache: 'default' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const posts = await response.json();
     blogPosts = Array.isArray(posts) ? posts : [];

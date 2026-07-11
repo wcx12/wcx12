@@ -2,17 +2,25 @@ name: Build site
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 16 * * *"
   push:
     branches: ["master", "main"]
     paths:
       - "content/**"
       - "blog-src/**"
       - "scripts/**"
+      - "index.html"
+      - "styles.css"
+      - "script.js"
+      - "research-canvas.js"
+      - "repo-map.js"
       - "site-data.js"
       - "research-config.json"
       - "resume.md"
       - "package.json"
       - "package-lock.json"
+      - ".nvmrc"
       - ".github/workflows/blog-build.yml"
 
 permissions:
@@ -24,36 +32,40 @@ concurrency:
 
 jobs:
   build-site:
-    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
     env:
       SITE_URL: https://wcx12.github.io/wcx12
+      SITE_TIME_ZONE: Asia/Shanghai
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: true
 
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Validate content
-        run: npm run validate
+      - name: Validate source content
+        run: node scripts/validate-content.mjs && npm run test:content
 
       - name: Build site
         run: npm run build:site
+
+      - name: Validate generated site
+        run: npm run validate
 
       - name: Commit generated site
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add blog research publications zh resume publications.md rss.xml sitemap.xml package-lock.json
+          git add index.html blog research publications zh resume publications.md rss.xml sitemap.xml package-lock.json
           if git diff --cached --quiet; then
             echo "No generated site changes."
           else

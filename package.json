@@ -3,8 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.23.1 <25"
+  },
   "scripts": {
     "new:post": "node scripts/new-post.mjs",
+    "build:preview": "node scripts/build-blog.mjs --preview-drafts",
+    "preview:blog": "node scripts/serve-preview.mjs",
     "test:content": "node --test scripts/blog-content.test.mjs",
     "test:homepage": "node --test scripts/homepage-runtime.test.mjs",
     "test:site": "node --test scripts/site-output.test.mjs",

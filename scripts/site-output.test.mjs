@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { localRepos, staticPublications } from '../site-data.js';
-import { SITE } from './blog-content.mjs';
+import { SITE, loadPosts } from './blog-content.mjs';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
@@ -69,6 +70,34 @@ function evidenceKeyFromSchema(item) {
   return '';
 }
 
+async function expectedAssetVersion() {
+  const { posts } = await loadPosts(rootDir);
+  const files = [
+    'styles.css',
+    'script.js',
+    'site-data.js',
+    'research-canvas.js',
+    'repo-map.js',
+    'blog/assets/blog.css',
+    'blog/assets/blog.js',
+    'blog/assets/katex.min.css',
+    'research-config.json',
+    'resume.md',
+    'scripts/blog-content.mjs',
+    'scripts/build-blog.mjs',
+    ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
+  ].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+  const hash = createHash('sha256');
+  for (const relativePath of files) {
+    hash.update(relativePath);
+    hash.update('\0');
+    const content = await fs.readFile(path.join(rootDir, relativePath), 'utf8');
+    hash.update(content.replace(/\r\n?/g, '\n'));
+    hash.update('\0');
+  }
+  return hash.digest('hex').slice(0, 12);
+}
+
 test('public HTML has stable document structure and valid JSON-LD', async () => {
   const pages = [
     path.join(rootDir, 'index.html'),
@@ -103,6 +132,31 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
   }
 });
 
+test('all executable and stylesheet assets share the current release version', async () => {
+  const version = await expectedAssetVersion();
+  const pages = [
+    path.join(rootDir, 'index.html'),
+    path.join(rootDir, 'resume', 'index.html'),
+    ...staticRouteFiles,
+    ...await walk(path.join(rootDir, 'blog'), (file) => file.endsWith('.html'))
+  ];
+
+  for (const file of pages) {
+    const source = await fs.readFile(file, 'utf8');
+    const relative = path.relative(rootDir, file).replace(/\\/g, '/');
+    const localAssets = [
+      ...matches(source, /<link\b[^>]+href="([^"]+\.(?:css))(?:\?([^"]*))?"[^>]*>/gi),
+      ...matches(source, /<script\b[^>]+src="([^"]+\.(?:js))(?:\?([^"]*))?"[^>]*><\/script>/gi)
+    ];
+    assert.ok(localAssets.length >= 2, `${relative}: expected versioned local assets`);
+    for (const [, assetPath, query = ''] of localAssets) {
+      if (/^(?:https?:)?\/\//i.test(assetPath)) continue;
+      const parameters = new URLSearchParams(query);
+      assert.equal(parameters.get('v'), version, `${relative}: ${assetPath} has a stale or missing release version`);
+    }
+  }
+});
+
 test('single-post blog avoids duplicate discovery sections', async () => {
   const posts = JSON.parse(await fs.readFile(path.join(rootDir, 'blog', 'posts.json'), 'utf8'));
   if (posts.length !== 1) return;
@@ -122,6 +176,8 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(clientSource, /hero_kicker:\s*'wcx12 的研究手记'/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
   assert.match(styleSource, /\.blog-content a\s*\{[^}]*overflow-wrap:\s*anywhere/s, 'long DOI links must wrap on mobile');
+  assert.match(clientSource, /new URL\('\.\.\/search\.json', import\.meta\.url\)/, 'blog search must resolve from blog/assets/ to blog/search.json');
+  assert.match(clientSource, /searchUrl\.searchParams\.set\('v', assetVersion\)/, 'blog search must inherit the release version');
 });
 
 test('portfolio routes use the researcher identity while blog routes retain their own brand', async () => {
@@ -143,6 +199,21 @@ test('generated code blocks and article contents remain keyboard reachable', asy
     }
     assert.match(source, /blog-toc-mobile/, `${path.relative(rootDir, file)}: missing mobile contents navigation`);
   }
+});
+
+test('bundled post media is copied, fingerprinted, and rendered accessibly', async () => {
+  const sourcePath = path.join(rootDir, 'content', 'posts', '2026-07-10-building-a-research-writing-system', 'media', 'publishing-flow.svg');
+  const publicPath = path.join(rootDir, 'blog', 'posts', 'building-a-research-writing-system', 'media', 'publishing-flow.svg');
+  const articlePath = path.join(rootDir, 'blog', 'posts', 'building-a-research-writing-system', 'index.html');
+  const [source, published, article] = await Promise.all([
+    fs.readFile(sourcePath),
+    fs.readFile(publicPath),
+    fs.readFile(articlePath, 'utf8')
+  ]);
+  assert.deepEqual(published, source, 'published media bytes differ from the validated source');
+  const version = createHash('sha256').update(source).digest('hex').slice(0, 12);
+  assert.match(article, new RegExp(`src="media/publishing-flow\\.svg\\?v=${version}"`));
+  assert.match(article, /publishing-flow\.svg[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"/);
 });
 
 test('all configured research and publication routes exist without stale generated HTML', async () => {
@@ -282,14 +353,31 @@ test('sitemap covers every configured fixed-language route', async () => {
   for (const route of staticRoutes) {
     assert.match(sitemap, new RegExp(`<loc>${`${SITE.url}/${route}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`), `${route}: missing from sitemap`);
   }
+
+  const entries = matches(sitemap, /<url><loc>([^<]+)<\/loc><lastmod>([^<]+)<\/lastmod><\/url>/g);
+  assert.equal(entries.length, matches(sitemap, /<url>/g).length, 'every sitemap URL needs a lastmod value');
+  for (const [, location, lastmod] of entries) {
+    assert.match(lastmod, /^\d{4}-\d{2}-\d{2}$/, `${location}: invalid lastmod`);
+    assert.ok(Number.isFinite(Date.parse(`${lastmod}T00:00:00Z`)), `${location}: unparseable lastmod`);
+  }
+  assert.match(
+    sitemap,
+    /<loc>https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/<\/loc><lastmod>2026-07-11<\/lastmod>/
+  );
 });
 
 test('RSS declares itself and preserves post taxonomy', async () => {
   const rss = await fs.readFile(path.join(rootDir, 'rss.xml'), 'utf8');
   assert.match(rss, /xmlns:atom="http:\/\/www\.w3\.org\/2005\/Atom"/);
+  assert.match(rss, /xmlns:content="http:\/\/purl\.org\/rss\/1\.0\/modules\/content\/"/);
   assert.match(rss, /<atom:link href="https:\/\/wcx12\.github\.io\/wcx12\/rss\.xml" rel="self" type="application\/rss\+xml" \/>/);
   assert.match(rss, /<category>Engineering<\/category>/);
   assert.match(rss, /<category>research-workflow<\/category>/);
+  assert.match(rss, /<content:encoded><!\[CDATA\[[\s\S]+?<\/content:encoded>/);
+  assert.match(
+    rss,
+    /src="https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/media\/publishing-flow\.svg\?v=[a-f0-9]{12}"/
+  );
 });
 
 test('fixed routes ignore stored language while preserving theme selection', async () => {
@@ -311,6 +399,19 @@ test('GitHub Actions are pinned and do not expose a long-lived metrics token', a
     }
     assert.doesNotMatch(source, /METRICS_TOKEN/, `${path.basename(file)}: metrics must use the job-scoped token`);
   }
+});
+
+test('scheduled publishing builds before validating generated output', async () => {
+  const source = await fs.readFile(path.join(rootDir, '.github', 'workflows', 'blog-build.yml'), 'utf8');
+  assert.match(source, /schedule:\s*\n\s*- cron: "17 16 \* \* \*"/);
+  assert.match(source, /SITE_TIME_ZONE: Asia\/Shanghai/);
+  assert.match(source, /actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/);
+  assert.match(source, /actions\/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e/);
+  const sourceValidation = source.indexOf('- name: Validate source content');
+  const build = source.indexOf('- name: Build site');
+  const generatedValidation = source.indexOf('- name: Validate generated site');
+  const commit = source.indexOf('- name: Commit generated site');
+  assert.ok(sourceValidation < build && build < generatedValidation && generatedValidation < commit, 'scheduled publishing steps are in an unsafe order');
 });
 
 test('public publication source and generated profile contain every canonical DOI', async () => {

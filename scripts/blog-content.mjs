@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import matter from 'gray-matter';
 import MarkdownIt from 'markdown-it';
@@ -9,9 +10,12 @@ export const SITE = {
   title: 'Research Fieldnotes',
   description: 'A growing research and engineering notebook by Chenxu Wang (wcx12), with reproducible workflows and fieldnotes from ongoing work.',
   author: 'Chenxu Wang',
+  copyrightYear: 2026,
   lang: 'en',
   url: (process.env.SITE_URL || 'https://wcx12.github.io/wcx12').replace(/\/$/, '')
 };
+
+export const SITE_TIME_ZONE = process.env.SITE_TIME_ZONE || 'Asia/Shanghai';
 
 export const VALID_RESEARCH_IDS = new Set([
   'point-cloud-registration',
@@ -50,6 +54,24 @@ export function formatDate(value, locale = 'en-US') {
   }).format(date);
 }
 
+export function siteDate(value = new Date(), timeZone = SITE_TIME_ZONE) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) throw new TypeError('siteDate requires a valid date value');
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+export function publicationState(data, today = siteDate()) {
+  if (data.draft === true) return 'draft';
+  return String(data.date || '') > today ? 'scheduled' : 'published';
+}
+
 export function estimateReadingMinutes(markdown) {
   const words = String(markdown || '')
     .replace(/```[\s\S]*?```/g, ' ')
@@ -71,18 +93,21 @@ export function excerptText(markdown, maxLength = 180) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1).trim()}...` : text;
 }
 
-async function walkMarkdown(dir) {
+async function walkPostSources(dir, isRoot = false) {
   const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+  entries.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+  const bundleIndex = !isRoot && entries.find((entry) => entry.isFile() && entry.name === 'index.md');
+  if (bundleIndex) return [path.join(dir, bundleIndex.name)];
   const files = [];
   for (const entry of entries) {
     const absolute = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...await walkMarkdown(absolute));
+      files.push(...await walkPostSources(absolute));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       files.push(absolute);
     }
   }
-  return files.sort((a, b) => a.localeCompare(b));
+  return files;
 }
 
 function asArray(value) {
@@ -109,7 +134,126 @@ function contentUsesMath(content) {
     && token.children?.some((child) => child.type === 'text' && textUsesMath(child.content)));
 }
 
-function validatePost(post, seenSlugs) {
+function markdownResourceReferences(content) {
+  const references = [];
+  for (const token of validationMarkdown.parse(content, {})) {
+    if (token.type !== 'inline' || !token.children) continue;
+    for (const child of token.children) {
+      if (child.type === 'image') {
+        references.push({ kind: 'image', url: child.attrGet('src') || '', alt: child.content || '' });
+      } else if (child.type === 'link_open') {
+        references.push({ kind: 'link', url: child.attrGet('href') || '', alt: '' });
+      }
+    }
+  }
+  return references;
+}
+
+function mediaReference(value, kind) {
+  const raw = String(value || '').trim();
+  if (!raw || /^(?:https?:|mailto:|tel:|data:|#|\/)/i.test(raw)) return null;
+  const pathPart = raw.split(/[?#]/, 1)[0];
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathPart);
+  } catch {
+    return { error: `invalid URL encoding in media reference "${raw}"` };
+  }
+  if (decoded.includes('\\')) return { error: `media reference must use forward slashes: "${raw}"` };
+  const normalized = decoded.replace(/^\.\//, '');
+  if (!normalized.startsWith('media/')) {
+    return kind === 'image' ? { error: `local images must use the article media/ directory: "${raw}"` } : null;
+  }
+  const relativePath = normalized.slice('media/'.length);
+  const segments = relativePath.split('/');
+  if (!relativePath
+    || segments.some((segment) => !segment || segment === '.' || segment === '..')
+    || !/^[a-z0-9][a-z0-9._/-]*$/.test(relativePath)) {
+    return { error: `invalid media path "${raw}"; use lowercase portable names inside media/` };
+  }
+  return { relativePath, publicPath: `media/${relativePath}` };
+}
+
+async function inspectMediaPath(root, relativePath) {
+  const rootStats = await fs.lstat(root).catch(() => null);
+  if (!rootStats) return { error: 'missing-or-case' };
+  if (rootStats.isSymbolicLink()) return { error: 'symlink' };
+  if (!rootStats.isDirectory()) return { error: 'not-file' };
+
+  let current = root;
+  const segments = relativePath.split('/');
+  for (const [index, segment] of segments.entries()) {
+    const names = await fs.readdir(current).catch(() => []);
+    if (!names.includes(segment)) return { error: 'missing-or-case' };
+    current = path.join(current, segment);
+    const stats = await fs.lstat(current).catch(() => null);
+    if (!stats) return { error: 'missing-or-case' };
+    if (stats.isSymbolicLink()) return { error: 'symlink' };
+    if (index < segments.length - 1 && !stats.isDirectory()) return { error: 'not-file' };
+    if (index === segments.length - 1 && !stats.isFile()) return { error: 'not-file' };
+  }
+  return { stats: await fs.lstat(current) };
+}
+
+async function validatePostMedia(post, errors, warnings) {
+  const references = markdownResourceReferences(post.content);
+  const mediaByPath = new Map();
+  for (const reference of references) {
+    if (reference.kind === 'image' && !reference.alt.trim()) {
+      (post.data.draft ? warnings : errors).push(`image "${reference.url}" must include alt text`);
+    }
+    const parsed = mediaReference(reference.url, reference.kind);
+    if (parsed?.error) {
+      errors.push(parsed.error);
+      continue;
+    }
+    if (!parsed) continue;
+    if (!post.bundleRoot) {
+      errors.push(`local media requires a bundled post with index.md: "${reference.url}"`);
+      continue;
+    }
+    if (!mediaByPath.has(parsed.relativePath)) mediaByPath.set(parsed.relativePath, parsed);
+  }
+
+  const mediaRoot = post.bundleRoot ? path.join(post.bundleRoot, 'media') : '';
+  const mediaFiles = [];
+  for (const parsed of mediaByPath.values()) {
+    const sourcePath = path.resolve(mediaRoot, parsed.relativePath);
+    const relativeToRoot = path.relative(mediaRoot, sourcePath);
+    if (!relativeToRoot || relativeToRoot === '..' || relativeToRoot.startsWith(`..${path.sep}`) || path.isAbsolute(relativeToRoot)) {
+      errors.push(`media path escapes its article bundle: "${parsed.publicPath}"`);
+      continue;
+    }
+    const inspected = await inspectMediaPath(mediaRoot, parsed.relativePath);
+    if (inspected.error === 'missing-or-case') {
+      errors.push(`media path does not exist with exact casing: "${parsed.publicPath}"`);
+      continue;
+    }
+    if (inspected.error === 'symlink') {
+      errors.push(`media path must not contain symbolic links: "${parsed.publicPath}"`);
+      continue;
+    }
+    if (inspected.error === 'not-file') {
+      errors.push(`media reference must point to a regular file: "${parsed.publicPath}"`);
+      continue;
+    }
+    const stats = inspected.stats;
+    if (stats.size > 10 * 1024 * 1024) {
+      errors.push(`media file exceeds 10 MB: "${parsed.publicPath}"`);
+      continue;
+    }
+    const content = await fs.readFile(sourcePath);
+    mediaFiles.push({
+      ...parsed,
+      sourcePath,
+      bytes: stats.size,
+      version: createHash('sha256').update(content).digest('hex').slice(0, 12)
+    });
+  }
+  return mediaFiles;
+}
+
+async function validatePost(post, seenSlugs) {
   const errors = [];
   const warnings = [];
   const data = post.data;
@@ -174,18 +318,22 @@ function validatePost(post, seenSlugs) {
   if (hasLevelOneHeading) {
     errors.push('post body must start at heading level 2; the template already provides the h1');
   }
-  if (/!\[\s*]\([^)]+\)/.test(post.content)) warnings.push('image without alt text');
   if (post.content.includes('\t')) warnings.push('contains tab characters');
 
-  return { errors, warnings };
+  const mediaFiles = await validatePostMedia(post, errors, warnings);
+
+  return { errors, warnings, mediaFiles };
 }
 
 export async function loadPosts(rootDir, options = {}) {
   const postsDir = path.join(rootDir, 'content', 'posts');
-  const files = await walkMarkdown(postsDir);
+  const files = await walkPostSources(postsDir, true);
+  const today = options.today || siteDate(options.now || new Date());
+  if (!validateDate(today)) throw new TypeError('loadPosts option "today" must be YYYY-MM-DD');
   const seenSlugs = new Set();
   const diagnostics = [];
   const posts = [];
+  const publicationCounts = { published: 0, scheduled: 0, draft: 0 };
 
   for (const file of files) {
     const raw = await fs.readFile(file, 'utf8');
@@ -202,14 +350,20 @@ export async function loadPosts(rootDir, options = {}) {
     };
     const post = {
       sourcePath: file,
+      bundleRoot: path.basename(file) === 'index.md' ? path.dirname(file) : null,
       relativePath: path.relative(rootDir, file).replace(/\\/g, '/'),
       rawData: parsed.data,
       data,
       content: parsed.content
     };
-    const result = validatePost(post, seenSlugs);
-    diagnostics.push({ file: post.relativePath, ...result });
-    if (!data.draft || options.includeDrafts) {
+    const result = await validatePost(post, seenSlugs);
+    const state = publicationState(data, today);
+    publicationCounts[state] += 1;
+    diagnostics.push({ file: post.relativePath, errors: result.errors, warnings: result.warnings });
+    const include = state === 'published'
+      || (state === 'draft' && options.includeDrafts)
+      || (state === 'scheduled' && options.includeFuture);
+    if (include) {
       posts.push({
         ...post,
         slug: data.slug,
@@ -225,17 +379,20 @@ export async function loadPosts(rootDir, options = {}) {
         math: data.math,
         lang: data.lang,
         toc: data.toc !== false,
-        readingMinutes: estimateReadingMinutes(parsed.content)
+        readingMinutes: estimateReadingMinutes(parsed.content),
+        draft: data.draft,
+        publicationState: state,
+        mediaFiles: result.mediaFiles
       });
     }
   }
 
   posts.sort((a, b) => {
-    const dateCompare = b.date.localeCompare(a.date);
-    return dateCompare || a.title.localeCompare(b.title);
+    const dateCompare = a.date === b.date ? 0 : a.date < b.date ? 1 : -1;
+    return dateCompare || (a.title < b.title ? -1 : a.title > b.title ? 1 : 0);
   });
 
-  return { posts, diagnostics };
+  return { posts, diagnostics, publicationCounts, today };
 }
 
 export function summarizeDiagnostics(diagnostics) {

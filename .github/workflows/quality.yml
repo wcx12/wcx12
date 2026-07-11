@@ -18,14 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE_URL: https://wcx12.github.io/wcx12
+      SITE_TIME_ZONE: Asia/Shanghai
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -47,4 +48,4 @@ jobs:
         run: npm run build:site
 
       - name: Verify generated files are current
-        run: git diff --exit-code -- blog research publications zh resume publications.md rss.xml sitemap.xml
+        run: git diff --exit-code -- index.html blog research publications zh resume publications.md rss.xml sitemap.xml

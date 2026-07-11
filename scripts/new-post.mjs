@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { slugify } from './blog-content.mjs';
+import { siteDate, slugify } from './blog-content.mjs';
 
 const title = process.argv.slice(2).join(' ').trim();
 
@@ -11,16 +11,10 @@ if (!title) {
 }
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-function localDateString(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-const today = localDateString();
+const today = siteDate();
 const slug = slugify(title);
-const filePath = path.join(rootDir, 'content', 'posts', `${today}-${slug}.md`);
+const bundlePath = path.join(rootDir, 'content', 'posts', `${today}-${slug}`);
+const filePath = path.join(bundlePath, 'index.md');
 
 const template = `---
 title: "${title.replace(/"/g, '\\"')}"
@@ -46,5 +40,6 @@ Write the opening summary here.
 - Replace this draft with the actual article.
 `;
 
+await fs.mkdir(path.join(bundlePath, 'media'), { recursive: true });
 await fs.writeFile(filePath, template, { flag: 'wx' });
 console.log(path.relative(rootDir, filePath).replace(/\\/g, '/'));

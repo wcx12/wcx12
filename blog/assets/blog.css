@@ -570,7 +570,17 @@
 .blog-content img {
   max-width: 100%;
   height: auto;
-  border-radius: 12px;
+  border-radius: 8px;
+}
+
+.blog-preview-banner {
+  margin: -1px -1px 22px;
+  padding: 10px 14px;
+  border: 1px solid var(--pink);
+  border-radius: 8px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--pink) 12%, var(--panel));
+  font: 700 0.78rem var(--blog-font-mono);
 }
 
 .blog-content table {

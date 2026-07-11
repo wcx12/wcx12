@@ -2,9 +2,9 @@
   {
     "title": "Building a Research Writing System for My Homepage",
     "slug": "building-a-research-writing-system",
-    "description": "A short note on turning this personal homepage into a maintainable research and technical writing space.",
+    "description": "How this homepage turns versioned Markdown, validated media, and research metadata into a maintainable static writing system.",
     "date": "2026-07-10",
-    "updated": "2026-07-10",
+    "updated": "2026-07-11",
     "category": "Engineering",
     "tags": [
       "personal-site",
@@ -15,7 +15,7 @@
     "series": "Homepage Lab",
     "lang": "en",
     "featured": true,
-    "readingMinutes": 1,
+    "readingMinutes": 2,
     "url": "blog/posts/building-a-research-writing-system/"
   }
 ]

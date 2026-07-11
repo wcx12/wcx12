@@ -358,7 +358,10 @@ function renderSearch(query) {
 }
 
 if (searchInput && searchResults) {
-  fetch('./search.json', { cache: 'no-store' })
+  const searchUrl = new URL('../search.json', import.meta.url);
+  const assetVersion = new URL(import.meta.url).searchParams.get('v');
+  if (assetVersion) searchUrl.searchParams.set('v', assetVersion);
+  fetch(searchUrl, { cache: 'default' })
     .then((response) => response.ok ? response.json() : [])
     .then((items) => {
       searchItems = Array.isArray(items) ? items : [];
