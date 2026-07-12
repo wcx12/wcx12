@@ -515,9 +515,14 @@ test('research profile has complete English and Chinese fixed-language records',
   for (const source of [english, chinese]) {
     assert.match(source, /<header class="profile-masthead">/);
     assert.match(source, /<dl class="profile-facts">/);
-    assert.match(source, /<aside class="profile-rail">/);
+    assert.doesNotMatch(source, /class="profile-rail"/);
     assert.equal(matches(source, /data-profile-section="[^"]+"/g).length, 5);
+    for (const kind of ['education', 'publications', 'interests', 'projects', 'skills']) {
+      assert.match(source, new RegExp(`data-profile-kind="${kind}"`));
+    }
+    assert.ok(source.indexOf('data-profile-kind="publications"') < source.indexOf('data-profile-kind="interests"'));
     assert.equal(matches(source, /class="resume-publication-entry"/g).length, staticPublications.length);
+    assert.equal(matches(source, /class="resume-author-self"/g).length, staticPublications.length);
     assert.equal(matches(source, /class="profile-section-nav"[\s\S]*?<\/nav>/g)[0][0].match(/<a href=/g)?.length, 5);
   }
   assert.match(chinese, /<h3 lang="en">TF-VPR/);
@@ -525,13 +530,14 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.match(english, new RegExp(publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(chinese, new RegExp(publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
-  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*grid-template-columns:\s*210px minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /\.profile-section-nav\s*\{[^}]*grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)/s);
+  assert.match(profileStyles, /\.profile-section\s*\{[^}]*grid-template-columns:\s*minmax\(130px, 165px\) minmax\(0, 1fr\)/s);
   assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
   assert.match(profileStyles, /@page\s*\{[^}]*size:\s*A4/s);
   assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*0/s);
   assert.match(profileStyles, /@media print[\s\S]*?html,[\s\S]*?\.blog-body\s*\{[^}]*background:\s*#ffffff !important/s);
   assert.match(profileStyles, /@media print[\s\S]*?\.blog-shell\s*\{[^}]*padding:\s*14mm 15mm/s);
-  assert.match(profileStyles, /@media print[\s\S]*?\.profile-rail\s*\{[^}]*display:\s*none/s);
+  assert.match(profileStyles, /@media print[\s\S]*?\.profile-section-nav,[\s\S]*?display:\s*none !important/s);
   assert.equal(jsonLdFor(english).inLanguage, 'en');
   assert.equal(jsonLdFor(chinese).inLanguage, 'zh-CN');
   assert.match(chineseHome, /href="\.\/resume\/"/);

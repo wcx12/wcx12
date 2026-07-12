@@ -1306,12 +1306,8 @@ async function renderResume(renderer, language) {
     print: '打印 / 保存 PDF',
     contact: '邮件联系',
     sections: '履历目录',
-    direction: '研究主线',
-    directionText: '三维几何、视觉定位、医学影像与证据驱动的智能体系统。',
     affiliation: '学校',
     graduation: '预计毕业',
-    publications: '论文',
-    researchAreas: '研究方向',
     emailLabel: '发送邮件给 Chenxu Wang',
     githubLabel: '在新标签页打开 GitHub 主页',
     orcidLabel: `在新标签页打开 ORCID 记录 ${ORCID_ID}`,
@@ -1326,12 +1322,8 @@ async function renderResume(renderer, language) {
     print: 'Print / Save PDF',
     contact: 'Email me',
     sections: 'Profile sections',
-    direction: 'Research direction',
-    directionText: '3D geometry, visual localization, medical imaging, and evidence-grounded agent systems.',
     affiliation: 'Affiliation',
     graduation: 'Expected graduation',
-    publications: 'Publications',
-    researchAreas: 'Research areas',
     emailLabel: 'Email Chenxu Wang',
     githubLabel: 'Open the GitHub profile in a new tab',
     orcidLabel: `Open ORCID record ${ORCID_ID} in a new tab`,
@@ -1344,13 +1336,14 @@ async function renderResume(renderer, language) {
     return `<li>
       <article class="resume-publication-entry">
         <h3 lang="en">${escapeHtml(publication.title)}</h3>
-        <p class="resume-publication-authors" lang="en">${escapeHtml(readableAuthors(publication))}</p>
+        <p class="resume-publication-authors" lang="en">${readableAuthorsHtml(publication)}</p>
+        <p class="resume-publication-summary">${escapeHtml(isZh ? publication.summaryZh : publication.summary)}</p>
         <p class="resume-publication-meta">
+          <time datetime="${escapeHtml(String(publication.year))}">${escapeHtml(String(publication.year))}</time>
           <cite>${escapeHtml(publication.venue)}</cite>
           <span>${escapeHtml(status)}</span>
-          <time datetime="${escapeHtml(String(publication.year))}">${escapeHtml(String(publication.year))}</time>
-          ${topic ? `<span class="resume-publication-topic">${escapeHtml(localized(topic.title, language))}</span>` : ''}
           <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(text.doiLabel(publication.title))}">DOI</a>
+          ${topic ? `<span class="resume-publication-topic">${escapeHtml(localized(topic.title, language))}</span>` : ''}
         </p>
       </article>
     </li>`;
@@ -1361,13 +1354,14 @@ async function renderResume(renderer, language) {
   const markerMarkup = `<p>${publicationMarker}</p>`;
   let publicationMarkers = 0;
   const sections = renderer.renderSections(withoutDocumentTitle);
+  const profileSectionKinds = ['education', 'publications', 'interests', 'projects', 'skills'];
   const sectionHtml = sections.map((section, index) => {
     const content = section.html.replace(markerMarkup, () => {
       publicationMarkers += 1;
       return publicationList;
     });
     const sectionNumber = String(index + 1).padStart(2, '0');
-    return `<section id="${escapeHtml(section.id)}" class="profile-section" data-profile-section="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+    return `<section id="${escapeHtml(section.id)}" class="profile-section" data-profile-section="${escapeHtml(section.id)}" data-profile-kind="${profileSectionKinds[index] || 'section'}" aria-labelledby="${escapeHtml(section.id)}-title">
       <header class="profile-section-head">
         <span aria-hidden="true">${sectionNumber}</span>
         <h2 id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
@@ -1376,45 +1370,36 @@ async function renderResume(renderer, language) {
     </section>`;
   }).join('');
   if (publicationMarkers !== 1) throw new Error(`${sourceFile} publication placeholder did not render predictably`);
-  const sectionNavigation = sections.map((section, index) => `<a href="#${escapeHtml(section.id)}"><span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>${escapeHtml(section.title)}</a>`).join('');
+  const sectionNavigation = sections.map((section, index) => `<a href="#${escapeHtml(section.id)}"><span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(section.title)}</strong></a>`).join('');
   const filePath = path.join(rootDir, relativeRoute, 'index.html');
   const body = `
     <article class="research-profile" lang="${isZh ? 'zh-CN' : 'en'}">
       <header class="profile-masthead">
         <div class="profile-heading">
           <p class="blog-kicker">${text.kicker}</p>
-          <h1>Chenxu Wang <span class="profile-handle">wcx12</span></h1>
-          <p class="profile-role">${text.role}<span aria-hidden="true">/</span>${text.location}</p>
+          <h1>Chenxu Wang <span class="profile-handle">@wcx12</span></h1>
+          <p class="profile-role">${text.role}<span aria-hidden="true">&middot;</span>${text.location}</p>
           <p class="profile-summary">${text.summary}</p>
+          <dl class="profile-facts">
+            <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
+            <div><dt>${text.graduation}</dt><dd>2026</dd></div>
+          </dl>
         </div>
-        <div class="profile-command">
-          <p class="profile-status"><span>${text.statusLabel}</span><strong>${text.status}</strong></p>
+        <aside class="profile-command">
+          <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${text.status}</strong></p>
           <div class="profile-actions">
-            <button id="printProfile" class="btn btn-primary" type="button">${text.print}</button>
-            <a class="btn btn-outline" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">${text.contact}</a>
+            <a class="btn btn-primary" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">${text.contact}</a>
+            <button id="printProfile" class="btn btn-outline" type="button">${text.print}</button>
           </div>
           <nav class="profile-contact-links" aria-label="${isZh ? '联系方式' : 'Contact links'}">
-            <a href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">Email</a>
+            <a href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">c2675668@gmail.com</a>
             <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer" aria-label="${text.githubLabel}">GitHub</a>
             <a href="https://orcid.org/${ORCID_ID}" target="_blank" rel="me noreferrer" aria-label="${text.orcidLabel}">ORCID</a>
           </nav>
-        </div>
-        <dl class="profile-facts">
-          <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
-          <div><dt>${text.graduation}</dt><dd>2026</dd></div>
-          <div><dt>${text.publications}</dt><dd>${staticPublications.length}</dd></div>
-          <div><dt>${text.researchAreas}</dt><dd>${researchChildren.length}</dd></div>
-        </dl>
-      </header>
-      <div class="profile-layout">
-        <aside class="profile-rail">
-          <p class="profile-rail-label">${text.sections}</p>
-          <nav class="profile-section-nav" aria-label="${text.sections}">${sectionNavigation}</nav>
-          <div class="profile-rail-note">
-            <span>${text.direction}</span>
-            <p>${text.directionText}</p>
-          </div>
         </aside>
+      </header>
+      <nav class="profile-section-nav" aria-label="${text.sections}">${sectionNavigation}</nav>
+      <div class="profile-layout">
         <div class="profile-sections">
 ${sectionHtml}
         </div>
@@ -1459,6 +1444,18 @@ function readableAuthors(publication) {
   if (authors.length < 2) return authors[0] || '';
   if (authors.length === 2) return `${authors[0]} and ${authors[1]}`;
   return `${authors.slice(0, -1).join(', ')}, and ${authors.at(-1)}`;
+}
+
+function readableAuthorsHtml(publication) {
+  const authors = authorsFor(publication);
+  return authors.map((author, index) => {
+    const name = author === 'Chenxu Wang'
+      ? `<strong class="resume-author-self">${escapeHtml(author)}</strong>`
+      : escapeHtml(author);
+    if (index === 0) return name;
+    if (index === authors.length - 1) return `${authors.length === 2 ? ' and ' : ', and '}${name}`;
+    return `, ${name}`;
+  }).join('');
 }
 
 function publicationTopic(publication) {

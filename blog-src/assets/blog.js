@@ -431,6 +431,40 @@ if (searchInput && searchResults) {
   searchInput.addEventListener('input', () => renderSearch(searchInput.value));
 }
 
+function initProfileNavigation() {
+  const links = [...document.querySelectorAll('.profile-section-nav a[href^="#"]')];
+  const items = links.map((link) => {
+    try {
+      return { link, section: document.getElementById(decodeURIComponent(link.hash.slice(1))) };
+    } catch {
+      return { link, section: null };
+    }
+  }).filter((item) => item.section);
+  if (!items.length) return;
+
+  const activate = (section) => {
+    for (const item of items) {
+      if (item.section === section) item.link.setAttribute('aria-current', 'location');
+      else item.link.removeAttribute('aria-current');
+    }
+  };
+
+  for (const item of items) item.link.addEventListener('click', () => activate(item.section));
+  if (!('IntersectionObserver' in window)) {
+    activate(items[0].section);
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    const visible = entries
+      .filter((entry) => entry.isIntersecting)
+      .sort((left, right) => Math.abs(left.boundingClientRect.top) - Math.abs(right.boundingClientRect.top));
+    if (visible[0]) activate(visible[0].target);
+  }, { rootMargin: '-18% 0px -62% 0px', threshold: 0 });
+  for (const item of items) observer.observe(item.section);
+}
+
 document.getElementById('printProfile')?.addEventListener('click', () => window.print());
+initProfileNavigation();
 
 applyLanguage(currentLang);
