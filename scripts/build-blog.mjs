@@ -322,7 +322,7 @@ const shellText = {
 };
 
 function hintHtml(key) {
-  return `<details class="blog-hint"><summary data-blog-i18n="hint_summary">${escapeHtml(blogText.hint_summary)}</summary><p data-blog-i18n="${key}">${escapeHtml(blogText[key])}</p></details>`;
+  return `<details class="blog-hint"><summary aria-label="${escapeHtml(blogText.hint_summary)}" title="${escapeHtml(blogText.hint_summary)}" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">${escapeHtml(blogText.hint_summary)}</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="${key}">${escapeHtml(blogText[key])}</p></details>`;
 }
 
 function cardHtml(ctx, post) {
@@ -1100,6 +1100,24 @@ async function renderPost(post, posts, renderer, options = {}) {
   const mathCss = post.math ? `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />` : '';
   const renderedToc = post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>';
   const socialImage = postSocialImage(post);
+  const relatedSection = related.length ? `<section aria-labelledby="related-writing-title">
+            <div class="blog-section-head">
+              <div>
+                <p class="blog-section-label" data-blog-i18n="section_related_label">Related</p>
+                <h2 id="related-writing-title" data-blog-i18n="section_related_title">Related writing</h2>
+              </div>
+              ${hintHtml('hint_related')}
+            </div>
+            <div class="blog-grid">${related.map((item) => cardHtml(ctx, item)).join('')}</div>
+          </section>` : '';
+  const postNavigation = newer || older ? `<nav class="blog-prev-next" aria-label="Post navigation">
+            ${hintHtml('hint_prev_next')}
+            ${newer ? `<a href="${postHref(ctx, newer)}"><span data-blog-i18n="nav_newer">Newer</span>${escapeHtml(newer.title)}</a>` : '<span></span>'}
+            ${older ? `<a href="${postHref(ctx, older)}"><span data-blog-i18n="nav_older">Older</span>${escapeHtml(older.title)}</a>` : '<span></span>'}
+          </nav>` : '';
+  const postFooter = relatedSection || postNavigation
+    ? `<footer class="blog-post-footer">${relatedSection}${postNavigation}</footer>`
+    : '';
 
   const body = `
     <div class="blog-post-layout">
@@ -1127,24 +1145,7 @@ ${preview ? `        <div class="blog-preview-banner" role="status">${post.publi
         <div class="blog-content">
 ${html}
         </div>
-        <footer class="blog-post-footer">
-          ${related.length ? `<section aria-labelledby="related-writing-title">
-            <div class="blog-section-head">
-              <div>
-                <p class="blog-section-label" data-blog-i18n="section_related_label">Related</p>
-                <h2 id="related-writing-title" data-blog-i18n="section_related_title">Related writing</h2>
-              </div>
-              ${hintHtml('hint_related')}
-            </div>
-            <div class="blog-grid">${related.map((item) => cardHtml(ctx, item)).join('')}</div>
-          </section>` : ''}
-          <nav class="blog-prev-next" aria-label="Post navigation">
-            ${hintHtml('hint_prev_next')}
-            ${newer ? `<a href="${postHref(ctx, newer)}"><span data-blog-i18n="nav_newer">Newer</span>${escapeHtml(newer.title)}</a>` : '<span></span>'}
-            ${older ? `<a href="${postHref(ctx, older)}"><span data-blog-i18n="nav_older">Older</span>${escapeHtml(older.title)}</a>` : '<span></span>'}
-          </nav>
-        </footer>
-      </article>
+${postFooter ? `        ${postFooter}\n` : ''}      </article>
       <aside class="blog-toc blog-toc-desktop" aria-label="Article contents">
         <h2 data-blog-i18n="toc_title">Contents</h2>
         ${hintHtml('hint_toc')}
@@ -1336,6 +1337,7 @@ async function renderResume(renderer, language) {
     summary: '研究不完整观测与有限标注下的可靠视觉智能，并落实为可复现的研究软件。',
     statusLabel: '当前状态',
     status: '正在申请硕士与博士项目',
+    commandLabel: '联系与导出',
     print: '打印 / 保存 PDF',
     contact: '邮件联系',
     sections: '履历目录',
@@ -1358,6 +1360,7 @@ async function renderResume(renderer, language) {
     summary: 'Reliable visual intelligence under incomplete observations and limited labels, built as reproducible research software.',
     statusLabel: 'Current status',
     status: "Applying for Master's and PhD opportunities",
+    commandLabel: 'Contact and export',
     print: 'Print / Save PDF',
     contact: 'Email me',
     sections: 'Profile sections',
@@ -1447,13 +1450,16 @@ async function renderResume(renderer, language) {
     <article class="research-profile" lang="${isZh ? 'zh-CN' : 'en'}">
       <header class="profile-masthead">
         <div class="profile-heading">
-          <p class="blog-kicker">${text.kicker}</p>
-          <h1>Chenxu Wang <span class="profile-handle">@wcx12</span></h1>
-          <p class="profile-role">${text.role}<span aria-hidden="true">&middot;</span>${text.location}</p>
+          <div class="profile-eyebrow">
+            <p class="blog-kicker">${text.kicker}</p>
+          </div>
+          <h1>Chenxu Wang</h1>
+          <p class="profile-identity"><span class="profile-handle">@wcx12</span><strong>${text.role}</strong><span>${text.location}</span></p>
           <p class="profile-summary">${text.summary}</p>
         </div>
         <aside class="profile-command">
           <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${text.status}</strong></p>
+          <p class="profile-command-label">${text.commandLabel}</p>
           <div class="profile-actions">
             <a class="btn btn-primary" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">${text.contact}</a>
             <button id="printProfile" class="btn btn-outline" type="button">${text.print}</button>

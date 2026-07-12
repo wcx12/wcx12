@@ -340,6 +340,8 @@ test('single-post blog avoids duplicate discovery sections', async () => {
   assert.doesNotMatch(source, /class="blog-stat-grid"/, 'single-post blog should lead directly into its only article');
   assert.match(source, /class="blog-section blog-latest-section"/, 'the only article should remain immediately discoverable');
   assert.match(source, /href="archive\/"[^>]+data-blog-i18n="hero_browse_archive"/, 'the promised writing archive needs a visible route');
+  const articleSource = await fs.readFile(path.join(rootDir, 'blog', 'posts', posts[0].slug, 'index.html'), 'utf8');
+  assert.doesNotMatch(articleSource, /class="blog-prev-next"/, 'an only article must not end with an empty post-navigation control');
 });
 
 test('blog presents the agreed fieldnotes identity', async () => {
@@ -359,6 +361,10 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(clientSource, /document\.title\s*=\s*t\('page_title'\)/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
   assert.match(styleSource, /html\[data-ui-lang="zh"\] \.blog-hero h1/);
+  assert.match(indexSource, /<summary[^>]*data-blog-i18n-aria="hint_summary"[^>]*>[\s\S]*?class="blog-hint-label"/);
+  assert.match(styleSource, /\.blog-hero\s*\{[^}]*border-top:\s*3px solid var\(--cyan\)[^}]*background:\s*transparent[^}]*box-shadow:\s*none/s);
+  assert.match(styleSource, /\.blog-post-card\s*\{[^}]*border:\s*0[^}]*border-radius:\s*0[^}]*background:\s*transparent/s);
+  assert.doesNotMatch(styleSource, /\.blog-body::before\s*\{[^}]*radial-gradient/s);
   assert.match(styleSource, /\.blog-content a\s*\{[^}]*overflow-wrap:\s*anywhere/s, 'long DOI links must wrap on mobile');
   assert.match(styleSource, /@media \(max-width: 560px\)[\s\S]*?\.blog-post-title\s*\{[^}]*font-size:\s*clamp\(1\.9rem, 8vw, 2\.55rem\)/s);
   assert.match(styleSource, /:root\[data-theme="mono"\] \.blog-card-meta,[\s\S]*?:root\[data-theme="mono"\] \.blog-content a,[\s\S]*?color:\s*var\(--text\)/s);
@@ -605,6 +611,8 @@ test('research profile has complete English and Chinese fixed-language records',
   assert.doesNotMatch(english, /class="blog-post-card research-profile"/);
   for (const source of [english, chinese]) {
     assert.match(source, /<header class="profile-masthead">/);
+    assert.match(source, /<p class="profile-identity"><span class="profile-handle">@wcx12<\/span>/);
+    assert.match(source, /<aside class="profile-command">[\s\S]*?<p class="profile-status">/);
     assert.match(source, /<dl class="profile-facts">/);
     assert.match(source, /<aside class="profile-directory">/);
     assert.doesNotMatch(source, /class="profile-rail"/);
@@ -632,14 +640,18 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.match(english, new RegExp(`href="\\.\\.\\/publications\\/${publication.slug}\\/"`));
     assert.match(chinese, new RegExp(`href="\\.\\.\\/publications\\/${publication.slug}\\/"`));
   }
-  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(164px, 188px\) minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(168px, 192px\) minmax\(0, 1fr\)/s);
   assert.match(profileStyles, /\.profile-directory\s*\{[^}]*position:\s*sticky/s);
   assert.match(profileStyles, /\.profile-section\s*\{[^}]*display:\s*block/s);
+  assert.match(profileStyles, /\.profile-section-head span\s*\{[^}]*border:\s*0[^}]*background:\s*transparent/s);
+  assert.match(profileStyles, /\.profile-section\[data-profile-kind="projects"\] \.profile-section-body > ul\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(profileStyles, /\.resume-publication-entry\s*\{[^}]*border-radius:\s*8px[^}]*background:\s*var\(--profile-surface\)/s);
   assert.equal(matches(profileStyles, /Keep the profile dense and editorial/g).length, 1);
   assert.doesNotMatch(profileStyles, /\.research-profile\s*\{[^}]*width:\s*min\(1040px, 100%\)/s);
   assert.doesNotMatch(profileStyles, /\.profile-section\s*\{[^}]*grid-template-columns:\s*minmax\(150px, 190px\)/s);
   assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section-nav\s*\{[^}]*display:\s*grid[^}]*overflow:\s*visible/s);
-  assert.match(profileStyles, /@media \(max-width: 880px\)[\s\S]*?\.profile-section\s*\{[^}]*scroll-margin-top:\s*160px/s);
+  assert.match(profileStyles, /@media \(max-width: 880px\)[\s\S]*?\.profile-directory\s*\{[^}]*position:\s*static/s);
+  assert.match(profileStyles, /@media \(max-width: 880px\)[\s\S]*?\.profile-section\s*\{[^}]*scroll-margin-top:\s*94px/s);
   assert.match(profileStyles, /@page\s*\{[^}]*size:\s*A4/s);
   assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*0/s);
   assert.match(profileStyles, /@media print[\s\S]*?:root\[data-theme="warm"\],[\s\S]*?:root\[data-theme="mono"\]\s*\{/s);
