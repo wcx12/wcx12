@@ -18,7 +18,7 @@ export const SITE = {
 
 export const SITE_TIME_ZONE = process.env.SITE_TIME_ZONE || 'Asia/Shanghai';
 
-export const VALID_RESEARCH_IDS = new Set([
+const FALLBACK_RESEARCH_IDS = new Set([
   'point-cloud-registration',
   'vpr',
   'medical-image-analysis',
@@ -152,7 +152,11 @@ function markdownResourceReferences(content) {
 
 function mediaReference(value, kind) {
   const raw = String(value || '').trim();
-  if (!raw || /^(?:https?:|mailto:|tel:|data:|#|\/)/i.test(raw)) return null;
+  if (!raw) return null;
+  if (kind === 'image' && /^(?:https?:|data:|\/)/i.test(raw)) {
+    return { error: `images must be bundled inside the article media/ directory: "${raw}"` };
+  }
+  if (/^(?:https?:|mailto:|tel:|data:|#|\/)/i.test(raw)) return null;
   const pathPart = raw.split(/[?#]/, 1)[0];
   let decoded;
   try {
@@ -290,7 +294,7 @@ async function validatePostMedia(post, errors, warnings) {
   return mediaFiles;
 }
 
-async function validatePost(post, seenSlugs) {
+async function validatePost(post, seenSlugs, validResearchIds) {
   const errors = [];
   const warnings = [];
   const data = post.data;
@@ -351,7 +355,7 @@ async function validatePost(post, seenSlugs) {
   });
 
   asArray(data.research).forEach((id) => {
-    if (!VALID_RESEARCH_IDS.has(id)) warnings.push(`research id "${id}" is not currently configured`);
+    if (!validResearchIds.has(id)) errors.push(`research id "${id}" is not configured in research-config.json`);
   });
 
   if (!post.content.trim()) errors.push('post body is empty');
@@ -380,6 +384,18 @@ export async function loadPosts(rootDir, options = {}) {
   const diagnostics = [];
   const posts = [];
   const publicationCounts = { published: 0, scheduled: 0, draft: 0 };
+  let validResearchIds = options.validResearchIds ? new Set(options.validResearchIds) : null;
+  if (!validResearchIds) {
+    try {
+      const config = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
+      validResearchIds = new Set((config.interests || []).flatMap((domain) => (
+        Array.isArray(domain.children) ? domain.children.map((child) => String(child.id || '')) : []
+      )).filter(Boolean));
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      validResearchIds = new Set(FALLBACK_RESEARCH_IDS);
+    }
+  }
 
   for (const file of files) {
     const raw = await fs.readFile(file, 'utf8');
@@ -402,7 +418,7 @@ export async function loadPosts(rootDir, options = {}) {
       data,
       content: parsed.content
     };
-    const result = await validatePost(post, seenSlugs);
+    const result = await validatePost(post, seenSlugs, validResearchIds);
     const state = publicationState(data, today);
     publicationCounts[state] += 1;
     diagnostics.push({ file: post.relativePath, errors: result.errors, warnings: result.warnings });

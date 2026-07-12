@@ -19,7 +19,7 @@
       <category>static-site</category>
       <category>research-workflow</category>
       <content:encoded><![CDATA[<p>This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material.</p>
-<p><img src="https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/media/publishing-flow.png?v=05149492835c" alt="Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence." loading="lazy" decoding="async"></p>
+<p><img src="https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/media/publishing-flow.png?v=05149492835c" alt="Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence." loading="lazy" decoding="async" referrerpolicy="no-referrer"></p>
 <h2 id="authoring-model">Authoring model</h2>
 <p>Creating a post produces a self-contained article directory:</p>
 <div class="code-frame"><div class="code-head"><span>Create a new post</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre tabindex="0"><code class="hljs language-powershell">npm run new:post <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>

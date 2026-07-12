@@ -4,6 +4,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  WORKFLOW_DISPATCH_INPUT_MAX_LENGTH,
+  normalizeResearchConfigUpdateInput,
   normalizeResearchConfigUpdatePayload,
   normalizeResearchConfigValue,
   validateResearchConfigValue
@@ -67,5 +69,15 @@ test('update payload normalization binds a valid config to its source hash', () 
   assert.throws(
     () => normalizeResearchConfigUpdatePayload({ version: 1, expected_sha256: 'invalid', config: currentConfig }),
     /lowercase SHA-256/
+  );
+});
+
+test('workflow input normalization enforces the GitHub dispatch transport limit', () => {
+  assert.equal(WORKFLOW_DISPATCH_INPUT_MAX_LENGTH, 65_535);
+  assert.equal(normalizeResearchConfigUpdateInput('e30='), 'e30=');
+  assert.throws(() => normalizeResearchConfigUpdateInput('not base64'), /valid base64/);
+  assert.throws(
+    () => normalizeResearchConfigUpdateInput('A'.repeat(WORKFLOW_DISPATCH_INPUT_MAX_LENGTH + 1)),
+    /65535 characters/
   );
 });

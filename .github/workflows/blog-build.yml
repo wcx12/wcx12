@@ -6,40 +6,13 @@ on:
     - cron: "17 16 * * *"
   push:
     branches: ["master", "main"]
-    paths:
-      - "content/**"
-      - "blog-src/**"
-      - "scripts/**"
-      - "index.html"
-      - "styles.css"
-      - "script.js"
-      - "homepage-i18n.js"
-      - "research-canvas.js"
-      - "repo-map.js"
-      - "site-data.js"
-      - "research-config.json"
-      - "resume.md"
-      - "resume.zh.md"
-      - "blog/**"
-      - "research/**"
-      - "projects/**"
-      - "publications/**"
-      - "resume/**"
-      - "zh/**"
-      - "publications.md"
-      - "rss.xml"
-      - "sitemap.xml"
-      - "package.json"
-      - "package-lock.json"
-      - ".nvmrc"
-      - ".github/workflows/blog-build.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-site-${{ github.ref }}
-  cancel-in-progress: true
+  group: portfolio-publish-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
   build-site:

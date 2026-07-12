@@ -2,18 +2,17 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { normalizeResearchConfigUpdatePayload } from './research-config-schema.js';
+import {
+  normalizeResearchConfigUpdateInput,
+  normalizeResearchConfigUpdatePayload
+} from './research-config-schema.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const configPath = path.join(rootDir, 'research-config.json');
-const encoded = String(process.env.RESEARCH_CONFIG_UPDATE_BASE64 || '').trim();
-
-if (!encoded || encoded.length > 128 * 1024 || !/^[a-z0-9+/]+={0,2}$/i.test(encoded)) {
-  throw new Error('RESEARCH_CONFIG_UPDATE_BASE64 is missing or invalid.');
-}
+const encoded = normalizeResearchConfigUpdateInput(process.env.RESEARCH_CONFIG_UPDATE_BASE64);
 
 const decoded = Buffer.from(encoded, 'base64');
-if (decoded.length > 96 * 1024) throw new Error('Decoded research config update exceeds 96 KiB.');
+if (decoded.length > 48 * 1024) throw new Error('Decoded research config update exceeds 48 KiB.');
 const payload = normalizeResearchConfigUpdatePayload(JSON.parse(decoded.toString('utf8').replace(/^\uFEFF/, '')));
 const expectedHash = payload.expected_sha256;
 const submitted = payload.config;

@@ -290,7 +290,7 @@ const shellText = {
     nav_projects_title: '浏览含阶段与公开证据说明的项目',
     nav_publications: '论文',
     nav_publications_title: '浏览含出版方链接的论文',
-    nav_blog: '写作',
+    nav_blog: '英文博客',
     nav_blog_title: '打开知研札记',
     nav_archive: '归档',
     nav_archive_title: '按日期浏览所有文章',
@@ -379,6 +379,9 @@ function renderShell({
   schemaType = 'WebPage',
   publishedTime = '',
   modifiedTime = '',
+  articleAuthorUrl = '',
+  articleSection = '',
+  articleTags = [],
   contentLang = SITE.lang,
   fixedLanguage = '',
   alternateUrl = '',
@@ -452,14 +455,17 @@ function renderShell({
   const safeMetadata = JSON.stringify(metadata).replace(/</g, '\\u003c');
   const articleMetadata = [
     publishedTime ? `<meta property="article:published_time" content="${escapeHtml(publishedTime)}" />` : '',
-    modifiedTime ? `<meta property="article:modified_time" content="${escapeHtml(modifiedTime)}" />` : ''
+    modifiedTime ? `<meta property="article:modified_time" content="${escapeHtml(modifiedTime)}" />` : '',
+    articleAuthorUrl ? `<meta property="article:author" content="${escapeHtml(articleAuthorUrl)}" />` : '',
+    articleSection ? `<meta property="article:section" content="${escapeHtml(articleSection)}" />` : '',
+    ...articleTags.map((tag) => `<meta property="article:tag" content="${escapeHtml(tag)}" />`)
   ].filter(Boolean).map((tag) => `  ${tag}`).join('\n');
   return `<!doctype html>
 <html lang="${escapeHtml(documentLanguage)}" data-content-lang="${escapeHtml(documentLanguage)}" data-ui-lang="${routeLanguage}"${fixedLanguage ? ` data-fixed-language="${routeLanguage}"` : ''}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeHtml(pageDescription)}" />
   <meta name="author" content="${escapeHtml(SITE.author)}" />
@@ -475,7 +481,7 @@ ${languageAlternates}
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
   <meta property="og:site_name" content="${escapeHtml(siteName)}" />
   <meta property="og:locale" content="${routeLanguage === 'zh' ? 'zh_CN' : 'en_US'}" />
-  <meta property="og:image" content="${escapeHtml(socialImage)}" />
+${fixedLanguage && alternateHref ? `  <meta property="og:locale:alternate" content="${routeLanguage === 'zh' ? 'en_US' : 'zh_CN'}" />\n` : ''}  <meta property="og:image" content="${escapeHtml(socialImage)}" />
   <meta property="og:image:type" content="${escapeHtml(socialImageType)}" />
   <meta property="og:image:width" content="${escapeHtml(socialImageWidth)}" />
   <meta property="og:image:height" content="${escapeHtml(socialImageHeight)}" />
@@ -567,6 +573,7 @@ function createMarkdownRenderer() {
     tokens[idx].attrSet('src', versionPostMedia(source, env.post));
     tokens[idx].attrSet('loading', 'lazy');
     tokens[idx].attrSet('decoding', 'async');
+    tokens[idx].attrSet('referrerpolicy', 'no-referrer');
     return defaultImage(tokens, idx, options, env, self);
   };
 
@@ -810,6 +817,7 @@ function localizeHomepageMetadata(source, language) {
   const seo = homepageSeo[language];
   if (!seo) throw new Error(`Missing homepage SEO metadata for ${language}`);
   const pageUrl = absoluteUrl(language === 'zh' ? 'zh/' : '');
+  const imageUrl = absoluteUrl(seo.imagePath);
   let localized = replaceRequired(source, /<title>[^<]*<\/title>/, `<title>${escapeHtml(seo.title)}</title>`, `${language} title`);
   localized = replaceRequired(localized, /(<link\s+rel="canonical"\s+href=")[^"]*("\s*\/?>)/, `$1${pageUrl}$2`, `${language} canonical`);
   localized = replaceHomepageMeta(localized, 'name', 'description', seo.description);
@@ -819,9 +827,11 @@ function localizeHomepageMetadata(source, language) {
   localized = replaceHomepageMeta(localized, 'property', 'og:site_name', seo.siteName);
   localized = replaceHomepageMeta(localized, 'property', 'og:locale', seo.locale);
   localized = replaceHomepageMeta(localized, 'property', 'og:locale:alternate', seo.alternateLocale);
+  localized = replaceHomepageMeta(localized, 'property', 'og:image', imageUrl);
   localized = replaceHomepageMeta(localized, 'property', 'og:image:alt', seo.imageAlt);
   localized = replaceHomepageMeta(localized, 'name', 'twitter:title', seo.title);
   localized = replaceHomepageMeta(localized, 'name', 'twitter:description', seo.description);
+  localized = replaceHomepageMeta(localized, 'name', 'twitter:image', imageUrl);
   localized = replaceHomepageMeta(localized, 'name', 'twitter:image:alt', seo.imageAlt);
   return localized;
 }
@@ -829,6 +839,7 @@ function localizeHomepageMetadata(source, language) {
 function localizeHomepageStructuredData(source, language) {
   const seo = homepageSeo[language];
   const pageUrl = absoluteUrl(language === 'zh' ? 'zh/' : '');
+  const imageUrl = absoluteUrl(seo.imagePath);
   let profilePages = 0;
   const localized = source.replace(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g, (match, json) => {
     const metadata = JSON.parse(json);
@@ -839,6 +850,13 @@ function localizeHomepageStructuredData(source, language) {
       metadata.name = seo.profileName;
       metadata.description = seo.description;
       metadata.inLanguage = language === 'zh' ? 'zh-CN' : 'en';
+      metadata.primaryImageOfPage = {
+        '@type': 'ImageObject',
+        url: imageUrl,
+        width: 1200,
+        height: 630,
+        caption: seo.imageAlt
+      };
       metadata.mainEntity.knowsAbout = seo.knowsAbout;
     } else if (metadata['@type'] === 'WebSite') {
       metadata.alternateName = seo.websiteName;
@@ -1077,6 +1095,9 @@ ${html}
     pageType: 'article',
     publishedTime: post.date,
     modifiedTime: post.updated,
+    articleAuthorUrl: absoluteUrl(''),
+    articleSection: post.category,
+    articleTags: post.tags,
     socialImagePath: socialImage.path,
     socialImageAlt: socialImage.alt,
     contentLang: post.lang,
@@ -1109,6 +1130,7 @@ async function renderDraftPreviews(posts, renderer) {
     'sitemap.xml',
     'assets',
     'blog',
+    'projects',
     'resume',
     'research',
     'publications',
@@ -1283,7 +1305,7 @@ ${html}
     body,
     jsonLd: metadata,
     schemaType: 'ProfilePage',
-    socialImagePath: 'assets/og-profile.png',
+    socialImagePath: isZh ? 'assets/og-profile-zh.png' : 'assets/og-profile.png',
     socialImageAlt: isZh ? 'Chenxu Wang 研究履历与论文记录' : 'Chenxu Wang research profile and publication record',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
@@ -1476,6 +1498,22 @@ function researchRoute(language, suffix = '') {
   return `${language === 'zh' ? 'zh/' : ''}research/${suffix}`;
 }
 
+const MIN_INDEXABLE_TOPIC_EVIDENCE = 2;
+
+function shouldIndexResearchTopic(evidence) {
+  return evidence.length >= MIN_INDEXABLE_TOPIC_EVIDENCE;
+}
+
+function emptyEvidenceSection(language) {
+  const isZh = language === 'zh';
+  return `<section class="research-section" aria-labelledby="evidence-status-title">
+    <div class="research-section-head"><h2 id="evidence-status-title">${isZh ? '当前状态' : 'Current status'}</h2><span>0</span></div>
+    <p class="muted">${isZh
+      ? '这是正在探索的研究方向，目前尚未关联可公开核验的项目、论文或文章。后续成果会在完成公开整理后显示在这里。'
+      : 'This is an exploratory direction with no publicly verifiable project, paper, or article mapped yet. Evidence will appear here after it is ready for public review.'}</p>
+  </section>`;
+}
+
 function resumeRoute(language) {
   return `${language === 'zh' ? 'zh/' : ''}resume/`;
 }
@@ -1539,7 +1577,7 @@ async function renderProjects(language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
-    socialImagePath: 'assets/og-projects.png',
+    socialImagePath: isZh ? 'assets/og-projects-zh.png' : 'assets/og-projects.png',
     socialImageAlt: isZh ? 'wcx12 项目与公开仓库索引' : 'wcx12 projects and public repository index',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
@@ -1608,7 +1646,7 @@ async function renderResearchIndex(posts, language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
-    socialImagePath: 'assets/og-research.png',
+    socialImagePath: isZh ? 'assets/og-research-zh.png' : 'assets/og-research.png',
     socialImageAlt: isZh ? 'wcx12 研究方向与公开成果索引' : 'wcx12 research topics and public evidence index',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
@@ -1636,7 +1674,7 @@ async function renderResearchTopic(posts, child, language) {
         <a class="btn btn-outline research-demo-link" href="${ctx.link(`${isZh ? 'zh/' : ''}index.html`)}#research/${escapeHtml(child.id)}">${isZh ? '打开概念演示' : 'Open concept demo'}</a>
       </div>
     </header>
-    ${evidenceSections(ctx, evidence, language)}`;
+    ${evidence.length ? evidenceSections(ctx, evidence, language) : emptyEvidenceSection(language)}`;
   const canonicalUrl = absoluteUrl(relativeRoute);
   const metadata = JSON.stringify({
     '@context': 'https://schema.org',
@@ -1671,12 +1709,12 @@ async function renderResearchTopic(posts, child, language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
-    socialImagePath: 'assets/og-research.png',
-    socialImageAlt: isZh ? `${title}研究与公开成果` : `${title} research and public evidence`,
+    socialImagePath: isZh ? 'assets/og-research-zh.png' : 'assets/og-research.png',
+    socialImageAlt: isZh ? 'wcx12 研究方向与公开成果索引页面' : 'wcx12 research topics and public evidence index page',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
     alternateUrl: alternateRoute,
-    robots: evidence.length ? 'index,follow,max-image-preview:large' : 'noindex,follow'
+    robots: shouldIndexResearchTopic(evidence) ? 'index,follow,max-image-preview:large' : 'noindex,follow'
   }));
 }
 
@@ -1731,7 +1769,7 @@ async function renderPublications(language) {
     body,
     jsonLd: metadata,
     schemaType: 'CollectionPage',
-    socialImagePath: 'assets/og-publications.png',
+    socialImagePath: isZh ? 'assets/og-publications-zh.png' : 'assets/og-publications.png',
     socialImageAlt: isZh ? 'Chenxu Wang 论文与出版记录' : 'Chenxu Wang publications and publisher-linked records',
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
@@ -1874,7 +1912,7 @@ async function renderSitemap(posts) {
   const latestHomeDate = latestDate([latestPostDate, latestProjectDate, latestPublicationDate, latestResearchDate]);
   const researchRoutes = ['en', 'zh'].flatMap((language) => [
     { route: researchRoute(language), lastmod: latestResearchDate },
-    ...researchChildren.filter((child) => evidenceForTopic(child.id, posts).length).map((child) => ({
+    ...researchChildren.filter((child) => shouldIndexResearchTopic(evidenceForTopic(child.id, posts))).map((child) => ({
       route: researchRoute(language, `${child.id}/`),
       lastmod: topicDates.get(child.id)
     })),

@@ -94,11 +94,13 @@ test('adds honest unclassified records and attributes new forks', () => {
 
   assert.deepEqual(repos.map((repo) => repo.name), ['NewProject', 'NewFork']);
   assert.equal(repos[0].demo_url, 'https://wcx12.github.io/NewProject/');
+  assert.match(repos[0].descriptionZh, /GitHub.*README/);
   assert.deepEqual(repos[0].interests, []);
   assert.equal(repos[0].stage.en, 'Public repository');
   assert.match(repos[0].evidence.en, /not yet been curated/);
   assert.equal(repos[1].fork, true);
   assert.equal(repos[1].source.full_name, 'upstream/NewFork');
+  assert.match(repos[1].descriptionZh, /分叉仓库/);
   assert.match(repos[1].evidence.en, /not claimed as original work/);
 });
 

@@ -197,11 +197,17 @@ test('all generated local links and assets resolve inside the published tree', a
 
 test('major pages use representative social cards in metadata and structured data', async () => {
   const cases = [
+    ['index.html', '/assets/og-home.png'],
+    ['zh/index.html', '/assets/og-home-zh.png'],
     ['blog/index.html', '/assets/og-blog.png'],
     ['resume/index.html', '/assets/og-profile.png'],
+    ['zh/resume/index.html', '/assets/og-profile-zh.png'],
     ['research/index.html', '/assets/og-research.png'],
+    ['zh/research/index.html', '/assets/og-research-zh.png'],
     ['projects/index.html', '/assets/og-projects.png'],
+    ['zh/projects/index.html', '/assets/og-projects-zh.png'],
     ['publications/index.html', '/assets/og-publications.png'],
+    ['zh/publications/index.html', '/assets/og-publications-zh.png'],
     ['blog/posts/building-a-research-writing-system/index.html', '/blog/posts/building-a-research-writing-system/media/social-card.png']
   ];
   const socialImages = new Set();
@@ -274,7 +280,10 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(clientSource, /hero_title:\s*'知研札记'/);
   assert.match(clientSource, /page_title:\s*'知研札记 \| wcx12'/);
   assert.match(clientSource, /hero_kicker:\s*'研究 · 工程 · 思考'/);
-  assert.match(clientSource, /hero_desc:\s*'记录研究问题如何被拆解、实验如何被验证，以及代码如何成为可复现的答案。'/);
+  assert.match(
+    clientSource,
+    /hero_desc:\s*'记录研究问题如何被拆解、实验如何被验证，以及代码如何成为可复现的答案。当前文章以英文发布。'/,
+  );
   assert.match(clientSource, /document\.title\s*=\s*t\('page_title'\)/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
   assert.match(styleSource, /html\[data-ui-lang="zh"\] \.blog-hero h1/);
@@ -326,11 +335,18 @@ test('bundled post media is copied, fingerprinted, and rendered accessibly', asy
   assert.deepEqual(published, source, 'published media bytes differ from the validated source');
   const version = createHash('sha256').update(source).digest('hex').slice(0, 12);
   assert.match(article, new RegExp(`src="media/publishing-flow\\.png\\?v=${version}"`));
-  assert.match(article, /publishing-flow\.png[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"/);
+  assert.match(article, /publishing-flow\.png[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"[^>]+referrerpolicy="no-referrer"/);
+  assert.match(article, /Content-Security-Policy[^>]+img-src 'self' data:; connect-src 'self'/);
+  assert.doesNotMatch(article, /Content-Security-Policy[^>]+img-src[^>]+https:/);
+  assert.match(article, /<meta property="article:author" content="https:\/\/wcx12\.github\.io\/wcx12\/" \/>/);
+  assert.match(article, /<meta property="article:section" content="Engineering" \/>/);
+  for (const tag of ['personal-site', 'static-site', 'research-workflow']) {
+    assert.match(article, new RegExp(`<meta property="article:tag" content="${tag}" \\/>`));
+  }
 });
 
 test('all configured fixed-language portfolio routes exist without stale generated HTML', async () => {
-  assert.equal(staticRoutes.length, 18, 'the profile, five topics, and three index routes must have English and Chinese pages');
+  assert.equal(staticRoutes.length, 2 * (researchChildren.length + 4), 'fixed routes must follow the current research configuration');
   const generated = [
     ...await walk(path.join(rootDir, 'resume'), (file) => file.endsWith('.html')),
     ...await walk(path.join(rootDir, 'research'), (file) => file.endsWith('.html')),
@@ -371,6 +387,7 @@ test('fixed-language routes have unique metadata and reciprocal language links',
     assert.equal(linkHref(source, 'alternate', 'x-default'), isZh ? alternate : canonical, `${route}: x-default must select English`);
     assert.match(source, new RegExp(`data-fixed-language="${isZh ? 'zh' : 'en'}"`), `${route}: missing fixed route language`);
     assert.match(source, new RegExp(`<html[^>]+lang="${isZh ? 'zh-CN' : 'en'}"`), `${route}: document language does not match route`);
+    assert.equal(metaContent(source, 'og:locale:alternate'), isZh ? 'en_US' : 'zh_CN', `${route}: missing alternate Open Graph locale`);
     const expectedHome = `${SITE.url}/${isZh ? 'zh/' : ''}`;
     const brandHome = source.match(/<a class="blog-brand" href="([^"]+)">wcx12<\/a>/i)?.[1];
     const footerHome = source.match(/<footer class="blog-footer">[\s\S]*?<a href="([^"]+)"/i)?.[1];
@@ -561,28 +578,39 @@ test('publication pages expose every canonical DOI record with ordered authors',
 test('sitemap covers every configured fixed-language route', async () => {
   const sitemap = await fs.readFile(path.join(rootDir, 'sitemap.xml'), 'utf8');
   const posts = JSON.parse(await fs.readFile(path.join(rootDir, 'blog', 'posts.json'), 'utf8'));
-  const topicHasEvidence = (topicId) => localRepos.some((repo) => new Set([
+  const topicEvidenceCount = (topicId) => localRepos.filter((repo) => new Set([
     ...(repo.interests || []),
     ...(researchConfig.repoAssignments[repo.name] || [])
-  ]).has(topicId)) || staticPublications.some((publication) => new Set([
+  ]).has(topicId)).length + staticPublications.filter((publication) => new Set([
     ...(publication.interests || []),
     ...(researchConfig.paperAssignments[publication.title] || [])
-  ]).has(topicId)) || posts.some((post) => (post.research || []).includes(topicId));
+  ]).has(topicId)).length + posts.filter((post) => (post.research || []).includes(topicId)).length;
   const indexableRoutes = ['en', 'zh'].flatMap((language) => [
     resumeRoute(language),
     researchRoute(language),
-    ...researchChildren.filter((child) => topicHasEvidence(child.id)).map((child) => researchRoute(language, `${child.id}/`)),
+    ...researchChildren.filter((child) => topicEvidenceCount(child.id) >= 2).map((child) => researchRoute(language, `${child.id}/`)),
     projectsRoute(language),
     publicationsRoute(language)
   ]);
   for (const route of indexableRoutes) {
     assert.match(sitemap, new RegExp(`<loc>${`${SITE.url}/${route}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`), `${route}: missing from sitemap`);
   }
-  for (const language of ['en', 'zh']) {
-    const emptyRoute = researchRoute(language, 'ai4edu/');
-    assert.doesNotMatch(sitemap, new RegExp(`<loc>${`${SITE.url}/${emptyRoute}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`));
-    const source = await fs.readFile(path.join(rootDir, emptyRoute, 'index.html'), 'utf8');
-    assert.match(source, /<meta name="robots" content="noindex,follow"/);
+  for (const child of researchChildren) {
+    for (const language of ['en', 'zh']) {
+      const route = researchRoute(language, `${child.id}/`);
+      const locationPattern = new RegExp(`<loc>${`${SITE.url}/${route}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`);
+      const source = await fs.readFile(path.join(rootDir, route, 'index.html'), 'utf8');
+      if (topicEvidenceCount(child.id) >= 2) {
+        assert.match(sitemap, locationPattern);
+        assert.match(source, /<meta name="robots" content="index,follow,max-image-preview:large"/);
+      } else {
+        assert.doesNotMatch(sitemap, locationPattern);
+        assert.match(source, /<meta name="robots" content="noindex,follow"/);
+      }
+      if (topicEvidenceCount(child.id) === 0) {
+        assert.match(source, language === 'zh' ? /正在探索的研究方向/ : /exploratory direction/);
+      }
+    }
   }
 
   const entries = matches(sitemap, /<url><loc>([^<]+)<\/loc>(?:<lastmod>([^<]+)<\/lastmod>)?<\/url>/g);
@@ -602,9 +630,9 @@ test('sitemap covers every configured fixed-language route', async () => {
     .slice(0, 10);
   assert.equal(lastmodByUrl.get(`${SITE.url}/projects/`), latestProjectDate);
   assert.equal(lastmodByUrl.get(`${SITE.url}/publications/`), '2026-07-11');
-  assert.equal(lastmodByUrl.get(`${SITE.url}/research/point-cloud-registration/`), '2026-06-02');
-  assert.equal(lastmodByUrl.get(`${SITE.url}/research/agent/`), '2026-06-18');
-  assert.equal(lastmodByUrl.get(`${SITE.url}/research/ai4edu/`), undefined, 'empty research topics must stay out of the sitemap');
+  for (const child of researchChildren.filter((item) => topicEvidenceCount(item.id) < 2)) {
+    assert.equal(lastmodByUrl.get(`${SITE.url}/research/${child.id}/`), undefined, 'thin research topics must stay out of the sitemap');
+  }
   assert.equal(lastmodByUrl.get(`${SITE.url}/resume/`), '', 'profile lastmod must be omitted without a reliable source date');
   assert.equal(lastmodByUrl.get(`${SITE.url}/zh/resume/`), '', 'Chinese profile lastmod must be omitted without a reliable source date');
   assert.match(
@@ -682,15 +710,14 @@ test('scheduled publishing builds before validating generated output', async () 
   assert.match(source, /if: steps\.repository_sync\.outcome == 'failure'/);
   assert.match(source, /building from the last committed snapshot/);
   assert.match(source, /git add site-data\.js index\.html blog research projects publications zh resume/);
-  assert.match(source, /- "homepage-i18n\.js"/);
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(source, /pages: write/);
   assert.match(source, /id-token: write/);
   assert.match(source, /github\.repository_owner == 'wcx12'/);
   assert.match(source, /github\.ref_name == github\.event\.repository\.default_branch/);
-  assert.match(source, /- "projects\/\*\*"/);
-  assert.match(source, /- "resume\.zh\.md"/);
+  assert.match(source, /concurrency:\s*\n\s*group: portfolio-publish-\$\{\{ github\.repository \}\}\s*\n\s*cancel-in-progress: false/);
+  assert.doesNotMatch(source, /\n\s+paths:/, 'every default-branch push must be eligible to publish the explicit public artifact');
   assert.match(source, /actions\/configure-pages@[a-f0-9]{40}/);
   assert.match(source, /actions\/upload-pages-artifact@[a-f0-9]{40}/);
   assert.match(source, /actions\/deploy-pages@[a-f0-9]{40}/);
@@ -712,17 +739,26 @@ test('research mapping workflow validates, rebuilds, and commits to the protecte
   assert.match(workflow, /environment: github-pages/);
   assert.match(workflow, /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/);
   assert.match(workflow, /fetch-depth: 0/);
-  assert.doesNotMatch(workflow, /concurrency:/);
+  assert.match(workflow, /concurrency:\s*\n\s*group: portfolio-publish-\$\{\{ github\.repository \}\}\s*\n\s*cancel-in-progress: false/);
   assert.match(workflow, /RESEARCH_CONFIG_UPDATE_BASE64: \$\{\{ inputs\.update_payload_base64 \}\}/);
   const sync = workflow.indexOf('name: Synchronize target branch');
   const validate = workflow.indexOf('name: Validate submitted mapping');
   const build = workflow.indexOf('name: Build site');
   const generatedValidation = workflow.indexOf('name: Validate generated site');
+  const packageArtifact = workflow.indexOf('name: Package public Pages artifact');
+  const uploadArtifact = workflow.indexOf('name: Upload GitHub Pages artifact');
   const commit = workflow.indexOf('name: Commit mapping');
-  assert.ok(sync < validate && validate < build && build < generatedValidation && generatedValidation < commit);
+  const deployArtifact = workflow.indexOf('name: Deploy GitHub Pages artifact');
+  assert.ok(sync < validate && validate < build && build < generatedValidation && generatedValidation < packageArtifact);
+  assert.ok(packageArtifact < uploadArtifact && uploadArtifact < commit && commit < deployArtifact);
   assert.ok(validate < workflow.indexOf('GH_TOKEN: ${{ github.token }}'));
   assert.match(workflow, /git add research-config\.json index\.html blog research projects publications zh resume publications\.md rss\.xml sitemap\.xml package-lock\.json/);
-  assert.doesNotMatch(workflow, /pages: write|pages\/builds/);
+  assert.match(workflow, /actions\/configure-pages@[a-f0-9]{40}/);
+  assert.match(workflow, /actions\/upload-pages-artifact@[a-f0-9]{40}/);
+  assert.match(workflow, /actions\/deploy-pages@[a-f0-9]{40}/);
+  assert.match(workflow, /pages: write/);
+  assert.match(workflow, /id-token: write/);
+  assert.doesNotMatch(workflow, /pages\/builds/);
   assert.match(applyScript, /normalizeResearchConfigUpdatePayload/);
   assert.match(schema, /payload\.version !== 1/);
   assert.match(schema, /payload\.expected_sha256/);
@@ -742,6 +778,7 @@ test('local draft preview rejects rebinding and symlink escapes', async () => {
   assert.match(source, /if \(!allowedHosts\.has\(requestHost\)\)/);
   assert.match(source, /'X-Frame-Options': 'DENY'/);
   assert.match(buildSource, /const scaffold = \[[\s\S]*?'script\.js',[\s\S]*?'homepage-i18n\.js',[\s\S]*?'site-data\.js'/, 'draft preview must include the homepage translation module');
+  assert.match(buildSource, /const scaffold = \[[\s\S]*?'blog',[\s\S]*?'projects',[\s\S]*?'resume'/, 'draft preview navigation must include the public Projects route');
 });
 
 test('public publication source and generated profile contain every canonical DOI', async () => {

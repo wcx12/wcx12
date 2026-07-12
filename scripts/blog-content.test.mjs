@@ -6,6 +6,7 @@ import test from 'node:test';
 import MarkdownIt from 'markdown-it';
 import markdownItKatexModule from 'markdown-it-katex';
 import { loadPosts, publicationState, siteDate, slugify, summarizeDiagnostics } from './blog-content.mjs';
+import { createPostDraft, postSlugify } from './new-post.mjs';
 
 const markdownItKatex = typeof markdownItKatexModule === 'function'
   ? markdownItKatexModule
@@ -30,6 +31,20 @@ test('keeps non-Latin heading text in stable slugs', () => {
   assert.equal(slugify('研究兴趣'), '研究兴趣');
   assert.equal(slugify('Café / 研究 Notes'), 'cafe-研究-notes');
 });
+
+test('new post scaffolding creates valid ASCII slugs and YAML-safe titles', async () => withContentRoot(async (root) => {
+  assert.match(postSlugify('研究日志'), /^post-[a-f0-9]{10}$/);
+  const title = String.raw`研究日志 C:\temp "quoted"`;
+  const { filePath, slug } = await createPostDraft(title, { rootDir: root, date: '2026-07-10' });
+  assert.match(slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+  assert.ok(await fs.stat(path.join(path.dirname(filePath), 'media')).then((stats) => stats.isDirectory()));
+
+  const { posts, diagnostics } = await loadPosts(root, { includeDrafts: true, today: '2026-07-10' });
+  const { errors } = summarizeDiagnostics(diagnostics);
+  assert.equal(errors.length, 0);
+  assert.equal(posts[0].title, title);
+  assert.equal(posts[0].slug, slug);
+}));
 
 test('renders inline and block dollar-delimited formulas with KaTeX', () => {
   const html = createRenderer().render(String.raw`Inline: $E=mc^2$.
@@ -232,6 +247,29 @@ test('requires media references to come from a bundled post', async () => {
   const { errors } = await validateFixture('![Plot](media/plot.png)');
   assert.match(errors.join('\n'), /requires a bundled post with index\.md/);
 });
+
+test('rejects remote and root-relative article images', async () => {
+  const { errors } = await validateFixture([
+    '![Remote tracker](https://tracker.example/pixel.png)',
+    '![Shared asset](/assets/remote.png)'
+  ].join('\n\n'));
+  assert.match(errors.join('\n'), /images must be bundled inside the article media\/ directory/);
+});
+
+test('validates article research ids against the current research configuration', async () => withContentRoot(async (root) => {
+  await fs.writeFile(path.join(root, 'research-config.json'), JSON.stringify({
+    interests: [{ children: [{ id: 'custom-topic' }] }]
+  }));
+  const postPath = path.join(root, 'content', 'posts', 'fixture.md');
+  await fs.writeFile(postPath, postSource('Configured topic.').replace('research: []', 'research: ["custom-topic"]'));
+
+  let result = summarizeDiagnostics((await loadPosts(root, { today: '2026-07-10' })).diagnostics);
+  assert.equal(result.errors.length, 0);
+
+  await fs.writeFile(postPath, postSource('Misspelled topic.').replace('research: []', 'research: ["custom-topc"]'));
+  result = summarizeDiagnostics((await loadPosts(root, { today: '2026-07-10' })).diagnostics);
+  assert.match(result.errors.join('\n'), /research id "custom-topc" is not configured/);
+}));
 
 test('rejects active media formats and files disguised as safe images', async () => withContentRoot(async (root) => {
   const bundle = path.join(root, 'content', 'posts', 'fixture');

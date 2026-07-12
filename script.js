@@ -16,6 +16,7 @@ const [
     RESEARCH_CONFIG_LIMITS,
     RESEARCH_CONFIG_VERSION,
     SUPPORTED_ANIMATIONS,
+    normalizeResearchConfigUpdateInput,
     normalizeResearchConfigValue: normalizeSharedResearchConfig,
     normalizeResearchConfigUpdatePayload
   }
@@ -2268,7 +2269,7 @@ async function prepareResearchConfigUpdate() {
       expected_sha256: remoteResearchConfigHash,
       config
     });
-    managerUpdatePayload.value = toBase64Utf8(JSON.stringify(updatePayload));
+    managerUpdatePayload.value = normalizeResearchConfigUpdateInput(toBase64Utf8(JSON.stringify(updatePayload)));
     managerCopyRemote.disabled = false;
     managerRemoteStatus.textContent = i18n[currentLang].manager_remote_ready;
   } catch (error) {
@@ -3017,9 +3018,9 @@ function renderRepoPreviewCard(repo) {
       </div>
       <div class="repo-actions">
         <button class="btn btn-outline repo-detail" type="button" data-repo="${safeName}" aria-label="${escapeHtml(i18n[currentLang].readme_open.replace('{repo}', repo.name))}">${i18n[currentLang].repo_preview_readme}</button>
-        ${repoInterestId ? `<button class="btn btn-outline repo-research" type="button" data-repo="${safeName}">${i18n[currentLang].show_in_research}</button>` : ''}
-        ${demoHref ? `<a class="btn btn-primary" href="${escapeHtml(demoHref)}" target="_blank" rel="noreferrer">${i18n[currentLang].project_demo}</a>` : ''}
-        <a class="btn ${demoHref ? 'btn-outline' : 'btn-primary'}" href="${repoHref}" target="_blank" rel="noreferrer">${i18n[currentLang].open_repo}</a>
+        ${repoInterestId ? `<button class="btn btn-outline repo-research" type="button" data-repo="${safeName}" aria-label="${escapeHtml(i18n[currentLang].show_repo_in_research_aria.replace('{repo}', repo.name))}">${i18n[currentLang].show_in_research}</button>` : ''}
+        ${demoHref ? `<a class="btn btn-primary" href="${escapeHtml(demoHref)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(i18n[currentLang].open_repo_demo_aria.replace('{repo}', repo.name))}">${i18n[currentLang].project_demo}</a>` : ''}
+        <a class="btn ${demoHref ? 'btn-outline' : 'btn-primary'}" href="${repoHref}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(i18n[currentLang].open_repo_aria.replace('{repo}', repo.name))}">${i18n[currentLang].open_repo}</a>
       </div>
     </article>
   `;
@@ -3256,11 +3257,11 @@ function renderPublications(preserveScroll = false) {
       <h3 style="margin:8px 0;font-size:1em">${safeTitle}</h3>
       ${item.authors ? `<p class="muted"><strong>${i18n[currentLang].pub_authors}:</strong> ${escapeHtml(item.authors)}</p>` : ''}
       <div class="research-badges">${researchBadgesHtml(item, 'paper')}</div>
-      <p class="muted">${escapeHtml(item.summary || '')}</p>
+      <p class="muted">${escapeHtml(paperSummary(item))}</p>
       <div class="repo-actions">
-        <button class="btn btn-outline pub-detail" type="button" data-paper="${safeTitle}">${i18n[currentLang].view_details}</button>
-        <button class="btn btn-outline pub-research" type="button" data-paper="${safeTitle}" ${primaryId ? '' : 'disabled'}>${i18n[currentLang].show_in_research}</button>
-        <a class="btn btn-primary" href="${safeExternalHref(item.link)}" target="_blank" rel="noreferrer">${i18n[currentLang].pub_open_article}</a>
+        <button class="btn btn-outline pub-detail" type="button" data-paper="${safeTitle}" aria-label="${escapeHtml(i18n[currentLang].view_paper_details_aria.replace('{paper}', item.title))}">${i18n[currentLang].view_details}</button>
+        <button class="btn btn-outline pub-research" type="button" data-paper="${safeTitle}" aria-label="${escapeHtml(i18n[currentLang].show_paper_in_research_aria.replace('{paper}', item.title))}" ${primaryId ? '' : 'disabled'}>${i18n[currentLang].show_in_research}</button>
+        <a class="btn btn-primary" href="${safeExternalHref(item.link)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(i18n[currentLang].open_paper_aria.replace('{paper}', item.title))}">${i18n[currentLang].pub_open_article}</a>
       </div>
     </article>
   `;

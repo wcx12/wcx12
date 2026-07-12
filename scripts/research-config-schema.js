@@ -2,6 +2,7 @@
 export const RESEARCH_CONFIG_VERSION = 2;
 export const SUPPORTED_ANIMATIONS = new Set(['point-cloud', 'vpr', 'medical-image', 'agent', 'education']);
 export const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const WORKFLOW_DISPATCH_INPUT_MAX_LENGTH = 65_535;
 
 export const RESEARCH_CONFIG_LIMITS = Object.freeze({
   domains: 64,
@@ -12,6 +13,17 @@ export const RESEARCH_CONFIG_LIMITS = Object.freeze({
   itemNameLength: 300,
   localizedTextLength: 1200
 });
+
+export function normalizeResearchConfigUpdateInput(value) {
+  const encoded = String(value || '').trim();
+  if (!encoded
+    || encoded.length > WORKFLOW_DISPATCH_INPUT_MAX_LENGTH
+    || encoded.length % 4 !== 0
+    || !/^[a-z0-9+/]+={0,2}$/i.test(encoded)) {
+    throw new TypeError(`Research config update must be valid base64 and no longer than ${WORKFLOW_DISPATCH_INPUT_MAX_LENGTH} characters.`);
+  }
+  return encoded;
+}
 
 function isPlainObject(value) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;

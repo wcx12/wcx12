@@ -29,6 +29,12 @@ function defaultStage(repo) {
   return { en: 'Public repository', zh: '公开仓库' };
 }
 
+function defaultDescriptionZh(repo) {
+  if (repo.archived) return '从 GitHub 自动同步的已归档公开仓库；详细说明请查看项目 README。';
+  if (repo.fork) return '从 GitHub 自动同步的公开分叉仓库；详细说明与上游归属请查看项目 README。';
+  return '从 GitHub 自动同步的公开仓库；详细说明请查看项目 README。';
+}
+
 function defaultEvidence(repo, source) {
   if (repo.archived) {
     return {
@@ -72,7 +78,7 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
       const description = String(existing.description || '').trim()
         || remoteDescription
         || 'Public GitHub repository.';
-      const descriptionZh = String(existing.descriptionZh || '').trim();
+      const descriptionZh = String(existing.descriptionZh || '').trim() || defaultDescriptionZh(remote);
       const htmlUrl = validHttpUrl(remote.html_url) || `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(remote.name)}`;
       const existingDemo = validHttpUrl(existing.demo_url);
       const pageDemo = !isCurated && remote.has_pages
@@ -84,7 +90,7 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
       return {
         name: remote.name,
         description,
-        ...(descriptionZh ? { descriptionZh } : {}),
+        descriptionZh,
         language: remote.language ?? null,
         stargazers_count: Number.isFinite(remote.stargazers_count) ? remote.stargazers_count : 0,
         updated_at: remote.updated_at || existing.updated_at || '',

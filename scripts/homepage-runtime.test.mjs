@@ -5,7 +5,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { homepageI18n } from '../homepage-i18n.js';
 import { localRepos, staticPublications } from '../site-data.js';
-import { RESEARCH_CONFIG_LIMITS } from './research-config-schema.js';
+import {
+  RESEARCH_CONFIG_LIMITS,
+  WORKFLOW_DISPATCH_INPUT_MAX_LENGTH
+} from './research-config-schema.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -133,6 +136,11 @@ test('view navigation and research tabs preserve visible keyboard focus and ARIA
     assert.match(indexSource, new RegExp(`id="interestPanel${suffix}"[^>]+role="tabpanel"[^>]+aria-labelledby="interestTab${suffix}"[^>]+data-interest-tabpanel="${panel}"`));
   }
   assert.match(scriptSource, /tabPanel\.hidden = compactViewportQuery\.matches && tabPanel\.dataset\.interestTabpanel !== activeInterestPanel/);
+  assert.match(scriptSource, /show_repo_in_research_aria\.replace\('\{repo\}', repo\.name\)/);
+  assert.match(scriptSource, /open_repo_aria\.replace\('\{repo\}', repo\.name\)/);
+  assert.match(scriptSource, /view_paper_details_aria\.replace\('\{paper\}', item\.title\)/);
+  assert.match(scriptSource, /open_paper_aria\.replace\('\{paper\}', item\.title\)/);
+  assert.match(scriptSource, /escapeHtml\(paperSummary\(item\)\)/);
 });
 
 test('project view gives immediate feedback and limits first-render work on phones', () => {
@@ -181,7 +189,9 @@ test('owner mapping reuses the workflow schema and its exact limits', () => {
   assert.equal(RESEARCH_CONFIG_LIMITS.idsPerAssignment, 64);
   assert.equal(RESEARCH_CONFIG_LIMITS.itemNameLength, 300);
   assert.equal(RESEARCH_CONFIG_LIMITS.localizedTextLength, 1200);
+  assert.equal(WORKFLOW_DISPATCH_INPUT_MAX_LENGTH, 65_535);
   assert.match(scriptSource, /const CONFIG_LIMITS = RESEARCH_CONFIG_LIMITS/);
+  assert.match(scriptSource, /normalizeResearchConfigUpdateInput\(toBase64Utf8\(JSON\.stringify\(updatePayload\)\)\)/);
   assert.match(scriptSource, /normalizeSharedResearchConfig\(nextConfig\)/);
   assert.match(scriptSource, /normalizeSharedResearchConfig\(normalizeResearchConfig\(/);
   assert.doesNotMatch(scriptSource, /const RESEARCH_CONFIG_VERSION = 2|const CONFIG_LIMITS = Object\.freeze/);
@@ -225,7 +235,7 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
     );
   }
   assert.match(chineseIndexSource, /href="\.\/research\/"[^>]*>研究<\/a>/);
-  assert.match(chineseIndexSource, /href="\.\.\/blog\/"[^>]*>博客<\/a>/);
+  assert.match(chineseIndexSource, /href="\.\.\/blog\/"[^>]*>英文博客<\/a>/);
   assert.match(chineseIndexSource, /href="\.\/resume\/"[^>]*>履历<\/a>/);
   assert.match(chineseIndexSource, /<noscript>[\s\S]*无需 JavaScript 也可以浏览研究主页[\s\S]*href="\.\.\/"[\s\S]*<\/noscript>/);
 
@@ -260,10 +270,10 @@ test('canonical repository and publication data stays unique and classifiable', 
   }
   assert.equal(localRepos.find((repo) => repo.name === 'codex-pet-battle')?.stage?.en, 'Planning');
   assert.equal(localRepos.find((repo) => repo.name === 'TrendRadar')?.stage?.en, 'Upstream fork');
-  assert.deepEqual(
-    localRepos.filter((repo) => repo.demo_url).map((repo) => repo.name).sort(),
-    ['FusionTrack', 'shuxuepeiyou', 'tetrahedron-visualizer']
-  );
+  const demoRepos = new Set(localRepos.filter((repo) => repo.demo_url).map((repo) => repo.name));
+  for (const name of ['FusionTrack', 'shuxuepeiyou', 'tetrahedron-visualizer']) {
+    assert.ok(demoRepos.has(name), `${name} unexpectedly lost its public demo`);
+  }
   assert.ok(localRepos.filter((repo) => repo.demo_url).every((repo) => /^https:\/\//.test(repo.demo_url)));
   assert.match(scriptSource, /stage: local\?\.stage \|\| null/);
   assert.match(scriptSource, /evidence: local\?\.evidence \|\| null/);
