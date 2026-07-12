@@ -385,14 +385,30 @@ function interestDemoLabels(type) {
       vpr: ['前一候选', '下一候选', '重置匹配'],
       'medical-image': ['前一高不确定样本', '标注样本', '重置主动学习'],
       agent: ['前一任务', '执行下一步', '重置任务'],
-      education: ['前一练习', educationInteraction.selectedSignal === 'correct' ? '下一提示' : '提交回答', '重置学习']
+      education: [
+        '前一练习',
+        educationInteraction.selectedSignal === 'correct'
+          ? '下一提示'
+          : educationInteraction.selectedSignal === 'incorrect'
+            ? '重新作答'
+            : '提交回答',
+        '重置学习'
+      ]
     }
     : {
       'point-cloud': ['Rotate Point Cloud', 'Run Registration', 'Reset Registration'],
       vpr: ['Previous Candidate', 'Next Candidate', 'Reset Match'],
       'medical-image': ['Previous Uncertain Sample', 'Annotate Sample', 'Reset Active Learning'],
       agent: ['Previous Task', 'Run Next Step', 'Reset Task'],
-      education: ['Previous Exercise', educationInteraction.selectedSignal === 'correct' ? 'Next Hint' : 'Submit Response', 'Reset Learning']
+      education: [
+        'Previous Exercise',
+        educationInteraction.selectedSignal === 'correct'
+          ? 'Next Hint'
+          : educationInteraction.selectedSignal === 'incorrect'
+            ? 'Try Again'
+            : 'Submit Response',
+        'Reset Learning'
+      ]
     };
   return labels[type] || [];
 }
@@ -502,6 +518,9 @@ function runEducationAction() {
     educationInteraction.selectedConcept = educationConcepts[(currentIndex + 1) % educationConcepts.length].id;
     educationInteraction.selectedSignal = 'hint';
     educationInteraction.masteryBoost = 0.3;
+  } else if (educationInteraction.selectedSignal === 'hint') {
+    educationInteraction.selectedSignal = 'incorrect';
+    educationInteraction.masteryBoost = 0.2;
   } else {
     educationInteraction.selectedSignal = 'correct';
     educationInteraction.masteryBoost = 1;

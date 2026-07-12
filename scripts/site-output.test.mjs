@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { localRepos, staticPublications } from '../site-data.js';
+import { homepageSeo } from '../homepage-i18n.js';
 import { SITE, loadPosts, slugify } from './blog-content.mjs';
 import {
   PUBLICATION_STATUS_LABELS,
@@ -354,6 +355,7 @@ test('blog presents the agreed fieldnotes identity', async () => {
     /hero_desc:\s*'记录研究工具、可复现工作流、技术写作与本网站背后的系统。当前文章以英文发布。'/,
   );
   assert.match(indexSource, /Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site\./);
+  assert.match(indexSource, /id="blogLangToggle"[^>]+lang="zh-CN"[^>]+aria-label="切换到中文界面"/);
   assert.match(clientSource, /document\.title\s*=\s*t\('page_title'\)/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
   assert.match(styleSource, /html\[data-ui-lang="zh"\] \.blog-hero h1/);
@@ -460,6 +462,7 @@ test('fixed-language routes have unique metadata and reciprocal language links',
     assert.match(source, new RegExp(`data-fixed-language="${isZh ? 'zh' : 'en'}"`), `${route}: missing fixed route language`);
     assert.match(source, new RegExp(`<html[^>]+lang="${isZh ? 'zh-CN' : 'en'}"`), `${route}: document language does not match route`);
     assert.equal(metaContent(source, 'og:locale:alternate'), isZh ? 'en_US' : 'zh_CN', `${route}: missing alternate Open Graph locale`);
+    assert.equal(metaContent(source, 'og:site_name'), homepageSeo[isZh ? 'zh' : 'en'].siteName, `${route}: portfolio site name drifted`);
     const expectedHome = `${SITE.url}/${isZh ? 'zh/' : ''}`;
     const brandHome = source.match(/<a class="blog-brand" href="([^"]+)">wcx12<\/a>/i)?.[1];
     const footerHome = source.match(/<footer class="blog-footer">[\s\S]*?<a href="([^"]+)"/i)?.[1];
@@ -613,6 +616,10 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.equal(matches(source, /class="resume-publication-entry"/g).length, staticPublications.length);
     assert.equal(matches(source, /class="resume-author-self"/g).length, staticPublications.length);
     assert.equal(matches(source, /class="profile-section-nav"[\s\S]*?<\/nav>/g)[0][0].match(/<a href=/g)?.length, 5);
+    assert.equal(metaContent(source, 'og:type'), 'profile');
+    assert.equal(metaContent(source, 'profile:first_name'), 'Chenxu');
+    assert.equal(metaContent(source, 'profile:last_name'), 'Wang');
+    assert.equal(metaContent(source, 'profile:username'), 'wcx12');
   }
   assert.match(chinese, /<h3 lang="en"><a href="\.\.\/publications\/tf-vpr\/">TF-VPR/);
   for (const publication of staticPublications) {
@@ -749,6 +756,7 @@ test('publication pages expose every canonical DOI record with ordered authors',
       assert.equal(list.itemListElement[index].pagination, publication.article_number, `${route}: article number is missing`);
       assert.equal(list.itemListElement[index].isAccessibleForFree, publication.open_access, `${route}: open-access status is missing`);
       assert.equal(list.itemListElement[index].license, publication.license, `${route}: publication license is missing`);
+      assert.equal(list.itemListElement[index].creativeWorkStatus, publicationStatusLabel(publication, 'en'), `${route}: publication status is missing from JSON-LD`);
 
       const record = matches(source, /(<article class="research-evidence"[\s\S]*?<\/article>)/g)[index]?.[1] || '';
       const detailRoute = publicationRoute(language, publication);
@@ -778,15 +786,29 @@ test('publication pages expose every canonical DOI record with ordered authors',
       assert.match(bibtex, new RegExp(`doi = \\{${publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}`));
       assert.match(ris, new RegExp(`DO  - ${publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
       assert.match(ris, new RegExp(`VL  - ${publication.volume}`));
+      if (publicationStatusKey(publication) === 'in_press') {
+        assert.match(bibtex, /note = \{In press\}/);
+        assert.match(ris, /N1  - In press/);
+      } else {
+        assert.doesNotMatch(bibtex, /note = \{In press\}/);
+        assert.doesNotMatch(ris, /N1  - In press/);
+      }
 
       const detailSource = await fs.readFile(path.join(rootDir, detailRoute, 'index.html'), 'utf8');
       const detailMetadata = jsonLdFor(detailSource);
-      assert.equal(detailMetadata['@type'], 'ScholarlyArticle', `${detailRoute}: JSON-LD must describe one paper`);
-      assert.equal(detailMetadata.url, detailUrl, `${detailRoute}: article URL must use the local permanent record`);
-      assert.equal(detailMetadata.sameAs, publication.link, `${detailRoute}: publisher DOI must remain the authoritative external record`);
-      assert.equal(detailMetadata.mainEntityOfPage?.['@id'], detailUrl, `${detailRoute}: mainEntityOfPage is missing`);
-      assert.equal(detailMetadata.identifier?.value, publication.doi, `${detailRoute}: DOI identifier changed`);
-      assert.deepEqual(detailMetadata.author.map((author) => author.name), publication.authors.split(';').map((author) => author.trim()));
+      const detailPage = graphNode(detailMetadata, 'WebPage');
+      const detailArticle = graphNode(detailMetadata, 'ScholarlyArticle');
+      assert.ok(detailPage, `${detailRoute}: missing page-level JSON-LD`);
+      assert.ok(detailArticle, `${detailRoute}: JSON-LD must describe one paper`);
+      assert.equal(detailPage.inLanguage, language === 'zh' ? 'zh-CN' : 'en');
+      assert.equal(detailPage.mainEntity?.['@id'], detailArticle['@id']);
+      assert.equal(detailArticle.inLanguage, 'en');
+      assert.equal(detailArticle.url, detailUrl, `${detailRoute}: article URL must use the local permanent record`);
+      assert.equal(detailArticle.sameAs, publication.link, `${detailRoute}: publisher DOI must remain the authoritative external record`);
+      assert.equal(detailArticle.mainEntityOfPage?.['@id'], detailUrl, `${detailRoute}: mainEntityOfPage is missing`);
+      assert.equal(detailArticle.identifier?.value, publication.doi, `${detailRoute}: DOI identifier changed`);
+      assert.equal(detailArticle.creativeWorkStatus, publicationStatusLabel(publication, 'en'));
+      assert.deepEqual(detailArticle.author.map((author) => author.name), publication.authors.split(';').map((author) => author.trim()));
       assert.match(detailSource, new RegExp(`<h1 lang="en">${publication.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<\\/h1>`));
       assert.match(detailSource, new RegExp((language === 'zh' ? publication.summaryZh : publication.summary).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.equal(metaContent(detailSource, 'citation_title'), publication.title);
@@ -888,8 +910,12 @@ test('sitemap covers every configured fixed-language route', async () => {
   for (const child of researchChildren.filter((item) => !topicIsIndexable(item))) {
     assert.equal(lastmodByUrl.get(`${SITE.url}/research/${child.id}/`), undefined, 'thin research topics must stay out of the sitemap');
   }
-  assert.equal(lastmodByUrl.get(`${SITE.url}/resume/`), '', 'profile lastmod must be omitted without a reliable source date');
-  assert.equal(lastmodByUrl.get(`${SITE.url}/zh/resume/`), '', 'Chinese profile lastmod must be omitted without a reliable source date');
+  const latestProfileDate = [latestProjectDate, ...staticPublications.map((publication) => publication.updated_at)]
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  assert.equal(lastmodByUrl.get(`${SITE.url}/resume/`), latestProfileDate);
+  assert.equal(lastmodByUrl.get(`${SITE.url}/zh/resume/`), latestProfileDate);
   assert.match(
     sitemap,
     /<loc>https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/<\/loc><lastmod>2026-07-11<\/lastmod>/
@@ -922,9 +948,16 @@ test('fixed routes ignore stored language while preserving theme selection', asy
   assert.match(source, /if \(fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
   assert.match(source, /if \(!fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
   assert.match(source, /applyTheme\(localStorage\.getItem\(THEME_KEY\) \|\| 'neon'\)/);
+  assert.match(source, /langToggle\.lang = currentLang === 'zh' \? 'en' : 'zh-CN'/);
+  assert.match(source, /lang_target_aria: '切换到中文界面'/);
+  assert.match(source, /lang_target_aria: 'Switch to the English interface'/);
   assert.match(source, /blogMenu\?\.addEventListener\('focusout',[\s\S]*?!blogMenu\.contains\(event\.relatedTarget\)[\s\S]*?setBlogMenuOpen\(false\)/);
   assert.match(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*3px solid var\(--pink\);[^}]*outline-offset:\s*3px;/s);
   assert.doesNotMatch(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*none/s);
+  assert.doesNotMatch(styles, /\.code-copy:focus-visible\s*\{[^}]*outline:\s*none/s);
+  assert.doesNotMatch(styles, /\.research-topic-link:focus-visible\s*\{[^}]*outline:\s*none/s);
+  assert.doesNotMatch(styles, /\.code-copy:hover,\s*\.code-copy:focus-visible\s*\{[^}]*outline:\s*none/s);
+  assert.doesNotMatch(styles, /\.research-topic-link:hover,\s*\.research-topic-link:focus-visible\s*\{[^}]*outline:\s*none/s);
 });
 
 test('GitHub Actions are pinned and do not expose a long-lived metrics token', async () => {

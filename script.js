@@ -178,6 +178,7 @@ let heroPreviewVisible = true;
 let heroPreviewSize = { width: 0, height: 0, scale: 1 };
 let motionTimer = null;
 let motionFrame = null;
+let resizeFrame = null;
 const themeColorCache = new Map();
 let activationGeneration = 0;
 let researchCanvasImportPromise = null;
@@ -311,6 +312,7 @@ const GITHUB_BRANCH = 'main';
 const GITHUB_OWNER = 'wcx12';
 const GITHUB_RAW_CONFIG_URL = `https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_BRANCH}/${CONFIG_PATH}`;
 const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
+const LEGACY_GITHUB_TOKEN_KEY = 'wcx12-github-token';
 const REQUEST_TIMEOUT_MS = Object.freeze({
   config: 8000,
   github: 10000,
@@ -392,6 +394,18 @@ async function responseTextWithLimit(response, maxBytes) {
   });
   return new TextDecoder().decode(bytes);
 }
+
+function clearLegacyGithubToken() {
+  for (const storageName of ['localStorage', 'sessionStorage']) {
+    try {
+      window[storageName]?.removeItem(LEGACY_GITHUB_TOKEN_KEY);
+    } catch {
+      // Storage can be unavailable in hardened or sandboxed browsing contexts.
+    }
+  }
+}
+
+clearLegacyGithubToken();
 
 function detectOwnerTools() {
   if (window.top !== window.self) {
@@ -1011,7 +1025,9 @@ function handleLocationNavigation() {
 commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view, { focusHeading: true })));
 window.addEventListener('popstate', handleLocationNavigation);
 window.addEventListener('hashchange', handleLocationNavigation);
-openResearch.addEventListener('click', () => {
+openResearch.addEventListener('click', (event) => {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
   activateView('research', { focusHeading: true });
 });
 
@@ -3701,6 +3717,10 @@ document.addEventListener('pointerdown', (event) => {
 document.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault();
+    const blockingOverlayOpen = readmeDrawer?.classList.contains('open')
+      || researchManager?.classList.contains('open')
+      || modal?.classList.contains('open');
+    if (blockingOverlayOpen) return;
     if (commandPalette.classList.contains('open')) closeCommandPalette();
     else openCommandPalette();
     return;
@@ -3733,8 +3753,17 @@ function resizeCanvas() {
   }));
 }
 
+function hasVisibleMotionTarget() {
+  if (heroPreviewVisible) return true;
+  if (isResearchViewActive()) return Boolean(researchCanvasFeature?.isVisible());
+  if (isProjectsViewActive()) return Boolean(repoMapFeature?.isVisible());
+  return true;
+}
+
 function shouldRunMotion() {
-  return !reducedMotionQuery.matches && document.visibilityState !== 'hidden';
+  return !reducedMotionQuery.matches
+    && document.visibilityState !== 'hidden'
+    && hasVisibleMotionTarget();
 }
 
 function shouldAnimateHeroPreview(timestamp) {
@@ -3762,7 +3791,7 @@ function drawStarfieldFrame(timestamp = 0) {
 
 function motionCadence() {
   if (isResearchViewActive() && researchCanvasFeature?.isVisible()) return researchCanvasFeature.cadence();
-  if (isProjectsViewActive() && repoMapFeature) return repoMapFeature.cadence();
+  if (isProjectsViewActive() && repoMapFeature?.isVisible()) return repoMapFeature.cadence();
   return heroPreviewVisible ? 100 : 140;
 }
 
@@ -3851,12 +3880,18 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('resize', () => {
-  themeColorCache.clear();
-  resizeCanvas();
-  repoMapFeature?.resize();
-  researchCanvasFeature?.resize();
-  measureHeroPreviewSize();
-  drawHeroPreviewCanvas();
+  if (resizeFrame !== null) return;
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = null;
+    themeColorCache.clear();
+    resizeCanvas();
+    if (!('ResizeObserver' in window)) {
+      repoMapFeature?.resize();
+      researchCanvasFeature?.resize();
+    }
+    measureHeroPreviewSize();
+    drawHeroPreviewCanvas();
+  });
 });
 resizeCanvas();
 scheduleMotionLoop({ immediate: true });

@@ -410,9 +410,10 @@ function renderShell({
   const ctx = createPageContext(filePath, siteRoot);
   const relativeFilePath = path.relative(siteRoot, filePath).replace(/\\/g, '/');
   const isBlogPage = blogPage ?? relativeFilePath.startsWith('blog/');
+  const routeLanguage = fixedLanguage === 'zh' ? 'zh' : 'en';
   const titleSuffix = isBlogPage ? SITE.title : PORTFOLIO_TITLE;
   const pageTitle = title === SITE.title ? title : `${title} | ${titleSuffix}`;
-  const siteName = isBlogPage ? SITE.title : 'wcx12 Research Portfolio';
+  const siteName = isBlogPage ? SITE.title : homepageSeo[routeLanguage].siteName;
   const pageDescription = description || SITE.description;
   const canonicalUrl = canonicalUrlOverride || canonicalUrlForFile(filePath);
   const socialImage = resolveSocialImage(socialImagePath);
@@ -424,7 +425,6 @@ function renderShell({
     height: socialImageHeight,
     caption: socialImageAlt
   };
-  const routeLanguage = fixedLanguage === 'zh' ? 'zh' : 'en';
   const documentLanguage = contentLang === 'zh' ? 'zh-CN' : contentLang;
   const text = shellText[routeLanguage];
   const homePath = fixedLanguage === 'zh' ? 'zh/index.html' : 'index.html';
@@ -455,7 +455,7 @@ function renderShell({
     : ` data-blog-i18n${attribute ? `-${attribute}` : ''}="${key}"`;
   const languageControl = fixedLanguage
     ? `<a id="blogLangLink" class="blog-nav-button" href="${ctx.link(`${alternateUrl}index.html`)}" hreflang="${alternateLanguage}" lang="${alternateLanguage}" title="${escapeHtml(text.lang_title)}">${escapeHtml(text.lang_label)}</a>`
-    : `<button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title">中文</button>`;
+    : `<button id="blogLangToggle" class="blog-nav-button" type="button" lang="zh-CN" title="Switch interface language" aria-label="切换到中文界面" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_target_aria">中文</button>`;
   const metadata = metadataWithSocialImage(jsonLd, {
     '@context': 'https://schema.org',
     '@type': schemaType,
@@ -473,6 +473,11 @@ function renderShell({
     articleSection ? `<meta property="article:section" content="${escapeHtml(articleSection)}" />` : '',
     ...articleTags.map((tag) => `<meta property="article:tag" content="${escapeHtml(tag)}" />`)
   ].filter(Boolean).map((tag) => `  ${tag}`).join('\n');
+  const profileMetadata = pageType === 'profile'
+    ? `  <meta property="profile:first_name" content="Chenxu" />
+  <meta property="profile:last_name" content="Wang" />
+  <meta property="profile:username" content="wcx12" />`
+    : '';
   return `<!doctype html>
 <html lang="${escapeHtml(documentLanguage)}" data-content-lang="${escapeHtml(documentLanguage)}" data-ui-lang="${routeLanguage}"${fixedLanguage ? ` data-fixed-language="${routeLanguage}"` : ''}>
 <head>
@@ -491,7 +496,7 @@ ${languageAlternates}
   <meta property="og:title" content="${escapeHtml(pageTitle)}" />
   <meta property="og:description" content="${escapeHtml(pageDescription)}" />
   <meta property="og:type" content="${escapeHtml(pageType)}" />
-  <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
+${profileMetadata ? `${profileMetadata}\n` : ''}  <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
   <meta property="og:site_name" content="${escapeHtml(siteName)}" />
   <meta property="og:locale" content="${routeLanguage === 'zh' ? 'zh_CN' : 'en_US'}" />
 ${fixedLanguage && alternateHref ? `  <meta property="og:locale:alternate" content="${routeLanguage === 'zh' ? 'en_US' : 'zh_CN'}" />\n` : ''}  <meta property="og:image" content="${escapeHtml(socialImage)}" />
@@ -807,7 +812,8 @@ async function stampHomepageAssets() {
     ...[
       './site-data.js',
       './homepage-i18n.js',
-      './scripts/research-config-schema.js'
+      './scripts/research-config-schema.js',
+      './scripts/portfolio-ranking.js'
     ].map((assetPath) => ({
       pattern: new RegExp(`(<link\\s+rel="modulepreload"\\s+href="${escapeRegExp(assetPath)})(?:\\?v=[a-f0-9]{12})?("\\s*\\/?>)`),
       replacement: `$1?v=${assetVersion}$2`
@@ -853,6 +859,16 @@ function renderHomepageNoscript(language) {
     return `          <a href="${escapeHtml(href)}"${languageAttributes}>${escapeHtml(label)}</a>`;
   }).join('\n');
   return `<noscript>
+      <style>
+        .console,
+        .hero-preview-panel,
+        .utility-menu-toggle,
+        #themeSelect,
+        #openCommand { display: none !important; }
+        .utility-menu,
+        .utility-menu-panel { display: contents !important; }
+        .hero { grid-template-columns: minmax(0, 1fr) !important; }
+      </style>
       <section class="noscript-notice" aria-labelledby="noscriptTitle">
         <p class="panel-eyebrow">${escapeHtml(copy.label)}</p>
         <h2 id="noscriptTitle">${escapeHtml(copy.title)}</h2>
@@ -936,7 +952,8 @@ async function renderChineseHomepage() {
     ['src="script.js', 'src="../script.js', 'Chinese script path'],
     ['href="./site-data.js', 'href="../site-data.js', 'Chinese site data preload path'],
     ['href="./homepage-i18n.js', 'href="../homepage-i18n.js', 'Chinese translations preload path'],
-    ['href="./scripts/research-config-schema.js', 'href="../scripts/research-config-schema.js', 'Chinese research schema preload path']
+    ['href="./scripts/research-config-schema.js', 'href="../scripts/research-config-schema.js', 'Chinese research schema preload path'],
+    ['href="./scripts/portfolio-ranking.js', 'href="../scripts/portfolio-ranking.js', 'Chinese portfolio ranking preload path']
   ]) {
     localized = replaceRequired(localized, search, replacement, label);
   }
@@ -1470,6 +1487,7 @@ ${sectionHtml}
     body,
     jsonLd: metadata,
     schemaType: 'ProfilePage',
+    pageType: 'profile',
     socialImagePath: isZh ? 'assets/og-profile-zh.png' : 'assets/og-profile.png',
     socialImageAlt: isZh ? 'Chenxu Wang 研究履历与论文记录' : 'Chenxu Wang research profile and publication record',
     contentLang: isZh ? 'zh-CN' : 'en',
@@ -1527,6 +1545,7 @@ function bibtexAuthorName(author) {
 }
 
 function bibtexFor(publication) {
+  const statusKey = publicationStatusKey(publication);
   const fields = [
     ['title', `{${publication.title}}`],
     ['author', authorsFor(publication).map(bibtexAuthorName).join(' and ')],
@@ -1538,13 +1557,15 @@ function bibtexFor(publication) {
     ['publisher', publication.publisher],
     ['issn', publication.issn],
     ['doi', publication.doi],
-    ['url', publication.link]
+    ['url', publication.link],
+    ['note', statusKey === 'in_press' ? 'In press' : '']
   ].filter(([, value]) => value);
   const body = fields.map(([name, value, bare]) => `  ${name} = ${bare ? value : `{${value}}`}`).join(',\n');
   return `@article{${publication.citation_key},\n${body}\n}\n`;
 }
 
 function risFor(publication) {
+  const statusKey = publicationStatusKey(publication);
   const lines = [
     'TY  - JOUR',
     `DO  - ${publication.doi}`,
@@ -1558,6 +1579,7 @@ function risFor(publication) {
     publication.article_number ? `SP  - ${publication.article_number}` : '',
     publication.volume ? `VL  - ${publication.volume}` : '',
     publication.issn ? `SN  - ${publication.issn}` : '',
+    statusKey === 'in_press' ? 'N1  - In press' : '',
     'ER  - '
   ].filter(Boolean);
   return `${lines.join('\n')}\n`;
@@ -1647,6 +1669,7 @@ function publicationSchema(publication, language = 'en', pageUrl = '') {
       mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl }
     } : {}),
     inLanguage: 'en',
+    creativeWorkStatus: publicationStatusLabel(publication, 'en'),
     datePublished: publication.published_date || publication.year,
     author: authorsFor(publication).map((name) => name.toLowerCase() === SITE.author.toLowerCase()
       ? { ...personEntity(), name }
@@ -2181,9 +2204,22 @@ async function renderPublicationDetail(publication, language) {
         <p class="muted">${escapeHtml(localized(publication.code_note, language))}</p>
       </section>` : ''}
     </article>`;
+  const articleMetadata = publicationSchema(publication, language, canonicalUrl);
   const metadata = JSON.stringify({
     '@context': 'https://schema.org',
-    ...publicationSchema(publication, language, canonicalUrl)
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': canonicalUrl,
+        url: canonicalUrl,
+        name: isZh ? `${publication.title}（论文记录）` : publication.title,
+        description: summary,
+        inLanguage: isZh ? 'zh-CN' : 'en',
+        author: personReference(),
+        mainEntity: { '@id': articleMetadata['@id'] }
+      },
+      articleMetadata
+    ]
   });
   await writePage(`${relativeRoute}index.html`, renderShell({
     filePath,
@@ -2401,6 +2437,7 @@ async function renderSitemap(posts) {
   ]));
   const latestResearchDate = latestDate([...topicDates.values()]);
   const latestHomeDate = latestDate([latestPostDate, latestProjectDate, latestPublicationDate, latestResearchDate]);
+  const latestProfileDate = latestDate([latestProjectDate, latestPublicationDate, latestResearchDate]);
   const researchRoutes = ['en', 'zh'].flatMap((language) => [
     { route: researchRoute(language), lastmod: latestResearchDate },
     ...researchChildren.filter((child) => shouldIndexResearchTopic(child, evidenceForTopic(child.id, posts))).map((child) => ({
@@ -2417,7 +2454,7 @@ async function renderSitemap(posts) {
   const urls = [
     { route: '', lastmod: latestHomeDate },
     { route: 'zh/', lastmod: latestHomeDate },
-    ...['en', 'zh'].map((language) => ({ route: resumeRoute(language), lastmod: '' })),
+    ...['en', 'zh'].map((language) => ({ route: resumeRoute(language), lastmod: latestProfileDate })),
     { route: 'blog/', lastmod: latestPostDate },
     ...(posts.length > 1 ? [{ route: 'blog/archive/', lastmod: latestPostDate }] : []),
     ...researchRoutes,

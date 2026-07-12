@@ -19,9 +19,10 @@
   <link rel="me" href="https://orcid.org/0009-0005-6139-4327" />
   <link rel="sitemap" type="application/xml" href="./sitemap.xml" />
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="./rss.xml" />
-  <link rel="modulepreload" href="./site-data.js?v=7c9b90b16a94" />
-  <link rel="modulepreload" href="./homepage-i18n.js?v=7c9b90b16a94" />
-  <link rel="modulepreload" href="./scripts/research-config-schema.js?v=7c9b90b16a94" />
+  <link rel="modulepreload" href="./site-data.js?v=ab80c8e865cd" />
+  <link rel="modulepreload" href="./homepage-i18n.js?v=ab80c8e865cd" />
+  <link rel="modulepreload" href="./scripts/research-config-schema.js?v=ab80c8e865cd" />
+  <link rel="modulepreload" href="./scripts/portfolio-ranking.js?v=ab80c8e865cd" />
   <meta property="og:title" content="Chenxu Wang (wcx12) | Machine Learning Researcher" />
   <meta property="og:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta property="og:type" content="profile" />
@@ -33,6 +34,7 @@
   <meta property="og:locale" content="en_US" />
   <meta property="og:locale:alternate" content="zh_CN" />
   <meta property="og:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
+  <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="wcx12 machine learning research portfolio" />
@@ -41,7 +43,7 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <link rel="stylesheet" href="styles.css?v=7c9b90b16a94" />
+  <link rel="stylesheet" href="styles.css?v=ab80c8e865cd" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -137,7 +139,7 @@
             <option value="mono" data-i18n="theme_mono">Black &amp; White</option>
           </select>
           <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
-          <a id="langToggle" class="ghost-btn" href="./zh/" hreflang="zh-CN" lang="zh-CN" title="中文, view the Chinese homepage" aria-label="中文, view the Chinese homepage" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">中文</a>
+          <a id="langToggle" class="ghost-btn" href="./zh/" hreflang="zh-CN" lang="zh-CN" title="切换到中文主页" aria-label="切换到中文主页" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">中文</a>
         </div>
       </div>
     </div>
@@ -154,7 +156,7 @@
 
         <div class="hero-actions">
           <a href="./publications/" class="btn btn-primary" data-i18n="btn_publications_hero">View Publications</a>
-          <button id="openResearch" type="button" class="btn btn-outline" data-i18n="btn_research_hero">Explore Research</button>
+          <a id="openResearch" href="./research/" class="btn btn-outline" data-i18n="btn_research_hero">Explore Research</a>
           <a href="mailto:c2675668@gmail.com?subject=Research%20collaboration%20with%20Chenxu%20Wang" class="btn btn-outline" data-i18n="btn_contact">Contact Me</a>
         </div>
 
@@ -182,6 +184,16 @@
     </section>
 
     <noscript>
+      <style>
+        .console,
+        .hero-preview-panel,
+        .utility-menu-toggle,
+        #themeSelect,
+        #openCommand { display: none !important; }
+        .utility-menu,
+        .utility-menu-panel { display: contents !important; }
+        .hero { grid-template-columns: minmax(0, 1fr) !important; }
+      </style>
       <section class="noscript-notice" aria-labelledby="noscriptTitle">
         <p class="panel-eyebrow">Static research index</p>
         <h2 id="noscriptTitle">Explore the research portfolio without JavaScript</h2>
@@ -193,7 +205,11 @@
           <a href="./research/medical-image-analysis/">Medical image analysis</a>
           <a href="./research/agent/">LLM agents</a>
           <a href="./research/ai4edu/">AI for Education</a>
+          <a href="./projects/">Projects</a>
           <a href="./publications/">Publications</a>
+          <a href="./blog/">Writing</a>
+          <a href="./resume/">Academic profile</a>
+          <a href="mailto:c2675668@gmail.com?subject=Research%20collaboration%20with%20Chenxu%20Wang">Email Chenxu Wang</a>
           <a href="./zh/" hreflang="zh-CN" lang="zh-CN">中文主页</a>
         </nav>
       </section>
@@ -554,6 +570,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="script.js?v=7c9b90b16a94"></script>
+  <script type="module" src="script.js?v=ab80c8e865cd"></script>
 </body>
 </html>

@@ -1198,7 +1198,6 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .code-copy:hover,
 .code-copy:focus-visible {
   border-color: var(--cyan);
-  outline: none;
 }
 
 .code-frame pre {
@@ -1429,7 +1428,6 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .research-topic-link:hover,
 .research-topic-link:focus-visible {
   border-color: var(--pink);
-  outline: none;
 }
 
 .research-topic-copy {

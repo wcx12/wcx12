@@ -246,7 +246,7 @@ export const homepageI18n = {
     project_updated: 'Updated',
     modal_close: 'x',
     lang_btn: '中文',
-    lang_link_aria: '中文, view the Chinese homepage',
+    lang_link_aria: '切换到中文主页',
     chip_loaded: 'Loaded: {tag} -> actively used in my current workflow.',
     statuses: ['Applying for Master/PhD programs']
   },
@@ -497,7 +497,7 @@ export const homepageI18n = {
     project_updated: '更新时间',
     modal_close: 'x',
     lang_btn: 'EN',
-    lang_link_aria: 'EN，查看英文主页',
+    lang_link_aria: 'View the English homepage',
     chip_loaded: '已加载: {tag} -> 已纳入当前工作流。',
     statuses: ['正在申请硕士/博士项目']
   }
@@ -533,7 +533,11 @@ export const homepageSeo = {
         ['./research/medical-image-analysis/', 'Medical image analysis'],
         ['./research/agent/', 'LLM agents'],
         ['./research/ai4edu/', 'AI for Education'],
+        ['./projects/', 'Projects'],
         ['./publications/', 'Publications'],
+        ['./blog/', 'Writing'],
+        ['./resume/', 'Academic profile'],
+        ['mailto:c2675668@gmail.com?subject=Research%20collaboration%20with%20Chenxu%20Wang', 'Email Chenxu Wang'],
         ['./zh/', '中文主页', 'zh-CN']
       ]
     }
@@ -567,7 +571,11 @@ export const homepageSeo = {
         ['./research/medical-image-analysis/', '医学影像分析'],
         ['./research/agent/', '大模型智能体'],
         ['./research/ai4edu/', 'AI4 教育'],
+        ['./projects/', '项目'],
         ['./publications/', '论文'],
+        ['../blog/', '英文博客'],
+        ['./resume/', '履历'],
+        ['mailto:c2675668@gmail.com?subject=Research%20collaboration%20with%20Chenxu%20Wang', '邮件联系 Chenxu Wang'],
         ['../', 'English homepage', 'en']
       ]
     }

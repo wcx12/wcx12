@@ -60,7 +60,7 @@ test('every literal DOM lookup used by the homepage modules exists', () => {
 test('research and repository visualizations are real lazy modules', async () => {
   const releaseVersion = indexSource.match(/<script\s+type="module"\s+src="script\.js\?v=([a-f0-9]{12})"><\/script>/i)?.[1];
   assert.ok(releaseVersion, 'homepage entry module must include a release version');
-  for (const assetPath of ['./site-data.js', './homepage-i18n.js', './scripts/research-config-schema.js']) {
+  for (const assetPath of ['./site-data.js', './homepage-i18n.js', './scripts/research-config-schema.js', './scripts/portfolio-ranking.js']) {
     assert.match(
       indexSource,
       new RegExp(`<link\\s+rel="modulepreload"\\s+href="${assetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?v=${releaseVersion}"\\s*\\/?>`, 'i'),
@@ -70,6 +70,7 @@ test('research and repository visualizations are real lazy modules', async () =>
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/site-data\.js'\)\)/);
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/homepage-i18n\.js'\)\)/);
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/scripts\/research-config-schema\.js'\)\)/);
+  assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/scripts\/portfolio-ranking\.js'\)\)/);
   assert.match(scriptSource, /import\(researchCanvasModuleUrl\(\)\)/);
   assert.match(scriptSource, /import\(repoMapModuleUrl\(\)\)/);
   assert.match(scriptSource, /versionedModuleUrl\('\.\/research-canvas\.js', attempt \? \{ retry: attempt \} : \{\}\)/);
@@ -215,6 +216,7 @@ test('command palette exposes the active option through the combobox pattern', (
   assert.match(scriptSource, /commandInput\.setAttribute\('aria-activedescendant', `command-option-\$\{commandCursor\}`\)/);
   assert.match(scriptSource, /commandInput\.setAttribute\('aria-expanded', 'true'\)/);
   assert.match(scriptSource, /commandInput\.setAttribute\('aria-expanded', 'false'\)/);
+  assert.match(scriptSource, /const blockingOverlayOpen = readmeDrawer\?\.classList\.contains\('open'\)[\s\S]*?researchManager\?\.classList\.contains\('open'\)[\s\S]*?modal\?\.classList\.contains\('open'\)[\s\S]*?if \(blockingOverlayOpen\) return;/);
 });
 
 test('project view gives immediate feedback and limits first-render work on phones', () => {
@@ -254,6 +256,13 @@ test('canvas motion respects mobile budgets and page visibility', () => {
   assert.match(repoMapSource, /context\.reducedMotion \? 'auto' : 'smooth'/);
   assert.doesNotMatch(scriptSource, /scrollIntoView\(\{ behavior: 'smooth'/);
   assert.match(researchCanvasSource, /addEventListener\('pointerup'[\s\S]*?updateInterestCanvasAccessibility\(\);[\s\S]*?releasePointerCapture/);
+  assert.match(scriptSource, /function hasVisibleMotionTarget\(\)[\s\S]*?researchCanvasFeature\?\.isVisible\(\)[\s\S]*?repoMapFeature\?\.isVisible\(\)/);
+  assert.match(scriptSource, /shouldRunMotion\(\)[\s\S]*?hasVisibleMotionTarget\(\)/);
+  assert.match(repoMapSource, /if \(hoveredRepo === nextHoveredRepo && hoveredMapField === nextHoveredMapField\) return;/);
+  assert.match(scriptSource, /if \(resizeFrame !== null\) return;[\s\S]*?resizeFrame = requestAnimationFrame\(\(\) => \{/);
+  assert.match(scriptSource, /if \(!\('ResizeObserver' in window\)\) \{[\s\S]*?repoMapFeature\?\.resize\(\);[\s\S]*?researchCanvasFeature\?\.resize\(\);/);
+  assert.match(researchCanvasSource, /educationInteraction\.selectedSignal === 'hint'[\s\S]*?educationInteraction\.selectedSignal = 'incorrect'[\s\S]*?educationInteraction\.selectedSignal = 'correct'/);
+  assert.match(researchCanvasSource, /educationInteraction\.selectedSignal === 'incorrect'[\s\S]*?'Try Again'/);
 });
 
 test('owner mapping hands a token-free payload to GitHub Actions', () => {
@@ -268,6 +277,9 @@ test('owner mapping hands a token-free payload to GitHub Actions', () => {
   assert.doesNotMatch(indexSource, /type="password"|github_pat_/);
   assert.doesNotMatch(scriptSource, /Authorization: `Bearer|api\.github\.com\/repos\/.*dispatches/);
   assert.doesNotMatch(scriptSource, /repos\/\$\{GITHUB_REPOSITORY\}\/contents\//);
+  assert.match(scriptSource, /const LEGACY_GITHUB_TOKEN_KEY = 'wcx12-github-token'/);
+  assert.match(scriptSource, /for \(const storageName of \['localStorage', 'sessionStorage'\]\)[\s\S]*?removeItem\(LEGACY_GITHUB_TOKEN_KEY\)/);
+  assert.ok(scriptSource.indexOf('clearLegacyGithubToken();') < scriptSource.indexOf('const ownerToolsEnabled = detectOwnerTools();'));
 });
 
 test('owner mapping reuses the workflow schema and its exact limits', () => {
@@ -300,6 +312,14 @@ test('homepage source exposes crawlable research and publication routes', () => 
   }
   assert.match(indexSource, /<a\b[^>]*id="langToggle"[^>]*href="\.\/zh\/"[^>]*hreflang="zh-CN"/i);
   assert.match(indexSource, /<noscript>[\s\S]*?\.\/zh\/[\s\S]*?<\/noscript>/i, 'no-JavaScript navigation must include the Chinese homepage');
+});
+
+test('homepage no-JavaScript fallback contains only working primary controls and a complete static index', () => {
+  assert.match(indexSource, /<a\b[^>]*id="openResearch"[^>]*href="\.\/research\/"/i);
+  assert.match(scriptSource, /openResearch\.addEventListener\('click', \(event\) => \{[\s\S]*?event\.preventDefault\(\)[\s\S]*?activateView\('research'/);
+  assert.match(indexSource, /<noscript>[\s\S]*?\.console,[\s\S]*?display: none !important;[\s\S]*?<\/noscript>/i);
+  assert.match(indexSource, /<noscript>[\s\S]*?\.\/projects\/[\s\S]*?\.\/publications\/[\s\S]*?\.\/blog\/[\s\S]*?\.\/resume\/[\s\S]*?mailto:c2675668@gmail\.com[\s\S]*?<\/noscript>/i);
+  assert.match(chineseIndexSource, /<noscript>[\s\S]*?\.\/projects\/[\s\S]*?\.\/publications\/[\s\S]*?\.\.\/blog\/[\s\S]*?\.\/resume\/[\s\S]*?mailto:c2675668@gmail\.com[\s\S]*?<\/noscript>/i);
 });
 
 test('Chinese homepage is a complete fixed-language mirror with stable deep links', () => {
@@ -335,6 +355,10 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
   assert.match(scriptSource, /if \(fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
   assert.match(scriptSource, /target\.search = window\.location\.search/, 'language links must preserve management and preview parameters');
   assert.match(scriptSource, /target\.hash = window\.location\.hash/, 'language links must preserve the active homepage section');
+  assert.equal(homepageI18n.en.lang_link_aria, '切换到中文主页');
+  assert.equal(homepageI18n.zh.lang_link_aria, 'View the English homepage');
+  assert.match(indexSource, /<meta property="og:image:type" content="image\/png"/);
+  assert.match(chineseIndexSource, /<meta property="og:image:type" content="image\/png"/);
 });
 
 test('homepage exposes navigation and hero meaning without runtime-only semantics', () => {
@@ -465,8 +489,6 @@ test('monochrome theme removes hard-coded color residue from structural UI', () 
   assert.match(styleSource, /:root\[data-theme="mono"\] #starfield \{[^}]*filter:\s*grayscale\(1\)/s);
   assert.match(styleSource, /:root\[data-theme="mono"\] \.console,[\s\S]*?border-color:\s*var\(--line\)/);
   assert.match(styleSource, /:root\[data-theme="mono"\] footer \{[^}]*color:\s*var\(--muted\)/s);
-  assert.ok(homepageI18n.en.lang_link_aria.startsWith(homepageI18n.en.lang_btn));
-  assert.ok(homepageI18n.zh.lang_link_aria.startsWith(homepageI18n.zh.lang_btn));
 });
 
 test('retired sandbox code and taxonomy drift do not return', () => {

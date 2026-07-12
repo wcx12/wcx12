@@ -418,8 +418,11 @@ repoMap.addEventListener('mousemove', (event) => {
   const pointer = repoMapPointer(event);
   const hit = repoNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
   const fieldHit = hit ? null : repoMapFieldNodes.find((node) => Math.hypot(pointer.x - node.x, pointer.y - node.y) <= node.r + 8);
-  hoveredRepo = hit ? hit.repo.name : null;
-  hoveredMapField = fieldHit ? fieldHit.id : null;
+  const nextHoveredRepo = hit ? hit.repo.name : null;
+  const nextHoveredMapField = fieldHit ? fieldHit.id : null;
+  if (hoveredRepo === nextHoveredRepo && hoveredMapField === nextHoveredMapField) return;
+  hoveredRepo = nextHoveredRepo;
+  hoveredMapField = nextHoveredMapField;
   repoMap.style.cursor = hit || fieldHit ? 'pointer' : 'default';
   repoMapHint.textContent = hit
     ? `${hit.repo.name} · ${repoMappingLabel(hit.repo)} · ${hit.repo.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${hit.repo.stargazers_count}`

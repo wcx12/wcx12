@@ -31,6 +31,7 @@ const blogI18n = {
     orcid_title: 'View ORCID record 0009-0005-6139-4327',
     lang_button: '中文',
     lang_title: 'Switch interface language',
+    lang_target_aria: '切换到中文界面',
     theme_title: 'Switch color theme',
     theme_default: 'Default',
     theme_warm: 'Warm',
@@ -120,6 +121,7 @@ const blogI18n = {
     orcid_title: '查看 ORCID 记录 0009-0005-6139-4327',
     lang_button: 'EN',
     lang_title: '切换界面语言',
+    lang_target_aria: 'Switch to the English interface',
     theme_title: '切换页面色调',
     theme_default: '默认',
     theme_warm: '暖色',
@@ -288,6 +290,7 @@ function applyLanguage(lang = currentLang) {
     const value = t(node.dataset.blogI18nAria);
     if (value) node.setAttribute('aria-label', value);
   });
+  if (langToggle) langToggle.lang = currentLang === 'zh' ? 'en' : 'zh-CN';
   document.querySelectorAll('[data-blog-i18n-ph]').forEach((node) => {
     const value = t(node.dataset.blogI18nPh);
     if (value) node.setAttribute('placeholder', value);
