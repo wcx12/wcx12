@@ -1381,22 +1381,27 @@ async function renderResume(renderer, language) {
     inPressCount ? `${inPressCount} ${text.inPressUnit}` : ''
   ].filter(Boolean).join(' · ') || `${staticPublications.length} ${text.publicationUnit}`;
   const publicationMarker = 'RESUME_PUBLICATIONS_PLACEHOLDER';
-  const publicationList = `<ol class="resume-publications">${staticPublications.map((publication) => {
+  const publicationList = `<ol class="resume-publications">${staticPublications.map((publication, publicationIndex) => {
     const status = publicationStatusLabel(publication, language);
     const topic = publicationTopic(publication);
     return `<li>
       <article class="resume-publication-entry">
-        <h3 lang="en"><a href="${ctx.link(`${publicationRoute(language, publication)}index.html`)}">${escapeHtml(publication.title)}</a></h3>
-        <p class="resume-publication-authors" lang="en">${readableAuthorsHtml(publication)}</p>
-        <p class="resume-publication-meta">
+        <div class="resume-publication-index">
+          <span aria-hidden="true">P${String(publicationIndex + 1).padStart(2, '0')}</span>
           <time datetime="${escapeHtml(String(publication.year))}">${escapeHtml(String(publication.year))}</time>
-          <cite>${escapeHtml(publication.venue)}${publication.volume ? ` ${escapeHtml(publication.volume)}` : ''}</cite>
-          ${publication.article_number ? `<span>${escapeHtml(publication.article_number)}</span>` : ''}
-          <span class="resume-publication-status">${escapeHtml(status)}</span>
-          <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(text.doiLabel(publication.title))}">DOI</a>
-          ${topic ? `<span class="resume-publication-topic"><span>${escapeHtml(text.topicLabel)}</span>${escapeHtml(localized(topic.title, language))}</span>` : ''}
-        </p>
-        <p class="resume-publication-summary">${escapeHtml(isZh ? publication.summaryZh : publication.summary)}</p>
+        </div>
+        <div class="resume-publication-content">
+          <h3 lang="en"><a href="${ctx.link(`${publicationRoute(language, publication)}index.html`)}">${escapeHtml(publication.title)}</a></h3>
+          <p class="resume-publication-authors" lang="en">${readableAuthorsHtml(publication)}</p>
+          <p class="resume-publication-meta">
+            <cite>${escapeHtml(publication.venue)}${publication.volume ? ` ${escapeHtml(publication.volume)}` : ''}</cite>
+            ${publication.article_number ? `<span>${escapeHtml(publication.article_number)}</span>` : ''}
+            <span class="resume-publication-status">${escapeHtml(status)}</span>
+            <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(text.doiLabel(publication.title))}">DOI</a>
+            ${topic ? `<span class="resume-publication-topic"><span>${escapeHtml(text.topicLabel)}</span>${escapeHtml(localized(topic.title, language))}</span>` : ''}
+          </p>
+          <p class="resume-publication-summary">${escapeHtml(isZh ? publication.summaryZh : publication.summary)}</p>
+        </div>
       </article>
     </li>`;
   }).join('')}</ol>`;
@@ -1412,7 +1417,10 @@ async function renderResume(renderer, language) {
     : ['Education and academic milestones', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
   const profileSectionNavLabels = isZh
     ? ['教育背景', '论文', '研究兴趣', '代表项目', '技术能力']
-    : ['Education', 'Publications', 'Research', 'Projects', 'Skills'];
+    : ['Education', 'Papers', 'Research', 'Projects', 'Skills'];
+  const profileSectionMobileLabels = isZh
+    ? profileSectionNavLabels
+    : ['Edu', 'Papers', 'Topics', 'Work', 'Skills'];
   const sectionHtml = sections.map((section, index) => {
     const content = section.html.replace(markerMarkup, () => {
       publicationMarkers += 1;
@@ -1431,7 +1439,10 @@ async function renderResume(renderer, language) {
     </section>`;
   }).join('');
   if (publicationMarkers !== 1) throw new Error(`${sourceFile} publication placeholder did not render predictably`);
-  const sectionNavigation = sections.map((section, index) => `<a href="#${escapeHtml(section.id)}"><span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(profileSectionNavLabels[index] || section.title)}</strong></a>`).join('');
+  const sectionNavigation = sections.map((section, index) => {
+    const label = profileSectionNavLabels[index] || section.title;
+    return `<a href="#${escapeHtml(section.id)}" aria-label="${escapeHtml(label)}"><span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><strong data-mobile-label="${escapeHtml(profileSectionMobileLabels[index] || section.title)}">${escapeHtml(label)}</strong></a>`;
+  }).join('');
   const body = `
     <article class="research-profile" lang="${isZh ? 'zh-CN' : 'en'}">
       <header class="profile-masthead">
