@@ -29,15 +29,19 @@
 ## 代表项目
 
 - **[FusionTrack](https://github.com/wcx12/FusionTrack)**\
-  毕业论文与点集配准研究成果
+  毕业论文与点集配准研究成果，包含可审计的基准协议和可复现评测工具
 - **[major-intel](https://github.com/wcx12/major-intel)**\
-  面向高校专业信息的 SQL 优先检索与智能体原型，支持证据缺口追踪
+  基于 MySQL 的 SQL 优先检索智能体，记录工具轨迹并显式处理证据缺口
 - **[shuxuepeiyou](https://github.com/wcx12/shuxuepeiyou)**\
-  数学培优讲义与教育资源
+  面向数学培优的 LaTeX 讲义、公开 PDF 与交互式可视化
 
 ## 技术能力
 
 - **研究工具**\
   Python、PyTorch、TensorFlow、OpenCV 与 Scikit-learn
-- **工程流程**\
-  Linux、Git、可复现实验与开源协作
+- **检索与数据系统**\
+  MySQL、SQL 优先检索、函数调用智能体与证据追踪
+- **可复现实验**\
+  Linux、Git、基准协议、严格评测审计与测试自动化
+- **科研发布**\
+  LaTeX、GitHub Actions、技术文档与交互式可视化

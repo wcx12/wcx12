@@ -635,8 +635,11 @@ test('research profile has complete English and Chinese fixed-language records',
   assert.match(profileStyles, /\.profile-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(164px, 188px\) minmax\(0, 1fr\)/s);
   assert.match(profileStyles, /\.profile-directory\s*\{[^}]*position:\s*sticky/s);
   assert.match(profileStyles, /\.profile-section\s*\{[^}]*display:\s*block/s);
+  assert.equal(matches(profileStyles, /Keep the profile dense and editorial/g).length, 1);
+  assert.doesNotMatch(profileStyles, /\.research-profile\s*\{[^}]*width:\s*min\(1040px, 100%\)/s);
+  assert.doesNotMatch(profileStyles, /\.profile-section\s*\{[^}]*grid-template-columns:\s*minmax\(150px, 190px\)/s);
   assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section-nav\s*\{[^}]*display:\s*grid[^}]*overflow:\s*visible/s);
-  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section\s*\{[^}]*display:\s*block/s);
+  assert.match(profileStyles, /@media \(max-width: 880px\)[\s\S]*?\.profile-section\s*\{[^}]*scroll-margin-top:\s*160px/s);
   assert.match(profileStyles, /@page\s*\{[^}]*size:\s*A4/s);
   assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*0/s);
   assert.match(profileStyles, /@media print[\s\S]*?:root\[data-theme="warm"\],[\s\S]*?:root\[data-theme="mono"\]\s*\{/s);
