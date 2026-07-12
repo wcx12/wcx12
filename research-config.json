@@ -23,6 +23,7 @@
             "zh": "对齐"
           },
           "animation": "point-cloud",
+          "indexable": true,
           "description": {
             "en": "Robust point set registration under noisy, partial, and imperfect observations.",
             "zh": "研究噪声、缺失与不完美观测条件下的稳健点集配准。"

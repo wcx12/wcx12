@@ -450,8 +450,8 @@ function initProfileNavigation() {
   };
 
   for (const item of items) item.link.addEventListener('click', () => activate(item.section));
+  activate(items[0].section);
   if (!('IntersectionObserver' in window)) {
-    activate(items[0].section);
     return;
   }
 

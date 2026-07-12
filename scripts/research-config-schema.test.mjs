@@ -28,10 +28,12 @@ test('shared schema rejects path traversal and unsupported animations', () => {
   config.interests[0].id = '..';
   config.interests[0].children[0].id = '../outside';
   config.interests[0].children[0].animation = 'remote-script';
+  config.interests[0].children[0].indexable = 'yes';
   const errors = validateResearchConfigValue(config).join('\n');
   assert.match(errors, /interests\[0\]\.id must use lowercase letters/);
   assert.match(errors, /children\[0\]\.id must use lowercase letters/);
   assert.match(errors, /animation must be one of/);
+  assert.match(errors, /indexable must be a boolean/);
 });
 
 test('shared schema rejects unknown and duplicate assignment targets', () => {

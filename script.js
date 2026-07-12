@@ -115,6 +115,7 @@ const interestSectionTabs = document.querySelectorAll('[data-interest-panel]');
 const interestTabPanels = document.querySelectorAll('[data-interest-tabpanel]');
 const interestCanvasControls = document.getElementById('interestCanvasControls');
 const interestFeatureRetry = document.getElementById('interestFeatureRetry');
+const repoMapRetry = document.getElementById('repoMapRetry');
 const interestProjects = document.getElementById('interestProjects');
 const interestPapers = document.getElementById('interestPapers');
 const interestPosts = document.getElementById('interestPosts');
@@ -137,6 +138,7 @@ let loadedPublications = [];
 let publicationLoadFailed = false;
 let blogPosts = [];
 let filteredBlogPosts = [];
+let blogPostsLoadState = 'idle';
 let reposLoadPromise = null;
 let publicationsLoadPromise = null;
 let blogPostsLoadPromise = null;
@@ -182,7 +184,7 @@ let pendingResearchBinding = null;
 function initCustomCursor() {
   if (!customCursor || !window.matchMedia('(pointer: fine) and (min-width: 720px)').matches) return;
 
-  const hoverSelector = 'a, button, select, input, textarea, [role="button"], .repo-card, .pub-card, #interestCanvas';
+  const hoverSelector = 'a, button, select, input, textarea, [role="button"], .pub-card, #interestCanvas';
   const textSelector = 'input, textarea, [contenteditable="true"]';
   let clickTimer = null;
 
@@ -306,6 +308,7 @@ const REQUEST_TIMEOUT_MS = Object.freeze({
   config: 8000,
   github: 10000,
   orcid: 10000,
+  blog: 8000,
   readme: 12000
 });
 const MAX_README_BYTES = 1024 * 1024;
@@ -503,11 +506,15 @@ function validateResearchInterests(value) {
       if (!SUPPORTED_ANIMATIONS.has(child.animation)) {
         throw configValidationError(`${childPath}.animation`, 'unsupported animation');
       }
+      if (Object.hasOwn(child, 'indexable') && typeof child.indexable !== 'boolean') {
+        throw configValidationError(`${childPath}.indexable`, 'expected a boolean');
+      }
       return {
         id: childId,
         title: validateLocalizedConfigText(child.title, `${childPath}.title`, CONFIG_LIMITS.localizedTextLength),
         label: validateLocalizedConfigText(child.label, `${childPath}.label`, CONFIG_LIMITS.localizedTextLength),
         animation: child.animation,
+        ...(Object.hasOwn(child, 'indexable') ? { indexable: child.indexable } : {}),
         description: validateLocalizedConfigText(child.description, `${childPath}.description`, CONFIG_LIMITS.localizedTextLength)
       };
     });
@@ -746,8 +753,9 @@ function lazyFeatureStatus(viewId, message, state = 'loading') {
     interestCanvasControls?.querySelectorAll('button').forEach((button) => {
       button.disabled = state !== 'ready';
     });
-    if (interestFeatureRetry) interestFeatureRetry.hidden = state !== 'error';
   }
+  const retry = isResearchFeature ? interestFeatureRetry : repoMapRetry;
+  if (retry) retry.hidden = state !== 'error';
 }
 
 function currentFeatureContext() {
@@ -853,6 +861,12 @@ interestFeatureRetry?.addEventListener('click', () => {
   if (!document.getElementById('research')?.classList.contains('active')) return;
   const generation = ++activationGeneration;
   void activateLazyFeature('research', generation);
+});
+
+repoMapRetry?.addEventListener('click', () => {
+  if (!document.getElementById('projects')?.classList.contains('active')) return;
+  const generation = ++activationGeneration;
+  void activateLazyFeature('projects', generation);
 });
 
 function renderLazyView(viewId) {
@@ -1645,6 +1659,28 @@ function applyWritingFilter() {
 
 function renderWriting() {
   if (!writingList || !writingFeatured || !writingCount) return;
+  if (blogPostsLoadState !== 'ready' && blogPosts.length === 0) {
+    const failed = blogPostsLoadState === 'error';
+    writingSearch.disabled = true;
+    writingCount.textContent = failed ? i18n[currentLang].writing_error_count : i18n[currentLang].writing_loading;
+    writingFeatured.innerHTML = failed
+      ? `<div class="writing-state" role="alert">
+          <strong>${escapeHtml(i18n[currentLang].writing_error)}</strong>
+          <p class="muted">${escapeHtml(i18n[currentLang].writing_error_hint)}</p>
+          <div class="related-actions">
+            <button class="mini-action" type="button" data-writing-retry>${escapeHtml(i18n[currentLang].writing_retry)}</button>
+            <a class="mini-action" href="${currentLang === 'zh' && fixedLanguage === 'zh' ? '../blog/' : './blog/'}">${escapeHtml(i18n[currentLang].writing_open)}</a>
+          </div>
+        </div>`
+      : `<p class="muted" role="status">${escapeHtml(i18n[currentLang].writing_loading)}</p>`;
+    writingList.innerHTML = '';
+    writingFeatured.querySelector('[data-writing-retry]')?.addEventListener('click', () => {
+      blogPostsLoadPromise = null;
+      void ensureBlogPostsLoaded();
+    }, { once: true });
+    return;
+  }
+  writingSearch.disabled = false;
   const posts = filteredBlogPosts.length || (writingSearch?.value || '').trim() ? filteredBlogPosts : blogPosts;
   const featured = posts.filter((post) => post.featured).slice(0, 3);
   const featuredSlugs = new Set(featured.map((post) => post.slug));
@@ -3026,7 +3062,7 @@ function renderRepoPreviewCard(repo) {
   const repoHref = safeExternalHref(repo.html_url);
   const demoHref = validatedExternalHttpUrl(repo.demo_url);
   return `
-    <article class="repo-card repo-preview-card interactive-card motion-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-motion-card data-motion-key="repo-${safeName}" data-repo="${safeName}" style="--repo-accent:${accent}">
+    <article class="repo-card repo-preview-card motion-card ${highlightedRepo === repo.name ? 'highlight' : ''}" data-motion-card data-motion-key="repo-${safeName}" data-repo="${safeName}" style="--repo-accent:${accent}">
       <div class="repo-preview-top">
         <div>
           <span class="panel-eyebrow">${i18n[currentLang].repo_preview_title}</span>
@@ -3459,16 +3495,21 @@ async function loadPublications() {
 }
 
 async function loadBlogPosts() {
-  if (initializedViews.has('writing') && writingList) {
-    writingList.innerHTML = `<p class="muted">${i18n[currentLang].writing_loading}</p>`;
-  }
+  blogPostsLoadState = 'loading';
+  refreshInitializedView('writing');
   try {
-    const response = await fetch(versionedModuleUrl('./blog/posts.json'), { cache: 'default' });
+    const response = await fetchWithTimeout(
+      versionedModuleUrl('./blog/posts.json'),
+      { cache: 'default' },
+      REQUEST_TIMEOUT_MS.blog
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const posts = await response.json();
-    blogPosts = Array.isArray(posts) ? posts : [];
+    if (!Array.isArray(posts)) throw new Error('Invalid writing index');
+    blogPosts = posts;
+    blogPostsLoadState = 'ready';
   } catch {
-    blogPosts = [];
+    blogPostsLoadState = 'error';
   }
   filteredBlogPosts = [...blogPosts];
   renderHeroPreview();

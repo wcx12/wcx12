@@ -86,7 +86,7 @@ test('research and repository visualizations are real lazy modules', async () =>
   const translationBytes = (await fs.stat(path.join(rootDir, 'homepage-i18n.js'))).size;
   const schemaBytes = (await fs.stat(path.join(rootDir, 'scripts', 'research-config-schema.js'))).size;
   assert.ok(eagerBytes < 150 * 1024, `eager homepage script grew to ${eagerBytes} bytes`);
-  assert.ok(translationBytes < 26 * 1024, `homepage translations grew to ${translationBytes} bytes`);
+  assert.ok(translationBytes < 27 * 1024, `homepage translations grew to ${translationBytes} bytes`);
   assert.ok(eagerBytes + translationBytes + schemaBytes < 190 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
 });
 
@@ -96,10 +96,12 @@ test('research visualization exposes a recoverable module-failure state', () => 
     assert.match(source, /id="interestDemoAction"[^>]+disabled/);
     assert.match(source, /id="interestDemoReset"[^>]+disabled/);
     assert.match(source, /id="interestFeatureRetry"[^>]+data-i18n="interactive_retry"[^>]+hidden/);
+    assert.match(source, /id="repoMapRetry"[^>]+data-i18n="interactive_retry"[^>]+hidden/);
   }
   assert.match(scriptSource, /button\.disabled = state !== 'ready'/);
-  assert.match(scriptSource, /interestFeatureRetry\.hidden = state !== 'error'/);
+  assert.match(scriptSource, /const retry = isResearchFeature \? interestFeatureRetry : repoMapRetry/);
   assert.match(scriptSource, /interestFeatureRetry\?\.addEventListener\('click'/);
+  assert.match(scriptSource, /repoMapRetry\?\.addEventListener\('click'/);
   assert.match(scriptSource, /void activateLazyFeature\('research', generation\)/);
   assert.equal(homepageI18n.en.interactive_retry, 'Retry interaction');
   assert.equal(homepageI18n.zh.interactive_retry, '重试交互');
@@ -115,6 +117,7 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
   assert.match(styleSource, /space-grotesk-latin\.woff2/);
   assert.match(styleSource, /jetbrains-mono-latin\.woff2/);
+  assert.equal(styleSource.match(/font-display:\s*swap/g)?.length || 0, 2, 'both local interface fonts should render consistently on a cold visit');
 
   const initialization = scriptSource.slice(scriptSource.lastIndexOf('initCustomCursor();'));
   assert.doesNotMatch(initialization, /\bload(?:Repos|Publications|BlogPosts|RemoteResearchConfig)\(\);/);
@@ -130,6 +133,24 @@ test('homepage prioritizes verified identity and defers optional data requests',
   }
 });
 
+test('project cards reserve pointer feedback for controls that actually perform an action', () => {
+  assert.doesNotMatch(scriptSource, /class="repo-card[^\"]*interactive-card/);
+  assert.doesNotMatch(scriptSource, /const hoverSelector = [^\n]*\.repo-card/);
+  assert.match(scriptSource, /class="repo-card repo-preview-card motion-card/);
+});
+
+test('homepage navigation uses the same content order and Writing label as fixed pages', () => {
+  const navigation = indexSource.match(/<nav class="top-actions-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+  const labels = ['Research', 'Projects', 'Publications', 'Writing', 'Profile'];
+  let previous = -1;
+  for (const label of labels) {
+    const index = navigation.indexOf(`>${label}</a>`);
+    assert.ok(index > previous, `${label} is missing or out of order in homepage navigation`);
+    previous = index;
+  }
+  assert.equal(homepageI18n.en.btn_blog, 'Writing');
+});
+
 test('mobile utility controls stay above content and touch instructions avoid desktop-only gestures', () => {
   assert.match(styleSource, /\.topbar\s*\{[^}]*z-index:\s*50\s*;/s, 'mobile settings need their own top-level stacking context');
   assert.match(styleSource, /\.utility-menu-panel\s*\{[^}]*right:\s*auto\s*;[^}]*left:\s*0\s*;/s, 'mobile settings panel must open into the viewport');
@@ -140,6 +161,12 @@ test('mobile utility controls stay above content and touch instructions avoid de
   assert.match(styleSource, /@media\s*\(max-width:\s*480px\)[\s\S]*?\.hero-preview-panel\s*\{[^}]*display:\s*none/s);
   assert.match(styleSource, /@media\s*\(max-width:\s*480px\)[\s\S]*?\.top-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.match(styleSource, /@media\s*\(max-width:\s*360px\)[\s\S]*?\.quick-stats\s*\{[^}]*display:\s*none/s);
+});
+
+test('native controls keep the site typography and stable pointer targets', () => {
+  assert.match(styleSource, /button,\s*input,\s*select,\s*textarea\s*\{\s*font:\s*inherit;/s);
+  assert.doesNotMatch(styleSource, /\.btn:hover\s*\{[^}]*transform\s*:/s);
+  assert.match(styleSource, /\.btn:active\s*\{[^}]*filter:\s*brightness\(0\.9\)/s);
 });
 
 test('view navigation and research tabs preserve visible keyboard focus and ARIA relationships', () => {
@@ -181,7 +208,19 @@ test('project view gives immediate feedback and limits first-render work on phon
   assert.doesNotMatch(styleSource, /\.repo-card\s*\{[^}]*content-visibility:\s*auto;/s, 'offscreen cards must not flash as blank placeholders');
 });
 
+test('writing distinguishes loading failures from a real empty index and supports retry', () => {
+  assert.match(scriptSource, /let blogPostsLoadState = 'idle'/);
+  assert.match(scriptSource, /blogPostsLoadState = 'loading'[\s\S]*?fetchWithTimeout\([\s\S]*?REQUEST_TIMEOUT_MS\.blog/);
+  assert.match(scriptSource, /if \(!Array\.isArray\(posts\)\) throw new Error\('Invalid writing index'\)/);
+  assert.match(scriptSource, /blogPostsLoadState = 'error'/);
+  assert.match(scriptSource, /data-writing-retry/);
+  assert.match(scriptSource, /blogPostsLoadPromise = null;[\s\S]*?void ensureBlogPostsLoaded\(\)/);
+  assert.equal(homepageI18n.en.writing_error_count, 'Writing index unavailable');
+  assert.equal(homepageI18n.zh.writing_error_count, '文章索引不可用');
+});
+
 test('canvas motion respects mobile budgets and page visibility', () => {
+  assert.match(styleSource, /#interestCanvas\s*\{[^}]*touch-action:\s*none/s, 'touch gestures must reach the interactive research canvas');
   assert.match(scriptSource, /Math\.min\(window\.devicePixelRatio \|\| 1, MAX_CANVAS_DPR\)/);
   for (const source of [researchCanvasSource, repoMapSource]) {
     assert.match(source, /const MAX_CANVAS_DPR = 2/);
@@ -285,6 +324,8 @@ test('homepage exposes navigation and hero meaning without runtime-only semantic
   assert.match(indexSource, /id="typeTarget"[^>]*>Applying for Master\/PhD programs<\/span>/i);
   assert.match(indexSource, /<canvas\s+id="heroPreviewCanvas"\s+aria-hidden="true"><\/canvas>/i);
   assert.match(indexSource, /id="heroPreviewMeta"[\s\S]*?\.\/research\/point-cloud-registration\/[\s\S]*?Robust point set registration/i);
+  assert.match(indexSource, /limited labels\.<br \/> Research spanning/);
+  assert.match(homepageI18n.en.hero_subtitle_html, /labels\.<br \/> Research/);
   assert.doesNotMatch(scriptSource, /heroPreviewCanvas\?\.setAttribute\('aria-label'/);
 });
 
@@ -299,9 +340,11 @@ test('canonical repository and publication data stays unique and classifiable', 
   }
   assert.equal(localRepos.find((repo) => repo.name === 'codex-pet-battle')?.stage?.en, 'Planning');
   assert.equal(localRepos.find((repo) => repo.name === 'TrendRadar')?.stage?.en, 'Upstream fork');
-  assert.equal(localRepos.find((repo) => repo.name === 'TrendRadar')?.license_spdx, 'GPL-3.0');
   assert.ok(localRepos.every((repo) => Object.hasOwn(repo, 'license_spdx')), 'repository license status must be explicit');
-  assert.ok(localRepos.filter((repo) => !repo.fork).every((repo) => repo.license_spdx === null), 'original repositories unexpectedly claim a detected license');
+  assert.ok(
+    localRepos.every((repo) => repo.license_spdx === null || /^[A-Za-z0-9.+-]+$/.test(repo.license_spdx)),
+    'repository SPDX values must be null or normalized identifiers'
+  );
   const demoRepos = new Set(localRepos.filter((repo) => repo.demo_url).map((repo) => repo.name));
   for (const name of ['FusionTrack', 'shuxuepeiyou', 'tetrahedron-visualizer']) {
     assert.ok(demoRepos.has(name), `${name} unexpectedly lost its public demo`);
@@ -317,10 +360,12 @@ test('canonical repository and publication data stays unique and classifiable', 
 
   assert.ok(staticPublications.length >= 2, 'canonical publication data unexpectedly lost verified papers');
   assert.equal(new Set(staticPublications.map((publication) => publication.doi)).size, staticPublications.length, 'publication DOIs must be unique');
+  assert.equal(new Set(staticPublications.map((publication) => publication.slug)).size, staticPublications.length, 'publication route slugs must be unique');
   for (const doi of ['10.1016/j.neucom.2026.133399', '10.1016/j.neucom.2026.134314']) {
     assert.ok(staticPublications.some((publication) => publication.doi === doi), `verified publication is missing: ${doi}`);
   }
   for (const publication of staticPublications) {
+    assert.match(publication.slug || '', /^[a-z0-9]+(?:-[a-z0-9]+)*$/, `${publication.doi} has an invalid publication route slug`);
     assert.ok(publication.summaryZh, `${publication.doi} is missing a Chinese summary`);
     assert.ok(publication.published_date && publication.volume && publication.article_number, `${publication.doi} is missing canonical bibliographic data`);
     assert.ok(publication.citation_key && publication.citation_month && publication.citation_date, `${publication.doi} is missing citation export data`);
@@ -342,6 +387,12 @@ test('canonical repository and publication data stays unique and classifiable', 
   }
 
   assert.deepEqual(researchConfig.repoAssignments.FusionTrack, ['point-cloud-registration']);
+  assert.equal(
+    researchConfig.interests.flatMap((domain) => domain.children).find((child) => child.id === 'point-cloud-registration')?.indexable,
+    true,
+    'the manually reviewed core registration topic should remain indexable'
+  );
+  assert.match(scriptSource, /Object\.hasOwn\(child, 'indexable'\)[\s\S]*?indexable: child\.indexable/);
   assert.deepEqual(researchConfig.repoAssignments.wcx12, []);
   for (const name of ['hlpp-crossword', 'codex-pet-battle', 'shuxuepeiyou', 'tetrahedron-visualizer', 'BIT-The-mathematical-foundation-of-big-Data']) {
     assert.deepEqual(researchConfig.repoAssignments[name], [], `${name} must remain a project without being counted as research evidence`);

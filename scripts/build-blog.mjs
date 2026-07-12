@@ -33,6 +33,8 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const outputDir = path.join(rootDir, 'blog');
 const sourceAssetsDir = path.join(rootDir, 'blog-src', 'assets');
 const outputAssetsDir = path.join(outputDir, 'assets');
+const generatedDirectories = ['blog', 'projects', 'resume', 'research', 'publications', 'zh'];
+const generatedFiles = ['index.html', 'publications.md', 'rss.xml', 'sitemap.xml'];
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
 const researchChildren = researchConfig.interests.flatMap((interest) => interest.children);
 const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -507,11 +509,11 @@ ${extraHead.trim()}
       <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}>${escapeHtml(text.nav_menu)}</button>
       <nav id="blogSiteNav" class="blog-nav" aria-label="${escapeHtml(text.nav_landmark)}"${i18n('nav_landmark', 'aria')}>
         <a href="${ctx.link(homePath)}"${current('home')} title="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}>${escapeHtml(text.nav_home)}</a>
-        <a href="${ctx.link(resumePath)}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}>${escapeHtml(text.nav_profile)}</a>
         <a href="${ctx.link(researchPath)}"${current('research')} title="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}>${escapeHtml(text.nav_research)}</a>
         <a href="${ctx.link(projectsPath)}"${current('projects')} title="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}>${escapeHtml(text.nav_projects)}</a>
         <a href="${ctx.link(publicationsPath)}"${current('publications')} title="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}>${escapeHtml(text.nav_publications)}</a>
         <a href="${ctx.link('blog/index.html')}"${current('writing')} title="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}>${escapeHtml(text.nav_blog)}</a>
+        <a href="${ctx.link(resumePath)}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}>${escapeHtml(text.nav_profile)}</a>
         ${languageControl}
         <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
           <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
@@ -756,9 +758,9 @@ async function computeAssetVersion(posts) {
     'site-data.js',
     'research-canvas.js',
     'repo-map.js',
-    'blog/assets/blog.css',
-    'blog/assets/blog.js',
-    'blog/assets/katex.min.css',
+    'blog-src/assets/blog.css',
+    'blog-src/assets/blog.js',
+    'node_modules/katex/dist/katex.min.css',
     'research-config.json',
     'resume.md',
     'resume.zh.md',
@@ -947,7 +949,7 @@ async function renderIndex(posts) {
   const recent = posts.slice(0, 6);
   const showSearch = posts.length >= 3;
   const showFeatured = posts.length >= 3 && featured.length > 0;
-  const showArchive = posts.length > 1;
+  const showArchive = posts.length > 0;
   const showStats = posts.length >= 3;
   const latestHref = posts.length === 1 ? postHref(ctx, posts[0]) : '#recent-writing';
   const tagLinks = topicCounts(posts, 'tags')
@@ -1295,19 +1297,24 @@ async function renderResume(renderer, language) {
   const relativeRoute = resumeRoute(language);
   const alternateRoute = resumeRoute(isZh ? 'en' : 'zh');
   const sourceFile = isZh ? 'resume.zh.md' : 'resume.md';
+  const filePath = path.join(rootDir, relativeRoute, 'index.html');
+  const ctx = createPageContext(filePath);
   const source = await fs.readFile(path.join(rootDir, sourceFile), 'utf8');
   const text = isZh ? {
     kicker: '学术履历',
     role: '机器学习研究者',
     location: '中国北京',
-    summary: '研究不完整观测与有限标注条件下的可靠视觉智能，并将方法落实为可复现的研究工程。',
+    summary: '研究不完整观测与有限标注下的可靠视觉智能，并落实为可复现的研究软件。',
     statusLabel: '当前状态',
     status: '正在申请硕士与博士项目',
     print: '打印 / 保存 PDF',
     contact: '邮件联系',
     sections: '履历目录',
+    sectionsLabel: '快速浏览',
     affiliation: '学校',
     graduation: '预计毕业',
+    publications: '论文记录',
+    publicationUnit: '篇',
     emailLabel: '发送邮件给 Chenxu Wang',
     githubLabel: '在新标签页打开 GitHub 主页',
     orcidLabel: `在新标签页打开 ORCID 记录 ${ORCID_ID}`,
@@ -1316,14 +1323,17 @@ async function renderResume(renderer, language) {
     kicker: 'Academic profile',
     role: 'Machine Learning Researcher',
     location: 'Beijing, China',
-    summary: 'I study reliable visual intelligence under incomplete observations and limited labels, then turn the methods into reproducible research software.',
+    summary: 'Reliable visual intelligence under incomplete observations and limited labels, built as reproducible research software.',
     statusLabel: 'Current status',
     status: "Applying for Master's and PhD opportunities",
     print: 'Print / Save PDF',
     contact: 'Email me',
     sections: 'Profile sections',
+    sectionsLabel: 'Quick navigation',
     affiliation: 'Affiliation',
     graduation: 'Expected graduation',
+    publications: 'Publications',
+    publicationUnit: 'papers',
     emailLabel: 'Email Chenxu Wang',
     githubLabel: 'Open the GitHub profile in a new tab',
     orcidLabel: `Open ORCID record ${ORCID_ID} in a new tab`,
@@ -1335,7 +1345,7 @@ async function renderResume(renderer, language) {
     const topic = publicationTopic(publication);
     return `<li>
       <article class="resume-publication-entry">
-        <h3 lang="en">${escapeHtml(publication.title)}</h3>
+        <h3 lang="en"><a href="${ctx.link(`${publicationRoute(language, publication)}index.html`)}">${escapeHtml(publication.title)}</a></h3>
         <p class="resume-publication-authors" lang="en">${readableAuthorsHtml(publication)}</p>
         <p class="resume-publication-summary">${escapeHtml(isZh ? publication.summaryZh : publication.summary)}</p>
         <p class="resume-publication-meta">
@@ -1356,6 +1366,12 @@ async function renderResume(renderer, language) {
   let publicationMarkers = 0;
   const sections = renderer.renderSections(withoutDocumentTitle);
   const profileSectionKinds = ['education', 'publications', 'interests', 'projects', 'skills'];
+  const profileSectionNotes = isZh
+    ? ['教育经历与学术节点', '经同行评议的研究成果', '当前持续推进的研究方向', '代表性开源与研究工程', '研究方法与工程工具']
+    : ['Education and academic milestones', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
+  const profileSectionNavLabels = isZh
+    ? ['教育', '论文', '方向', '项目', '技能']
+    : ['Education', 'Papers', 'Interests', 'Projects', 'Skills'];
   const sectionHtml = sections.map((section, index) => {
     const content = section.html.replace(markerMarkup, () => {
       publicationMarkers += 1;
@@ -1365,14 +1381,16 @@ async function renderResume(renderer, language) {
     return `<section id="${escapeHtml(section.id)}" class="profile-section" data-profile-section="${escapeHtml(section.id)}" data-profile-kind="${profileSectionKinds[index] || 'section'}" aria-labelledby="${escapeHtml(section.id)}-title">
       <header class="profile-section-head">
         <span aria-hidden="true">${sectionNumber}</span>
-        <h2 id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
+        <div>
+          <h2 id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
+          <p>${escapeHtml(profileSectionNotes[index] || '')}</p>
+        </div>
       </header>
       <div class="profile-section-body">${content}</div>
     </section>`;
   }).join('');
   if (publicationMarkers !== 1) throw new Error(`${sourceFile} publication placeholder did not render predictably`);
-  const sectionNavigation = sections.map((section, index) => `<a href="#${escapeHtml(section.id)}"><span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(section.title)}</strong></a>`).join('');
-  const filePath = path.join(rootDir, relativeRoute, 'index.html');
+  const sectionNavigation = sections.map((section, index) => `<a href="#${escapeHtml(section.id)}"><span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(profileSectionNavLabels[index] || section.title)}</strong></a>`).join('');
   const body = `
     <article class="research-profile" lang="${isZh ? 'zh-CN' : 'en'}">
       <header class="profile-masthead">
@@ -1384,6 +1402,7 @@ async function renderResume(renderer, language) {
           <dl class="profile-facts">
             <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
             <div><dt>${text.graduation}</dt><dd>2026</dd></div>
+            <div><dt>${text.publications}</dt><dd>${staticPublications.length} ${text.publicationUnit}</dd></div>
           </dl>
         </div>
         <aside class="profile-command">
@@ -1399,8 +1418,11 @@ async function renderResume(renderer, language) {
           </nav>
         </aside>
       </header>
-      <nav class="profile-section-nav" aria-label="${text.sections}">${sectionNavigation}</nav>
       <div class="profile-layout">
+        <aside class="profile-directory">
+          <p>${text.sectionsLabel}</p>
+          <nav class="profile-section-nav" aria-label="${text.sections}">${sectionNavigation}</nav>
+        </aside>
         <div class="profile-sections">
 ${sectionHtml}
         </div>
@@ -1524,8 +1546,62 @@ async function renderCitationFiles() {
   }
 }
 
-function publicationSchema(publication, language = 'en') {
+async function pathExists(target) {
+  try {
+    await fs.access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function createGeneratedSiteBackup() {
+  const backupRoot = path.join(rootDir, `.build-backup-${process.pid}-${Date.now()}`);
+  const directories = [];
+  const files = [];
+  await fs.mkdir(backupRoot, { recursive: false });
+  try {
+    for (const relativePath of generatedDirectories) {
+      const source = path.join(rootDir, relativePath);
+      if (!await pathExists(source)) continue;
+      await fs.cp(source, path.join(backupRoot, relativePath), { recursive: true, force: false, errorOnExist: true });
+      directories.push(relativePath);
+    }
+    for (const relativePath of generatedFiles) {
+      const source = path.join(rootDir, relativePath);
+      if (!await pathExists(source)) continue;
+      await fs.copyFile(source, path.join(backupRoot, relativePath));
+      files.push(relativePath);
+    }
+    return { backupRoot, directories, files };
+  } catch (error) {
+    await fs.rm(backupRoot, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+async function clearGeneratedDirectories() {
+  for (const relativePath of generatedDirectories) {
+    await fs.rm(path.join(rootDir, relativePath), { recursive: true, force: true });
+  }
+}
+
+async function restoreGeneratedSite(backup) {
+  await clearGeneratedDirectories();
+  for (const relativePath of backup.directories) {
+    await fs.cp(path.join(backup.backupRoot, relativePath), path.join(rootDir, relativePath), { recursive: true });
+  }
+  for (const relativePath of generatedFiles) {
+    const target = path.join(rootDir, relativePath);
+    if (backup.files.includes(relativePath)) await fs.copyFile(path.join(backup.backupRoot, relativePath), target);
+    else await fs.rm(target, { force: true });
+  }
+  await fs.rm(backup.backupRoot, { recursive: true, force: true });
+}
+
+function publicationSchema(publication, language = 'en', pageUrl = '') {
   const topic = publicationTopic(publication);
+  const articleUrl = pageUrl || publication.link;
   const publisher = publication.publisher
     ? { '@type': 'Organization', name: publication.publisher }
     : undefined;
@@ -1540,7 +1616,13 @@ function publicationSchema(publication, language = 'en') {
     '@id': `${publication.link}#article`,
     headline: publication.title,
     name: publication.title,
-    url: publication.link,
+    description: language === 'zh' ? publication.summaryZh : publication.summary,
+    url: articleUrl,
+    ...(pageUrl ? {
+      sameAs: publication.link,
+      mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl }
+    } : {}),
+    inLanguage: 'en',
     datePublished: publication.published_date || publication.year,
     author: authorsFor(publication).map((name) => name.toLowerCase() === SITE.author.toLowerCase()
       ? { ...personEntity(), name }
@@ -1676,6 +1758,7 @@ ${repo.language ? `        <div><dt>${isZh ? '语言' : 'Language'}</dt><dd>${es
 ${stage ? `        <div><dt>${isZh ? '阶段' : 'Stage'}</dt><dd>${escapeHtml(stage)}</dd></div>` : ''}
 ${publicEvidence ? `        <div><dt>${isZh ? '公开证据' : 'Public evidence'}</dt><dd>${escapeHtml(publicEvidence)}</dd></div>` : ''}
         <div><dt>${isZh ? '许可证' : 'License'}</dt><dd>${escapeHtml(license)}</dd></div>
+${repo.fork && repo.source?.html_url ? `        <div><dt>${isZh ? '上游仓库' : 'Upstream'}</dt><dd><a href="${escapeHtml(repo.source.html_url)}" rel="noreferrer">${escapeHtml(repo.source.full_name || repo.source.html_url)}</a></dd></div>` : ''}
         <div><dt>${isZh ? '代码' : 'Code'}</dt><dd><a href="${escapeHtml(repo.html_url)}" rel="noreferrer">GitHub</a></dd></div>
 ${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href="${escapeHtml(repo.demo_url)}" rel="noreferrer">${isZh ? '打开在线演示' : 'Open live demo'}</a></dd></div>` : ''}
       </dl>
@@ -1686,14 +1769,18 @@ ${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href=
     const topic = publicationTopic(publication);
     const codeNote = localized(publication.code_note, language);
     const publishedLabel = localized(publication.publishedLabel, language);
+    const status = isZh ? publication.statusZh : publication.status;
+    const statusLine = publication.status === 'Published' && publishedLabel
+      ? publishedLabel
+      : [status, publishedLabel].filter(Boolean).join(' · ');
     const bibtexPath = ctx.link(citationFilePath(publication, 'bib'));
     const risPath = ctx.link(citationFilePath(publication, 'ris'));
     return `<article class="research-evidence" data-evidence-type="ScholarlyArticle" data-evidence-key="${escapeHtml(evidence.key)}">
-      <h3 class="research-evidence-title" lang="en"><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.title)}</a></h3>
+      <h3 class="research-evidence-title" lang="en"><a href="${ctx.link(`${publicationRoute(language, publication)}index.html`)}">${escapeHtml(publication.title)}</a></h3>
       <p class="research-authors">${escapeHtml(authorsFor(publication).join(', '))}</p>
       <dl class="research-meta">
         <div><dt>${isZh ? '书目信息' : 'Citation'}</dt><dd>${escapeHtml(publicationCitationLine(publication))}</dd></div>
-        <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(isZh ? publication.statusZh : publication.status)}${publishedLabel ? ` &middot; ${escapeHtml(publishedLabel)}` : ''}${publication.open_access ? ` &middot; ${isZh ? '开放获取' : 'Open access'}` : ''}</dd></div>
+        <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(statusLine)}${publication.open_access ? ` &middot; ${isZh ? '开放获取' : 'Open access'}` : ''}</dd></div>
         <div><dt>DOI</dt><dd><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.doi)}</a></dd></div>
         <div><dt>${isZh ? '引用导出' : 'Export citation'}</dt><dd><a href="${escapeHtml(bibtexPath)}" download>BibTeX</a> <span aria-hidden="true">&middot;</span> <a href="${escapeHtml(risPath)}" download>RIS</a></dd></div>
         ${publication.code_url ? `<div><dt>${isZh ? '官方实现' : 'Official implementation'}</dt><dd><a href="${escapeHtml(publication.code_url)}" rel="noreferrer">GitHub</a></dd></div>` : ''}
@@ -1745,7 +1832,9 @@ function researchTopicEvidenceScore(evidence) {
   return evidence.reduce((score, item) => score + (TOPIC_EVIDENCE_WEIGHTS[item.type] || 0), 0);
 }
 
-function shouldIndexResearchTopic(evidence) {
+function shouldIndexResearchTopic(child, evidence) {
+  if (child.indexable === true) return evidence.length > 0;
+  if (child.indexable === false) return false;
   return researchTopicEvidenceScore(evidence) >= MIN_INDEXABLE_TOPIC_SCORE;
 }
 
@@ -1765,6 +1854,10 @@ function resumeRoute(language) {
 
 function publicationsRoute(language) {
   return `${language === 'zh' ? 'zh/' : ''}publications/`;
+}
+
+function publicationRoute(language, publication) {
+  return `${publicationsRoute(language)}${publication.slug}/`;
 }
 
 function projectsRoute(language) {
@@ -1959,7 +2052,103 @@ async function renderResearchTopic(posts, child, language) {
     contentLang: isZh ? 'zh-CN' : 'en',
     fixedLanguage: language,
     alternateUrl: alternateRoute,
-    robots: shouldIndexResearchTopic(evidence) ? 'index,follow,max-image-preview:large' : 'noindex,follow'
+    robots: shouldIndexResearchTopic(child, evidence) ? 'index,follow,max-image-preview:large' : 'noindex,follow'
+  }));
+}
+
+function publicationHighwireMeta(publication, canonicalUrl) {
+  const tags = [
+    ['citation_title', publication.title],
+    ...authorsFor(publication).map((author) => ['citation_author', author]),
+    ['citation_journal_title', publication.venue],
+    ['citation_publication_date', publication.citation_date],
+    ['citation_online_date', publication.published_date?.replaceAll('-', '/')],
+    ['citation_volume', publication.volume],
+    ['citation_firstpage', publication.article_number],
+    ['citation_doi', publication.doi],
+    ['citation_issn', publication.issn],
+    ['citation_publisher', publication.publisher],
+    ['citation_language', 'en'],
+    ['citation_abstract_html_url', canonicalUrl]
+  ].filter(([, value]) => value);
+  return tags.map(([name, value]) => `  <meta name="${name}" content="${escapeHtml(value)}" />`).join('\n');
+}
+
+async function renderPublicationDetail(publication, language) {
+  const isZh = language === 'zh';
+  const relativeRoute = publicationRoute(language, publication);
+  const alternateRoute = publicationRoute(isZh ? 'en' : 'zh', publication);
+  const filePath = path.join(rootDir, relativeRoute, 'index.html');
+  const ctx = createPageContext(filePath);
+  const canonicalUrl = absoluteUrl(relativeRoute);
+  const topic = publicationTopic(publication);
+  const status = isZh ? publication.statusZh : publication.status;
+  const publishedLabel = localized(publication.publishedLabel, language);
+  const summary = isZh ? publication.summaryZh : publication.summary;
+  const bibtexPath = ctx.link(citationFilePath(publication, 'bib'));
+  const risPath = ctx.link(citationFilePath(publication, 'ris'));
+  const topicUrl = topic ? ctx.link(`${researchRoute(language, `${topic.id}/`)}index.html`) : '';
+  const body = `
+    <article class="publication-detail">
+      <header class="research-header">
+        <p class="blog-kicker">${isZh ? '论文记录' : 'Research publication'}</p>
+        <h1 lang="en">${escapeHtml(publication.title)}</h1>
+        <p>${escapeHtml(summary)}</p>
+        <p class="research-authors" lang="en">${readableAuthorsHtml(publication)}</p>
+        <div class="blog-hero-actions">
+          <a class="btn btn-primary" href="${escapeHtml(publication.link)}" rel="noreferrer">DOI</a>
+          <a class="btn btn-outline" href="${escapeHtml(bibtexPath)}" download>BibTeX</a>
+          <a class="btn btn-outline" href="${escapeHtml(risPath)}" download>RIS</a>
+          <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '全部论文' : 'All publications'}</a>
+        </div>
+      </header>
+      <section class="research-section" aria-labelledby="publication-record-title">
+        <div class="research-section-head"><h2 id="publication-record-title">${isZh ? '书目信息' : 'Bibliographic record'}</h2><span>${escapeHtml(publication.year)}</span></div>
+        <dl class="research-meta publication-record-meta">
+          <div><dt>${isZh ? '期刊' : 'Journal'}</dt><dd>${escapeHtml(publication.venue)}</dd></div>
+          <div><dt>${isZh ? '卷' : 'Volume'}</dt><dd>${escapeHtml(publication.volume)}</dd></div>
+          <div><dt>${isZh ? '文章号' : 'Article number'}</dt><dd>${escapeHtml(publication.article_number)}</dd></div>
+          <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(status)}${publishedLabel ? ` &middot; ${escapeHtml(publishedLabel)}` : ''}</dd></div>
+          <div><dt>DOI</dt><dd><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.doi)}</a></dd></div>
+          <div><dt>ISSN</dt><dd>${escapeHtml(publication.issn)}</dd></div>
+          <div><dt>${isZh ? '出版方' : 'Publisher'}</dt><dd>${escapeHtml(publication.publisher)}</dd></div>
+          <div><dt>${isZh ? '开放获取' : 'Open access'}</dt><dd>${publication.open_access ? (isZh ? '是' : 'Yes') : (isZh ? '否' : 'No')}</dd></div>
+          <div><dt>${isZh ? '许可证' : 'License'}</dt><dd><a href="${escapeHtml(publication.license)}" rel="noreferrer">CC BY 4.0</a></dd></div>
+        </dl>
+      </section>
+      ${topic ? `<section class="research-section" aria-labelledby="publication-topic-title">
+        <div class="research-section-head"><h2 id="publication-topic-title">${isZh ? '研究方向' : 'Research area'}</h2><span>${escapeHtml(topic.id)}</span></div>
+        <p><a class="publication-topic-link" href="${topicUrl}">${escapeHtml(localized(topic.title, language))}</a> &middot; ${escapeHtml(localized(topic.label, language))}</p>
+      </section>` : ''}
+      ${publication.code_url ? `<section class="research-section" aria-labelledby="publication-code-title">
+        <div class="research-section-head"><h2 id="publication-code-title">${isZh ? '官方实现' : 'Official implementation'}</h2><span>GitHub</span></div>
+        <p><a href="${escapeHtml(publication.code_url)}" rel="noreferrer">${escapeHtml(publication.code_url)}</a></p>
+        <p class="muted">${escapeHtml(localized(publication.code_note, language))}</p>
+      </section>` : ''}
+    </article>`;
+  const metadata = JSON.stringify({
+    '@context': 'https://schema.org',
+    ...publicationSchema(publication, language, canonicalUrl)
+  });
+  await writePage(`${relativeRoute}index.html`, renderShell({
+    filePath,
+    title: isZh ? `${publication.title}（论文记录）` : publication.title,
+    description: summary,
+    body,
+    extraHead: publicationHighwireMeta(publication, canonicalUrl),
+    jsonLd: metadata,
+    pageType: 'article',
+    schemaType: 'ScholarlyArticle',
+    publishedTime: publication.published_date,
+    modifiedTime: publication.updated_at,
+    articleAuthorUrl: absoluteUrl(resumeRoute(language)),
+    articleSection: topic ? localized(topic.title, language) : publication.venue,
+    articleTags: topic ? [localized(topic.title, language), localized(topic.label, language), publication.venue] : [publication.venue],
+    socialImagePath: isZh ? 'assets/og-publications-zh.png' : 'assets/og-publications.png',
+    socialImageAlt: isZh ? 'Chenxu Wang 论文与出版记录' : 'Chenxu Wang publications and publisher-linked records',
+    contentLang: isZh ? 'zh-CN' : 'en',
+    fixedLanguage: language,
+    alternateUrl: alternateRoute
   }));
 }
 
@@ -2035,7 +2224,7 @@ async function renderPublicationsMarkdown() {
     const codeLines = publication.code_url
       ? `\n- Official implementation: ${publication.code_url}\n- Hosting note: ${localized(publication.code_note, 'en')}`
       : '';
-    return `## ${heading}\n\n### ${publication.title}\n\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${publication.status}; ${localized(publication.publishedLabel, 'en')}${publication.open_access ? '; open access' : ''}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
+    return `## ${heading}\n\n### ${publication.title}\n\n- Record: ${absoluteUrl(publicationRoute('en', publication))}\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${publication.status}; ${localized(publication.publishedLabel, 'en')}${publication.open_access ? '; open access' : ''}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
   });
   const markdown = `# Publications\n\n${sections.join('\n\n')}\n\nOnly publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.\n`;
   await fs.writeFile(path.join(rootDir, 'publications.md'), markdown);
@@ -2047,6 +2236,7 @@ async function renderResearchPages(posts) {
     await renderResearchIndex(posts, language);
     await renderProjects(language);
     for (const child of researchChildren) await renderResearchTopic(posts, child, language);
+    for (const publication of staticPublications) await renderPublicationDetail(publication, language);
     await renderPublications(language);
   }
   await renderPublicationsMarkdown();
@@ -2156,12 +2346,16 @@ async function renderSitemap(posts) {
   const latestHomeDate = latestDate([latestPostDate, latestProjectDate, latestPublicationDate, latestResearchDate]);
   const researchRoutes = ['en', 'zh'].flatMap((language) => [
     { route: researchRoute(language), lastmod: latestResearchDate },
-    ...researchChildren.filter((child) => shouldIndexResearchTopic(evidenceForTopic(child.id, posts))).map((child) => ({
+    ...researchChildren.filter((child) => shouldIndexResearchTopic(child, evidenceForTopic(child.id, posts))).map((child) => ({
       route: researchRoute(language, `${child.id}/`),
       lastmod: topicDates.get(child.id)
     })),
     { route: projectsRoute(language), lastmod: latestProjectDate },
-    { route: publicationsRoute(language), lastmod: latestPublicationDate }
+    { route: publicationsRoute(language), lastmod: latestPublicationDate },
+    ...staticPublications.map((publication) => ({
+      route: publicationRoute(language, publication),
+      lastmod: publication.updated_at
+    }))
   ]);
   const urls = [
     { route: '', lastmod: latestHomeDate },
@@ -2193,35 +2387,42 @@ async function main() {
     process.exit(1);
   }
 
-  await fs.rm(outputDir, { recursive: true, force: true });
-  await fs.rm(path.join(rootDir, 'resume'), { recursive: true, force: true });
-  await fs.rm(path.join(rootDir, 'research'), { recursive: true, force: true });
-  await fs.rm(path.join(rootDir, 'publications'), { recursive: true, force: true });
-  await fs.rm(path.join(rootDir, 'zh'), { recursive: true, force: true });
-  await fs.mkdir(outputDir, { recursive: true });
-  await copyAssets();
   assetVersion = await computeAssetVersion(posts);
-  await stampHomepageAssets();
-  await renderChineseHomepage();
-
   const renderer = createMarkdownRenderer();
-  for (const post of posts) {
-    await renderPost(post, posts, renderer);
-  }
-  for (const language of ['en', 'zh']) await renderResume(renderer, language);
-  await renderResearchPages(posts);
-  await renderIndex(posts);
-  await renderArchive(posts);
-  await renderTagPages(posts);
-  await renderJsonFeeds(posts);
-  await renderRss(posts);
-  await renderSitemap(posts);
+  const backup = await createGeneratedSiteBackup();
+  try {
+    await clearGeneratedDirectories();
+    await fs.mkdir(outputDir, { recursive: true });
+    await copyAssets();
+    await stampHomepageAssets();
+    await renderChineseHomepage();
 
-  if (process.argv.includes('--preview-drafts')) {
-    const previewResult = await loadPosts(rootDir, { includeDrafts: true, includeFuture: true, today });
-    const unpublished = previewResult.posts.filter((post) => post.publicationState !== 'published');
-    await renderDraftPreviews(unpublished, renderer);
-    console.log(`Built local preview with ${unpublished.length} unpublished post(s).`);
+    for (const post of posts) {
+      await renderPost(post, posts, renderer);
+    }
+    for (const language of ['en', 'zh']) await renderResume(renderer, language);
+    await renderResearchPages(posts);
+    await renderIndex(posts);
+    await renderArchive(posts);
+    await renderTagPages(posts);
+    await renderJsonFeeds(posts);
+    await renderRss(posts);
+    await renderSitemap(posts);
+
+    if (process.argv.includes('--preview-drafts')) {
+      const previewResult = await loadPosts(rootDir, { includeDrafts: true, includeFuture: true, today });
+      const unpublished = previewResult.posts.filter((post) => post.publicationState !== 'published');
+      await renderDraftPreviews(unpublished, renderer);
+      console.log(`Built local preview with ${unpublished.length} unpublished post(s).`);
+    }
+    await fs.rm(backup.backupRoot, { recursive: true, force: true });
+  } catch (buildError) {
+    try {
+      await restoreGeneratedSite(backup);
+    } catch (restoreError) {
+      throw new AggregateError([buildError, restoreError], 'Site build failed and generated output restoration also failed.');
+    }
+    throw buildError;
   }
 
   console.log(`Built ${posts.length} public blog post(s) for ${today}; ${publicationCounts.scheduled} scheduled, ${publicationCounts.draft} draft.`);

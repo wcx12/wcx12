@@ -162,6 +162,9 @@ export function validateResearchConfigValue(config) {
           && !SUPPORTED_ANIMATIONS.has(interest.animation)) {
           addConfigError(errors, `${interestLocation}.animation`, `must be one of: ${[...SUPPORTED_ANIMATIONS].join(', ')}; received "${interest.animation}"`);
         }
+        if (Object.hasOwn(interest, 'indexable') && typeof interest.indexable !== 'boolean') {
+          addConfigError(errors, `${interestLocation}.indexable`, 'must be a boolean when provided');
+        }
       });
     });
   }
@@ -199,6 +202,7 @@ export function normalizeResearchConfigValue(config) {
         title: cleanLocalizedText(interest.title),
         label: cleanLocalizedText(interest.label),
         animation: interest.animation,
+        ...(Object.hasOwn(interest, 'indexable') ? { indexable: interest.indexable } : {}),
         description: cleanLocalizedText(interest.description)
       }))
     })),

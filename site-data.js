@@ -206,6 +206,7 @@ export const localRepos = [
 
 export const staticPublications = [
   {
+    "slug": "tf-vpr",
     "title": "TF-VPR: A novel benchmark for training-free visual place recognition",
     "venue": "Neurocomputing",
     "year": "2026",
@@ -241,6 +242,7 @@ export const staticPublications = [
     ]
   },
   {
+    "slug": "synergistic-learning-active-learning",
     "title": "Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification",
     "venue": "Neurocomputing",
     "year": "2026",

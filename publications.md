@@ -4,6 +4,7 @@
 
 ### TF-VPR: A novel benchmark for training-free visual place recognition
 
+- Record: https://wcx12.github.io/wcx12/publications/tf-vpr/
 - Authors: Chenxu Wang, Qingtong Meng, Bonan Zhang, and Fusen Guo
 - Citation: Neurocomputing 681 (2026), 133399
 - Status: Published; Published 7 June 2026; open access
@@ -18,6 +19,7 @@
 
 ### Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification
 
+- Record: https://wcx12.github.io/wcx12/publications/synergistic-learning-active-learning/
 - Authors: Chenxu Wang, QingTong Meng, Qianxun Lin, Bonan Zhang, and Fusen Guo
 - Citation: Neurocomputing 699 (2026), 134314
 - Status: In press; Available online 22 June 2026; open access
