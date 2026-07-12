@@ -1805,3 +1805,10 @@ html[data-ui-lang="zh"] .blog-hero h1 {
     text-decoration: underline;
   }
 }
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 3px !important;
+  }
+}

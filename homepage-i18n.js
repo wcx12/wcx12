@@ -88,6 +88,9 @@ export const homepageI18n = {
     section_projects: 'Projects',
     section_papers: 'Papers',
     section_writing: 'Writing',
+    interactive_loading: 'Loading interaction...',
+    interactive_unavailable: 'Interaction failed; text content remains available.',
+    interactive_retry: 'Retry interaction',
     show_in_projects: 'Show in Projects',
     show_in_research: 'Show in Research',
     show_repo_in_research_aria: 'Show {repo} in Research',
@@ -238,7 +241,7 @@ export const homepageI18n = {
     project_updated: 'Updated',
     modal_close: 'x',
     lang_btn: '中文',
-    lang_link_aria: 'View the Chinese homepage',
+    lang_link_aria: '中文, view the Chinese homepage',
     chip_loaded: 'Loaded: {tag} -> actively used in my current workflow.',
     statuses: ['Applying for Master/PhD programs']
   },
@@ -331,6 +334,9 @@ export const homepageI18n = {
     section_projects: '项目',
     section_papers: '论文',
     section_writing: '文章',
+    interactive_loading: '正在加载交互…',
+    interactive_unavailable: '交互加载失败；文字内容仍可浏览。',
+    interactive_retry: '重试交互',
     show_in_projects: '在项目中显示',
     show_in_research: '查看研究方向',
     show_repo_in_research_aria: '在研究视图中查看 {repo}',
@@ -481,7 +487,7 @@ export const homepageI18n = {
     project_updated: '更新时间',
     modal_close: 'x',
     lang_btn: 'EN',
-    lang_link_aria: '查看英文主页',
+    lang_link_aria: 'EN，查看英文主页',
     chip_loaded: '已加载: {tag} -> 已纳入当前工作流。',
     statuses: ['正在申请硕士/博士项目']
   }

@@ -113,6 +113,8 @@ const interestDescription = document.getElementById('interestDescription');
 const interestDetail = document.querySelector('.interest-detail');
 const interestSectionTabs = document.querySelectorAll('[data-interest-panel]');
 const interestTabPanels = document.querySelectorAll('[data-interest-tabpanel]');
+const interestCanvasControls = document.getElementById('interestCanvasControls');
+const interestFeatureRetry = document.getElementById('interestFeatureRetry');
 const interestProjects = document.getElementById('interestProjects');
 const interestPapers = document.getElementById('interestPapers');
 const interestPosts = document.getElementById('interestPosts');
@@ -307,7 +309,12 @@ const REQUEST_TIMEOUT_MS = Object.freeze({
   readme: 12000
 });
 const MAX_README_BYTES = 1024 * 1024;
-const README_IMAGE_HOSTS = new Set(['github.com', 'img.shields.io']);
+  const README_IMAGE_HOSTS = new Set([
+    'capsule-render.vercel.app',
+    'github.com',
+    'img.shields.io',
+    'skillicons.dev'
+  ]);
 
 function timeoutSignal(timeoutMs) {
   if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
@@ -727,12 +734,19 @@ function updateViewDocumentTitle(viewId) {
 }
 
 function lazyFeatureStatus(viewId, message, state = 'loading') {
-  const status = document.getElementById(viewId === 'research' ? 'interestCanvasStatus' : 'repoMapHint');
-  const canvas = document.getElementById(viewId === 'research' ? 'interestCanvas' : 'repoMap');
+  const isResearchFeature = viewId === 'research';
+  const status = document.getElementById(isResearchFeature ? 'interestCanvasStatus' : 'repoMapHint');
+  const canvas = document.getElementById(isResearchFeature ? 'interestCanvas' : 'repoMap');
   if (status && message) status.textContent = message;
   if (canvas) {
     canvas.dataset.featureState = state;
     canvas.setAttribute('aria-busy', String(state === 'loading'));
+  }
+  if (isResearchFeature) {
+    interestCanvasControls?.querySelectorAll('button').forEach((button) => {
+      button.disabled = state !== 'ready';
+    });
+    if (interestFeatureRetry) interestFeatureRetry.hidden = state !== 'error';
   }
 }
 
@@ -812,10 +826,8 @@ function isCurrentActivation(viewId, generation) {
 
 async function activateLazyFeature(viewId, generation, options = {}) {
   if (!['research', 'projects'].includes(viewId)) return;
-  const loadingText = currentLang === 'zh' ? '正在加载交互视图…' : 'Loading interactive view...';
-  const failureText = currentLang === 'zh'
-    ? '交互视图加载失败；文本内容仍可使用。'
-    : 'Interactive view unavailable; textual content remains available.';
+  const loadingText = i18n[currentLang].interactive_loading;
+  const failureText = i18n[currentLang].interactive_unavailable;
   lazyFeatureStatus(viewId, loadingText);
   try {
     const feature = viewId === 'research'
@@ -836,6 +848,12 @@ async function activateLazyFeature(viewId, generation, options = {}) {
     if (isCurrentActivation(viewId, generation)) lazyFeatureStatus(viewId, failureText, 'error');
   }
 }
+
+interestFeatureRetry?.addEventListener('click', () => {
+  if (!document.getElementById('research')?.classList.contains('active')) return;
+  const generation = ++activationGeneration;
+  void activateLazyFeature('research', generation);
+});
 
 function renderLazyView(viewId) {
   if (viewId === 'projects') renderRepos(filteredRepos);
@@ -1174,16 +1192,18 @@ function renderCommandList() {
   commandCursor = Math.min(commandCursor, Math.max(items.length - 1, 0));
   if (!items.length) {
     commandList.innerHTML = `<p class="muted">${i18n[currentLang].command_empty}</p>`;
+    commandInput.removeAttribute('aria-activedescendant');
     renderCommandPreview(null);
     return;
   }
 
   commandList.innerHTML = items.map((item, index) => `
-    <button class="command-item ${index === commandCursor ? 'active' : ''}" type="button" data-index="${index}">
+    <div id="command-option-${index}" class="command-item ${index === commandCursor ? 'active' : ''}" role="option" aria-selected="${index === commandCursor}" tabindex="-1" data-index="${index}">
       <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
       <span class="command-shortcut">${escapeHtml(item.type)}</span>
-    </button>
+    </div>
   `).join('');
+  commandInput.setAttribute('aria-activedescendant', `command-option-${commandCursor}`);
 
   commandList.querySelectorAll('.command-item').forEach((button) => {
     button.addEventListener('mouseenter', () => {
@@ -1256,6 +1276,7 @@ function openCommandPalette() {
   }
   commandPalette.classList.add('open');
   commandPalette.setAttribute('aria-hidden', 'false');
+  commandInput.setAttribute('aria-expanded', 'true');
   setOverlayActive(commandPalette, true);
   commandInput.value = '';
   commandCursor = 0;
@@ -1270,6 +1291,8 @@ function closeCommandPalette() {
   const wasOpen = commandPalette.classList.contains('open');
   commandPalette.classList.remove('open');
   commandPalette.setAttribute('aria-hidden', 'true');
+  commandInput.setAttribute('aria-expanded', 'false');
+  commandInput.removeAttribute('aria-activedescendant');
   setOverlayActive(commandPalette, false);
   if (wasOpen) restoreOverlayFocus(commandReturnFocus);
   commandReturnFocus = null;
@@ -3532,38 +3555,39 @@ function restartTypeLoop() {
   typeLoop();
 }
 
-function applyTranslations() {
-  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
-  document.querySelectorAll('[data-i18n]').forEach((node) => {
-    const key = node.dataset.i18n;
-    const value = i18n[currentLang][key];
-    if (typeof value === 'string') node.textContent = value;
-  });
-  document.querySelectorAll('[data-i18n-ph]').forEach((node) => {
-    const key = node.dataset.i18nPh;
-    const value = i18n[currentLang][key];
-    if (typeof value === 'string') node.setAttribute('placeholder', value);
-  });
-  document.querySelectorAll('[data-i18n-aria]').forEach((node) => {
-    const key = node.dataset.i18nAria;
-    const value = i18n[currentLang][key];
-    if (typeof value === 'string') node.setAttribute('aria-label', value);
-  });
-  document.querySelectorAll('[data-i18n-title]').forEach((node) => {
-    const key = node.dataset.i18nTitle;
-    const value = i18n[currentLang][key];
-    if (typeof value === 'string') node.setAttribute('title', value);
-  });
-  repoSearch.setAttribute('aria-label', i18n[currentLang].repo_search_aria);
-  writingSearch?.setAttribute('aria-label', i18n[currentLang].writing_search_aria);
-  commandInput.setAttribute('aria-label', i18n[currentLang].command_search_aria);
-  document.querySelectorAll('[data-i18n="hero_subtitle_html"]').forEach((node) => {
-    node.innerHTML = i18n[currentLang].hero_subtitle_html;
-  });
-
-  langToggle.textContent = i18n[currentLang].lang_btn;
+function applyTranslations({ translateDocument = true } = {}) {
+  if (translateDocument) {
+    document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+    document.querySelectorAll('[data-i18n]').forEach((node) => {
+      const key = node.dataset.i18n;
+      const value = i18n[currentLang][key];
+      if (typeof value === 'string') node.textContent = value;
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach((node) => {
+      const key = node.dataset.i18nPh;
+      const value = i18n[currentLang][key];
+      if (typeof value === 'string') node.setAttribute('placeholder', value);
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach((node) => {
+      const key = node.dataset.i18nAria;
+      const value = i18n[currentLang][key];
+      if (typeof value === 'string') node.setAttribute('aria-label', value);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach((node) => {
+      const key = node.dataset.i18nTitle;
+      const value = i18n[currentLang][key];
+      if (typeof value === 'string') node.setAttribute('title', value);
+    });
+    repoSearch.setAttribute('aria-label', i18n[currentLang].repo_search_aria);
+    writingSearch?.setAttribute('aria-label', i18n[currentLang].writing_search_aria);
+    commandInput.setAttribute('aria-label', i18n[currentLang].command_search_aria);
+    document.querySelectorAll('[data-i18n="hero_subtitle_html"]').forEach((node) => {
+      node.innerHTML = i18n[currentLang].hero_subtitle_html;
+    });
+    langToggle.textContent = i18n[currentLang].lang_btn;
+    modalClose.textContent = i18n[currentLang].modal_close;
+  }
   updateLanguageLink();
-  modalClose.textContent = i18n[currentLang].modal_close;
   updateHeroStats();
   updateHeroPublicationCount();
   renderHeroPreview();
@@ -3718,7 +3742,7 @@ function runMotionFrame(timestamp = 0) {
 initCustomCursor();
 measureHeroPreviewSize();
 applyTheme(currentTheme, { animate: false });
-applyTranslations();
+applyTranslations({ translateDocument: !fixedLanguage });
 applyLocationRoute({ scroll: Boolean(window.location.hash) });
 lastHandledRouteUrl = currentRouteUrl();
 restartTypeLoop();

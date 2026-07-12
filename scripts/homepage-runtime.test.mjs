@@ -90,6 +90,21 @@ test('research and repository visualizations are real lazy modules', async () =>
   assert.ok(eagerBytes + translationBytes + schemaBytes < 190 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
 });
 
+test('research visualization exposes a recoverable module-failure state', () => {
+  for (const source of [indexSource, chineseIndexSource]) {
+    assert.match(source, /id="interestDemoPrevious"[^>]+disabled/);
+    assert.match(source, /id="interestDemoAction"[^>]+disabled/);
+    assert.match(source, /id="interestDemoReset"[^>]+disabled/);
+    assert.match(source, /id="interestFeatureRetry"[^>]+data-i18n="interactive_retry"[^>]+hidden/);
+  }
+  assert.match(scriptSource, /button\.disabled = state !== 'ready'/);
+  assert.match(scriptSource, /interestFeatureRetry\.hidden = state !== 'error'/);
+  assert.match(scriptSource, /interestFeatureRetry\?\.addEventListener\('click'/);
+  assert.match(scriptSource, /void activateLazyFeature\('research', generation\)/);
+  assert.equal(homepageI18n.en.interactive_retry, 'Retry interaction');
+  assert.equal(homepageI18n.zh.interactive_retry, '重试交互');
+});
+
 test('homepage prioritizes verified identity and defers optional data requests', async () => {
   assert.match(indexSource, /<title>Chenxu Wang \(wcx12\) \| Machine Learning Researcher<\/title>/);
   assert.match(indexSource, /<html lang="en" data-fixed-language="en">/);
@@ -103,6 +118,8 @@ test('homepage prioritizes verified identity and defers optional data requests',
 
   const initialization = scriptSource.slice(scriptSource.lastIndexOf('initCustomCursor();'));
   assert.doesNotMatch(initialization, /\bload(?:Repos|Publications|BlogPosts|RemoteResearchConfig)\(\);/);
+  assert.match(initialization, /applyTranslations\(\{ translateDocument: !fixedLanguage \}\)/);
+  assert.match(scriptSource, /function applyTranslations\(\{ translateDocument = true \} = \{\}\) \{\s*if \(translateDocument\)/);
   assert.match(scriptSource, /void ensureViewData\(resolvedViewId\)/);
   assert.match(scriptSource, /'Chenxu Wang \(wcx12\) \| Machine Learning Researcher'/);
   assert.match(scriptSource, /`\$\{displayTitle\} \| Chenxu Wang \(wcx12\)`/);
@@ -120,6 +137,9 @@ test('mobile utility controls stay above content and touch instructions avoid de
   assert.match(indexSource, /class="desktop-hint" data-i18n="hints"/);
   assert.match(indexSource, /class="touch-hint" data-i18n="hints_touch"/);
   assert.match(indexSource, /data-i18n="repo_map_hint_touch"/);
+  assert.match(styleSource, /@media\s*\(max-width:\s*480px\)[\s\S]*?\.hero-preview-panel\s*\{[^}]*display:\s*none/s);
+  assert.match(styleSource, /@media\s*\(max-width:\s*480px\)[\s\S]*?\.top-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(styleSource, /@media\s*\(max-width:\s*360px\)[\s\S]*?\.quick-stats\s*\{[^}]*display:\s*none/s);
 });
 
 test('view navigation and research tabs preserve visible keyboard focus and ARIA relationships', () => {
@@ -141,6 +161,15 @@ test('view navigation and research tabs preserve visible keyboard focus and ARIA
   assert.match(scriptSource, /view_paper_details_aria\.replace\('\{paper\}', item\.title\)/);
   assert.match(scriptSource, /open_paper_aria\.replace\('\{paper\}', item\.title\)/);
   assert.match(scriptSource, /escapeHtml\(paperSummary\(item\)\)/);
+});
+
+test('command palette exposes the active option through the combobox pattern', () => {
+  assert.match(indexSource, /id="commandInput"[^>]+role="combobox"[^>]+aria-controls="commandList"[^>]+aria-expanded="false"/);
+  assert.match(indexSource, /id="commandList"[^>]+role="listbox"/);
+  assert.match(scriptSource, /id="command-option-\$\{index\}"[^>]+role="option"[^>]+aria-selected="\$\{index === commandCursor\}"/);
+  assert.match(scriptSource, /commandInput\.setAttribute\('aria-activedescendant', `command-option-\$\{commandCursor\}`\)/);
+  assert.match(scriptSource, /commandInput\.setAttribute\('aria-expanded', 'true'\)/);
+  assert.match(scriptSource, /commandInput\.setAttribute\('aria-expanded', 'false'\)/);
 });
 
 test('project view gives immediate feedback and limits first-render work on phones', () => {
@@ -346,10 +375,21 @@ test('README previews bound response work and block arbitrary tracking images', 
   assert.match(scriptSource, /responseTextWithLimit\(response, MAX_README_BYTES\)/);
   assert.match(scriptSource, /response\.body\.getReader\(\)/);
   assert.match(scriptSource, /total > maxBytes[\s\S]*?reader\.cancel\(\)/);
-  assert.match(scriptSource, /README_IMAGE_HOSTS = new Set\(\['github\.com', 'img\.shields\.io'\]\)/);
+  assert.match(scriptSource, /const README_IMAGE_HOSTS = new Set\(\[/);
+  for (const host of ['capsule-render.vercel.app', 'github.com', 'img.shields.io', 'skillicons.dev']) {
+    assert.ok(scriptSource.includes(`'${host}'`), `README image allowlist is missing ${host}`);
+  }
   assert.match(scriptSource, /host\.endsWith\('\.githubusercontent\.com'\)/);
   assert.match(scriptSource, /node\.setAttribute\('referrerpolicy', 'no-referrer'\)/);
   assert.match(scriptSource, /node\.setAttribute\('decoding', 'async'\)/);
+});
+
+test('monochrome theme removes hard-coded color residue from structural UI', () => {
+  assert.match(styleSource, /:root\[data-theme="mono"\] #starfield \{[^}]*filter:\s*grayscale\(1\)/s);
+  assert.match(styleSource, /:root\[data-theme="mono"\] \.console,[\s\S]*?border-color:\s*var\(--line\)/);
+  assert.match(styleSource, /:root\[data-theme="mono"\] footer \{[^}]*color:\s*var\(--muted\)/s);
+  assert.ok(homepageI18n.en.lang_link_aria.startsWith(homepageI18n.en.lang_btn));
+  assert.ok(homepageI18n.zh.lang_link_aria.startsWith(homepageI18n.zh.lang_btn));
 });
 
 test('retired sandbox code and taxonomy drift do not return', () => {

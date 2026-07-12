@@ -161,6 +161,37 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
   }
 });
 
+test('shared content navigation keeps visible labels in accessible names', async () => {
+  for (const relativePath of ['blog/index.html', 'research/index.html', 'resume/index.html', 'zh/research/index.html']) {
+    const source = await fs.readFile(path.join(rootDir, relativePath), 'utf8');
+    assert.match(source, /class="blog-menu-toggle"[^>]+>[^<]+<\/button>/);
+    assert.doesNotMatch(source.match(/<button class="blog-menu-toggle"[\s\S]*?<\/button>/)?.[0] || '', /aria-label=/);
+    const siteNav = source.match(/<nav id="blogSiteNav"[\s\S]*?<\/nav>/)?.[0] || '';
+    assert.ok(siteNav, `${relativePath}: missing shared navigation`);
+    assert.doesNotMatch(siteNav, /<a\b[^>]*aria-label=/, `${relativePath}: visible nav links must name themselves`);
+    assert.doesNotMatch(siteNav.match(/<a id="blogLangLink"[\s\S]*?<\/a>/)?.[0] || '', /aria-label=/);
+  }
+});
+
+test('content pages restore visible focus in forced-color mode', async () => {
+  const source = await fs.readFile(path.join(rootDir, 'blog', 'assets', 'blog.css'), 'utf8');
+  assert.match(source, /@media \(forced-colors: active\)[\s\S]*?:where\(a, button, input, select, textarea, summary, \[tabindex\]\):focus-visible[\s\S]*?outline:\s*3px solid Highlight !important/);
+});
+
+test('404 is a bilingual, script-free recovery page', async () => {
+  const source = await fs.readFile(path.join(rootDir, '404.html'), 'utf8');
+  assert.match(source, /<span lang="zh-CN">页面未找到。<\/span>/);
+  assert.match(source, /<p class="zh-copy" lang="zh-CN">/);
+  for (const href of ['/wcx12/', '/wcx12/research/', '/wcx12/projects/', '/wcx12/blog/']) {
+    assert.ok(source.includes(`href="${href}"`), `404 is missing ${href}`);
+  }
+  assert.match(source, /nav a \{[^}]*min-height:\s*44px/s);
+  assert.match(source, /img-src 'self'/);
+  assert.match(source, /@media \(forced-colors: active\)[\s\S]*?a:focus-visible \{[^}]*outline:\s*3px solid Highlight/);
+  assert.doesNotMatch(source, /<script\b/i);
+  assert.doesNotMatch(source, /font-size:\s*clamp\([^)]*vw/i);
+});
+
 test('all generated local links and assets resolve inside the published tree', async () => {
   const pages = [
     path.join(rootDir, 'index.html'),

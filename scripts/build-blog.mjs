@@ -441,8 +441,8 @@ function renderShell({
     ? ''
     : ` data-blog-i18n${attribute ? `-${attribute}` : ''}="${key}"`;
   const languageControl = fixedLanguage
-    ? `<a id="blogLangLink" class="blog-nav-button" href="${ctx.link(`${alternateUrl}index.html`)}" hreflang="${alternateLanguage}" lang="${alternateLanguage}" title="${escapeHtml(text.lang_title)}" aria-label="${escapeHtml(text.lang_title)}">${escapeHtml(text.lang_label)}</a>`
-    : `<button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" aria-label="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_title">中文</button>`;
+    ? `<a id="blogLangLink" class="blog-nav-button" href="${ctx.link(`${alternateUrl}index.html`)}" hreflang="${alternateLanguage}" lang="${alternateLanguage}" title="${escapeHtml(text.lang_title)}">${escapeHtml(text.lang_label)}</a>`
+    : `<button id="blogLangToggle" class="blog-nav-button" type="button" title="Switch interface language" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title">中文</button>`;
   const metadata = metadataWithSocialImage(jsonLd, {
     '@context': 'https://schema.org',
     '@type': schemaType,
@@ -504,14 +504,14 @@ ${extraHead.trim()}
   <header class="blog-topbar">
     <a class="blog-brand" href="${ctx.link(homePath)}">wcx12</a>
     <div class="blog-menu">
-      <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}" aria-label="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}${i18n('nav_menu_title', 'aria')}>${escapeHtml(text.nav_menu)}</button>
+      <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}>${escapeHtml(text.nav_menu)}</button>
       <nav id="blogSiteNav" class="blog-nav" aria-label="${escapeHtml(text.nav_landmark)}"${i18n('nav_landmark', 'aria')}>
-        <a href="${ctx.link(homePath)}"${current('home')} title="${escapeHtml(text.nav_home_title)}" aria-label="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}${i18n('nav_home_title', 'aria')}>${escapeHtml(text.nav_home)}</a>
-        <a href="${ctx.link(resumePath)}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}" aria-label="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}${i18n('nav_profile_title', 'aria')}>${escapeHtml(text.nav_profile)}</a>
-        <a href="${ctx.link(researchPath)}"${current('research')} title="${escapeHtml(text.nav_research_title)}" aria-label="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}${i18n('nav_research_title', 'aria')}>${escapeHtml(text.nav_research)}</a>
-        <a href="${ctx.link(projectsPath)}"${current('projects')} title="${escapeHtml(text.nav_projects_title)}" aria-label="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}${i18n('nav_projects_title', 'aria')}>${escapeHtml(text.nav_projects)}</a>
-        <a href="${ctx.link(publicationsPath)}"${current('publications')} title="${escapeHtml(text.nav_publications_title)}" aria-label="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}${i18n('nav_publications_title', 'aria')}>${escapeHtml(text.nav_publications)}</a>
-        <a href="${ctx.link('blog/index.html')}"${current('writing')} title="${escapeHtml(text.nav_blog_title)}" aria-label="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}${i18n('nav_blog_title', 'aria')}>${escapeHtml(text.nav_blog)}</a>
+        <a href="${ctx.link(homePath)}"${current('home')} title="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}>${escapeHtml(text.nav_home)}</a>
+        <a href="${ctx.link(resumePath)}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}>${escapeHtml(text.nav_profile)}</a>
+        <a href="${ctx.link(researchPath)}"${current('research')} title="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}>${escapeHtml(text.nav_research)}</a>
+        <a href="${ctx.link(projectsPath)}"${current('projects')} title="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}>${escapeHtml(text.nav_projects)}</a>
+        <a href="${ctx.link(publicationsPath)}"${current('publications')} title="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}>${escapeHtml(text.nav_publications)}</a>
+        <a href="${ctx.link('blog/index.html')}"${current('writing')} title="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}>${escapeHtml(text.nav_blog)}</a>
         ${languageControl}
         <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
           <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
