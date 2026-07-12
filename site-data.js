@@ -7,10 +7,11 @@ export const localRepos = [
     "descriptionZh": "交互式 GitHub 个人资料与研究主页。",
     "language": "JavaScript",
     "stargazers_count": 2,
-    "updated_at": "2026-07-11T16:58:28Z",
+    "updated_at": "2026-07-12T12:04:52Z",
     "default_branch": "main",
     "html_url": "https://github.com/wcx12/wcx12",
     "readme_url": "https://raw.githubusercontent.com/wcx12/wcx12/main/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Deployed website",
       "zh": "已部署网站"
@@ -32,6 +33,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/shuxuepeiyou",
     "demo_url": "https://wcx12.github.io/shuxuepeiyou/",
     "readme_url": "https://raw.githubusercontent.com/wcx12/shuxuepeiyou/main/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Teaching materials",
       "zh": "教学资料"
@@ -52,6 +54,7 @@ export const localRepos = [
     "default_branch": "main",
     "html_url": "https://github.com/wcx12/major-intel",
     "readme_url": "https://raw.githubusercontent.com/wcx12/major-intel/main/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Working prototype",
       "zh": "可运行原型"
@@ -75,6 +78,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/FusionTrack",
     "demo_url": "https://wcx12.github.io/FusionTrack/",
     "readme_url": "https://raw.githubusercontent.com/wcx12/FusionTrack/main/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Research repository",
       "zh": "研究仓库"
@@ -97,6 +101,7 @@ export const localRepos = [
     "default_branch": "master",
     "html_url": "https://github.com/wcx12/hlpp-crossword",
     "readme_url": "https://raw.githubusercontent.com/wcx12/hlpp-crossword/master/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Working prototype",
       "zh": "可运行原型"
@@ -117,6 +122,7 @@ export const localRepos = [
     "default_branch": "main",
     "html_url": "https://github.com/wcx12/codex-pet-battle",
     "readme_url": "https://raw.githubusercontent.com/wcx12/codex-pet-battle/main/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Planning",
       "zh": "规划阶段"
@@ -137,6 +143,7 @@ export const localRepos = [
     "default_branch": "master",
     "html_url": "https://github.com/wcx12/TrendRadar",
     "readme_url": "https://raw.githubusercontent.com/wcx12/TrendRadar/master/README.md",
+    "license_spdx": "GPL-3.0",
     "fork": true,
     "source": {
       "full_name": "sansan0/TrendRadar",
@@ -163,6 +170,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/tetrahedron-visualizer",
     "demo_url": "https://wcx12.github.io/tetrahedron-visualizer/",
     "readme_url": "https://raw.githubusercontent.com/wcx12/tetrahedron-visualizer/master/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Interactive demo",
       "zh": "交互演示"
@@ -183,6 +191,7 @@ export const localRepos = [
     "default_branch": "main",
     "html_url": "https://github.com/wcx12/BIT-The-mathematical-foundation-of-big-Data",
     "readme_url": "https://raw.githubusercontent.com/wcx12/BIT-The-mathematical-foundation-of-big-Data/main/README.md",
+    "license_spdx": null,
     "stage": {
       "en": "Coursework",
       "zh": "课程作业"

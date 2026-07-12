@@ -1633,6 +1633,7 @@ function evidenceSchema(evidence, language = 'en') {
       } : {}),
       ...(schemaType === 'CreativeWork' ? { genre: localized(repo.stage, language) } : {}),
       ...(repo.stage ? { creativeWorkStatus: localized(repo.stage, language) } : {}),
+      ...(repo.license_spdx ? { license: `https://spdx.org/licenses/${encodeURIComponent(repo.license_spdx)}.html` } : {}),
       ...(repo.updated_at ? { dateModified: repo.updated_at } : {}),
       ...(!repo.fork ? { author: personReference() } : {}),
       ...(repo.fork && repo.source?.html_url ? {
@@ -1666,6 +1667,7 @@ function evidenceHtml(ctx, evidence, language) {
     const repo = evidence.value;
     const stage = localized(repo.stage, language);
     const publicEvidence = localized(repo.evidence, language);
+    const license = repo.license_spdx || (isZh ? '未声明仓库许可证' : 'No repository license declared');
     return `<article class="research-evidence" data-evidence-type="SoftwareSourceCode" data-evidence-key="${escapeHtml(evidence.key)}">
       <h3 class="research-evidence-title"><a href="${escapeHtml(repo.html_url)}" rel="noreferrer">${escapeHtml(repo.name)}</a></h3>
       <p${language === 'zh' && repo.descriptionZh ? '' : ' lang="en"'}>${escapeHtml(language === 'zh' ? (repo.descriptionZh || repo.description) : repo.description)}</p>
@@ -1673,6 +1675,7 @@ function evidenceHtml(ctx, evidence, language) {
 ${repo.language ? `        <div><dt>${isZh ? '语言' : 'Language'}</dt><dd>${escapeHtml(repo.language)}</dd></div>` : ''}
 ${stage ? `        <div><dt>${isZh ? '阶段' : 'Stage'}</dt><dd>${escapeHtml(stage)}</dd></div>` : ''}
 ${publicEvidence ? `        <div><dt>${isZh ? '公开证据' : 'Public evidence'}</dt><dd>${escapeHtml(publicEvidence)}</dd></div>` : ''}
+        <div><dt>${isZh ? '许可证' : 'License'}</dt><dd>${escapeHtml(license)}</dd></div>
         <div><dt>${isZh ? '代码' : 'Code'}</dt><dd><a href="${escapeHtml(repo.html_url)}" rel="noreferrer">GitHub</a></dd></div>
 ${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href="${escapeHtml(repo.demo_url)}" rel="noreferrer">${isZh ? '打开在线演示' : 'Open live demo'}</a></dd></div>` : ''}
       </dl>
@@ -1784,7 +1787,7 @@ async function renderProjects(language) {
     <header class="research-header">
       <p class="blog-kicker">${isZh ? '公开软件与资料索引' : 'Public software and materials index'}</p>
       <h1>${isZh ? '项目' : 'Projects'}</h1>
-      <p>${isZh ? '浏览全部公开仓库。阶段与公开证据说明会区分研究仓库、可运行原型、教学资料、课程作业、规划文档与上游分叉。' : 'Browse every public repository. Maturity and evidence notes distinguish research repositories, working prototypes, teaching materials, coursework, planning documents, and upstream forks.'}</p>
+      <p>${isZh ? '浏览全部公开仓库。阶段、公开证据与许可证状态会区分研究仓库、可运行原型、教学资料、课程作业、规划文档与上游分叉。' : 'Browse every public repository. Maturity, evidence, and license status distinguish research repositories, working prototypes, teaching materials, coursework, planning documents, and upstream forks.'}</p>
       <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '浏览研究方向' : 'Browse research topics'}</a>
     </header>
     <section class="research-section" aria-labelledby="project-list-title">

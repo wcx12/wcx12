@@ -86,6 +86,7 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
         : '';
       const stage = existing.stage || defaultStage(remote);
       const evidence = existing.evidence || defaultEvidence(remote, source);
+      const licenseSpdx = String(remote.license?.spdx_id || '').trim();
 
       return {
         name: remote.name,
@@ -98,6 +99,7 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
         html_url: htmlUrl,
         ...(existingDemo || pageDemo ? { demo_url: existingDemo || pageDemo } : {}),
         readme_url: readmeUrl(owner, remote),
+        license_spdx: licenseSpdx && licenseSpdx !== 'NOASSERTION' ? licenseSpdx : null,
         ...(remote.fork ? { fork: true } : {}),
         ...(source ? { source } : {}),
         ...(remote.archived ? { archived: true } : {}),

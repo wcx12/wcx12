@@ -299,6 +299,9 @@ test('canonical repository and publication data stays unique and classifiable', 
   }
   assert.equal(localRepos.find((repo) => repo.name === 'codex-pet-battle')?.stage?.en, 'Planning');
   assert.equal(localRepos.find((repo) => repo.name === 'TrendRadar')?.stage?.en, 'Upstream fork');
+  assert.equal(localRepos.find((repo) => repo.name === 'TrendRadar')?.license_spdx, 'GPL-3.0');
+  assert.ok(localRepos.every((repo) => Object.hasOwn(repo, 'license_spdx')), 'repository license status must be explicit');
+  assert.ok(localRepos.filter((repo) => !repo.fork).every((repo) => repo.license_spdx === null), 'original repositories unexpectedly claim a detected license');
   const demoRepos = new Set(localRepos.filter((repo) => repo.demo_url).map((repo) => repo.name));
   for (const name of ['FusionTrack', 'shuxuepeiyou', 'tetrahedron-visualizer']) {
     assert.ok(demoRepos.has(name), `${name} unexpectedly lost its public demo`);

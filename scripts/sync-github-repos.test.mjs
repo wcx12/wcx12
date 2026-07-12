@@ -28,6 +28,7 @@ test('refreshes API-owned fields without overwriting curated evidence', () => {
     default_branch: 'trunk',
     html_url: 'https://github.com/wcx12/Existing',
     has_pages: false,
+    license: { spdx_id: 'MIT' },
     fork: false,
     archived: false
   }], curated, { owner: 'wcx12' });
@@ -40,6 +41,7 @@ test('refreshes API-owned fields without overwriting curated evidence', () => {
   assert.equal(repo.default_branch, 'trunk');
   assert.equal(repo.demo_url, 'https://example.com/existing/');
   assert.equal(repo.readme_url, 'https://raw.githubusercontent.com/wcx12/Existing/trunk/README.md');
+  assert.equal(repo.license_spdx, 'MIT');
   assert.deepEqual(repo.stage, curated[0].stage);
   assert.deepEqual(repo.evidence, curated[0].evidence);
   assert.deepEqual(repo.interests, ['agent']);
@@ -52,10 +54,12 @@ test('refreshes API-owned fields without overwriting curated evidence', () => {
     default_branch: 'trunk',
     html_url: 'https://github.com/wcx12/Existing',
     has_pages: true,
+    license: null,
     fork: false,
     archived: false
   }], [{ ...curated[0], demo_url: undefined }], { owner: 'wcx12' });
   assert.equal(withoutDemo.demo_url, undefined, 'sync must not infer a demo for an already curated repository');
+  assert.equal(withoutDemo.license_spdx, null);
 });
 
 test('adds honest unclassified records and attributes new forks', () => {
@@ -70,6 +74,7 @@ test('adds honest unclassified records and attributes new forks', () => {
       html_url: 'https://github.com/wcx12/NewProject',
       homepage: '',
       has_pages: true,
+      license: null,
       fork: false,
       archived: false
     },
@@ -82,6 +87,7 @@ test('adds honest unclassified records and attributes new forks', () => {
       default_branch: 'main',
       html_url: 'https://github.com/wcx12/NewFork',
       has_pages: false,
+      license: { spdx_id: 'GPL-3.0' },
       fork: true,
       archived: false
     }
@@ -97,9 +103,11 @@ test('adds honest unclassified records and attributes new forks', () => {
   assert.match(repos[0].descriptionZh, /GitHub.*README/);
   assert.deepEqual(repos[0].interests, []);
   assert.equal(repos[0].stage.en, 'Public repository');
+  assert.equal(repos[0].license_spdx, null);
   assert.match(repos[0].evidence.en, /not yet been curated/);
   assert.equal(repos[1].fork, true);
   assert.equal(repos[1].source.full_name, 'upstream/NewFork');
+  assert.equal(repos[1].license_spdx, 'GPL-3.0');
   assert.match(repos[1].descriptionZh, /分叉仓库/);
   assert.match(repos[1].evidence.en, /not claimed as original work/);
 });

@@ -497,6 +497,7 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
         if (/data-evidence-type="SoftwareSourceCode"/.test(article)) {
           assert.match(article, new RegExp(`<dt>${language === 'zh' ? '阶段' : 'Stage'}<\\/dt>`), `${route}: visible project stage is missing`);
           assert.match(article, new RegExp(`<dt>${language === 'zh' ? '公开证据' : 'Public evidence'}<\\/dt>`), `${route}: visible project evidence is missing`);
+          assert.match(article, new RegExp(`<dt>${language === 'zh' ? '许可证' : 'License'}<\\/dt>`), `${route}: visible project license status is missing`);
         }
       }
     }
@@ -601,6 +602,9 @@ test('project indexes expose every repository with maturity and public evidence'
         assert.equal(item.author?.name, SITE.author, `${route}: original work is missing its author`);
       }
       if (item['@type'] === 'LearningResource') assert.equal(item.educationalUse, 'instruction');
+      const expectedLicense = repo.license_spdx ? `https://spdx.org/licenses/${encodeURIComponent(repo.license_spdx)}.html` : undefined;
+      assert.equal(item.license, expectedLicense, `${route}: license metadata drifted for ${repo.name}`);
+      assert.match(source, new RegExp((repo.license_spdx || (language === 'zh' ? '未声明仓库许可证' : 'No repository license declared')).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(source, new RegExp(repo.html_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(source, new RegExp(expectedDescription.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     }
