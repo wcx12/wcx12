@@ -28,6 +28,17 @@ import {
   slugify,
   summarizeDiagnostics
 } from './blog-content.mjs';
+import {
+  assignedResearchIds,
+  classifyResearchTopic,
+  compareRepositoriesByRelevance,
+  compareResearchTopics,
+  publicationStatusKey,
+  publicationStatusLabel,
+  repositoryStageKey,
+  repositoryStageLabel,
+  summarizeTopicEvidence
+} from './portfolio-ranking.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = path.join(rootDir, 'blog');
@@ -765,6 +776,7 @@ async function computeAssetVersion(posts) {
     'resume.md',
     'resume.zh.md',
     'scripts/blog-content.mjs',
+    'scripts/portfolio-ranking.js',
     'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
     ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
@@ -977,7 +989,7 @@ async function renderIndex(posts) {
     <section class="blog-hero${showStats ? '' : ' blog-hero-compact'}">
       <p class="blog-kicker" data-blog-i18n="hero_kicker">Research · Engineering · Reflection</p>
       <h1 data-blog-i18n="hero_title">Research Fieldnotes</h1>
-      <p data-blog-i18n="hero_desc">Tracing how research questions are broken down, experiments are verified, and code becomes a reproducible answer.</p>
+      <p data-blog-i18n="hero_desc">Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site.</p>
       ${hintHtml('hint_hero')}
       <div class="blog-hero-actions">
         <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>${showArchive ? `
@@ -1315,6 +1327,9 @@ async function renderResume(renderer, language) {
     graduation: '预计毕业',
     publications: '论文记录',
     publicationUnit: '篇',
+    publishedUnit: '篇已发表',
+    inPressUnit: '篇待刊',
+    topicLabel: '方向',
     emailLabel: '发送邮件给 Chenxu Wang',
     githubLabel: '在新标签页打开 GitHub 主页',
     orcidLabel: `在新标签页打开 ORCID 记录 ${ORCID_ID}`,
@@ -1334,28 +1349,37 @@ async function renderResume(renderer, language) {
     graduation: 'Expected graduation',
     publications: 'Publications',
     publicationUnit: 'papers',
+    publishedUnit: 'published',
+    inPressUnit: 'in press',
+    topicLabel: 'Topic',
     emailLabel: 'Email Chenxu Wang',
     githubLabel: 'Open the GitHub profile in a new tab',
     orcidLabel: `Open ORCID record ${ORCID_ID} in a new tab`,
     doiLabel: (title) => `Open the DOI for ${title} in a new tab`
   };
+  const publishedCount = staticPublications.filter((publication) => publicationStatusKey(publication) === 'published').length;
+  const inPressCount = staticPublications.filter((publication) => publicationStatusKey(publication) === 'in_press').length;
+  const publicationFact = [
+    publishedCount ? `${publishedCount} ${text.publishedUnit}` : '',
+    inPressCount ? `${inPressCount} ${text.inPressUnit}` : ''
+  ].filter(Boolean).join(' · ') || `${staticPublications.length} ${text.publicationUnit}`;
   const publicationMarker = 'RESUME_PUBLICATIONS_PLACEHOLDER';
   const publicationList = `<ol class="resume-publications">${staticPublications.map((publication) => {
-    const status = isZh ? publication.statusZh : publication.status;
+    const status = publicationStatusLabel(publication, language);
     const topic = publicationTopic(publication);
     return `<li>
       <article class="resume-publication-entry">
         <h3 lang="en"><a href="${ctx.link(`${publicationRoute(language, publication)}index.html`)}">${escapeHtml(publication.title)}</a></h3>
         <p class="resume-publication-authors" lang="en">${readableAuthorsHtml(publication)}</p>
-        <p class="resume-publication-summary">${escapeHtml(isZh ? publication.summaryZh : publication.summary)}</p>
         <p class="resume-publication-meta">
           <time datetime="${escapeHtml(String(publication.year))}">${escapeHtml(String(publication.year))}</time>
           <cite>${escapeHtml(publication.venue)}${publication.volume ? ` ${escapeHtml(publication.volume)}` : ''}</cite>
           ${publication.article_number ? `<span>${escapeHtml(publication.article_number)}</span>` : ''}
-          <span>${escapeHtml(status)}</span>
+          <span class="resume-publication-status">${escapeHtml(status)}</span>
           <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(text.doiLabel(publication.title))}">DOI</a>
-          ${topic ? `<span class="resume-publication-topic">${escapeHtml(localized(topic.title, language))}</span>` : ''}
+          ${topic ? `<span class="resume-publication-topic"><span>${escapeHtml(text.topicLabel)}</span>${escapeHtml(localized(topic.title, language))}</span>` : ''}
         </p>
+        <p class="resume-publication-summary">${escapeHtml(isZh ? publication.summaryZh : publication.summary)}</p>
       </article>
     </li>`;
   }).join('')}</ol>`;
@@ -1370,8 +1394,8 @@ async function renderResume(renderer, language) {
     ? ['教育经历与学术节点', '经同行评议的研究成果', '当前持续推进的研究方向', '代表性开源与研究工程', '研究方法与工程工具']
     : ['Education and academic milestones', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
   const profileSectionNavLabels = isZh
-    ? ['教育', '论文', '方向', '项目', '技能']
-    : ['Education', 'Papers', 'Interests', 'Projects', 'Skills'];
+    ? ['教育背景', '论文', '研究兴趣', '代表项目', '技术能力']
+    : ['Education', 'Publications', 'Research', 'Projects', 'Skills'];
   const sectionHtml = sections.map((section, index) => {
     const content = section.html.replace(markerMarkup, () => {
       publicationMarkers += 1;
@@ -1399,11 +1423,6 @@ async function renderResume(renderer, language) {
           <h1>Chenxu Wang <span class="profile-handle">@wcx12</span></h1>
           <p class="profile-role">${text.role}<span aria-hidden="true">&middot;</span>${text.location}</p>
           <p class="profile-summary">${text.summary}</p>
-          <dl class="profile-facts">
-            <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
-            <div><dt>${text.graduation}</dt><dd>2026</dd></div>
-            <div><dt>${text.publications}</dt><dd>${staticPublications.length} ${text.publicationUnit}</dd></div>
-          </dl>
         </div>
         <aside class="profile-command">
           <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${text.status}</strong></p>
@@ -1417,6 +1436,11 @@ async function renderResume(renderer, language) {
             <a href="https://orcid.org/${ORCID_ID}" target="_blank" rel="me noreferrer" aria-label="${text.orcidLabel}">ORCID</a>
           </nav>
         </aside>
+        <dl class="profile-facts">
+          <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
+          <div><dt>${text.graduation}</dt><dd>2026</dd></div>
+          <div><dt>${text.publications}</dt><dd>${publicationFact}</dd></div>
+        </dl>
       </header>
       <div class="profile-layout">
         <aside class="profile-directory">
@@ -1662,9 +1686,9 @@ function publicationSchema(publication, language = 'en', pageUrl = '') {
 }
 
 function repositorySchemaType(repo) {
-  const stage = repo.stage?.en;
-  if (stage === 'Teaching materials' || stage === 'Coursework') return 'LearningResource';
-  if (stage === 'Planning') return 'CreativeWork';
+  const stageKey = repositoryStageKey(repo);
+  if (stageKey === 'teaching_materials' || stageKey === 'coursework') return 'LearningResource';
+  if (stageKey === 'planning') return 'CreativeWork';
   return 'SoftwareSourceCode';
 }
 
@@ -1673,24 +1697,13 @@ function evidenceForTopic(topicId, posts) {
     ...(repo.interests || []),
     ...(researchConfig.repoAssignments[repo.name] || [])
   ]).has(topicId));
-  const knownRepoNames = new Set(localRepos.map((repo) => repo.name));
-  const configuredOnlyRepos = Object.entries(researchConfig.repoAssignments)
-    .filter(([name, interestIds]) => !knownRepoNames.has(name) && Array.isArray(interestIds) && interestIds.includes(topicId))
-    .map(([name]) => ({
-      name,
-      description: 'Repository mapped to this research area in the site configuration.',
-      descriptionZh: '网站配置中映射到该研究方向的公开仓库。',
-      html_url: `https://github.com/wcx12/${encodeURIComponent(name)}`,
-      language: null,
-      updated_at: null
-    }));
   const publications = staticPublications.filter((publication) => new Set([
     ...(publication.interests || []),
     ...(researchConfig.paperAssignments[publication.title] || [])
   ]).has(topicId));
   const writing = posts.filter((post) => post.research.includes(topicId));
   return [
-    ...[...repos, ...configuredOnlyRepos].map((repo) => ({ type: 'SoftwareSourceCode', key: `repo:${repo.name}`, value: repo })),
+    ...repos.map((repo) => ({ type: 'SoftwareSourceCode', key: `repo:${repo.name}`, value: repo })),
     ...publications.map((publication) => ({ type: 'ScholarlyArticle', key: `paper:${publication.doi}`, value: publication })),
     ...writing.map((post) => ({ type: 'BlogPosting', key: `post:${post.slug}`, value: post }))
   ];
@@ -1700,6 +1713,7 @@ function evidenceSchema(evidence, language = 'en') {
   if (evidence.type === 'SoftwareSourceCode') {
     const repo = evidence.value;
     const schemaType = repositorySchemaType(repo);
+    const stage = repositoryStageLabel(repo, language);
     return {
       '@type': schemaType,
       '@id': `${repo.html_url}#${schemaType === 'SoftwareSourceCode' ? 'software' : 'work'}`,
@@ -1710,11 +1724,11 @@ function evidenceSchema(evidence, language = 'en') {
       ...(repo.demo_url ? { sameAs: repo.demo_url } : {}),
       ...(schemaType === 'SoftwareSourceCode' && repo.language ? { programmingLanguage: repo.language } : {}),
       ...(schemaType === 'LearningResource' ? {
-        learningResourceType: localized(repo.stage, language),
+        learningResourceType: stage,
         educationalUse: 'instruction'
       } : {}),
-      ...(schemaType === 'CreativeWork' ? { genre: localized(repo.stage, language) } : {}),
-      ...(repo.stage ? { creativeWorkStatus: localized(repo.stage, language) } : {}),
+      ...(schemaType === 'CreativeWork' ? { genre: stage } : {}),
+      creativeWorkStatus: stage,
       ...(repo.license_spdx ? { license: `https://spdx.org/licenses/${encodeURIComponent(repo.license_spdx)}.html` } : {}),
       ...(repo.updated_at ? { dateModified: repo.updated_at } : {}),
       ...(!repo.fork ? { author: personReference() } : {}),
@@ -1747,7 +1761,7 @@ function evidenceHtml(ctx, evidence, language) {
   const isZh = language === 'zh';
   if (evidence.type === 'SoftwareSourceCode') {
     const repo = evidence.value;
-    const stage = localized(repo.stage, language);
+    const stage = repositoryStageLabel(repo, language);
     const publicEvidence = localized(repo.evidence, language);
     const license = repo.license_spdx || (isZh ? '未声明仓库许可证' : 'No repository license declared');
     return `<article class="research-evidence" data-evidence-type="SoftwareSourceCode" data-evidence-key="${escapeHtml(evidence.key)}">
@@ -1769,8 +1783,8 @@ ${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href=
     const topic = publicationTopic(publication);
     const codeNote = localized(publication.code_note, language);
     const publishedLabel = localized(publication.publishedLabel, language);
-    const status = isZh ? publication.statusZh : publication.status;
-    const statusLine = publication.status === 'Published' && publishedLabel
+    const status = publicationStatusLabel(publication, language);
+    const statusLine = publicationStatusKey(publication) === 'published' && publishedLabel
       ? publishedLabel
       : [status, publishedLabel].filter(Boolean).join(' · ');
     const bibtexPath = ctx.link(citationFilePath(publication, 'bib'));
@@ -1864,29 +1878,52 @@ function projectsRoute(language) {
   return `${language === 'zh' ? 'zh/' : ''}projects/`;
 }
 
+function repositoryResearchTopics(repo) {
+  const ids = new Set(assignedResearchIds(repo, researchConfig.repoAssignments, researchChildren.map((child) => child.id)));
+  return researchChildren.filter((child) => ids.has(child.id));
+}
+
 async function renderProjects(language) {
   const isZh = language === 'zh';
   const relativeRoute = projectsRoute(language);
   const alternateRoute = projectsRoute(isZh ? 'en' : 'zh');
   const filePath = path.join(rootDir, relativeRoute, 'index.html');
   const ctx = createPageContext(filePath);
-  const repos = [...localRepos].sort((left, right) => String(right.updated_at || '').localeCompare(String(left.updated_at || '')));
+  const repos = [...localRepos].sort((left, right) => compareRepositoriesByRelevance(left, right, {
+    repoAssignments: researchConfig.repoAssignments,
+    validTopicIds: researchChildren.map((child) => child.id)
+  }));
   const evidence = repos.map((repo) => ({
     type: 'SoftwareSourceCode',
     key: `repo:${repo.name}`,
     value: repo
   }));
+  const researchEvidence = evidence.filter((item) => repositoryResearchTopics(item.value).length);
+  const otherEvidence = evidence.filter((item) => !repositoryResearchTopics(item.value).length);
+  const projectGroup = (id, title, note, items) => items.length ? `<section class="research-section project-evidence-group" data-project-tier="${escapeHtml(id)}" aria-labelledby="${escapeHtml(id)}-project-list-title">
+      <div class="research-section-head"><h2 id="${escapeHtml(id)}-project-list-title">${escapeHtml(title)}</h2><span>${items.length}</span></div>
+      <p class="research-group-note">${escapeHtml(note)}</p>
+      <div class="research-evidence-list">${items.map((item) => evidenceHtml(ctx, item, language)).join('')}</div>
+    </section>` : '';
   const body = `
     <header class="research-header">
       <p class="blog-kicker">${isZh ? '公开软件与资料索引' : 'Public software and materials index'}</p>
       <h1>${isZh ? '项目' : 'Projects'}</h1>
-      <p>${isZh ? '浏览全部公开仓库。阶段、公开证据与许可证状态会区分研究仓库、可运行原型、教学资料、课程作业、规划文档与上游分叉。' : 'Browse every public repository. Maturity, evidence, and license status distinguish research repositories, working prototypes, teaching materials, coursework, planning documents, and upstream forks.'}</p>
+      <p>${isZh ? '优先展示与研究方向直接关联的仓库，其它公开工作仍按成熟阶段完整保留。每项均标注阶段、公开证据与许可证状态。' : 'Research-linked repositories appear first; every other public work remains available and is ordered by maturity. Each record states its stage, public evidence, and license status.'}</p>
       <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '浏览研究方向' : 'Browse research topics'}</a>
     </header>
-    <section class="research-section" aria-labelledby="project-list-title">
-      <div class="research-section-head"><h2 id="project-list-title">${isZh ? '仓库记录' : 'Repository records'}</h2><span>${evidence.length}</span></div>
-      <div class="research-evidence-list">${evidence.map((item) => evidenceHtml(ctx, item, language)).join('')}</div>
-    </section>`;
+    ${projectGroup(
+      'research-linked',
+      isZh ? '研究相关仓库' : 'Research-linked repositories',
+      isZh ? '已关联具体研究方向，并按研究相关性与成熟阶段排序。' : 'Mapped to a specific research topic and ordered by research relevance and maturity.',
+      researchEvidence
+    )}
+    ${projectGroup(
+      'other-public-work',
+      isZh ? '其它公开工作' : 'Other public work',
+      isZh ? '包含原型、教学资料、交互演示、个人网站、课程作业、规划项目与上游分叉。' : 'Prototypes, teaching materials, interactive demos, the profile site, coursework, planning work, and upstream forks.',
+      otherEvidence
+    )}`;
   const canonicalUrl = absoluteUrl(relativeRoute);
   const metadata = JSON.stringify({
     '@context': 'https://schema.org',
@@ -1929,23 +1966,41 @@ async function renderResearchIndex(posts, language) {
   const alternateRoute = researchRoute(isZh ? 'en' : 'zh');
   const filePath = path.join(rootDir, relativeRoute, 'index.html');
   const ctx = createPageContext(filePath);
-  const topics = researchChildren.map((child) => ({ child, evidence: evidenceForTopic(child.id, posts) }));
+  const topics = researchChildren.map((child, configIndex) => {
+    const evidence = evidenceForTopic(child.id, posts);
+    const classification = classifyResearchTopic(child, evidence, { profileAuthor: SITE.author });
+    return { child, evidence, classification, tier: classification.tier, configIndex };
+  }).sort(compareResearchTopics);
+  const topicLink = ({ child, evidence, tier }) => `<a class="research-topic-link" data-topic-tier="${escapeHtml(tier)}" href="${ctx.link(`${researchRoute(language, `${child.id}/`)}index.html`)}">
+    <span class="research-topic-copy"><strong>${escapeHtml(localized(child.title, language))}</strong><span>${escapeHtml(localized(child.description, language))}</span></span>
+    <span class="research-topic-count">${escapeHtml(summarizeTopicEvidence(evidence, language))}</span>
+  </a>`;
+  const topicGroup = (tier, title, note) => {
+    const entries = topics.filter((topic) => topic.tier === tier);
+    if (!entries.length) return '';
+    return `<section class="research-section research-topic-group" data-topic-tier="${escapeHtml(tier)}" aria-labelledby="${escapeHtml(tier)}-topics-title">
+      <div class="research-section-head"><h2 id="${escapeHtml(tier)}-topics-title">${escapeHtml(title)}</h2><span>${entries.length}</span></div>
+      <p class="research-group-note">${escapeHtml(note)}</p>
+      <div class="research-topic-list">${entries.map(topicLink).join('')}</div>
+    </section>`;
+  };
   const body = `
     <header class="research-header">
       <p class="blog-kicker">${isZh ? '可核验的研究索引' : 'Verifiable research index'}</p>
       <h1>${isZh ? '研究方向' : 'Research'}</h1>
-      <p>${isZh ? '按主题浏览公开项目、论文与研究写作。每个条目均链接到可访问的来源。' : 'Browse public projects, papers, and research writing by topic. Every item links to an accessible source.'}</p>
+      <p>${isZh ? '按主题浏览公开项目、论文与研究写作。已有证据与探索方向分开展示；存在公开成果时均链接到可访问来源。' : 'Browse public projects, papers, and research writing by topic. Evidence-backed work is separated from exploratory directions, and every public result links to an accessible source.'}</p>
       <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '查看全部论文' : 'View all publications'}</a>
     </header>
-    <section class="research-section" aria-labelledby="research-topics-title">
-      <div class="research-section-head"><h2 id="research-topics-title">${isZh ? '主题' : 'Topics'}</h2><span>${topics.length}</span></div>
-      <div class="research-topic-list">
-        ${topics.map(({ child, evidence }) => `<a class="research-topic-link" href="${ctx.link(`${researchRoute(language, `${child.id}/`)}index.html`)}">
-          <span class="research-topic-copy"><strong>${escapeHtml(localized(child.title, language))}</strong><span>${escapeHtml(localized(child.description, language))}</span></span>
-          <span class="research-topic-count">${evidence.length} ${isZh ? '项成果' : evidence.length === 1 ? 'item' : 'items'}</span>
-        </a>`).join('')}
-      </div>
-    </section>`;
+    ${topicGroup(
+      'evidence',
+      isZh ? '已有公开证据' : 'Evidence-backed research',
+      isZh ? '由同行评议论文或可核验的公开研究产物支持。' : 'Supported by a peer-reviewed paper or an inspectable public research artifact.'
+    )}
+    ${topicGroup(
+      'exploring',
+      isZh ? '探索中' : 'Exploring',
+      isZh ? '目前处于原型或方向探索阶段，不作为成熟研究成果展示。' : 'Prototype or topic-stage work; not presented as a mature research result.'
+    )}`;
   const canonicalUrl = absoluteUrl(relativeRoute);
   const metadata = JSON.stringify({
     '@context': 'https://schema.org',
@@ -2082,7 +2137,7 @@ async function renderPublicationDetail(publication, language) {
   const ctx = createPageContext(filePath);
   const canonicalUrl = absoluteUrl(relativeRoute);
   const topic = publicationTopic(publication);
-  const status = isZh ? publication.statusZh : publication.status;
+  const status = publicationStatusLabel(publication, language);
   const publishedLabel = localized(publication.publishedLabel, language);
   const summary = isZh ? publication.summaryZh : publication.summary;
   const bibtexPath = ctx.link(citationFilePath(publication, 'bib'));
@@ -2220,11 +2275,13 @@ function publicationArea(publication) {
 
 async function renderPublicationsMarkdown() {
   const sections = staticPublications.map((publication) => {
-    const heading = publication.status === 'In press' ? 'In Press' : publication.status;
+    const statusKey = publicationStatusKey(publication);
+    const status = publicationStatusLabel(publication, 'en');
+    const heading = statusKey === 'in_press' ? 'In Press' : status;
     const codeLines = publication.code_url
       ? `\n- Official implementation: ${publication.code_url}\n- Hosting note: ${localized(publication.code_note, 'en')}`
       : '';
-    return `## ${heading}\n\n### ${publication.title}\n\n- Record: ${absoluteUrl(publicationRoute('en', publication))}\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${publication.status}; ${localized(publication.publishedLabel, 'en')}${publication.open_access ? '; open access' : ''}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
+    return `## ${heading}\n\n### ${publication.title}\n\n- Record: ${absoluteUrl(publicationRoute('en', publication))}\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${status}; ${localized(publication.publishedLabel, 'en')}${publication.open_access ? '; open access' : ''}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
   });
   const markdown = `# Publications\n\n${sections.join('\n\n')}\n\nOnly publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.\n`;
   await fs.writeFile(path.join(rootDir, 'publications.md'), markdown);

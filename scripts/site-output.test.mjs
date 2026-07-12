@@ -6,6 +6,18 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { localRepos, staticPublications } from '../site-data.js';
 import { SITE, loadPosts, slugify } from './blog-content.mjs';
+import {
+  PUBLICATION_STATUS_LABELS,
+  REPOSITORY_STAGE_LABELS,
+  assignedResearchIds,
+  classifyResearchTopic,
+  compareRepositoriesByRelevance,
+  compareResearchTopics,
+  publicationStatusKey,
+  publicationStatusLabel,
+  repositoryStageKey,
+  repositoryStageLabel
+} from './portfolio-ranking.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
@@ -86,8 +98,9 @@ function evidenceKeyFromSchema(item) {
 }
 
 function expectedRepositorySchemaType(repo) {
-  if (['Teaching materials', 'Coursework'].includes(repo.stage?.en)) return 'LearningResource';
-  if (repo.stage?.en === 'Planning') return 'CreativeWork';
+  const stageKey = repositoryStageKey(repo);
+  if (stageKey === 'teaching_materials' || stageKey === 'coursework') return 'LearningResource';
+  if (stageKey === 'planning') return 'CreativeWork';
   return 'SoftwareSourceCode';
 }
 
@@ -122,6 +135,7 @@ async function expectedAssetVersion() {
     'resume.md',
     'resume.zh.md',
     'scripts/blog-content.mjs',
+    'scripts/portfolio-ranking.js',
     'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
     ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
@@ -337,8 +351,9 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(clientSource, /hero_kicker:\s*'研究 · 工程 · 思考'/);
   assert.match(
     clientSource,
-    /hero_desc:\s*'记录研究问题如何被拆解、实验如何被验证，以及代码如何成为可复现的答案。当前文章以英文发布。'/,
+    /hero_desc:\s*'记录研究工具、可复现工作流、技术写作与本网站背后的系统。当前文章以英文发布。'/,
   );
+  assert.match(indexSource, /Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site\./);
   assert.match(clientSource, /document\.title\s*=\s*t\('page_title'\)/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
   assert.match(styleSource, /html\[data-ui-lang="zh"\] \.blog-hero h1/);
@@ -457,8 +472,47 @@ test('fixed-language routes have unique metadata and reciprocal language links',
   }
 });
 
+test('machine stage and publication status keys match canonical bilingual labels', () => {
+  for (const repo of localRepos) {
+    const stageKey = repositoryStageKey(repo);
+    assert.notEqual(stageKey, 'unknown', `${repo.name}: unknown stage key`);
+    assert.deepEqual(repo.stage, REPOSITORY_STAGE_LABELS[stageKey], `${repo.name}: stage labels drifted from stage_key`);
+  }
+  for (const publication of staticPublications) {
+    const statusKey = publicationStatusKey(publication);
+    assert.notEqual(statusKey, 'unknown', `${publication.title}: unknown publication status key`);
+    assert.equal(publication.status, publicationStatusLabel(publication, 'en'));
+    assert.equal(publication.statusZh, publicationStatusLabel(publication, 'zh'));
+    assert.equal(publicationStatusLabel(publication, 'en'), PUBLICATION_STATUS_LABELS[statusKey].en);
+  }
+});
+
 test('research JSON-LD follows configured topics and visible evidence exactly', async () => {
   const posts = JSON.parse(await fs.readFile(path.join(rootDir, 'blog', 'posts.json'), 'utf8'));
+  const evidenceFor = (child) => [
+    ...localRepos
+      .filter((repo) => assignedResearchIds(repo, researchConfig.repoAssignments, researchChildren.map((item) => item.id)).includes(child.id))
+      .map((repo) => ({ type: 'SoftwareSourceCode', key: `repo:${repo.name}`, value: repo })),
+    ...staticPublications
+      .filter((publication) => new Set([...(publication.interests || []), ...(researchConfig.paperAssignments[publication.title] || [])]).has(child.id))
+      .map((publication) => ({ type: 'ScholarlyArticle', key: `paper:${publication.doi}`, value: publication })),
+    ...posts
+      .filter((post) => post.research.includes(child.id))
+      .map((post) => ({ type: 'BlogPosting', key: `post:${post.slug}`, value: post }))
+  ];
+  const rankedTopics = researchChildren.map((child, configIndex) => {
+    const evidence = evidenceFor(child);
+    return {
+      child,
+      evidence,
+      configIndex,
+      classification: classifyResearchTopic(child, evidence, { profileAuthor: SITE.author })
+    };
+  }).sort(compareResearchTopics);
+  assert.deepEqual(
+    rankedTopics.map(({ child }) => child.id),
+    ['vpr', 'medical-image-analysis', 'point-cloud-registration', 'agent', 'ai4edu']
+  );
   for (const language of ['en', 'zh']) {
     const indexRoute = researchRoute(language);
     const indexSource = await fs.readFile(path.join(rootDir, indexRoute, 'index.html'), 'utf8');
@@ -468,8 +522,20 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
     assert.ok(collection, `${indexRoute}: missing CollectionPage`);
     assert.ok(topics, `${indexRoute}: missing ItemList`);
     assert.equal(topics.numberOfItems, researchChildren.length);
-    assert.deepEqual(topics.itemListElement.map((entry) => entry.item.termCode), researchChildren.map((child) => child.id));
+    assert.deepEqual(topics.itemListElement.map((entry) => entry.item.termCode), rankedTopics.map(({ child }) => child.id));
     assert.ok(topics.itemListElement.every((entry) => entry.item['@type'] === 'DefinedTerm'));
+    assert.match(indexSource, new RegExp(language === 'zh' ? '已有公开证据' : 'Evidence-backed research'));
+    assert.match(indexSource, new RegExp(language === 'zh' ? '探索中' : '>Exploring<'));
+    for (const { child, classification } of rankedTopics) {
+      const title = (child.title[language] || child.title.en).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      assert.match(
+        indexSource,
+        new RegExp(`<a class="research-topic-link" data-topic-tier="${classification.tier}"[^>]*>(?:(?!<\\/a>)[\\s\\S])*?<strong>${title}<\\/strong>`),
+        `${indexRoute}: ${child.id} is shown in the wrong evidence tier`
+      );
+    }
+    assert.match(indexSource, new RegExp(language === 'zh' ? '1 篇已发表论文' : '1 published paper'));
+    assert.match(indexSource, new RegExp(language === 'zh' ? '暂无公开证据' : 'No public evidence yet'));
 
     for (const child of researchChildren) {
       const route = researchRoute(language, `${child.id}/`);
@@ -477,15 +543,7 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
       const metadata = jsonLdFor(source);
       const page = graphNode(metadata, 'CollectionPage');
       const list = graphNode(metadata, 'ItemList');
-      const knownRepoNames = new Set(localRepos.map((repo) => repo.name));
-      const expectedKeys = [
-        ...localRepos.filter((repo) => new Set([...(repo.interests || []), ...(researchConfig.repoAssignments[repo.name] || [])]).has(child.id)).map((repo) => `repo:${repo.name}`),
-        ...Object.entries(researchConfig.repoAssignments)
-          .filter(([name, interestIds]) => !knownRepoNames.has(name) && Array.isArray(interestIds) && interestIds.includes(child.id))
-          .map(([name]) => `repo:${name}`),
-        ...staticPublications.filter((publication) => new Set([...(publication.interests || []), ...(researchConfig.paperAssignments[publication.title] || [])]).has(child.id)).map((publication) => `paper:${publication.doi}`),
-        ...posts.filter((post) => post.research.includes(child.id)).map((post) => `post:${post.slug}`)
-      ].sort();
+      const expectedKeys = evidenceFor(child).map((item) => item.key).sort();
       const visibleEvidence = matches(source, /data-evidence-type="([^"]+)" data-evidence-key="([^"]+)"/g);
       const visibleKeys = visibleEvidence.map(([, , key]) => key).sort();
       const schemaKeys = list.itemListElement.map(evidenceKeyFromSchema).sort();
@@ -509,7 +567,7 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
         const repo = localRepos.find((entry) => entry.name === item.name);
         if (!repo) continue;
         assert.equal(item['@type'], expectedRepositorySchemaType(repo), `${route}: repository schema type is inaccurate`);
-        assert.equal(item.creativeWorkStatus, repo.stage[language], `${route}: repository stage is missing from JSON-LD`);
+        assert.equal(item.creativeWorkStatus, repositoryStageLabel(repo, language), `${route}: repository stage is missing from JSON-LD`);
       }
       for (const [, type] of visibleEvidence) assert.ok(['SoftwareSourceCode', 'ScholarlyArticle', 'BlogPosting'].includes(type));
       for (const [, article] of matches(source, /(<article class="research-evidence"[\s\S]*?<\/article>)/g)) {
@@ -537,6 +595,8 @@ test('research profile has complete English and Chinese fixed-language records',
   assert.match(chinese, /<h2 id="profile-研究兴趣-title">研究兴趣<\/h2>/);
   assert.match(chinese, /预计毕业时间：2026 年/);
   assert.match(chinese, /正在申请硕士与博士项目/);
+  assert.match(english, /1 published · 1 in press/);
+  assert.match(chinese, /1 篇已发表 · 1 篇待刊/);
   assert.doesNotMatch(chinese, />Research Interests</);
   assert.doesNotMatch(chinese, />Current Goal</);
   assert.doesNotMatch(english, /class="blog-post-card research-profile"/);
@@ -561,10 +621,11 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.match(english, new RegExp(`href="\\.\\.\\/publications\\/${publication.slug}\\/"`));
     assert.match(chinese, new RegExp(`href="\\.\\.\\/publications\\/${publication.slug}\\/"`));
   }
-  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*grid-template-columns:\s*minmax\(150px, 180px\) minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*display:\s*block/s);
   assert.match(profileStyles, /\.profile-directory\s*\{[^}]*position:\s*sticky/s);
-  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section-nav\s*\{[^}]*grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)/s);
-  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-layout\s*\{[^}]*display:\s*block/s);
+  assert.match(profileStyles, /\.profile-section\s*\{[^}]*grid-template-columns:\s*minmax\(150px, 190px\) minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section-nav\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto/s);
+  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section\s*\{[^}]*display:\s*block/s);
   assert.match(profileStyles, /@page\s*\{[^}]*size:\s*A4/s);
   assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*0/s);
   assert.match(profileStyles, /@media print[\s\S]*?:root\[data-theme="warm"\],[\s\S]*?:root\[data-theme="mono"\]\s*\{/s);
@@ -599,6 +660,19 @@ test('homepage language mirrors are self-canonical and mutually discoverable', a
 
 test('project indexes expose every repository with maturity and public evidence', async () => {
   const expectedNames = localRepos.map((repo) => repo.name).sort();
+  const rankingOptions = {
+    repoAssignments: researchConfig.repoAssignments,
+    validTopicIds: researchChildren.map((child) => child.id)
+  };
+  const expectedOrder = [...localRepos]
+    .sort((left, right) => compareRepositoriesByRelevance(left, right, rankingOptions))
+    .map((repo) => repo.name);
+  const expectedResearch = expectedOrder.filter((name) => assignedResearchIds(
+    localRepos.find((repo) => repo.name === name),
+    rankingOptions.repoAssignments,
+    rankingOptions.validTopicIds
+  ).length);
+  const expectedOther = expectedOrder.filter((name) => !expectedResearch.includes(name));
   for (const language of ['en', 'zh']) {
     const route = projectsRoute(language);
     const source = await fs.readFile(path.join(rootDir, route, 'index.html'), 'utf8');
@@ -608,17 +682,22 @@ test('project indexes expose every repository with maturity and public evidence'
     assert.ok(page, `${route}: missing CollectionPage`);
     assert.equal(page.mainEntity['@id'], `${SITE.url}/${route}#projects`);
     assert.equal(list.numberOfItems, localRepos.length);
+    assert.deepEqual(list.itemListElement.map((item) => item.name), expectedOrder, `${route}: JSON-LD must lead with research-relevant work`);
     assert.deepEqual(list.itemListElement.map((item) => item.name).sort(), expectedNames);
-    assert.deepEqual(
-      matches(source, /data-evidence-key="repo:([^"]+)"/g).map(([, name]) => name).sort(),
-      expectedNames
-    );
+    const visibleOrder = matches(source, /data-evidence-key="repo:([^"]+)"/g).map(([, name]) => name);
+    assert.deepEqual(visibleOrder, expectedOrder, `${route}: visible order must follow research relevance`);
+    const researchGroup = source.match(/<section class="research-section project-evidence-group" data-project-tier="research-linked"[\s\S]*?<\/section>/)?.[0] || '';
+    const otherGroup = source.match(/<section class="research-section project-evidence-group" data-project-tier="other-public-work"[\s\S]*?<\/section>/)?.[0] || '';
+    assert.deepEqual(matches(researchGroup, /data-evidence-key="repo:([^"]+)"/g).map(([, name]) => name), expectedResearch);
+    assert.deepEqual(matches(otherGroup, /data-evidence-key="repo:([^"]+)"/g).map(([, name]) => name), expectedOther);
+    assert.match(researchGroup, new RegExp(language === 'zh' ? '研究相关仓库' : 'Research-linked repositories'));
+    assert.match(otherGroup, new RegExp(language === 'zh' ? '其它公开工作' : 'Other public work'));
     for (const item of list.itemListElement) {
       const repo = localRepos.find((entry) => entry.name === item.name);
       const expectedDescription = language === 'zh' ? repo.descriptionZh : repo.description;
       assert.equal(item['@type'], expectedRepositorySchemaType(repo), `${route}: wrong schema type for ${repo.name}`);
       assert.equal(item.description, expectedDescription, `${route}: localized description drifted for ${repo.name}`);
-      assert.equal(item.creativeWorkStatus, repo.stage[language]);
+      assert.equal(item.creativeWorkStatus, repositoryStageLabel(repo, language));
       if (repo.fork) {
         assert.equal(item.author, undefined, `${route}: fork must not claim the profile owner as author`);
         assert.equal(item.isBasedOn?.url, repo.source.html_url, `${route}: fork is missing upstream attribution`);

@@ -12,6 +12,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/wcx12",
     "readme_url": "https://raw.githubusercontent.com/wcx12/wcx12/main/README.md",
     "license_spdx": null,
+    "stage_key": "deployed_website",
     "stage": {
       "en": "Deployed website",
       "zh": "已部署网站"
@@ -34,6 +35,7 @@ export const localRepos = [
     "demo_url": "https://wcx12.github.io/shuxuepeiyou/",
     "readme_url": "https://raw.githubusercontent.com/wcx12/shuxuepeiyou/main/README.md",
     "license_spdx": null,
+    "stage_key": "teaching_materials",
     "stage": {
       "en": "Teaching materials",
       "zh": "教学资料"
@@ -55,6 +57,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/major-intel",
     "readme_url": "https://raw.githubusercontent.com/wcx12/major-intel/main/README.md",
     "license_spdx": null,
+    "stage_key": "working_prototype",
     "stage": {
       "en": "Working prototype",
       "zh": "可运行原型"
@@ -79,6 +82,7 @@ export const localRepos = [
     "demo_url": "https://wcx12.github.io/FusionTrack/",
     "readme_url": "https://raw.githubusercontent.com/wcx12/FusionTrack/main/README.md",
     "license_spdx": null,
+    "stage_key": "research_repository",
     "stage": {
       "en": "Research repository",
       "zh": "研究仓库"
@@ -87,6 +91,16 @@ export const localRepos = [
       "en": "Mapped through code/registration; the repository also contains thesis code, tests, paper source, and experiment records.",
       "zh": "此处依据 code/registration 模块映射；仓库还包含毕业论文代码、测试、论文源码与实验记录。"
     },
+    "evidence_refs": [
+      {
+        "kind": "research_artifact",
+        "url": "https://github.com/wcx12/FusionTrack/tree/main/code/registration"
+      },
+      {
+        "kind": "experiment_record",
+        "url": "https://github.com/wcx12/FusionTrack/blob/main/code/registration/EXPERIMENT_RECORD.md"
+      }
+    ],
     "interests": [
       "point-cloud-registration"
     ]
@@ -102,6 +116,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/hlpp-crossword",
     "readme_url": "https://raw.githubusercontent.com/wcx12/hlpp-crossword/master/README.md",
     "license_spdx": null,
+    "stage_key": "working_prototype",
     "stage": {
       "en": "Working prototype",
       "zh": "可运行原型"
@@ -123,6 +138,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/codex-pet-battle",
     "readme_url": "https://raw.githubusercontent.com/wcx12/codex-pet-battle/main/README.md",
     "license_spdx": null,
+    "stage_key": "planning",
     "stage": {
       "en": "Planning",
       "zh": "规划阶段"
@@ -149,6 +165,7 @@ export const localRepos = [
       "full_name": "sansan0/TrendRadar",
       "html_url": "https://github.com/sansan0/TrendRadar"
     },
+    "stage_key": "upstream_fork",
     "stage": {
       "en": "Upstream fork",
       "zh": "上游分叉"
@@ -171,6 +188,7 @@ export const localRepos = [
     "demo_url": "https://wcx12.github.io/tetrahedron-visualizer/",
     "readme_url": "https://raw.githubusercontent.com/wcx12/tetrahedron-visualizer/master/README.md",
     "license_spdx": null,
+    "stage_key": "interactive_demo",
     "stage": {
       "en": "Interactive demo",
       "zh": "交互演示"
@@ -192,6 +210,7 @@ export const localRepos = [
     "html_url": "https://github.com/wcx12/BIT-The-mathematical-foundation-of-big-Data",
     "readme_url": "https://raw.githubusercontent.com/wcx12/BIT-The-mathematical-foundation-of-big-Data/main/README.md",
     "license_spdx": null,
+    "stage_key": "coursework",
     "stage": {
       "en": "Coursework",
       "zh": "课程作业"
@@ -217,6 +236,7 @@ export const staticPublications = [
       "zh": "2026 年 6 月 7 日出版"
     },
     "status": "Published",
+    "status_key": "published",
     "statusZh": "已发表",
     "volume": "681",
     "article_number": "133399",
@@ -253,6 +273,7 @@ export const staticPublications = [
       "zh": "2026 年 6 月 22 日在线发表"
     },
     "status": "In press",
+    "status_key": "in_press",
     "statusZh": "录用待刊",
     "volume": "699",
     "article_number": "134314",

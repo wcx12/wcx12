@@ -2,6 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ORCID_ID, localRepos, staticPublications } from '../site-data.js';
+import {
+  REPOSITORY_STAGE_LABELS,
+  RESEARCH_EVIDENCE_KINDS,
+  repositoryStageKey
+} from './portfolio-ranking.js';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const rootDir = path.resolve(path.dirname(scriptPath), '..');
@@ -24,9 +29,13 @@ function readmeUrl(owner, repo) {
 }
 
 function defaultStage(repo) {
-  if (repo.archived) return { en: 'Archived repository', zh: '已归档仓库' };
-  if (repo.fork) return { en: 'Upstream fork', zh: '上游分叉' };
-  return { en: 'Public repository', zh: '公开仓库' };
+  return REPOSITORY_STAGE_LABELS[defaultStageKey(repo)];
+}
+
+function defaultStageKey(repo) {
+  if (repo.archived) return 'archived_repository';
+  if (repo.fork) return 'upstream_fork';
+  return 'public_repository';
 }
 
 function defaultDescriptionZh(repo) {
@@ -61,6 +70,20 @@ function normalizedSource(value) {
   return fullName && htmlUrl ? { full_name: fullName, html_url: htmlUrl } : null;
 }
 
+function normalizedEvidenceRefs(value) {
+  if (value == null) return [];
+  if (!Array.isArray(value)) throw new TypeError('evidence_refs must be an array');
+  return value.map((reference, index) => {
+    const kind = String(reference?.kind || '').trim();
+    const url = validHttpUrl(reference?.url);
+    if (!RESEARCH_EVIDENCE_KINDS.includes(kind)) {
+      throw new TypeError(`evidence_refs[${index}].kind is unsupported: ${kind || '(empty)'}`);
+    }
+    if (!url) throw new TypeError(`evidence_refs[${index}].url must be an absolute HTTP(S) URL`);
+    return { kind, url };
+  });
+}
+
 export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
   const owner = options.owner || DEFAULT_OWNER;
   const forkSources = options.forkSources || {};
@@ -84,8 +107,20 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
       const pageDemo = !isCurated && remote.has_pages
         ? validHttpUrl(remote.homepage) || `https://${owner}.github.io/${encodeURIComponent(remote.name)}/`
         : '';
-      const stage = existing.stage || defaultStage(remote);
+      const explicitStageKey = String(existing.stage_key || '').trim();
+      const labelStageKey = repositoryStageKey({ stage: existing.stage });
+      if (!remote.archived && !remote.fork && explicitStageKey && !REPOSITORY_STAGE_LABELS[explicitStageKey]) {
+        throw new TypeError(`Unsupported stage_key for ${remote.name}: ${explicitStageKey}`);
+      }
+      if (!remote.archived && !remote.fork && explicitStageKey && labelStageKey !== 'unknown' && explicitStageKey !== labelStageKey) {
+        throw new TypeError(`Conflicting stage_key and stage label for ${remote.name}`);
+      }
+      const stageKey = remote.archived || remote.fork
+        ? defaultStageKey(remote)
+        : explicitStageKey || (labelStageKey !== 'unknown' ? labelStageKey : defaultStageKey(remote));
+      const stage = REPOSITORY_STAGE_LABELS[stageKey] || defaultStage(remote);
       const evidence = existing.evidence || defaultEvidence(remote, source);
+      const evidenceRefs = normalizedEvidenceRefs(existing.evidence_refs);
       const licenseSpdx = String(remote.license?.spdx_id || '').trim();
 
       return {
@@ -103,8 +138,10 @@ export function mergeGitHubRepos(remoteRepos, curatedRepos, options = {}) {
         ...(remote.fork ? { fork: true } : {}),
         ...(source ? { source } : {}),
         ...(remote.archived ? { archived: true } : {}),
+        stage_key: stageKey,
         stage,
         evidence,
+        ...(evidenceRefs.length ? { evidence_refs: evidenceRefs } : {}),
         interests: Array.isArray(existing.interests) ? existing.interests : []
       };
     })

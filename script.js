@@ -19,11 +19,18 @@ const [
     normalizeResearchConfigUpdateInput,
     normalizeResearchConfigValue: normalizeSharedResearchConfig,
     normalizeResearchConfigUpdatePayload
+  },
+  {
+    assignedResearchIds,
+    compareRepositoriesByRelevance,
+    publicationStatusLabel,
+    repositoryStageLabel
   }
 ] = await Promise.all([
   import(versionedModuleUrl('./site-data.js')),
   import(versionedModuleUrl('./homepage-i18n.js')),
-  import(versionedModuleUrl('./scripts/research-config-schema.js'))
+  import(versionedModuleUrl('./scripts/research-config-schema.js')),
+  import(versionedModuleUrl('./scripts/portfolio-ranking.js'))
 ]);
 
 const views = document.querySelectorAll('.view');
@@ -1454,10 +1461,16 @@ function itemKey(item) {
 
 function assignedInterestIds(item, kind) {
   if (kind === 'post') return Array.isArray(item.research) ? item.research : inferInterestIds(item);
+  if (kind === 'repo') {
+    return assignedResearchIds(
+      item,
+      researchConfig.repoAssignments,
+      allInterestChildren().map(({ child }) => child.id)
+    );
+  }
   const map = kind === 'repo' ? researchConfig.repoAssignments : researchConfig.paperAssignments;
   const key = itemKey(item);
   if (Array.isArray(map[key])) return map[key];
-  if (kind === 'repo') return [];
   if (Array.isArray(item.interests)) return item.interests;
   return inferInterestIds(item);
 }
@@ -2513,7 +2526,11 @@ function sortedRepos(repos) {
   const items = [...repos];
   if (key === 'stars') items.sort((a, b) => b.stargazers_count - a.stargazers_count || a.name.localeCompare(b.name));
   else if (key === 'name') items.sort((a, b) => a.name.localeCompare(b.name));
-  else items.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  else if (key === 'updated') items.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  else items.sort((left, right) => compareRepositoriesByRelevance(left, right, {
+    repoAssignments: researchConfig.repoAssignments,
+    validTopicIds: allInterestChildren().map(({ child }) => child.id)
+  }));
   return items;
 }
 
@@ -3010,7 +3027,7 @@ function openPaperDetail(title) {
   const citationLine = paper.venue
     ? `${paper.venue}${paper.volume ? ` ${paper.volume}` : ''} (${paper.year || ''})${paper.article_number ? `, ${paper.article_number}` : ''}`
     : '';
-  const status = currentLang === 'zh' ? (paper.statusZh || paper.status) : paper.status;
+  const status = publicationStatusLabel(paper, currentLang);
   const statusParts = [status, textFor(paper.publishedLabel), paper.open_access ? publicationLabels.openAccess : '']
     .filter(Boolean)
     .map((value) => escapeHtml(value));
@@ -3058,7 +3075,7 @@ function renderRepoPreviewCard(repo) {
   const accent = repoColor(repo.language);
   const safeName = escapeHtml(repo.name);
   const desc = languageAwareHtml(repoDescription(repo));
-  const stage = textFor(repo.stage);
+  const stage = repositoryStageLabel(repo, currentLang);
   const repoHref = safeExternalHref(repo.html_url);
   const demoHref = validatedExternalHttpUrl(repo.demo_url);
   return `

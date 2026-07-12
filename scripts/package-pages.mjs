@@ -58,10 +58,12 @@ await fs.mkdir(resolvedArtifact, { recursive: true });
 for (const relativePath of [...publicFiles, ...publicDirectories]) await copyPublicEntry(relativePath);
 
 await fs.mkdir(path.join(artifactDir, 'scripts'), { recursive: true });
-await fs.copyFile(
-    path.join(rootDir, 'scripts', 'research-config-schema.js'),
-    path.join(artifactDir, 'scripts', 'research-config-schema.js')
-);
+for (const scriptName of ['portfolio-ranking.js', 'research-config-schema.js']) {
+  await fs.copyFile(
+    path.join(rootDir, 'scripts', scriptName),
+    path.join(artifactDir, 'scripts', scriptName)
+  );
+}
 
 await fs.rm(path.join(artifactDir, 'assets', 'fonts', 'README.md'), { force: true });
 await fs.writeFile(path.join(artifactDir, '.nojekyll'), '');

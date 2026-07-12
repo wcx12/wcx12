@@ -82,9 +82,15 @@ test('research and repository visualizations are real lazy modules', async () =>
   assert.match(scriptSource, /function drawRoundedRect\(/, 'eager hero preview lost its rounded-rectangle helper');
   assert.match(scriptSource, /function fillTruncatedText\(/, 'eager hero preview lost its text helper');
 
-  const eagerBytes = (await fs.stat(path.join(rootDir, 'script.js'))).size;
-  const translationBytes = (await fs.stat(path.join(rootDir, 'homepage-i18n.js'))).size;
-  const schemaBytes = (await fs.stat(path.join(rootDir, 'scripts', 'research-config-schema.js'))).size;
+  const normalizedBytes = async (relativePath) => Buffer.byteLength(
+    (await fs.readFile(path.join(rootDir, relativePath), 'utf8')).replaceAll('\r\n', '\n'),
+    'utf8'
+  );
+  const [eagerBytes, translationBytes, schemaBytes] = await Promise.all([
+    normalizedBytes('script.js'),
+    normalizedBytes('homepage-i18n.js'),
+    normalizedBytes('scripts/research-config-schema.js')
+  ]);
   assert.ok(eagerBytes < 150 * 1024, `eager homepage script grew to ${eagerBytes} bytes`);
   assert.ok(translationBytes < 27 * 1024, `homepage translations grew to ${translationBytes} bytes`);
   assert.ok(eagerBytes + translationBytes + schemaBytes < 190 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
@@ -137,6 +143,18 @@ test('project cards reserve pointer feedback for controls that actually perform 
   assert.doesNotMatch(scriptSource, /class="repo-card[^\"]*interactive-card/);
   assert.doesNotMatch(scriptSource, /const hoverSelector = [^\n]*\.repo-card/);
   assert.match(scriptSource, /class="repo-card repo-preview-card motion-card/);
+});
+
+test('project browsing defaults to research relevance without hiding alternative sorts', () => {
+  const sortControl = indexSource.match(/<select id="repoSort"[\s\S]*?<\/select>/)?.[0] || '';
+  assert.match(sortControl, /<option value="relevance"[^>]*>Sort: Research relevance<\/option>/);
+  assert.ok(sortControl.indexOf('value="relevance"') < sortControl.indexOf('value="updated"'));
+  for (const value of ['updated', 'stars', 'name']) assert.match(sortControl, new RegExp(`value="${value}"`));
+  assert.equal(homepageI18n.en.sort_relevance, 'Sort: Research relevance');
+  assert.equal(homepageI18n.zh.sort_relevance, '排序：研究相关性');
+  assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/scripts\/portfolio-ranking\.js'\)\)/);
+  assert.match(scriptSource, /else items\.sort\(\(left, right\) => compareRepositoriesByRelevance/);
+  assert.match(scriptSource, /validTopicIds:\s*allInterestChildren\(\)\.map\(\(\{ child \}\) => child\.id\)/);
 });
 
 test('homepage navigation uses the same content order and Writing label as fixed pages', () => {

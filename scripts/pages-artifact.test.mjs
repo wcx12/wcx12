@@ -41,6 +41,7 @@ test('Pages artifact contains only the explicit public surface', async () => {
     'publications/citations/10-1016-j-neucom-2026-133399.ris',
     'publications/citations/10-1016-j-neucom-2026-134314.bib',
     'publications/citations/10-1016-j-neucom-2026-134314.ris',
+    'scripts/portfolio-ranking.js',
     'scripts/research-config-schema.js'
   ]) assert.ok(paths.includes(required), `artifact is missing ${required}`);
 
@@ -84,11 +85,12 @@ test('homepage runtime dependencies are packaged without exposing the source tre
     './site-data.js',
     './homepage-i18n.js',
     './scripts/research-config-schema.js',
+    './scripts/portfolio-ranking.js',
     './research-canvas.js',
     './repo-map.js'
   ]) {
     assert.match(source, new RegExp(dependency.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   const scripts = await fs.readdir(path.join(artifactDir, 'scripts'));
-  assert.deepEqual(scripts, ['research-config-schema.js']);
+  assert.deepEqual(scripts, ['portfolio-ranking.js', 'research-config-schema.js']);
 });
