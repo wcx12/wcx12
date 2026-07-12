@@ -1,24 +1,16 @@
-# Research Profile Snapshot
-
-## Identity
-
-- Name: Chenxu Wang (wcx12)
-- Email: c2675668@gmail.com
-- Location: Beijing, China
-- ORCID: https://orcid.org/0009-0005-6139-4327
+# Academic Profile
 
 ## Education
 
-- Beijing Institute of Technology
-- Expected graduation: 2026
+- **Beijing Institute of Technology** - expected graduation: 2026
 
 ## Research Interests
 
-- Point-set registration and robust 3D geometry
-- Visual place recognition
-- Medical image analysis and active learning
-- LLM agent systems
-- AI for Education
+- **3D Geometry** - point-set registration under noisy, partial, and imperfect observations
+- **Visual Localization** - visual place recognition, retrieval, and localization benchmarks
+- **Medical Imaging** - active learning and sample-efficient image classification
+- **Agent Systems** - retrieval, tool use, planning, and evaluation workflows
+- **AI for Education** - learning tools and interactive mathematics resources
 
 ## Publications
 
@@ -26,21 +18,11 @@
 
 ## Selected Projects
 
-- FusionTrack: graduation thesis and point-set registration research artifacts.
-- major-intel: a SQL-first retrieval and agent prototype for college-major information with evidence-gap tracking.
-- shuxuepeiyou: mathematics enrichment notes and education resources.
+- **FusionTrack** - graduation thesis and point-set registration research artifacts
+- **major-intel** - a SQL-first retrieval and agent prototype for college-major information with evidence-gap tracking
+- **shuxuepeiyou** - mathematics enrichment notes and education resources
 
 ## Technical Skills
 
-- Python, PyTorch, TensorFlow, OpenCV, and Scikit-learn
-- Linux, Git, reproducible experimentation, and open-source workflows
-
-## Current Goal
-
-- Applying for Master's and PhD opportunities.
-
-## Links
-
-- GitHub: https://github.com/wcx12
-- Interactive portfolio: https://wcx12.github.io/wcx12/
-- Research writing: https://wcx12.github.io/wcx12/blog/
+- **Research stack** - Python, PyTorch, TensorFlow, OpenCV, and Scikit-learn
+- **Engineering workflow** - Linux, Git, reproducible experimentation, and open-source collaboration

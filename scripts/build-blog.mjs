@@ -606,6 +606,43 @@ function createMarkdownRenderer() {
       const env = { toc: [], headingCounts: new Map(), post };
       const html = md.render(markdown, env);
       return { html, toc: env.toc };
+    },
+    renderSections(markdown, post = null) {
+      const env = { toc: [], headingCounts: new Map(), post };
+      const tokens = md.parse(markdown, env);
+      const sections = [];
+      let current = null;
+
+      for (let index = 0; index < tokens.length;) {
+        const token = tokens[index];
+        if (token.type === 'heading_open' && token.tag === 'h2') {
+          if (current) sections.push(current);
+          const title = tokens[index + 1]?.content?.trim();
+          if (!title || tokens[index + 2]?.type !== 'heading_close') {
+            throw new Error('Resume level-two headings must contain plain text titles.');
+          }
+          current = { title, tokens: [] };
+          index += 3;
+          continue;
+        }
+        if (!current) throw new Error('Resume content must begin with a level-two heading.');
+        current.tokens.push(token);
+        index += 1;
+      }
+      if (current) sections.push(current);
+      if (!sections.length) throw new Error('Resume must contain at least one level-two section.');
+
+      const idCounts = new Map();
+      return sections.map((section) => {
+        const baseId = `profile-${slugify(section.title)}`;
+        const count = idCounts.get(baseId) || 0;
+        idCounts.set(baseId, count + 1);
+        return {
+          id: count ? `${baseId}-${count + 1}` : baseId,
+          title: section.title,
+          html: md.renderer.render(section.tokens, md.options, env)
+        };
+      });
     }
   };
 }
@@ -1259,39 +1296,135 @@ async function renderResume(renderer, language) {
   const alternateRoute = resumeRoute(isZh ? 'en' : 'zh');
   const sourceFile = isZh ? 'resume.zh.md' : 'resume.md';
   const source = await fs.readFile(path.join(rootDir, sourceFile), 'utf8');
+  const text = isZh ? {
+    kicker: '学术履历',
+    role: '机器学习研究者',
+    location: '中国北京',
+    summary: '研究不完整观测与有限标注条件下的可靠视觉智能，并将方法落实为可复现的研究工程。',
+    statusLabel: '当前状态',
+    status: '正在申请硕士与博士项目',
+    print: '打印 / 保存 PDF',
+    contact: '邮件联系',
+    sections: '履历目录',
+    direction: '研究主线',
+    directionText: '三维几何、视觉定位、医学影像与证据驱动的智能体系统。',
+    affiliation: '学校',
+    graduation: '预计毕业',
+    publications: '论文',
+    researchAreas: '研究方向',
+    emailLabel: '发送邮件给 Chenxu Wang',
+    githubLabel: '在新标签页打开 GitHub 主页',
+    orcidLabel: `在新标签页打开 ORCID 记录 ${ORCID_ID}`,
+    doiLabel: (title) => `在新标签页打开论文 ${title} 的 DOI`
+  } : {
+    kicker: 'Academic profile',
+    role: 'Machine Learning Researcher',
+    location: 'Beijing, China',
+    summary: 'I study reliable visual intelligence under incomplete observations and limited labels, then turn the methods into reproducible research software.',
+    statusLabel: 'Current status',
+    status: "Applying for Master's and PhD opportunities",
+    print: 'Print / Save PDF',
+    contact: 'Email me',
+    sections: 'Profile sections',
+    direction: 'Research direction',
+    directionText: '3D geometry, visual localization, medical imaging, and evidence-grounded agent systems.',
+    affiliation: 'Affiliation',
+    graduation: 'Expected graduation',
+    publications: 'Publications',
+    researchAreas: 'Research areas',
+    emailLabel: 'Email Chenxu Wang',
+    githubLabel: 'Open the GitHub profile in a new tab',
+    orcidLabel: `Open ORCID record ${ORCID_ID} in a new tab`,
+    doiLabel: (title) => `Open the DOI for ${title} in a new tab`
+  };
   const publicationMarker = 'RESUME_PUBLICATIONS_PLACEHOLDER';
   const publicationList = `<ol class="resume-publications">${staticPublications.map((publication) => {
     const status = isZh ? publication.statusZh : publication.status;
-    return `<li><span lang="en">${escapeHtml(readableAuthors(publication))}. &ldquo;${escapeHtml(publication.title)}.&rdquo; <cite>${escapeHtml(publication.venue)}</cite>.</span> ${escapeHtml(status)}, ${escapeHtml(publication.year)}. <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer">DOI</a></li>`;
+    const topic = publicationTopic(publication);
+    return `<li>
+      <article class="resume-publication-entry">
+        <h3 lang="en">${escapeHtml(publication.title)}</h3>
+        <p class="resume-publication-authors" lang="en">${escapeHtml(readableAuthors(publication))}</p>
+        <p class="resume-publication-meta">
+          <cite>${escapeHtml(publication.venue)}</cite>
+          <span>${escapeHtml(status)}</span>
+          <time datetime="${escapeHtml(String(publication.year))}">${escapeHtml(String(publication.year))}</time>
+          ${topic ? `<span class="resume-publication-topic">${escapeHtml(localized(topic.title, language))}</span>` : ''}
+          <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(text.doiLabel(publication.title))}">DOI</a>
+        </p>
+      </article>
+    </li>`;
   }).join('')}</ol>`;
   if (!source.includes('{{PUBLICATIONS}}')) throw new Error(`${sourceFile} must contain {{PUBLICATIONS}}`);
   const hydratedSource = source.replace('{{PUBLICATIONS}}', publicationMarker);
   const withoutDocumentTitle = hydratedSource.replace(/^#\s+[^\r\n]+\r?\n+/, '');
-  const rendered = renderer.render(withoutDocumentTitle).html;
   const markerMarkup = `<p>${publicationMarker}</p>`;
-  if (!rendered.includes(markerMarkup)) throw new Error(`${sourceFile} publication placeholder did not render predictably`);
-  const html = rendered.replace(markerMarkup, publicationList);
+  let publicationMarkers = 0;
+  const sections = renderer.renderSections(withoutDocumentTitle);
+  const sectionHtml = sections.map((section, index) => {
+    const content = section.html.replace(markerMarkup, () => {
+      publicationMarkers += 1;
+      return publicationList;
+    });
+    const sectionNumber = String(index + 1).padStart(2, '0');
+    return `<section id="${escapeHtml(section.id)}" class="profile-section" data-profile-section="${escapeHtml(section.id)}" aria-labelledby="${escapeHtml(section.id)}-title">
+      <header class="profile-section-head">
+        <span aria-hidden="true">${sectionNumber}</span>
+        <h2 id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
+      </header>
+      <div class="profile-section-body">${content}</div>
+    </section>`;
+  }).join('');
+  if (publicationMarkers !== 1) throw new Error(`${sourceFile} publication placeholder did not render predictably`);
+  const sectionNavigation = sections.map((section, index) => `<a href="#${escapeHtml(section.id)}"><span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>${escapeHtml(section.title)}</a>`).join('');
   const filePath = path.join(rootDir, relativeRoute, 'index.html');
   const body = `
-    <article class="blog-post-card research-profile" lang="${isZh ? 'zh-CN' : 'en'}">
-      <header class="blog-post-header">
-        <p class="blog-kicker">${isZh ? '研究履历' : 'Research Profile'}</p>
-        <h1 class="blog-post-title">Chenxu Wang <span class="profile-handle">(wcx12)</span></h1>
-        <p class="blog-post-subtitle">${isZh ? '集中展示教育背景、研究方向、论文、项目与技术能力的可核验摘要。' : 'A concise, verifiable snapshot of education, research, publications, projects, and technical skills.'}</p>
-        <div class="blog-hero-actions profile-actions">
-          <button id="printProfile" class="btn btn-primary" type="button">${isZh ? '打印 / 保存为 PDF' : 'Print / Save as PDF'}</button>
-          <a class="btn btn-outline" href="mailto:c2675668@gmail.com">${isZh ? '联系我' : 'Contact'}</a>
+    <article class="research-profile" lang="${isZh ? 'zh-CN' : 'en'}">
+      <header class="profile-masthead">
+        <div class="profile-heading">
+          <p class="blog-kicker">${text.kicker}</p>
+          <h1>Chenxu Wang <span class="profile-handle">wcx12</span></h1>
+          <p class="profile-role">${text.role}<span aria-hidden="true">/</span>${text.location}</p>
+          <p class="profile-summary">${text.summary}</p>
         </div>
+        <div class="profile-command">
+          <p class="profile-status"><span>${text.statusLabel}</span><strong>${text.status}</strong></p>
+          <div class="profile-actions">
+            <button id="printProfile" class="btn btn-primary" type="button">${text.print}</button>
+            <a class="btn btn-outline" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">${text.contact}</a>
+          </div>
+          <nav class="profile-contact-links" aria-label="${isZh ? '联系方式' : 'Contact links'}">
+            <a href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">Email</a>
+            <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer" aria-label="${text.githubLabel}">GitHub</a>
+            <a href="https://orcid.org/${ORCID_ID}" target="_blank" rel="me noreferrer" aria-label="${text.orcidLabel}">ORCID</a>
+          </nav>
+        </div>
+        <dl class="profile-facts">
+          <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
+          <div><dt>${text.graduation}</dt><dd>2026</dd></div>
+          <div><dt>${text.publications}</dt><dd>${staticPublications.length}</dd></div>
+          <div><dt>${text.researchAreas}</dt><dd>${researchChildren.length}</dd></div>
+        </dl>
       </header>
-      <div class="blog-content">
-${html}
+      <div class="profile-layout">
+        <aside class="profile-rail">
+          <p class="profile-rail-label">${text.sections}</p>
+          <nav class="profile-section-nav" aria-label="${text.sections}">${sectionNavigation}</nav>
+          <div class="profile-rail-note">
+            <span>${text.direction}</span>
+            <p>${text.directionText}</p>
+          </div>
+        </aside>
+        <div class="profile-sections">
+${sectionHtml}
+        </div>
       </div>
     </article>
   `;
   const metadata = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
-    name: isZh ? 'Chenxu Wang（wcx12）研究履历' : 'Chenxu Wang (wcx12) Research Profile',
+    name: isZh ? 'Chenxu Wang（wcx12）学术履历' : 'Chenxu Wang (wcx12) Academic Profile',
     description: isZh ? 'Chenxu Wang（wcx12）的研究履历，涵盖教育背景、研究方向、论文、项目与技术能力。' : 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
     url: absoluteUrl(relativeRoute),
     inLanguage: isZh ? 'zh-CN' : 'en',
@@ -1300,7 +1433,7 @@ ${html}
 
   await writePage(`${relativeRoute}index.html`, renderShell({
     filePath,
-    title: isZh ? '研究履历' : 'Research Profile',
+    title: isZh ? '学术履历' : 'Academic Profile',
     description: isZh ? 'Chenxu Wang（wcx12）的研究履历，涵盖教育背景、研究方向、论文、项目与技术能力。' : 'Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.',
     body,
     jsonLd: metadata,

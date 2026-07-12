@@ -466,22 +466,41 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
 });
 
 test('research profile has complete English and Chinese fixed-language records', async () => {
-  const [english, chinese, chineseHome] = await Promise.all([
+  const [english, chinese, chineseHome, profileStyles] = await Promise.all([
     fs.readFile(path.join(rootDir, 'resume', 'index.html'), 'utf8'),
     fs.readFile(path.join(rootDir, 'zh', 'resume', 'index.html'), 'utf8'),
-    fs.readFile(path.join(rootDir, 'zh', 'index.html'), 'utf8')
+    fs.readFile(path.join(rootDir, 'zh', 'index.html'), 'utf8'),
+    fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8')
   ]);
-  assert.match(english, /<h2 id="research-interests">Research Interests<\/h2>/);
-  assert.match(chinese, /<h2 id="研究兴趣">研究兴趣<\/h2>/);
+  assert.match(english, /<title>Academic Profile \| Chenxu Wang \(wcx12\)<\/title>/);
+  assert.match(chinese, /<title>学术履历 \| Chenxu Wang \(wcx12\)<\/title>/);
+  assert.match(english, /<h2 id="profile-research-interests-title">Research Interests<\/h2>/);
+  assert.match(chinese, /<h2 id="profile-研究兴趣-title">研究兴趣<\/h2>/);
   assert.match(chinese, /预计毕业时间：2026 年/);
-  assert.match(chinese, /申请硕士与博士项目机会/);
+  assert.match(chinese, /正在申请硕士与博士项目/);
   assert.doesNotMatch(chinese, />Research Interests</);
   assert.doesNotMatch(chinese, />Current Goal</);
-  assert.match(chinese, /<span lang="en">[^<]+TF-VPR/);
+  assert.doesNotMatch(english, /class="blog-post-card research-profile"/);
+  for (const source of [english, chinese]) {
+    assert.match(source, /<header class="profile-masthead">/);
+    assert.match(source, /<dl class="profile-facts">/);
+    assert.match(source, /<aside class="profile-rail">/);
+    assert.equal(matches(source, /data-profile-section="[^"]+"/g).length, 5);
+    assert.equal(matches(source, /class="resume-publication-entry"/g).length, staticPublications.length);
+    assert.equal(matches(source, /class="profile-section-nav"[\s\S]*?<\/nav>/g)[0][0].match(/<a href=/g)?.length, 5);
+  }
+  assert.match(chinese, /<h3 lang="en">TF-VPR/);
   for (const publication of staticPublications) {
     assert.match(english, new RegExp(publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(chinese, new RegExp(publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*grid-template-columns:\s*210px minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /@page\s*\{[^}]*size:\s*A4/s);
+  assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*0/s);
+  assert.match(profileStyles, /@media print[\s\S]*?html,[\s\S]*?\.blog-body\s*\{[^}]*background:\s*#ffffff !important/s);
+  assert.match(profileStyles, /@media print[\s\S]*?\.blog-shell\s*\{[^}]*padding:\s*14mm 15mm/s);
+  assert.match(profileStyles, /@media print[\s\S]*?\.profile-rail\s*\{[^}]*display:\s*none/s);
   assert.equal(jsonLdFor(english).inLanguage, 'en');
   assert.equal(jsonLdFor(chinese).inLanguage, 'zh-CN');
   assert.match(chineseHome, /href="\.\/resume\/"/);
