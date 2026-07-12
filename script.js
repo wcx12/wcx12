@@ -2968,15 +2968,31 @@ function openPaperDetail(title) {
     : '';
   const codeUrl = validatedExternalHttpUrl(paper.code_url);
   const codeNote = textFor(paper.code_note);
-  const codeEvidence = codeUrl ? `
-    <dl class="project-evidence">
-      <div><dt>${escapeHtml(i18n[currentLang].pub_code)}</dt><dd><a href="${escapeHtml(codeUrl)}" target="_blank" rel="noreferrer">${escapeHtml(i18n[currentLang].pub_open_code)}</a></dd></div>
-      ${codeNote ? `<div><dt>${escapeHtml(i18n[currentLang].pub_code_note)}</dt><dd>${escapeHtml(codeNote)}</dd></div>` : ''}
-    </dl>
-  ` : '';
+  const publicationLabels = currentLang === 'zh'
+    ? { citation: '书目信息', status: '状态', export: '引用导出', openAccess: '开放获取' }
+    : { citation: 'Citation', status: 'Status', export: 'Export citation', openAccess: 'Open access' };
+  const citationLine = paper.venue
+    ? `${paper.venue}${paper.volume ? ` ${paper.volume}` : ''} (${paper.year || ''})${paper.article_number ? `, ${paper.article_number}` : ''}`
+    : '';
+  const status = currentLang === 'zh' ? (paper.statusZh || paper.status) : paper.status;
+  const statusParts = [status, textFor(paper.publishedLabel), paper.open_access ? publicationLabels.openAccess : '']
+    .filter(Boolean)
+    .map((value) => escapeHtml(value));
+  const citationStem = paper.doi ? slugify(paper.doi) : '';
+  const citationRoot = document.documentElement.dataset.fixedLanguage === 'zh'
+    ? '../publications/citations'
+    : './publications/citations';
+  const detailRows = [
+    citationLine ? `<div><dt>${escapeHtml(publicationLabels.citation)}</dt><dd>${escapeHtml(citationLine)}</dd></div>` : '',
+    statusParts.length ? `<div><dt>${escapeHtml(publicationLabels.status)}</dt><dd>${statusParts.join(' &middot; ')}</dd></div>` : '',
+    citationStem ? `<div><dt>${escapeHtml(publicationLabels.export)}</dt><dd><a href="${citationRoot}/${citationStem}.bib" download>BibTeX</a> <span aria-hidden="true">&middot;</span> <a href="${citationRoot}/${citationStem}.ris" download>RIS</a></dd></div>` : '',
+    codeUrl ? `<div><dt>${escapeHtml(i18n[currentLang].pub_code)}</dt><dd><a href="${escapeHtml(codeUrl)}" target="_blank" rel="noreferrer">${escapeHtml(i18n[currentLang].pub_open_code)}</a></dd></div>` : '',
+    codeNote ? `<div><dt>${escapeHtml(i18n[currentLang].pub_code_note)}</dt><dd>${escapeHtml(codeNote)}</dd></div>` : ''
+  ].filter(Boolean).join('');
+  const paperDetails = detailRows ? `<dl class="project-evidence">${detailRows}</dl>` : '';
   openModal({
     title: paper.title,
-    html: `<div class="readme-box"><p class="muted">${escapeHtml(paper.venue || '')} · ${escapeHtml(paper.year || '')}</p>${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${languageAwareHtml(paperSummary(paper))}</p>${codeEvidence}</div>`,
+    html: `<div class="readme-box">${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${languageAwareHtml(paperSummary(paper))}</p>${paperDetails}</div>`,
     linkText: i18n[currentLang].pub_open_article,
     link: paper.link
   });
@@ -3213,15 +3229,8 @@ function currentPublications() {
     byTitle.set(item.title, override
       ? {
         ...item,
-        authors: override.authors,
-        doi: override.doi,
-        link: override.link,
-        summary: override.summary,
-        summaryZh: override.summaryZh,
-        code_url: override.code_url,
-        code_note: override.code_note,
-        status: currentLang === 'zh' ? override.statusZh : override.status,
-        interests: override.interests
+        ...override,
+        status: currentLang === 'zh' ? override.statusZh : override.status
       }
       : item);
   });

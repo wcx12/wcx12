@@ -10,7 +10,7 @@
 </p>
 
 <h1 align="center">Chenxu Wang (wcx12)</h1>
-<p align="center"><b>BIT Student · ML Researcher · Open Source Builder</b></p>
+<p align="center"><b>BIT Student · ML Researcher · Public Research Software Builder</b></p>
 
 <p align="center">
   <a href="https://wcx12.github.io/wcx12/"><b>Open My Interactive Website</b></a>
@@ -26,8 +26,8 @@
 - I am currently applying for **Master's / PhD** opportunities.
 
 ## Selected Publications
-- **TF-VPR: A novel benchmark for training-free visual place recognition.** Neurocomputing, 2026. [DOI](https://doi.org/10.1016/j.neucom.2026.133399)
-- **Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification.** Neurocomputing, in press, 2026. [DOI](https://doi.org/10.1016/j.neucom.2026.134314)
+- **TF-VPR: A novel benchmark for training-free visual place recognition.** Neurocomputing 681 (2026), 133399. [DOI](https://doi.org/10.1016/j.neucom.2026.133399)
+- **Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification.** Neurocomputing 699 (2026), 134314; in press. [DOI](https://doi.org/10.1016/j.neucom.2026.134314)
 
 Full author lists and research mappings are available in the [publication index](https://wcx12.github.io/wcx12/publications/).
 

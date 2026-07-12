@@ -310,7 +310,7 @@ test('canonical repository and publication data stays unique and classifiable', 
   assert.match(scriptSource, /description: local\?\.description \|\| externalText\(repo\.description/);
   assert.match(scriptSource, /descriptionZh: local\?\.descriptionZh \|\| ''/);
   assert.match(scriptSource, /function repoDescription\(repo\)/);
-  assert.match(scriptSource, /summaryZh: override\.summaryZh/);
+  assert.match(scriptSource, /\.\.\.override,[\s\S]*?status: currentLang === 'zh' \? override\.statusZh : override\.status/);
 
   assert.ok(staticPublications.length >= 2, 'canonical publication data unexpectedly lost verified papers');
   assert.equal(new Set(staticPublications.map((publication) => publication.doi)).size, staticPublications.length, 'publication DOIs must be unique');
@@ -319,9 +319,14 @@ test('canonical repository and publication data stays unique and classifiable', 
   }
   for (const publication of staticPublications) {
     assert.ok(publication.summaryZh, `${publication.doi} is missing a Chinese summary`);
+    assert.ok(publication.published_date && publication.volume && publication.article_number, `${publication.doi} is missing canonical bibliographic data`);
+    assert.ok(publication.citation_key && publication.citation_month && publication.citation_date, `${publication.doi} is missing citation export data`);
+    assert.equal(publication.open_access, true, `${publication.doi} open-access status drifted`);
+    assert.match(publication.license || '', /^https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/$/);
     assert.match(publication.code_url || '', /^https:\/\/github\.com\/ddfs430\//);
     assert.ok(publication.code_note?.en && publication.code_note?.zh, `${publication.doi} is missing a bilingual code-hosting note`);
   }
+  assert.match(scriptSource, /publications\/citations/);
 
   const assignmentGroups = [
     ...Object.entries(researchConfig.repoAssignments),

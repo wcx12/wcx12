@@ -1340,7 +1340,8 @@ async function renderResume(renderer, language) {
         <p class="resume-publication-summary">${escapeHtml(isZh ? publication.summaryZh : publication.summary)}</p>
         <p class="resume-publication-meta">
           <time datetime="${escapeHtml(String(publication.year))}">${escapeHtml(String(publication.year))}</time>
-          <cite>${escapeHtml(publication.venue)}</cite>
+          <cite>${escapeHtml(publication.venue)}${publication.volume ? ` ${escapeHtml(publication.volume)}` : ''}</cite>
+          ${publication.article_number ? `<span>${escapeHtml(publication.article_number)}</span>` : ''}
           <span>${escapeHtml(status)}</span>
           <a href="${escapeHtml(publication.link)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(text.doiLabel(publication.title))}">DOI</a>
           ${topic ? `<span class="resume-publication-topic">${escapeHtml(localized(topic.title, language))}</span>` : ''}
@@ -1463,19 +1464,96 @@ function publicationTopic(publication) {
   return researchChildren.find((child) => topicIds.includes(child.id));
 }
 
+function publicationCitationLine(publication) {
+  const volume = publication.volume ? ` ${publication.volume}` : '';
+  const article = publication.article_number ? `, ${publication.article_number}` : '';
+  return `${publication.venue}${volume} (${publication.year})${article}`;
+}
+
+function citationFilePath(publication, extension) {
+  return `publications/citations/${slugify(publication.doi)}.${extension}`;
+}
+
+function bibtexAuthorName(author) {
+  const parts = String(author).trim().split(/\s+/);
+  if (parts.length < 2) return parts[0] || '';
+  return `${parts.at(-1)}, ${parts.slice(0, -1).join(' ')}`;
+}
+
+function bibtexFor(publication) {
+  const fields = [
+    ['title', `{${publication.title}}`],
+    ['author', authorsFor(publication).map(bibtexAuthorName).join(' and ')],
+    ['journal', publication.venue],
+    ['volume', publication.volume],
+    ['pages', publication.article_number],
+    ['year', publication.year],
+    ['month', publication.citation_month, true],
+    ['publisher', publication.publisher],
+    ['issn', publication.issn],
+    ['doi', publication.doi],
+    ['url', publication.link]
+  ].filter(([, value]) => value);
+  const body = fields.map(([name, value, bare]) => `  ${name} = ${bare ? value : `{${value}}`}`).join(',\n');
+  return `@article{${publication.citation_key},\n${body}\n}\n`;
+}
+
+function risFor(publication) {
+  const lines = [
+    'TY  - JOUR',
+    `DO  - ${publication.doi}`,
+    `UR  - ${publication.link}`,
+    `TI  - ${publication.title}`,
+    `T2  - ${publication.venue}`,
+    ...authorsFor(publication).map((author) => `AU  - ${bibtexAuthorName(author)}`),
+    `PY  - ${publication.year}`,
+    publication.citation_date ? `DA  - ${publication.citation_date}` : '',
+    publication.publisher ? `PB  - ${publication.publisher}` : '',
+    publication.article_number ? `SP  - ${publication.article_number}` : '',
+    publication.volume ? `VL  - ${publication.volume}` : '',
+    publication.issn ? `SN  - ${publication.issn}` : '',
+    'ER  - '
+  ].filter(Boolean);
+  return `${lines.join('\n')}\n`;
+}
+
+async function renderCitationFiles() {
+  for (const publication of staticPublications) {
+    await writePage(citationFilePath(publication, 'bib'), bibtexFor(publication));
+    await writePage(citationFilePath(publication, 'ris'), risFor(publication));
+  }
+}
+
 function publicationSchema(publication, language = 'en') {
   const topic = publicationTopic(publication);
+  const publisher = publication.publisher
+    ? { '@type': 'Organization', name: publication.publisher }
+    : undefined;
+  const periodical = {
+    '@type': 'Periodical',
+    name: publication.venue,
+    ...(publication.issn ? { issn: publication.issn } : {}),
+    ...(publisher ? { publisher } : {})
+  };
   return {
     '@type': 'ScholarlyArticle',
     '@id': `${publication.link}#article`,
     headline: publication.title,
     name: publication.title,
     url: publication.link,
-    datePublished: publication.year,
+    datePublished: publication.published_date || publication.year,
     author: authorsFor(publication).map((name) => name.toLowerCase() === SITE.author.toLowerCase()
       ? { ...personEntity(), name }
       : { '@type': 'Person', name }),
-    isPartOf: { '@type': 'Periodical', name: publication.venue },
+    isPartOf: publication.volume ? {
+      '@type': 'PublicationVolume',
+      volumeNumber: publication.volume,
+      isPartOf: periodical
+    } : periodical,
+    ...(publisher ? { publisher } : {}),
+    ...(publication.article_number ? { pagination: publication.article_number } : {}),
+    ...(publication.license ? { license: publication.license } : {}),
+    ...(typeof publication.open_access === 'boolean' ? { isAccessibleForFree: publication.open_access } : {}),
     identifier: {
       '@type': 'PropertyValue',
       propertyID: 'DOI',
@@ -1499,6 +1577,13 @@ function publicationSchema(publication, language = 'en') {
       }
     } : {})
   };
+}
+
+function repositorySchemaType(repo) {
+  const stage = repo.stage?.en;
+  if (stage === 'Teaching materials' || stage === 'Coursework') return 'LearningResource';
+  if (stage === 'Planning') return 'CreativeWork';
+  return 'SoftwareSourceCode';
 }
 
 function evidenceForTopic(topicId, posts) {
@@ -1532,18 +1617,32 @@ function evidenceForTopic(topicId, posts) {
 function evidenceSchema(evidence, language = 'en') {
   if (evidence.type === 'SoftwareSourceCode') {
     const repo = evidence.value;
+    const schemaType = repositorySchemaType(repo);
     return {
-      '@type': 'SoftwareSourceCode',
-      '@id': `${repo.html_url}#software`,
+      '@type': schemaType,
+      '@id': `${repo.html_url}#${schemaType === 'SoftwareSourceCode' ? 'software' : 'work'}`,
       name: repo.name,
       description: language === 'zh' ? (repo.descriptionZh || repo.description) : repo.description,
       url: repo.html_url,
-      codeRepository: repo.html_url,
+      ...(schemaType === 'SoftwareSourceCode' ? { codeRepository: repo.html_url } : {}),
       ...(repo.demo_url ? { sameAs: repo.demo_url } : {}),
-      ...(repo.language ? { programmingLanguage: repo.language } : {}),
+      ...(schemaType === 'SoftwareSourceCode' && repo.language ? { programmingLanguage: repo.language } : {}),
+      ...(schemaType === 'LearningResource' ? {
+        learningResourceType: localized(repo.stage, language),
+        educationalUse: 'instruction'
+      } : {}),
+      ...(schemaType === 'CreativeWork' ? { genre: localized(repo.stage, language) } : {}),
       ...(repo.stage ? { creativeWorkStatus: localized(repo.stage, language) } : {}),
       ...(repo.updated_at ? { dateModified: repo.updated_at } : {}),
-      author: personReference()
+      ...(!repo.fork ? { author: personReference() } : {}),
+      ...(repo.fork && repo.source?.html_url ? {
+        isBasedOn: {
+          '@type': 'SoftwareSourceCode',
+          name: repo.source.full_name,
+          url: repo.source.html_url,
+          codeRepository: repo.source.html_url
+        }
+      } : {})
     };
   }
   if (evidence.type === 'ScholarlyArticle') return publicationSchema(evidence.value, language);
@@ -1583,13 +1682,17 @@ ${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href=
     const publication = evidence.value;
     const topic = publicationTopic(publication);
     const codeNote = localized(publication.code_note, language);
+    const publishedLabel = localized(publication.publishedLabel, language);
+    const bibtexPath = ctx.link(citationFilePath(publication, 'bib'));
+    const risPath = ctx.link(citationFilePath(publication, 'ris'));
     return `<article class="research-evidence" data-evidence-type="ScholarlyArticle" data-evidence-key="${escapeHtml(evidence.key)}">
       <h3 class="research-evidence-title" lang="en"><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.title)}</a></h3>
       <p class="research-authors">${escapeHtml(authorsFor(publication).join(', '))}</p>
       <dl class="research-meta">
-        <div><dt>${isZh ? '期刊' : 'Journal'}</dt><dd>${escapeHtml(publication.venue)}</dd></div>
-        <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(isZh ? publication.statusZh : publication.status)}, ${escapeHtml(publication.year)}</dd></div>
+        <div><dt>${isZh ? '书目信息' : 'Citation'}</dt><dd>${escapeHtml(publicationCitationLine(publication))}</dd></div>
+        <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(isZh ? publication.statusZh : publication.status)}${publishedLabel ? ` &middot; ${escapeHtml(publishedLabel)}` : ''}${publication.open_access ? ` &middot; ${isZh ? '开放获取' : 'Open access'}` : ''}</dd></div>
         <div><dt>DOI</dt><dd><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.doi)}</a></dd></div>
+        <div><dt>${isZh ? '引用导出' : 'Export citation'}</dt><dd><a href="${escapeHtml(bibtexPath)}" download>BibTeX</a> <span aria-hidden="true">&middot;</span> <a href="${escapeHtml(risPath)}" download>RIS</a></dd></div>
         ${publication.code_url ? `<div><dt>${isZh ? '官方实现' : 'Official implementation'}</dt><dd><a href="${escapeHtml(publication.code_url)}" rel="noreferrer">GitHub</a></dd></div>` : ''}
         ${codeNote ? `<div><dt>${isZh ? '托管说明' : 'Hosting note'}</dt><dd>${escapeHtml(codeNote)}</dd></div>` : ''}
         ${topic ? `<div><dt>${isZh ? '研究方向' : 'Research topic'}</dt><dd><a class="publication-topic-link" href="${ctx.link(`${researchRoute(language, `${topic.id}/`)}index.html`)}">${escapeHtml(localized(topic.title, language))}</a></dd></div>` : ''}
@@ -1628,10 +1731,19 @@ function researchRoute(language, suffix = '') {
   return `${language === 'zh' ? 'zh/' : ''}research/${suffix}`;
 }
 
-const MIN_INDEXABLE_TOPIC_EVIDENCE = 2;
+const MIN_INDEXABLE_TOPIC_SCORE = 2;
+const TOPIC_EVIDENCE_WEIGHTS = Object.freeze({
+  ScholarlyArticle: 2,
+  SoftwareSourceCode: 1,
+  BlogPosting: 1
+});
+
+function researchTopicEvidenceScore(evidence) {
+  return evidence.reduce((score, item) => score + (TOPIC_EVIDENCE_WEIGHTS[item.type] || 0), 0);
+}
 
 function shouldIndexResearchTopic(evidence) {
-  return evidence.length >= MIN_INDEXABLE_TOPIC_EVIDENCE;
+  return researchTopicEvidenceScore(evidence) >= MIN_INDEXABLE_TOPIC_SCORE;
 }
 
 function emptyEvidenceSection(language) {
@@ -1916,20 +2028,18 @@ function publicationArea(publication) {
 
 async function renderPublicationsMarkdown() {
   const sections = staticPublications.map((publication) => {
-    const statusLine = publication.status === 'In press'
-      ? '- Status: Journal pre-proof; issue publication scheduled for 2026'
-      : `- Year: ${publication.year}`;
     const heading = publication.status === 'In press' ? 'In Press' : publication.status;
     const codeLines = publication.code_url
       ? `\n- Official implementation: ${publication.code_url}\n- Hosting note: ${localized(publication.code_note, 'en')}`
       : '';
-    return `## ${heading}\n\n### ${publication.title}\n\n- Authors: ${readableAuthors(publication)}\n- Journal: ${publication.venue}\n${statusLine}\n- DOI: ${publication.link}${codeLines}\n- Research area: ${publicationArea(publication)}`;
+    return `## ${heading}\n\n### ${publication.title}\n\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${publication.status}; ${localized(publication.publishedLabel, 'en')}${publication.open_access ? '; open access' : ''}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
   });
   const markdown = `# Publications\n\n${sections.join('\n\n')}\n\nOnly publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.\n`;
   await fs.writeFile(path.join(rootDir, 'publications.md'), markdown);
 }
 
 async function renderResearchPages(posts) {
+  await renderCitationFiles();
   for (const language of ['en', 'zh']) {
     await renderResearchIndex(posts, language);
     await renderProjects(language);
@@ -1996,6 +2106,7 @@ async function renderRss(posts) {
       <link>${escapeXml(itemUrl)}</link>
       <guid>${escapeXml(itemUrl)}</guid>
       <pubDate>${new Date(`${post.date}T00:00:00Z`).toUTCString()}</pubDate>
+      <dc:creator>${escapeXml(SITE.author)}</dc:creator>
       <description>${escapeXml(post.description)}</description>
 ${categories}
       <content:encoded><![CDATA[${content}]]></content:encoded>
@@ -2004,7 +2115,7 @@ ${categories}
   }).join('');
 
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>${escapeXml(SITE.title)}</title>
     <link>${escapeXml(absoluteUrl('blog/'))}</link>

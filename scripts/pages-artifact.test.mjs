@@ -37,6 +37,10 @@ test('Pages artifact contains only the explicit public surface', async () => {
     'research/index.html',
     'projects/index.html',
     'publications/index.html',
+    'publications/citations/10-1016-j-neucom-2026-133399.bib',
+    'publications/citations/10-1016-j-neucom-2026-133399.ris',
+    'publications/citations/10-1016-j-neucom-2026-134314.bib',
+    'publications/citations/10-1016-j-neucom-2026-134314.ris',
     'scripts/research-config-schema.js'
   ]) assert.ok(paths.includes(required), `artifact is missing ${required}`);
 

@@ -200,9 +200,23 @@ export const staticPublications = [
     "title": "TF-VPR: A novel benchmark for training-free visual place recognition",
     "venue": "Neurocomputing",
     "year": "2026",
-    "updated_at": "2026-07-11",
+    "updated_at": "2026-07-12",
+    "published_date": "2026-06-07",
+    "publishedLabel": {
+      "en": "Published 7 June 2026",
+      "zh": "2026 年 6 月 7 日出版"
+    },
     "status": "Published",
     "statusZh": "已发表",
+    "volume": "681",
+    "article_number": "133399",
+    "issn": "0925-2312",
+    "publisher": "Elsevier BV",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "open_access": true,
+    "citation_key": "Wang2026TFVPR",
+    "citation_month": "jun",
+    "citation_date": "2026/06",
     "summary": "Benchmark work connected to visual place recognition and visual localization.",
     "summaryZh": "面向视觉地点识别与视觉定位的免训练基准研究。",
     "authors": "Chenxu Wang; Qingtong Meng; Bonan Zhang; Fusen Guo",
@@ -210,8 +224,8 @@ export const staticPublications = [
     "link": "https://doi.org/10.1016/j.neucom.2026.133399",
     "code_url": "https://github.com/ddfs430/TF-VPR",
     "code_note": {
-      "en": "Official implementation hosted under a coauthor's account; linked as paper evidence, not claimed as this profile's repository.",
-      "zh": "官方实现由合作者账号托管；此处作为论文证据链接，不作为本主页账号的仓库认领。"
+      "en": "Official implementation hosted outside this profile's GitHub account; linked as paper evidence, not claimed as this profile's repository.",
+      "zh": "官方实现托管在本主页 GitHub 账号之外；此处作为论文证据链接，不作为本账号的仓库认领。"
     },
     "interests": [
       "vpr"
@@ -221,9 +235,23 @@ export const staticPublications = [
     "title": "Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification",
     "venue": "Neurocomputing",
     "year": "2026",
-    "updated_at": "2026-07-11",
+    "updated_at": "2026-07-12",
+    "published_date": "2026-06-22",
+    "publishedLabel": {
+      "en": "Available online 22 June 2026",
+      "zh": "2026 年 6 月 22 日在线发表"
+    },
     "status": "In press",
     "statusZh": "录用待刊",
+    "volume": "699",
+    "article_number": "134314",
+    "issn": "0925-2312",
+    "publisher": "Elsevier BV",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "open_access": true,
+    "citation_key": "Wang2026SynergisticLearning",
+    "citation_month": "oct",
+    "citation_date": "2026/10",
     "summary": "A unified training objective for sample-efficient active learning in medical image classification.",
     "summaryZh": "面向医学影像分类的样本高效主动学习统一训练目标。",
     "authors": "Chenxu Wang; QingTong Meng; Qianxun Lin; Bonan Zhang; Fusen Guo",
@@ -231,8 +259,8 @@ export const staticPublications = [
     "link": "https://doi.org/10.1016/j.neucom.2026.134314",
     "code_url": "https://github.com/ddfs430/Synergistic-Learning",
     "code_note": {
-      "en": "Official implementation hosted under a coauthor's account; linked as paper evidence, not claimed as this profile's repository.",
-      "zh": "官方实现由合作者账号托管；此处作为论文证据链接，不作为本主页账号的仓库认领。"
+      "en": "Official implementation hosted outside this profile's GitHub account; linked as paper evidence, not claimed as this profile's repository.",
+      "zh": "官方实现托管在本主页 GitHub 账号之外；此处作为论文证据链接，不作为本账号的仓库认领。"
     },
     "interests": [
       "medical-image-analysis"

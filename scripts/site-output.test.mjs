@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { localRepos, staticPublications } from '../site-data.js';
-import { SITE, loadPosts } from './blog-content.mjs';
+import { SITE, loadPosts, slugify } from './blog-content.mjs';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
@@ -71,13 +71,19 @@ function linkHref(source, relation, hreflang = '') {
 }
 
 function evidenceKeyFromSchema(item) {
-  if (item['@type'] === 'SoftwareSourceCode') return `repo:${item.name}`;
+  if (['SoftwareSourceCode', 'LearningResource', 'CreativeWork'].includes(item['@type'])) return `repo:${item.name}`;
   if (item['@type'] === 'ScholarlyArticle') return `paper:${item.identifier?.value}`;
   if (item['@type'] === 'BlogPosting') {
     const slug = new URL(item.url).pathname.split('/').filter(Boolean).at(-1);
     return `post:${slug}`;
   }
   return '';
+}
+
+function expectedRepositorySchemaType(repo) {
+  if (['Teaching materials', 'Coursework'].includes(repo.stage?.en)) return 'LearningResource';
+  if (repo.stage?.en === 'Planning') return 'CreativeWork';
+  return 'SoftwareSourceCode';
 }
 
 function metaContent(source, property) {
@@ -477,11 +483,12 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
       );
       assert.deepEqual(visibleKeys, expectedKeys, `${route}: visible evidence differs from configured sources`);
       assert.deepEqual(schemaKeys, visibleKeys, `${route}: JSON-LD evidence differs from visible evidence`);
-      assert.deepEqual([...evidenceTypes].filter((type) => !['SoftwareSourceCode', 'ScholarlyArticle', 'BlogPosting'].includes(type)), [], `${route}: unsupported evidence type`);
+      assert.deepEqual([...evidenceTypes].filter((type) => !['SoftwareSourceCode', 'LearningResource', 'CreativeWork', 'ScholarlyArticle', 'BlogPosting'].includes(type)), [], `${route}: unsupported evidence type`);
       assert.equal(list.numberOfItems, visibleEvidence.length, `${route}: evidence count mismatch`);
-      for (const item of list.itemListElement.filter((entry) => entry['@type'] === 'SoftwareSourceCode')) {
+      for (const item of list.itemListElement.filter((entry) => ['SoftwareSourceCode', 'LearningResource', 'CreativeWork'].includes(entry['@type']))) {
         const repo = localRepos.find((entry) => entry.name === item.name);
         if (!repo) continue;
+        assert.equal(item['@type'], expectedRepositorySchemaType(repo), `${route}: repository schema type is inaccurate`);
         assert.equal(item.creativeWorkStatus, repo.stage[language], `${route}: repository stage is missing from JSON-LD`);
       }
       for (const [, type] of visibleEvidence) assert.ok(['SoftwareSourceCode', 'ScholarlyArticle', 'BlogPosting'].includes(type));
@@ -583,8 +590,17 @@ test('project indexes expose every repository with maturity and public evidence'
     for (const item of list.itemListElement) {
       const repo = localRepos.find((entry) => entry.name === item.name);
       const expectedDescription = language === 'zh' ? repo.descriptionZh : repo.description;
+      assert.equal(item['@type'], expectedRepositorySchemaType(repo), `${route}: wrong schema type for ${repo.name}`);
       assert.equal(item.description, expectedDescription, `${route}: localized description drifted for ${repo.name}`);
       assert.equal(item.creativeWorkStatus, repo.stage[language]);
+      if (repo.fork) {
+        assert.equal(item.author, undefined, `${route}: fork must not claim the profile owner as author`);
+        assert.equal(item.isBasedOn?.url, repo.source.html_url, `${route}: fork is missing upstream attribution`);
+        assert.equal(item.isBasedOn?.codeRepository, repo.source.html_url, `${route}: fork upstream repository is incomplete`);
+      } else {
+        assert.equal(item.author?.name, SITE.author, `${route}: original work is missing its author`);
+      }
+      if (item['@type'] === 'LearningResource') assert.equal(item.educationalUse, 'instruction');
       assert.match(source, new RegExp(repo.html_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(source, new RegExp(expectedDescription.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     }
@@ -604,7 +620,7 @@ test('publication pages expose every canonical DOI record with ordered authors',
     assert.equal(list.itemListElement.length, staticPublications.length, `${route}: publication ItemList must follow canonical data`);
     assert.ok(list.itemListElement.every((item) => item['@type'] === 'ScholarlyArticle'));
     assert.deepEqual(list.itemListElement.map((item) => item.identifier.value), expectedDois);
-    staticPublications.forEach((publication, index) => {
+    for (const [index, publication] of staticPublications.entries()) {
       const topicIds = researchConfig.paperAssignments[publication.title] || publication.interests || [];
       const topic = researchChildren.find((child) => topicIds.includes(child.id));
       const expectedTopicUrl = `${SITE.url}/${researchRoute(language, `${topic.id}/`)}`;
@@ -617,14 +633,31 @@ test('publication pages expose every canonical DOI record with ordered authors',
       assert.equal(list.itemListElement[index].about.termCode, topic.id, `${route}: publication topic mapping changed`);
       assert.equal(list.itemListElement[index].about.url, expectedTopicUrl, `${route}: JSON-LD topic URL is incorrect`);
       assert.equal(list.itemListElement[index].subjectOf?.codeRepository, publication.code_url, `${route}: official implementation is missing from JSON-LD`);
+      assert.equal(list.itemListElement[index].datePublished, publication.published_date, `${route}: publication date is incomplete`);
+      assert.equal(list.itemListElement[index].isPartOf?.volumeNumber, publication.volume, `${route}: volume is missing`);
+      assert.equal(list.itemListElement[index].pagination, publication.article_number, `${route}: article number is missing`);
+      assert.equal(list.itemListElement[index].isAccessibleForFree, publication.open_access, `${route}: open-access status is missing`);
+      assert.equal(list.itemListElement[index].license, publication.license, `${route}: publication license is missing`);
 
       const record = matches(source, /(<article class="research-evidence"[\s\S]*?<\/article>)/g)[index]?.[1] || '';
       const topicHref = record.match(/<a class="publication-topic-link" href="([^"]+)"/i)?.[1];
       assert.ok(topicHref, `${route}: publication ${publication.doi} is missing its visible topic link`);
       assert.equal(new URL(topicHref, `${SITE.url}/${route}`).href, expectedTopicUrl, `${route}: visible and JSON-LD topic URLs differ`);
       assert.match(record, new RegExp(publication.code_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-      assert.match(record, new RegExp(language === 'zh' ? '合作者账号托管' : 'coauthor[^<]+account', 'i'));
-    });
+      assert.match(record, new RegExp(language === 'zh' ? '本主页 GitHub 账号之外' : 'outside this profile[^<]+GitHub account', 'i'));
+      assert.match(record, new RegExp(`${publication.venue} ${publication.volume} \\(${publication.year}\\), ${publication.article_number}`));
+
+      const citationStem = slugify(publication.doi);
+      const bibPath = path.join(rootDir, 'publications', 'citations', `${citationStem}.bib`);
+      const risPath = path.join(rootDir, 'publications', 'citations', `${citationStem}.ris`);
+      const [bibtex, ris] = await Promise.all([fs.readFile(bibPath, 'utf8'), fs.readFile(risPath, 'utf8')]);
+      assert.match(record, new RegExp(`href="[^"]*citations/${citationStem}\\.bib" download`));
+      assert.match(record, new RegExp(`href="[^"]*citations/${citationStem}\\.ris" download`));
+      assert.match(bibtex, new RegExp(`@article\\{${publication.citation_key},`));
+      assert.match(bibtex, new RegExp(`doi = \\{${publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}`));
+      assert.match(ris, new RegExp(`DO  - ${publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+      assert.match(ris, new RegExp(`VL  - ${publication.volume}`));
+    }
     const visibleDois = matches(source, /data-evidence-key="paper:([^"]+)"/g).map(([, doi]) => doi);
     assert.deepEqual(visibleDois, expectedDois, `${route}: visible DOI records differ from JSON-LD`);
     assert.doesNotMatch(source, /DOI-verified/i);
@@ -634,17 +667,26 @@ test('publication pages expose every canonical DOI record with ordered authors',
 test('sitemap covers every configured fixed-language route', async () => {
   const sitemap = await fs.readFile(path.join(rootDir, 'sitemap.xml'), 'utf8');
   const posts = JSON.parse(await fs.readFile(path.join(rootDir, 'blog', 'posts.json'), 'utf8'));
-  const topicEvidenceCount = (topicId) => localRepos.filter((repo) => new Set([
-    ...(repo.interests || []),
-    ...(researchConfig.repoAssignments[repo.name] || [])
-  ]).has(topicId)).length + staticPublications.filter((publication) => new Set([
-    ...(publication.interests || []),
-    ...(researchConfig.paperAssignments[publication.title] || [])
-  ]).has(topicId)).length + posts.filter((post) => (post.research || []).includes(topicId)).length;
+  const topicEvidenceParts = (topicId) => ({
+    repositories: localRepos.filter((repo) => new Set([
+      ...(repo.interests || []),
+      ...(researchConfig.repoAssignments[repo.name] || [])
+    ]).has(topicId)).length,
+    publications: staticPublications.filter((publication) => new Set([
+      ...(publication.interests || []),
+      ...(researchConfig.paperAssignments[publication.title] || [])
+    ]).has(topicId)).length,
+    posts: posts.filter((post) => (post.research || []).includes(topicId)).length
+  });
+  const topicEvidenceCount = (topicId) => Object.values(topicEvidenceParts(topicId)).reduce((sum, count) => sum + count, 0);
+  const topicEvidenceScore = (topicId) => {
+    const evidence = topicEvidenceParts(topicId);
+    return evidence.repositories + evidence.posts + (evidence.publications * 2);
+  };
   const indexableRoutes = ['en', 'zh'].flatMap((language) => [
     resumeRoute(language),
     researchRoute(language),
-    ...researchChildren.filter((child) => topicEvidenceCount(child.id) >= 2).map((child) => researchRoute(language, `${child.id}/`)),
+    ...researchChildren.filter((child) => topicEvidenceScore(child.id) >= 2).map((child) => researchRoute(language, `${child.id}/`)),
     projectsRoute(language),
     publicationsRoute(language)
   ]);
@@ -656,7 +698,7 @@ test('sitemap covers every configured fixed-language route', async () => {
       const route = researchRoute(language, `${child.id}/`);
       const locationPattern = new RegExp(`<loc>${`${SITE.url}/${route}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</loc>`);
       const source = await fs.readFile(path.join(rootDir, route, 'index.html'), 'utf8');
-      if (topicEvidenceCount(child.id) >= 2) {
+      if (topicEvidenceScore(child.id) >= 2) {
         assert.match(sitemap, locationPattern);
         assert.match(source, /<meta name="robots" content="index,follow,max-image-preview:large"/);
       } else {
@@ -685,8 +727,8 @@ test('sitemap covers every configured fixed-language route', async () => {
     .at(-1)
     .slice(0, 10);
   assert.equal(lastmodByUrl.get(`${SITE.url}/projects/`), latestProjectDate);
-  assert.equal(lastmodByUrl.get(`${SITE.url}/publications/`), '2026-07-11');
-  for (const child of researchChildren.filter((item) => topicEvidenceCount(item.id) < 2)) {
+  assert.equal(lastmodByUrl.get(`${SITE.url}/publications/`), '2026-07-12');
+  for (const child of researchChildren.filter((item) => topicEvidenceScore(item.id) < 2)) {
     assert.equal(lastmodByUrl.get(`${SITE.url}/research/${child.id}/`), undefined, 'thin research topics must stay out of the sitemap');
   }
   assert.equal(lastmodByUrl.get(`${SITE.url}/resume/`), '', 'profile lastmod must be omitted without a reliable source date');
@@ -701,9 +743,11 @@ test('RSS declares itself and preserves post taxonomy', async () => {
   const rss = await fs.readFile(path.join(rootDir, 'rss.xml'), 'utf8');
   assert.match(rss, /xmlns:atom="http:\/\/www\.w3\.org\/2005\/Atom"/);
   assert.match(rss, /xmlns:content="http:\/\/purl\.org\/rss\/1\.0\/modules\/content\/"/);
+  assert.match(rss, /xmlns:dc="http:\/\/purl\.org\/dc\/elements\/1\.1\/"/);
   assert.match(rss, /<atom:link href="https:\/\/wcx12\.github\.io\/wcx12\/rss\.xml" rel="self" type="application\/rss\+xml" \/>/);
   assert.match(rss, /<category>Engineering<\/category>/);
   assert.match(rss, /<category>research-workflow<\/category>/);
+  assert.match(rss, /<dc:creator>Chenxu Wang<\/dc:creator>/);
   assert.match(rss, /<content:encoded><!\[CDATA\[[\s\S]+?<\/content:encoded>/);
   assert.match(
     rss,

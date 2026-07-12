@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Research Fieldnotes</title>
     <link>https://wcx12.github.io/wcx12/blog/</link>
@@ -13,6 +13,7 @@
       <link>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</link>
       <guid>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</guid>
       <pubDate>Fri, 10 Jul 2026 00:00:00 GMT</pubDate>
+      <dc:creator>Chenxu Wang</dc:creator>
       <description>How this homepage turns versioned Markdown, validated media, and research metadata into a maintainable static writing system.</description>
       <category>Engineering</category>
       <category>personal-site</category>
