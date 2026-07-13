@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
   <title>Academic Profile | Chenxu Wang (wcx12)</title>
   <meta name="description" content="Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills." />
@@ -38,9 +39,11 @@
   <meta name="twitter:image:alt" content="Chenxu Wang research profile and publication record" />
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
-  <link rel="stylesheet" href="../styles.css?v=97afd23adf35" />
-  <link rel="stylesheet" href="../blog/assets/blog.css?v=97afd23adf35" />
+  <link rel="preload" href="../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="../styles.css?v=f9d7e382d85b" />
+  <link rel="stylesheet" href="../blog/assets/blog.css?v=f9d7e382d85b" />
 
+  <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfilePage","name":"Chenxu Wang (wcx12) Academic Profile","description":"Research profile for Chenxu Wang (wcx12), including education, publications, projects, and technical skills.","url":"https://wcx12.github.io/wcx12/resume/","inLanguage":"en","mainEntity":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/","alternateName":"wcx12","email":"mailto:c2675668@gmail.com","identifier":{"@type":"PropertyValue","propertyID":"ORCID","value":"0009-0005-6139-4327","url":"https://orcid.org/0009-0005-6139-4327"},"affiliation":{"@type":"CollegeOrUniversity","name":"Beijing Institute of Technology"},"sameAs":["https://github.com/wcx12","https://orcid.org/0009-0005-6139-4327"]},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-profile.png","width":1200,"height":630,"caption":"Chenxu Wang research profile and publication record"}}</script>
 </head>
 <body class="blog-body">
@@ -48,8 +51,8 @@
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
     <a class="blog-brand" href="../">wcx12</a>
-    <div class="blog-menu">
-      <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="Open site navigation">Menu</button>
+    <details class="blog-menu">
+      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="Open site navigation">Menu</summary>
       <nav id="blogSiteNav" class="blog-nav" aria-label="Site navigation">
         <a href="../" title="Back to the interactive homepage">Home</a>
         <a href="../research/" title="Browse research topics and evidence">Research</a>
@@ -64,7 +67,7 @@
           <option value="mono">Black &amp; White</option>
         </select>
       </nav>
-    </div>
+    </details>
   </header>
   <main id="main-content" class="blog-shell">
 <article class="research-profile" lang="en">
@@ -249,6 +252,6 @@ LaTeX, GitHub Actions, technical documentation, and interactive visualization</l
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327">ORCID</a>
     </nav>
   </footer>
-  <script type="module" src="../blog/assets/blog.js?v=97afd23adf35"></script>
+  <script type="module" src="../blog/assets/blog.js?v=f9d7e382d85b"></script>
 </body>
 </html>

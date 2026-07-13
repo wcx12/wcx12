@@ -36,10 +36,12 @@ const blogI18n = {
     theme_default: 'Default',
     theme_warm: 'Warm',
     theme_mono: 'Black & White',
-    page_title: 'Research Fieldnotes | wcx12',
+    page_title: 'Research Fieldnotes',
     hero_kicker: 'Research · Engineering · Reflection',
     hero_title: 'Research Fieldnotes',
     hero_desc: 'Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site.',
+    hero_byline: 'By',
+    hero_role: 'Machine Learning Researcher',
     hero_read_latest: 'Read latest',
     hero_browse_archive: 'Browse archive',
     stat_published: 'Published',
@@ -126,10 +128,12 @@ const blogI18n = {
     theme_default: '默认',
     theme_warm: '暖色',
     theme_mono: '黑白',
-    page_title: '知研札记 | wcx12',
+    page_title: '知研札记',
     hero_kicker: '研究 · 工程 · 思考',
     hero_title: '知研札记',
     hero_desc: '记录研究工具、可复现工作流、技术写作与本网站背后的系统。当前文章以英文发布。',
+    hero_byline: '作者',
+    hero_role: '机器学习研究者',
     hero_read_latest: '阅读最新',
     hero_browse_archive: '浏览归档',
     stat_published: '已发布',
@@ -194,9 +198,25 @@ function normalizeLang(lang) {
   return languages.includes(lang) ? lang : 'en';
 }
 
+function readStorage(key, fallback = '') {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable in private or policy-restricted contexts.
+  }
+}
+
 const fixedLanguage = document.documentElement.dataset.fixedLanguage;
-let currentLang = normalizeLang(fixedLanguage || localStorage.getItem(LANG_KEY) || 'en');
-if (fixedLanguage) localStorage.setItem(LANG_KEY, currentLang);
+let currentLang = normalizeLang(fixedLanguage || readStorage(LANG_KEY, 'en'));
+if (fixedLanguage) writeStorage(LANG_KEY, currentLang);
 
 function t(key) {
   return blogI18n[currentLang]?.[key] || blogI18n.en[key] || '';
@@ -205,7 +225,7 @@ function t(key) {
 function applyTheme(theme) {
   const next = themes.includes(theme) ? theme : 'neon';
   document.documentElement.dataset.theme = next;
-  localStorage.setItem(THEME_KEY, next);
+  writeStorage(THEME_KEY, next);
   if (themeSelect) themeSelect.value = next;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', {
     neon: '#070914',
@@ -214,19 +234,18 @@ function applyTheme(theme) {
   }[next]);
 }
 
-applyTheme(localStorage.getItem(THEME_KEY) || 'neon');
+applyTheme(readStorage(THEME_KEY, 'neon'));
 
 themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
 
 function setBlogMenuOpen(open) {
-  if (!blogMenu || !blogMenuToggle) return;
-  blogMenu.classList.toggle('open', open);
-  document.body.classList.toggle('blog-menu-open', open);
-  blogMenuToggle.setAttribute('aria-expanded', String(open));
+  if (!blogMenu) return;
+  blogMenu.open = Boolean(open);
+  document.body.classList.toggle('blog-menu-open', blogMenu.open);
 }
 
-blogMenuToggle?.addEventListener('click', () => {
-  setBlogMenuOpen(!blogMenu.classList.contains('open'));
+blogMenu?.addEventListener('toggle', () => {
+  document.body.classList.toggle('blog-menu-open', blogMenu.open);
 });
 
 blogMenu?.querySelectorAll('a').forEach((link) => {
@@ -234,17 +253,17 @@ blogMenu?.querySelectorAll('a').forEach((link) => {
 });
 
 blogMenu?.addEventListener('focusout', (event) => {
-  if (blogMenu.classList.contains('open') && !blogMenu.contains(event.relatedTarget)) {
+  if (blogMenu.open && !blogMenu.contains(event.relatedTarget)) {
     setBlogMenuOpen(false);
   }
 });
 
 document.addEventListener('pointerdown', (event) => {
-  if (blogMenu?.classList.contains('open') && !blogMenu.contains(event.target)) setBlogMenuOpen(false);
+  if (blogMenu?.open && !blogMenu.contains(event.target)) setBlogMenuOpen(false);
 });
 
 document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape' || !blogMenu?.classList.contains('open')) return;
+  if (event.key !== 'Escape' || !blogMenu?.open) return;
   setBlogMenuOpen(false);
   blogMenuToggle?.focus();
 });
@@ -266,7 +285,7 @@ function minuteLabel(minutes, long = false) {
 
 function applyLanguage(lang = currentLang) {
   currentLang = normalizeLang(fixedLanguage || lang);
-  if (!fixedLanguage) localStorage.setItem(LANG_KEY, currentLang);
+  if (!fixedLanguage) writeStorage(LANG_KEY, currentLang);
   const uiLang = currentLang === 'zh' ? 'zh-CN' : 'en';
   document.documentElement.dataset.uiLang = currentLang;
   document.documentElement.lang = uiLang;
@@ -294,6 +313,10 @@ function applyLanguage(lang = currentLang) {
   document.querySelectorAll('[data-blog-i18n-ph]').forEach((node) => {
     const value = t(node.dataset.blogI18nPh);
     if (value) node.setAttribute('placeholder', value);
+  });
+  document.querySelectorAll('[data-blog-nav-en][data-blog-nav-zh]').forEach((node) => {
+    const href = currentLang === 'zh' ? node.dataset.blogNavZh : node.dataset.blogNavEn;
+    if (href) node.setAttribute('href', href);
   });
   document.querySelectorAll('[data-blog-date]').forEach((node) => {
     node.textContent = formatBlogDate(node.dataset.blogDate);
@@ -346,9 +369,17 @@ window.addEventListener('scroll', updateProgress, { passive: true });
 window.addEventListener('resize', updateProgress);
 updateProgress();
 
-document.querySelectorAll('.code-copy').forEach((button) => {
+document.querySelectorAll('.code-frame').forEach((frame) => {
+  const head = frame.querySelector('.code-head');
+  if (!head) return;
+  const button = document.createElement('button');
+  button.className = 'code-copy';
+  button.type = 'button';
+  button.dataset.blogI18n = 'code_copy';
+  button.setAttribute('aria-live', 'polite');
+  button.textContent = t('code_copy');
+  head.append(button);
   button.addEventListener('click', async () => {
-    const frame = button.closest('.code-frame');
     const code = frame?.querySelector('code')?.innerText || '';
     try {
       await navigator.clipboard.writeText(code);

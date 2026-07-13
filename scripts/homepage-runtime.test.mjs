@@ -16,6 +16,7 @@ const read = (relativePath) => fs.readFile(path.join(rootDir, relativePath), 'ut
 
 const [
   indexSource,
+  bootstrapSource,
   scriptSource,
   researchCanvasSource,
   repoMapSource,
@@ -26,6 +27,7 @@ const [
   chineseIndexSource
 ] = await Promise.all([
   read('index.html'),
+  read('homepage-bootstrap.js'),
   read('script.js'),
   read('research-canvas.js'),
   read('repo-map.js'),
@@ -57,16 +59,17 @@ test('every literal DOM lookup used by the homepage modules exists', () => {
   assert.deepEqual([...htmlIds(chineseIndexSource)].sort(), [...ids].sort(), 'Chinese homepage DOM ids drifted from the English homepage');
 });
 
-test('research and repository visualizations are real lazy modules', async () => {
-  const releaseVersion = indexSource.match(/<script\s+type="module"\s+src="script\.js\?v=([a-f0-9]{12})"><\/script>/i)?.[1];
-  assert.ok(releaseVersion, 'homepage entry module must include a release version');
+test('homepage paints before loading its full interaction module and keeps visualizations lazy', async () => {
+  const releaseVersion = indexSource.match(/<script\s+type="module"\s+src="homepage-bootstrap\.js\?v=([a-f0-9]{12})"><\/script>/i)?.[1];
+  assert.ok(releaseVersion, 'homepage bootstrap must include a release version');
   for (const assetPath of ['./site-data.js', './homepage-i18n.js', './scripts/research-config-schema.js', './scripts/portfolio-ranking.js']) {
-    assert.match(
-      indexSource,
-      new RegExp(`<link\\s+rel="modulepreload"\\s+href="${assetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?v=${releaseVersion}"\\s*\\/?>`, 'i'),
-      `${assetPath} must be preloaded with the entry module release version`
-    );
+    assert.doesNotMatch(indexSource, new RegExp(`rel="modulepreload"[^>]+${assetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${assetPath} must not compete with the first paint`);
   }
+  assert.match(bootstrapSource, /new URL\('\.\/script\.js', bootstrapUrl\)/);
+  assert.match(bootstrapSource, /PerformanceObserver[\s\S]*?first-contentful-paint[\s\S]*?startHomepage\(\)/);
+  assert.match(bootstrapSource, /window\.setTimeout\(startHomepage, 1200\)/);
+  assert.match(bootstrapSource, /appUrl\.searchParams\.set\('v', assetVersion\)/);
+  assert.match(bootstrapSource, /import\(appUrl\.href\)/);
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/site-data\.js'\)\)/);
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/homepage-i18n\.js'\)\)/);
   assert.match(scriptSource, /import\(versionedModuleUrl\('\.\/scripts\/research-config-schema\.js'\)\)/);
@@ -87,14 +90,16 @@ test('research and repository visualizations are real lazy modules', async () =>
     (await fs.readFile(path.join(rootDir, relativePath), 'utf8')).replaceAll('\r\n', '\n'),
     'utf8'
   );
-  const [eagerBytes, translationBytes, schemaBytes] = await Promise.all([
+  const [bootstrapBytes, appBytes, translationBytes, schemaBytes] = await Promise.all([
+    normalizedBytes('homepage-bootstrap.js'),
     normalizedBytes('script.js'),
     normalizedBytes('homepage-i18n.js'),
     normalizedBytes('scripts/research-config-schema.js')
   ]);
-  assert.ok(eagerBytes < 150 * 1024, `eager homepage script grew to ${eagerBytes} bytes`);
+  assert.ok(bootstrapBytes < 2 * 1024, `homepage bootstrap grew to ${bootstrapBytes} bytes`);
+  assert.ok(appBytes < 152 * 1024, `homepage application grew to ${appBytes} bytes`);
   assert.ok(translationBytes < 27 * 1024, `homepage translations grew to ${translationBytes} bytes`);
-  assert.ok(eagerBytes + translationBytes + schemaBytes < 190 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
+  assert.ok(appBytes + translationBytes + schemaBytes < 190 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
 });
 
 test('research visualization exposes a recoverable module-failure state', () => {
@@ -119,18 +124,29 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.match(indexSource, /<html lang="en" data-fixed-language="en">/);
   assert.match(indexSource, /hreflang="zh-CN" href="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
   assert.match(indexSource, /<h1>Chenxu Wang <span class="hero-alias">\(wcx12\)<\/span><\/h1>/);
+  assert.match(indexSource, /<a class="brand" href="\.\/" aria-label="Home"[^>]*>wcx12<\/a>/);
+  assert.match(indexSource, /data-i18n="stat_focus">Research domains \/ topics<\/span><strong id="focusAreaCount">4 \/ 5<\/strong>/);
   assert.match(indexSource, /"propertyID": "ORCID"/);
   assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
   assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
+  assert.match(indexSource, /rel="preload" href="\.\/assets\/fonts\/space-grotesk-latin\.woff2" as="font" type="font\/woff2" crossorigin/);
+  assert.doesNotMatch(indexSource, /rel="preload"[^>]+jetbrains-mono/i);
   assert.match(styleSource, /space-grotesk-latin\.woff2/);
   assert.match(styleSource, /jetbrains-mono-latin\.woff2/);
-  assert.equal(styleSource.match(/font-display:\s*swap/g)?.length || 0, 2, 'both local interface fonts should render consistently on a cold visit');
+  assert.equal(styleSource.match(/font-display:\s*optional/g)?.length || 0, 2, 'local fonts should not delay or shift a cold visit');
 
   const initialization = scriptSource.slice(scriptSource.lastIndexOf('initCustomCursor();'));
   assert.doesNotMatch(initialization, /\bload(?:Repos|Publications|BlogPosts|RemoteResearchConfig)\(\);/);
   assert.match(initialization, /applyTranslations\(\{ translateDocument: !fixedLanguage \}\)/);
   assert.match(scriptSource, /function applyTranslations\(\{ translateDocument = true \} = \{\}\) \{\s*if \(translateDocument\)/);
   assert.match(scriptSource, /void ensureViewData\(resolvedViewId\)/);
+  assert.match(scriptSource, /rawTarget === 'demo'\) target = 'demo'/);
+  assert.match(scriptSource, /scrollFeature:\s*route\.target === 'demo'/);
+  assert.match(scriptSource, /feature\.scrollIntoView\(\);[\s\S]*?querySelector\('button:not\(\[hidden\]\):not\(:disabled\)'\)[\s\S]*?\(control \|\| interestCanvas\)\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(scriptSource, /function setInterestPanelAvailability\(panel, available\)[\s\S]*?tab\.hidden = !available[\s\S]*?tabPanel\.dataset\.available = String\(available\)/);
+  assert.match(scriptSource, /interestTabs\.hidden = Array\.from\(interestSectionTabs\)\.filter\(\(button\) => !button\.hidden\)\.length <= 1/);
+  assert.match(scriptSource, /setInterestPanelAvailability\('projects', repoItems\.length > 0\)/);
+  assert.match(scriptSource, /const topicCount = researchInterests\.reduce[\s\S]*?focusAreaCount\.textContent = `\$\{domainCount\} \/ \$\{topicCount\}`/);
   assert.match(scriptSource, /'Chenxu Wang \(wcx12\) \| Machine Learning Researcher'/);
   assert.match(scriptSource, /`\$\{displayTitle\} \| Chenxu Wang \(wcx12\)`/);
 
@@ -201,7 +217,9 @@ test('view navigation and research tabs preserve visible keyboard focus and ARIA
     assert.match(indexSource, new RegExp(`id="interestTab${suffix}"[^>]+aria-controls="interestPanel${suffix}"`));
     assert.match(indexSource, new RegExp(`id="interestPanel${suffix}"[^>]+role="tabpanel"[^>]+aria-labelledby="interestTab${suffix}"[^>]+data-interest-tabpanel="${panel}"`));
   }
-  assert.match(scriptSource, /tabPanel\.hidden = compactViewportQuery\.matches && tabPanel\.dataset\.interestTabpanel !== activeInterestPanel/);
+  assert.match(scriptSource, /const unavailable = tabPanel\.dataset\.available === 'false'/);
+  assert.match(scriptSource, /tabPanel\.hidden = unavailable \|\| \(compactViewportQuery\.matches && tabPanel\.dataset\.interestTabpanel !== activeInterestPanel\)/);
+  assert.match(scriptSource, /setInterestPanelAvailability\('projects', repoItems\.length > 0\)/);
   assert.match(scriptSource, /show_repo_in_research_aria\.replace\('\{repo\}', repo\.name\)/);
   assert.match(scriptSource, /open_repo_aria\.replace\('\{repo\}', repo\.name\)/);
   assert.match(scriptSource, /view_paper_details_aria\.replace\('\{paper\}', item\.title\)/);
@@ -329,17 +347,12 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
   assert.match(chineseIndexSource, /hreflang="zh-CN" href="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
   assert.match(chineseIndexSource, /hreflang="x-default" href="https:\/\/wcx12\.github\.io\/wcx12\/"/);
   assert.match(chineseIndexSource, /<a\b[^>]*id="langToggle"[^>]*href="\.\.\/"[^>]*hreflang="en"/i);
-  assert.match(chineseIndexSource, /src="\.\.\/script\.js\?v=[a-f0-9]{12}"/);
+  assert.match(chineseIndexSource, /src="\.\.\/homepage-bootstrap\.js\?v=[a-f0-9]{12}"/);
   assert.match(chineseIndexSource, /href="\.\.\/styles\.css\?v=[a-f0-9]{12}"/);
-  const chineseReleaseVersion = chineseIndexSource.match(/src="\.\.\/script\.js\?v=([a-f0-9]{12})"/)?.[1];
-  assert.ok(chineseReleaseVersion, 'Chinese homepage entry module must include a release version');
-  for (const assetPath of ['../site-data.js', '../homepage-i18n.js', '../scripts/research-config-schema.js']) {
-    assert.match(
-      chineseIndexSource,
-      new RegExp(`rel="modulepreload"\\s+href="${assetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?v=${chineseReleaseVersion}"`),
-      `${assetPath} must use the Chinese route and matching release version`
-    );
-  }
+  const chineseReleaseVersion = chineseIndexSource.match(/src="\.\.\/homepage-bootstrap\.js\?v=([a-f0-9]{12})"/)?.[1];
+  assert.ok(chineseReleaseVersion, 'Chinese homepage bootstrap must include a release version');
+  assert.doesNotMatch(chineseIndexSource, /rel="modulepreload"/);
+  assert.match(chineseIndexSource, /rel="preload" href="\.\.\/assets\/fonts\/space-grotesk-latin\.woff2" as="font"/);
   assert.match(chineseIndexSource, /href="\.\/research\/"[^>]*>研究<\/a>/);
   assert.match(chineseIndexSource, /href="\.\.\/blog\/"[^>]*>英文博客<\/a>/);
   assert.match(chineseIndexSource, /href="\.\/resume\/"[^>]*>履历<\/a>/);

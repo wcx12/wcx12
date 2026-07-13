@@ -20,16 +20,16 @@
       <category>static-site</category>
       <category>research-workflow</category>
       <content:encoded><![CDATA[<p>This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material.</p>
-<p><img src="https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/media/publishing-flow.png?v=05149492835c" alt="Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence." loading="lazy" decoding="async" referrerpolicy="no-referrer"></p>
+<p><img src="https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/media/publishing-flow.png?v=05149492835c" alt="Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence." width="1200" height="460" loading="lazy" decoding="async" referrerpolicy="no-referrer"></p>
 <h2 id="authoring-model">Authoring model</h2>
 <p>Creating a post produces a self-contained article directory:</p>
-<div class="code-frame"><div class="code-head"><span>Create a new post</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre tabindex="0"><code class="hljs language-powershell">npm run new:post <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
-</code></pre></div><div class="code-frame"><div class="code-head"><span>Article bundle</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre tabindex="0"><code class="hljs language-plaintext">content/posts/2026-07-11-visual-place-recognition-notes/
+<div class="code-frame"><div class="code-head"><span>Create a new post</span></div><pre tabindex="0"><code class="hljs language-powershell">npm run new:post <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
+</code></pre></div><div class="code-frame"><div class="code-head"><span>Article bundle</span></div><pre tabindex="0"><code class="hljs language-plaintext">content/posts/2026-07-11-visual-place-recognition-notes/
   index.md
   media/
     retrieval-results.webp
 </code></pre></div><p>The Markdown front matter controls discovery, research mapping, math rendering, navigation, and publication state.</p>
-<div class="code-frame"><div class="code-head"><span>Post metadata</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre tabindex="0"><code class="hljs language-yaml"><span class="hljs-attr">title:</span> <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
+<div class="code-frame"><div class="code-head"><span>Post metadata</span></div><pre tabindex="0"><code class="hljs language-yaml"><span class="hljs-attr">title:</span> <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
 <span class="hljs-attr">slug:</span> <span class="hljs-string">&quot;visual-place-recognition-notes&quot;</span>
 <span class="hljs-attr">date:</span> <span class="hljs-string">&quot;2026-07-11&quot;</span>
 <span class="hljs-attr">updated:</span> <span class="hljs-string">&quot;2026-07-11&quot;</span>

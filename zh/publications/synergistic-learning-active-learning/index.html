@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
   <title>Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification（论文记录） | Chenxu Wang (wcx12)</title>
   <meta name="description" content="面向医学影像分类的样本高效主动学习统一训练目标。" />
@@ -42,8 +43,9 @@
   <meta name="twitter:image:alt" content="Chenxu Wang 论文与出版记录" />
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
-  <link rel="stylesheet" href="../../../styles.css?v=97afd23adf35" />
-  <link rel="stylesheet" href="../../../blog/assets/blog.css?v=97afd23adf35" />
+  <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="../../../styles.css?v=f9d7e382d85b" />
+  <link rel="stylesheet" href="../../../blog/assets/blog.css?v=f9d7e382d85b" />
 <meta name="citation_title" content="Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification" />
   <meta name="citation_author" content="Chenxu Wang" />
   <meta name="citation_author" content="QingTong Meng" />
@@ -60,6 +62,7 @@
   <meta name="citation_publisher" content="Elsevier BV" />
   <meta name="citation_language" content="en" />
   <meta name="citation_abstract_html_url" content="https://wcx12.github.io/wcx12/zh/publications/synergistic-learning-active-learning/" />
+  <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://wcx12.github.io/wcx12/zh/publications/synergistic-learning-active-learning/","url":"https://wcx12.github.io/wcx12/zh/publications/synergistic-learning-active-learning/","name":"Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification（论文记录）","description":"面向医学影像分类的样本高效主动学习统一训练目标。","inLanguage":"zh-CN","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntity":{"@id":"https://doi.org/10.1016/j.neucom.2026.134314#article"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-publications-zh.png","width":1200,"height":630,"caption":"Chenxu Wang 论文与出版记录"}},{"@type":"ScholarlyArticle","@id":"https://doi.org/10.1016/j.neucom.2026.134314#article","headline":"Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification","name":"Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification","description":"面向医学影像分类的样本高效主动学习统一训练目标。","url":"https://wcx12.github.io/wcx12/zh/publications/synergistic-learning-active-learning/","sameAs":"https://doi.org/10.1016/j.neucom.2026.134314","mainEntityOfPage":{"@type":"WebPage","@id":"https://wcx12.github.io/wcx12/zh/publications/synergistic-learning-active-learning/"},"inLanguage":"en","creativeWorkStatus":"In press","datePublished":"2026-06-22","author":[{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/","alternateName":"wcx12","email":"mailto:c2675668@gmail.com","identifier":{"@type":"PropertyValue","propertyID":"ORCID","value":"0009-0005-6139-4327","url":"https://orcid.org/0009-0005-6139-4327"},"affiliation":{"@type":"CollegeOrUniversity","name":"Beijing Institute of Technology"},"sameAs":["https://github.com/wcx12","https://orcid.org/0009-0005-6139-4327"]},{"@type":"Person","name":"QingTong Meng"},{"@type":"Person","name":"Qianxun Lin"},{"@type":"Person","name":"Bonan Zhang"},{"@type":"Person","name":"Fusen Guo"}],"isPartOf":{"@type":"PublicationVolume","volumeNumber":"699","isPartOf":{"@type":"Periodical","name":"Neurocomputing","issn":"0925-2312","publisher":{"@type":"Organization","name":"Elsevier BV"}}},"publisher":{"@type":"Organization","name":"Elsevier BV"},"pagination":"134314","license":"https://creativecommons.org/licenses/by/4.0/","isAccessibleForFree":true,"identifier":{"@type":"PropertyValue","propertyID":"DOI","value":"10.1016/j.neucom.2026.134314","url":"https://doi.org/10.1016/j.neucom.2026.134314"},"subjectOf":{"@type":"SoftwareSourceCode","name":"Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification official implementation","url":"https://github.com/ddfs430/Synergistic-Learning","codeRepository":"https://github.com/ddfs430/Synergistic-Learning"},"about":{"@type":"DefinedTerm","termCode":"medical-image-analysis","name":"医学影像分析","url":"https://wcx12.github.io/wcx12/zh/research/medical-image-analysis/"}}]}</script>
 </head>
 <body class="blog-body">
@@ -67,13 +70,13 @@
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
     <a class="blog-brand" href="../../">wcx12</a>
-    <div class="blog-menu">
-      <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="打开站点导航">菜单</button>
+    <details class="blog-menu">
+      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="打开站点导航">菜单</summary>
       <nav id="blogSiteNav" class="blog-nav" aria-label="站点导航">
         <a href="../../" title="返回互动主页">主页</a>
         <a href="../../research/" title="浏览研究主题与成果">研究</a>
         <a href="../../projects/" title="浏览含阶段与公开证据说明的项目">项目</a>
-        <a href="../" aria-current="page" title="浏览含出版方链接的论文">论文</a>
+        <a href="../" aria-current="location" title="浏览含出版方链接的论文">论文</a>
         <a href="../../../blog/" title="打开知研札记">英文博客</a>
         <a href="../../resume/" title="打开研究履历">履历</a>
         <a id="blogLangLink" class="blog-nav-button" href="../../../publications/synergistic-learning-active-learning/" hreflang="en" lang="en" title="View this page in English">EN</a>
@@ -83,7 +86,7 @@
           <option value="mono">黑白</option>
         </select>
       </nav>
-    </div>
+    </details>
   </header>
   <main id="main-content" class="blog-shell">
 <article class="publication-detail">
@@ -132,6 +135,6 @@
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="查看 ORCID 记录 0009-0005-6139-4327">ORCID</a>
     </nav>
   </footer>
-  <script type="module" src="../../../blog/assets/blog.js?v=97afd23adf35"></script>
+  <script type="module" src="../../../blog/assets/blog.js?v=f9d7e382d85b"></script>
 </body>
 </html>

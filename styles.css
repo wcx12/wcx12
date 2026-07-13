@@ -21,7 +21,7 @@
   font-family: "Space Grotesk";
   font-style: normal;
   font-weight: 400 700;
-  font-display: swap;
+  font-display: optional;
   src: url("./assets/fonts/space-grotesk-latin.woff2") format("woff2");
 }
 
@@ -29,7 +29,7 @@
   font-family: "JetBrains Mono";
   font-style: normal;
   font-weight: 400 700;
-  font-display: swap;
+  font-display: optional;
   src: url("./assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
 }
 
@@ -365,6 +365,7 @@ footer { position: relative; z-index: 1; }
   font-weight: 700;
   color: var(--cyan);
   text-shadow: 0 0 14px var(--glow);
+  text-decoration: none;
 }
 
 .ghost-btn {

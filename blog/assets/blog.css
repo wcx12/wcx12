@@ -63,6 +63,11 @@
 
 .blog-menu-toggle {
   display: none;
+  list-style: none;
+}
+
+.blog-menu-toggle::-webkit-details-marker {
+  display: none;
 }
 
 .blog-nav a,
@@ -273,6 +278,24 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   width: fit-content;
   max-width: min(100%, 460px);
   color: var(--muted);
+}
+
+.blog-hero .blog-hero-author {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font: 700 0.82rem/1.45 var(--blog-font-mono);
+}
+
+.blog-hero-author a {
+  color: var(--text);
+  text-underline-offset: 4px;
+}
+
+.blog-hero-author > span:last-child {
+  color: var(--cyan);
 }
 
 .blog-hero .btn-primary {
@@ -1431,6 +1454,14 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   display: none;
 }
 
+.blog-toc-mobile > summary {
+  list-style: none;
+}
+
+.blog-toc-mobile > summary::-webkit-details-marker {
+  display: none;
+}
+
 .blog-toc h2 {
   margin: 0 0 10px;
   color: var(--cyan);
@@ -1762,7 +1793,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
     box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
   }
 
-  .blog-menu:not(.open) > .blog-nav {
+  .blog-menu:not([open]) > .blog-nav {
     display: none;
   }
 
@@ -1780,7 +1811,8 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .blog-toc {
     position: static;
-    max-height: 240px;
+    max-height: none;
+    overflow: visible;
   }
 
   .blog-toc-desktop {
@@ -1790,6 +1822,45 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   .blog-toc-mobile {
     display: block;
     margin-bottom: 24px;
+    padding: 0;
+  }
+
+  .blog-toc-mobile > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 12px 14px;
+    color: var(--cyan);
+    cursor: pointer;
+    font: 700 0.82rem/1.3 var(--blog-font-mono);
+    text-transform: uppercase;
+  }
+
+  .blog-toc-mobile > summary::after {
+    content: "+";
+    color: var(--text);
+    font-size: 1rem;
+  }
+
+  .blog-toc-mobile[open] > summary::after {
+    content: "-";
+  }
+
+  .blog-toc-mobile > summary:focus-visible {
+    outline: 3px solid var(--pink);
+    outline-offset: 3px;
+  }
+
+  .blog-toc-mobile-body {
+    max-height: 240px;
+    overflow: auto;
+    padding: 0 14px 14px;
+    border-top: 1px solid var(--line);
+  }
+
+  .blog-toc-mobile-body > .blog-hint {
+    margin-top: 10px;
   }
 
 }

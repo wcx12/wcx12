@@ -30,6 +30,7 @@ test('Pages artifact contains only the explicit public surface', async () => {
   assert.ok(paths.includes('.nojekyll'));
   for (const required of [
     'index.html',
+    'homepage-bootstrap.js',
     'zh/index.html',
     'resume/index.html',
     'zh/resume/index.html',
@@ -80,7 +81,11 @@ test('every local HTML asset and link remains inside the Pages artifact', async 
 });
 
 test('homepage runtime dependencies are packaged without exposing the source tree', async () => {
-  const source = await fs.readFile(path.join(artifactDir, 'script.js'), 'utf8');
+  const [bootstrap, source] = await Promise.all([
+    fs.readFile(path.join(artifactDir, 'homepage-bootstrap.js'), 'utf8'),
+    fs.readFile(path.join(artifactDir, 'script.js'), 'utf8')
+  ]);
+  assert.match(bootstrap, /new URL\('\.\/script\.js', bootstrapUrl\)/);
   for (const dependency of [
     './site-data.js',
     './homepage-i18n.js',

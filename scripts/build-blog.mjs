@@ -123,7 +123,7 @@ function renderCodeFence(code, info) {
   const highlighted = normalizedLang === 'plaintext'
     ? escapeHtml(code)
     : hljs.highlight(code, { language: normalizedLang, ignoreIllegals: true }).value;
-  return `<div class="code-frame"><div class="code-head"><span>${escapeHtml(label)}</span><button class="code-copy" type="button" data-blog-i18n="code_copy">Copy</button></div><pre tabindex="0"><code class="hljs language-${escapeHtml(normalizedLang)}">${highlighted}</code></pre></div>`;
+  return `<div class="code-frame"><div class="code-head"><span>${escapeHtml(label)}</span></div><pre tabindex="0"><code class="hljs language-${escapeHtml(normalizedLang)}">${highlighted}</code></pre></div>`;
 }
 
 function postUrl(post) {
@@ -441,7 +441,17 @@ function renderShell({
       : /^(?:zh\/)?publications\//.test(relativeFilePath)
         ? 'publications'
         : (isBlogPage ? 'writing' : 'home');
-  const current = (section) => currentSection === section ? ' aria-current="page"' : '';
+  const sectionIndexes = {
+    home: homePath,
+    research: researchPath,
+    projects: projectsPath,
+    publications: publicationsPath,
+    writing: 'blog/index.html',
+    profile: resumePath
+  };
+  const current = (section) => currentSection === section
+    ? ` aria-current="${relativeFilePath === sectionIndexes[section] ? 'page' : 'location'}"`
+    : '';
   const alternateLanguage = routeLanguage === 'zh' ? 'en' : 'zh-CN';
   const alternateHref = alternateUrl ? absoluteUrl(alternateUrl) : '';
   const englishHref = routeLanguage === 'en' ? canonicalUrl : alternateHref;
@@ -456,6 +466,9 @@ function renderShell({
   const languageControl = fixedLanguage
     ? `<a id="blogLangLink" class="blog-nav-button" href="${ctx.link(`${alternateUrl}index.html`)}" hreflang="${alternateLanguage}" lang="${alternateLanguage}" title="${escapeHtml(text.lang_title)}">${escapeHtml(text.lang_label)}</a>`
     : `<button id="blogLangToggle" class="blog-nav-button" type="button" lang="zh-CN" title="Switch interface language" aria-label="切换到中文界面" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_target_aria">中文</button>`;
+  const dynamicLanguageRoutes = (englishPath, chinesePath) => fixedLanguage
+    ? ''
+    : ` data-blog-nav-en="${ctx.link(englishPath)}" data-blog-nav-zh="${ctx.link(chinesePath)}"`;
   const metadata = metadataWithSocialImage(jsonLd, {
     '@context': 'https://schema.org',
     '@type': schemaType,
@@ -483,6 +496,7 @@ function renderShell({
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeHtml(pageDescription)}" />
@@ -511,25 +525,27 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <meta name="twitter:image:alt" content="${escapeHtml(socialImageAlt)}" />
   <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${escapeHtml(absoluteUrl('rss.xml'))}" />
   <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
+  <link rel="preload" href="${ctx.link('assets/fonts/space-grotesk-latin.woff2')}" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'styles.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/blog.css')}" />
 ${extraHead.trim()}
+  <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">${safeMetadata}</script>
 </head>
 <body class="blog-body">
   <a class="skip-link" href="#main-content"${i18n('skip_main')}>${escapeHtml(text.skip_main)}</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
-    <a class="blog-brand" href="${ctx.link(homePath)}">wcx12</a>
-    <div class="blog-menu">
-      <button class="blog-menu-toggle" type="button" aria-expanded="false" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}>${escapeHtml(text.nav_menu)}</button>
+    <a class="blog-brand" href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}>wcx12</a>
+    <details class="blog-menu">
+      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}>${escapeHtml(text.nav_menu)}</summary>
       <nav id="blogSiteNav" class="blog-nav" aria-label="${escapeHtml(text.nav_landmark)}"${i18n('nav_landmark', 'aria')}>
-        <a href="${ctx.link(homePath)}"${current('home')} title="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}>${escapeHtml(text.nav_home)}</a>
-        <a href="${ctx.link(researchPath)}"${current('research')} title="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}>${escapeHtml(text.nav_research)}</a>
-        <a href="${ctx.link(projectsPath)}"${current('projects')} title="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}>${escapeHtml(text.nav_projects)}</a>
-        <a href="${ctx.link(publicationsPath)}"${current('publications')} title="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}>${escapeHtml(text.nav_publications)}</a>
-        <a href="${ctx.link('blog/index.html')}"${current('writing')} title="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}>${escapeHtml(text.nav_blog)}</a>
-        <a href="${ctx.link(resumePath)}"${current('profile')} title="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}>${escapeHtml(text.nav_profile)}</a>
+        <a href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}${current('home')} title="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}>${escapeHtml(text.nav_home)}</a>
+        <a href="${ctx.link(researchPath)}"${dynamicLanguageRoutes('research/index.html', 'zh/research/index.html')}${current('research')} title="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}>${escapeHtml(text.nav_research)}</a>
+        <a href="${ctx.link(projectsPath)}"${dynamicLanguageRoutes('projects/index.html', 'zh/projects/index.html')}${current('projects')} title="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}>${escapeHtml(text.nav_projects)}</a>
+        <a href="${ctx.link(publicationsPath)}"${dynamicLanguageRoutes('publications/index.html', 'zh/publications/index.html')}${current('publications')} title="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}>${escapeHtml(text.nav_publications)}</a>
+        <a href="${ctx.link('blog/index.html')}"${dynamicLanguageRoutes('blog/index.html', 'blog/index.html')}${current('writing')} title="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}>${escapeHtml(text.nav_blog)}</a>
+        <a href="${ctx.link(resumePath)}"${dynamicLanguageRoutes('resume/index.html', 'zh/resume/index.html')}${current('profile')} title="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}>${escapeHtml(text.nav_profile)}</a>
         ${languageControl}
         <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
           <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
@@ -537,7 +553,7 @@ ${extraHead.trim()}
           <option value="mono"${i18n('theme_mono')}>${escapeHtml(text.theme_mono)}</option>
         </select>
       </nav>
-    </div>
+    </details>
   </header>
   <main id="main-content" class="blog-shell">
 ${body.trim()}
@@ -545,7 +561,7 @@ ${body.trim()}
   <footer class="blog-footer">
     <span>&copy; ${SITE.copyrightYear} wcx12</span>
     <nav aria-label="${escapeHtml(text.profile_links)}"${i18n('profile_links', 'aria')}>
-      <a href="${ctx.link(homePath)}"${i18n('nav_home')}>${escapeHtml(text.nav_home)}</a>
+      <a href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}${i18n('nav_home')}>${escapeHtml(text.nav_home)}</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
       <a href="https://orcid.org/${ORCID_ID}" target="_blank" rel="me noreferrer" aria-label="${escapeHtml(text.orcid_title)}"${i18n('orcid_title', 'aria')}>ORCID</a>
     </nav>
@@ -588,7 +604,19 @@ function createMarkdownRenderer() {
   const defaultImage = md.renderer.rules.image || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
   md.renderer.rules.image = (tokens, idx, options, env, self) => {
     const source = tokens[idx].attrGet('src') || '';
+    const normalized = (() => {
+      try {
+        return decodeURIComponent(source.split(/[?#]/, 1)[0]).replace(/^\.\//, '');
+      } catch {
+        return '';
+      }
+    })();
+    const media = env.post?.mediaFiles?.find((item) => item.publicPath === normalized);
     tokens[idx].attrSet('src', versionPostMedia(source, env.post));
+    if (media) {
+      tokens[idx].attrSet('width', String(media.width));
+      tokens[idx].attrSet('height', String(media.height));
+    }
     tokens[idx].attrSet('loading', 'lazy');
     tokens[idx].attrSet('decoding', 'async');
     tokens[idx].attrSet('referrerpolicy', 'no-referrer');
@@ -769,6 +797,7 @@ function versionedAssetLink(ctx, relativePath) {
 async function computeAssetVersion(posts) {
   const files = [
     'styles.css',
+    'homepage-bootstrap.js',
     'script.js',
     'homepage-i18n.js',
     'site-data.js',
@@ -806,18 +835,9 @@ async function stampHomepageAssets() {
       replacement: `$1?v=${assetVersion}$2`
     },
     {
-      pattern: /(<script\s+type="module"\s+src="script\.js)(?:\?v=[a-f0-9]{12})?("\s*><\/script>)/,
+      pattern: /(<script\s+type="module"\s+src="homepage-bootstrap\.js)(?:\?v=[a-f0-9]{12})?("\s*><\/script>)/,
       replacement: `$1?v=${assetVersion}$2`
-    },
-    ...[
-      './site-data.js',
-      './homepage-i18n.js',
-      './scripts/research-config-schema.js',
-      './scripts/portfolio-ranking.js'
-    ].map((assetPath) => ({
-      pattern: new RegExp(`(<link\\s+rel="modulepreload"\\s+href="${escapeRegExp(assetPath)})(?:\\?v=[a-f0-9]{12})?("\\s*\\/?>)`),
-      replacement: `$1?v=${assetVersion}$2`
-    }))
+    }
   ];
   let stamped = source;
   for (const { pattern, replacement } of replacements) {
@@ -948,12 +968,10 @@ async function renderChineseHomepage() {
     ['href="./favicon.svg"', 'href="../favicon.svg"', 'Chinese favicon path'],
     ['href="./sitemap.xml"', 'href="../sitemap.xml"', 'Chinese sitemap path'],
     ['href="./rss.xml"', 'href="../rss.xml"', 'Chinese RSS path'],
+    ['href="./assets/fonts/space-grotesk-latin.woff2"', 'href="../assets/fonts/space-grotesk-latin.woff2"', 'Chinese font preload path'],
     ['href="styles.css', 'href="../styles.css', 'Chinese stylesheet path'],
-    ['src="script.js', 'src="../script.js', 'Chinese script path'],
-    ['href="./site-data.js', 'href="../site-data.js', 'Chinese site data preload path'],
-    ['href="./homepage-i18n.js', 'href="../homepage-i18n.js', 'Chinese translations preload path'],
-    ['href="./scripts/research-config-schema.js', 'href="../scripts/research-config-schema.js', 'Chinese research schema preload path'],
-    ['href="./scripts/portfolio-ranking.js', 'href="../scripts/portfolio-ranking.js', 'Chinese portfolio ranking preload path']
+    ['src="homepage-bootstrap.js', 'src="../homepage-bootstrap.js', 'Chinese bootstrap path'],
+    ['<a class="brand" href="./"', '<a class="brand" href="../"', 'Chinese brand home path']
   ]) {
     localized = replaceRequired(localized, search, replacement, label);
   }
@@ -1007,6 +1025,7 @@ async function renderIndex(posts) {
       <p class="blog-kicker" data-blog-i18n="hero_kicker">Research · Engineering · Reflection</p>
       <h1 data-blog-i18n="hero_title">Research Fieldnotes</h1>
       <p data-blog-i18n="hero_desc">Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site.</p>
+      <p class="blog-hero-author"><span data-blog-i18n="hero_byline">By</span> <a href="${ctx.link('resume/index.html')}" rel="author" data-blog-nav-en="${ctx.link('resume/index.html')}" data-blog-nav-zh="${ctx.link('zh/resume/index.html')}">Chenxu Wang</a><span aria-hidden="true">/</span><span data-blog-i18n="hero_role">Machine Learning Researcher</span></p>
       ${hintHtml('hint_hero')}
       <div class="blog-hero-actions">
         <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>${showArchive ? `
@@ -1130,18 +1149,20 @@ ${preview ? `        <div class="blog-preview-banner" role="status">${post.publi
             <a class="blog-author" href="${ctx.link('resume/index.html')}" rel="author">${escapeHtml(SITE.author)}</a>
             <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
             <span data-blog-updated="${escapeHtml(post.updated)}">Updated ${escapeHtml(formatDate(post.updated))}</span>
-            <span data-blog-minutes-long="${post.readingMinutes}">${post.readingMinutes} min read</span>
-            ${post.series ? `<span>${escapeHtml(post.series)}</span>` : ''}
+            <span data-blog-minutes-long="${post.readingMinutes}">${post.readingMinutes} min read</span>${post.series ? `
+            <span>${escapeHtml(post.series)}</span>` : ''}
           </div>
           <p class="blog-post-subtitle">${escapeHtml(post.description)}</p>
           ${hintHtml('hint_post')}
           <div class="blog-tag-row">${tagRow}</div>
         </header>
-        <aside class="blog-toc blog-toc-mobile" aria-label="Article contents">
-          <h2 data-blog-i18n="toc_title">Contents</h2>
-          ${hintHtml('hint_toc')}
-          ${renderedToc}
-        </aside>
+        <details class="blog-toc blog-toc-mobile">
+          <summary data-blog-i18n="toc_title">Contents</summary>
+          <div class="blog-toc-mobile-body">
+            ${hintHtml('hint_toc')}
+            ${renderedToc}
+          </div>
+        </details>
         <div class="blog-content">
 ${html}
         </div>
@@ -1188,6 +1209,7 @@ async function renderDraftPreviews(posts, renderer) {
   const scaffold = [
     '404.html',
     'styles.css',
+    'homepage-bootstrap.js',
     'script.js',
     'homepage-i18n.js',
     'site-data.js',
@@ -2104,7 +2126,7 @@ async function renderResearchTopic(posts, child, language) {
       <div class="blog-hero-actions">
         <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '全部研究方向' : 'All research topics'}</a>
         <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '论文列表' : 'Publications'}</a>
-        <a class="btn btn-outline research-demo-link" href="${ctx.link(`${isZh ? 'zh/' : ''}index.html`)}#research/${escapeHtml(child.id)}">${isZh ? '打开概念演示' : 'Open concept demo'}</a>
+        <a class="btn btn-outline research-demo-link" href="${ctx.link(`${isZh ? 'zh/' : ''}index.html`)}#research/${escapeHtml(child.id)}/demo">${isZh ? '打开概念演示' : 'Open concept demo'}</a>
       </div>
     </header>
     ${evidence.length ? evidenceSections(ctx, evidence, language) : emptyEvidenceSection(language)}`;

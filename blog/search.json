@@ -12,6 +12,6 @@
     "research": [],
     "lang": "en",
     "url": "./posts/building-a-research-writing-system/",
-    "text": "This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material. Authoring model Creating a post produces a self-contained article directory: Create a new post Copy npm run new:post &quot;Visual Place..."
+    "text": "This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material. Authoring model Creating a post produces a self-contained article directory: Create a new post npm run new:post &quot;Visual Place Reco..."
   }
 ]

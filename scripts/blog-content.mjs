@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import matter from 'gray-matter';
 import MarkdownIt from 'markdown-it';
+import { imageSize } from 'image-size';
 
 const validationMarkdown = new MarkdownIt({ html: false });
 const SAFE_MEDIA_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif']);
@@ -284,10 +285,23 @@ async function validatePostMedia(post, errors, warnings) {
       errors.push(`media file content does not match its ${parsed.extension} extension: "${parsed.publicPath}"`);
       continue;
     }
+    let dimensions;
+    try {
+      dimensions = imageSize(content);
+    } catch {
+      errors.push(`media file dimensions could not be read: "${parsed.publicPath}"`);
+      continue;
+    }
+    if (!Number.isInteger(dimensions.width) || !Number.isInteger(dimensions.height) || dimensions.width < 1 || dimensions.height < 1) {
+      errors.push(`media file must expose positive pixel dimensions: "${parsed.publicPath}"`);
+      continue;
+    }
     mediaFiles.push({
       ...parsed,
       sourcePath,
       bytes: stats.size,
+      width: dimensions.width,
+      height: dimensions.height,
       version: createHash('sha256').update(content).digest('hex').slice(0, 12)
     });
   }

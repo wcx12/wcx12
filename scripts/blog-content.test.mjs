@@ -196,6 +196,8 @@ test('validates bundled post media and fingerprints referenced files', async () 
   const { errors } = summarizeDiagnostics(diagnostics);
   assert.deepEqual(errors, []);
   assert.equal(posts[0].mediaFiles[0].publicPath, 'media/plot.png');
+  assert.equal(posts[0].mediaFiles[0].width, 1);
+  assert.equal(posts[0].mediaFiles[0].height, 1);
   assert.match(posts[0].mediaFiles[0].version, /^[a-f0-9]{12}$/);
 }));
 
@@ -213,6 +215,10 @@ test('validates and publishes a front-matter social image from the article bundl
   assert.equal(posts[0].socialImage, 'media/social-card.png');
   assert.equal(posts[0].socialImageAlt, 'A concise article preview');
   assert.equal(posts[0].mediaFiles[0].publicPath, 'media/social-card.png');
+  assert.deepEqual(
+    { width: posts[0].mediaFiles[0].width, height: posts[0].mediaFiles[0].height },
+    { width: 1, height: 1 }
+  );
 }));
 
 test('requires social image metadata to be typed and accessible', async () => {

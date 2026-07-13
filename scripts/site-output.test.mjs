@@ -124,6 +124,7 @@ async function expectedAssetVersion() {
   const { posts } = await loadPosts(rootDir);
   const files = [
     'styles.css',
+    'homepage-bootstrap.js',
     'script.js',
     'homepage-i18n.js',
     'site-data.js',
@@ -181,13 +182,16 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
     assert.match(source, /<html\s+[^>]*lang="(?:en|zh-CN)"/i, `${relative}: missing valid document language`);
     assert.equal(matches(source, /<h1\b/gi).length, 1, `${relative}: expected exactly one h1`);
     assert.match(source, /http-equiv="Content-Security-Policy"/i, `${relative}: missing CSP`);
+    assert.match(source, /<meta\s+name="referrer"\s+content="strict-origin-when-cross-origin"\s*\/>/i, `${relative}: missing referrer policy`);
 
     if (relative !== '404.html') {
       assert.match(source, /<link\s+rel="canonical"/i, `${relative}: missing canonical URL`);
       assert.match(source, /class="skip-link"[^>]+href="#main-content"/i, `${relative}: missing skip link`);
       assert.match(source, /<main\s+[^>]*id="main-content"/i, `${relative}: missing main target`);
       assert.doesNotMatch(source, /fonts\.(?:googleapis|gstatic)\.com/i, `${relative}: external font dependency returned`);
-      assert.doesNotMatch(source, /<link\b[^>]*rel="preload"[^>]*as="font"/i, `${relative}: optional fonts must not compete with first paint`);
+      const fontPreloads = matches(source, /<link\b[^>]*rel="preload"[^>]*as="font"[^>]*>/gi);
+      assert.equal(fontPreloads.length, 1, `${relative}: only the primary UI font should be preloaded`);
+      assert.match(fontPreloads[0][0], /space-grotesk-latin\.woff2[^>]*type="font\/woff2"[^>]*crossorigin/i, `${relative}: primary font preload is incomplete`);
       assert.doesNotMatch(source, /script-src[^;"]*'unsafe-inline'/i, `${relative}: executable inline scripts must stay disabled`);
     } else {
       assert.match(source, /name="robots"\s+content="noindex,follow"/i, '404 must not be indexed');
@@ -202,8 +206,8 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
 test('shared content navigation keeps visible labels in accessible names', async () => {
   for (const relativePath of ['blog/index.html', 'research/index.html', 'resume/index.html', 'zh/research/index.html']) {
     const source = await fs.readFile(path.join(rootDir, relativePath), 'utf8');
-    assert.match(source, /class="blog-menu-toggle"[^>]+>[^<]+<\/button>/);
-    assert.doesNotMatch(source.match(/<button class="blog-menu-toggle"[\s\S]*?<\/button>/)?.[0] || '', /aria-label=/);
+    assert.match(source, /<details class="blog-menu">[\s\S]*?<summary class="blog-menu-toggle"[^>]+>[^<]+<\/summary>/);
+    assert.doesNotMatch(source.match(/<summary class="blog-menu-toggle"[\s\S]*?<\/summary>/)?.[0] || '', /aria-label=/);
     const siteNav = source.match(/<nav id="blogSiteNav"[\s\S]*?<\/nav>/)?.[0] || '';
     assert.ok(siteNav, `${relativePath}: missing shared navigation`);
     assert.doesNotMatch(siteNav, /<a\b[^>]*aria-label=/, `${relativePath}: visible nav links must name themselves`);
@@ -342,6 +346,7 @@ test('single-post blog avoids duplicate discovery sections', async () => {
   assert.match(source, /href="archive\/"[^>]+data-blog-i18n="hero_browse_archive"/, 'the promised writing archive needs a visible route');
   const articleSource = await fs.readFile(path.join(rootDir, 'blog', 'posts', posts[0].slug, 'index.html'), 'utf8');
   assert.doesNotMatch(articleSource, /class="blog-prev-next"/, 'an only article must not end with an empty post-navigation control');
+  assert.doesNotMatch(articleSource, /Homepage Lab/, 'a single article must not imply a nonexistent series');
 });
 
 test('blog presents the agreed fieldnotes identity', async () => {
@@ -349,8 +354,11 @@ test('blog presents the agreed fieldnotes identity', async () => {
   const clientSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
   const styleSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8');
   assert.match(indexSource, />Research Fieldnotes<\/h1>/);
+  assert.match(indexSource, /class="blog-hero-author"[\s\S]*?href="\.\.\/resume\/"[^>]*rel="author"[^>]*>Chenxu Wang<\/a>/);
+  assert.match(indexSource, /data-blog-nav-en="\.\.\/research\/" data-blog-nav-zh="\.\.\/zh\/research\/"/);
+  assert.match(indexSource, /data-blog-nav-en="\.\.\/resume\/" data-blog-nav-zh="\.\.\/zh\/resume\/"/);
   assert.match(clientSource, /hero_title:\s*'知研札记'/);
-  assert.match(clientSource, /page_title:\s*'知研札记 \| wcx12'/);
+  assert.match(clientSource, /page_title:\s*'知研札记'/);
   assert.match(clientSource, /hero_kicker:\s*'研究 · 工程 · 思考'/);
   assert.match(
     clientSource,
@@ -360,6 +368,7 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(indexSource, /id="blogLangToggle"[^>]+lang="zh-CN"[^>]+aria-label="切换到中文界面"/);
   assert.match(clientSource, /document\.title\s*=\s*t\('page_title'\)/);
   assert.match(clientSource, /document\.documentElement\.lang\s*=\s*uiLang/);
+  assert.match(clientSource, /querySelectorAll\('\[data-blog-nav-en\]\[data-blog-nav-zh\]'\)[\s\S]*?node\.dataset\.blogNavZh[\s\S]*?node\.setAttribute\('href', href\)/);
   assert.match(styleSource, /html\[data-ui-lang="zh"\] \.blog-hero h1/);
   assert.match(indexSource, /<summary[^>]*data-blog-i18n-aria="hint_summary"[^>]*>[\s\S]*?class="blog-hint-label"/);
   assert.match(styleSource, /\.blog-hero\s*\{[^}]*border-top:\s*3px solid var\(--cyan\)[^}]*background:\s*transparent[^}]*box-shadow:\s*none/s);
@@ -387,6 +396,7 @@ test('portfolio routes use the researcher identity while blog routes retain thei
 });
 
 test('generated code blocks and article contents remain keyboard reachable', async () => {
+  const clientSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
   const articleFiles = await walk(path.join(rootDir, 'blog', 'posts'), (file) => file.endsWith('index.html'));
   for (const file of articleFiles) {
     const source = await fs.readFile(file, 'utf8');
@@ -394,13 +404,16 @@ test('generated code blocks and article contents remain keyboard reachable', asy
     for (const [, pre] of matches(source, /(<pre\b[^>]*>)/gi)) {
       assert.match(pre, /tabindex="0"/i, `${path.relative(rootDir, file)}: scrollable pre must be focusable`);
     }
-    assert.match(source, /blog-toc-mobile/, `${path.relative(rootDir, file)}: missing mobile contents navigation`);
+    assert.match(source, /<details class="blog-toc blog-toc-mobile">[\s\S]*?<summary[^>]*data-blog-i18n="toc_title"/, `${path.relative(rootDir, file)}: missing collapsible mobile contents navigation`);
+    assert.doesNotMatch(source, /class="code-copy"/, `${path.relative(rootDir, file)}: script-only copy controls must not exist before enhancement`);
     if (file.includes('building-a-research-writing-system')) {
       assert.match(source, /href="https:\/\/github\.com\/wcx12\/wcx12\/blob\/main\/scripts\/blog-content\.mjs"/);
       assert.match(source, /href="https:\/\/github\.com\/wcx12\/wcx12\/blob\/main\/\.github\/workflows\/blog-build\.yml"/);
       assert.match(source, /href="https:\/\/wcx12\.github\.io\/wcx12\/research\/"/);
     }
   }
+  assert.match(clientSource, /document\.createElement\('button'\)[\s\S]*?button\.className = 'code-copy'/);
+  assert.match(clientSource, /button\.setAttribute\('aria-live', 'polite'\)/);
 });
 
 test('bundled post media is copied, fingerprinted, and rendered accessibly', async () => {
@@ -415,7 +428,8 @@ test('bundled post media is copied, fingerprinted, and rendered accessibly', asy
   assert.deepEqual(published, source, 'published media bytes differ from the validated source');
   const version = createHash('sha256').update(source).digest('hex').slice(0, 12);
   assert.match(article, new RegExp(`src="media/publishing-flow\\.png\\?v=${version}"`));
-  assert.match(article, /publishing-flow\.png[^>]+alt="[^"]+"[^>]+loading="lazy"[^>]+decoding="async"[^>]+referrerpolicy="no-referrer"/);
+  assert.match(article, /publishing-flow\.png[^>]+alt="[^"]+"[^>]+width="1200"[^>]+height="460"[^>]+loading="lazy"[^>]+decoding="async"[^>]+referrerpolicy="no-referrer"/);
+  assert.match(article, /href="\.\.\/\.\.\/"[^>]*aria-current="location"[^>]*>Writing<\/a>/);
   assert.match(article, /Content-Security-Policy[^>]+img-src 'self' data:; connect-src 'self'/);
   assert.doesNotMatch(article, /Content-Security-Policy[^>]+img-src[^>]+https:/);
   assert.match(article, /<meta property="article:author" content="https:\/\/wcx12\.github\.io\/wcx12\/" \/>/);
@@ -565,7 +579,7 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
       assert.equal(demoLink[2], language === 'zh' ? '打开概念演示' : 'Open concept demo');
       assert.equal(
         new URL(demoLink[1], `${SITE.url}/${route}`).href,
-        `${SITE.url}/${language === 'zh' ? 'zh/' : ''}#research/${child.id}`,
+        `${SITE.url}/${language === 'zh' ? 'zh/' : ''}#research/${child.id}/demo`,
         `${route}: interactive demo link targets the wrong homepage state`
       );
       assert.deepEqual(visibleKeys, expectedKeys, `${route}: visible evidence differs from configured sources`);
@@ -966,14 +980,17 @@ test('fixed routes ignore stored language while preserving theme selection', asy
     fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8')
   ]);
   assert.match(source, /const fixedLanguage = document\.documentElement\.dataset\.fixedLanguage/);
-  assert.match(source, /normalizeLang\(fixedLanguage \|\| localStorage\.getItem\(LANG_KEY\)/);
-  assert.match(source, /if \(fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
-  assert.match(source, /if \(!fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
-  assert.match(source, /applyTheme\(localStorage\.getItem\(THEME_KEY\) \|\| 'neon'\)/);
+  assert.match(source, /function readStorage\(key, fallback = ''\)[\s\S]*?try[\s\S]*?localStorage\.getItem\(key\)[\s\S]*?catch/);
+  assert.match(source, /function writeStorage\(key, value\)[\s\S]*?try[\s\S]*?localStorage\.setItem\(key, value\)[\s\S]*?catch/);
+  assert.match(source, /normalizeLang\(fixedLanguage \|\| readStorage\(LANG_KEY, 'en'\)\)/);
+  assert.match(source, /if \(fixedLanguage\) writeStorage\(LANG_KEY, currentLang\)/);
+  assert.match(source, /if \(!fixedLanguage\) writeStorage\(LANG_KEY, currentLang\)/);
+  assert.match(source, /applyTheme\(readStorage\(THEME_KEY, 'neon'\)\)/);
   assert.match(source, /langToggle\.lang = currentLang === 'zh' \? 'en' : 'zh-CN'/);
   assert.match(source, /lang_target_aria: '切换到中文界面'/);
   assert.match(source, /lang_target_aria: 'Switch to the English interface'/);
   assert.match(source, /blogMenu\?\.addEventListener\('focusout',[\s\S]*?!blogMenu\.contains\(event\.relatedTarget\)[\s\S]*?setBlogMenuOpen\(false\)/);
+  assert.match(styles, /\.blog-menu:not\(\[open\]\) > \.blog-nav\s*\{[^}]*display:\s*none/s);
   assert.match(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*3px solid var\(--pink\);[^}]*outline-offset:\s*3px;/s);
   assert.doesNotMatch(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*none/s);
   assert.doesNotMatch(styles, /\.code-copy:focus-visible\s*\{[^}]*outline:\s*none/s);

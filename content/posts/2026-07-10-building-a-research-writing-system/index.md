@@ -7,7 +7,6 @@ description: "How this homepage turns versioned Markdown, validated media, and r
 category: "Engineering"
 tags: ["personal-site", "static-site", "research-workflow"]
 research: []
-series: "Homepage Lab"
 featured: true
 draft: false
 math: false

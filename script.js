@@ -118,8 +118,10 @@ const interestTitle = document.getElementById('interestTitle');
 const interestTag = document.getElementById('interestTag');
 const interestDescription = document.getElementById('interestDescription');
 const interestDetail = document.querySelector('.interest-detail');
+const interestTabs = document.querySelector('.interest-section-tabs');
 const interestSectionTabs = document.querySelectorAll('[data-interest-panel]');
 const interestTabPanels = document.querySelectorAll('[data-interest-tabpanel]');
+const interestCanvas = document.getElementById('interestCanvas');
 const interestCanvasControls = document.getElementById('interestCanvasControls');
 const interestFeatureRetry = document.getElementById('interestFeatureRetry');
 const repoMapRetry = document.getElementById('repoMapRetry');
@@ -710,19 +712,21 @@ function currentRouteUrl() {
 function routeStateFromLocation() {
   const raw = window.location.hash.replace(/^#\/?/, '');
   if (!raw) return { viewId: 'about', interestId: null, valid: true };
-  const [rawView, rawInterest] = raw.split('/');
+  const [rawView, rawInterest, rawTarget] = raw.split('/');
   let viewId = 'about';
   let interestId = null;
+  let target = null;
   let valid = true;
   try {
     const decodedView = decodeURIComponent(rawView || '');
     if (VALID_VIEW_IDS.has(decodedView)) viewId = decodedView;
     else valid = false;
     if (viewId === 'research' && rawInterest) interestId = decodeURIComponent(rawInterest);
+    if (viewId === 'research' && rawTarget === 'demo') target = 'demo';
   } catch {
     return { viewId: 'about', interestId: null, valid: false };
   }
-  return { viewId, interestId, valid };
+  return { viewId, interestId, target, valid };
 }
 
 function routeUrl(viewId) {
@@ -869,7 +873,12 @@ async function activateLazyFeature(viewId, generation, options = {}) {
     scheduleMotionLoop({ immediate: true });
     if (options.scrollFeature) {
       requestAnimationFrame(() => {
-        if (isCurrentActivation(viewId, generation)) feature.scrollIntoView();
+        if (!isCurrentActivation(viewId, generation)) return;
+        feature.scrollIntoView();
+        if (viewId === 'research') {
+          const control = interestCanvasControls?.querySelector('button:not([hidden]):not(:disabled)');
+          (control || interestCanvas)?.focus({ preventScroll: true });
+        }
       });
     }
   } catch (error) {
@@ -1006,7 +1015,11 @@ function applyLocationRoute(options = {}) {
   if (route.viewId === 'research' && route.interestId && interestEntryById(route.interestId)) {
     activeInterestId = route.interestId;
   }
-  activateView(route.viewId, { historyMode: 'none', scroll });
+  activateView(route.viewId, {
+    historyMode: 'none',
+    scroll: scroll && route.target !== 'demo',
+    scrollFeature: route.target === 'demo'
+  });
   if (finalize) {
     if (!route.valid) updateRoute('about', 'replace');
     else if (route.viewId === 'research' && route.interestId && !interestEntryById(route.interestId)) {
@@ -1403,7 +1416,8 @@ function allInterestChildren() {
 function updateHeroStats() {
   if (!focusAreaCount) return;
   const domainCount = researchInterests.filter((domain) => Array.isArray(domain.children) && domain.children.length).length;
-  focusAreaCount.textContent = String(domainCount);
+  const topicCount = researchInterests.reduce((total, domain) => total + (Array.isArray(domain.children) ? domain.children.length : 0), 0);
+  focusAreaCount.textContent = `${domainCount} / ${topicCount}`;
 }
 
 function activeInterestEntry() {
@@ -1555,7 +1569,9 @@ function attachInterestJumpHandlers(root = document) {
 }
 
 function setInterestPanel(panel) {
-  activeInterestPanel = ['animation', 'projects', 'papers', 'writing'].includes(panel) ? panel : 'animation';
+  const requestedPanel = ['animation', 'projects', 'papers', 'writing'].includes(panel) ? panel : 'animation';
+  const requestedTab = Array.from(interestSectionTabs).find((button) => button.dataset.interestPanel === requestedPanel);
+  activeInterestPanel = requestedTab?.hidden ? 'animation' : requestedPanel;
   if (interestDetail) interestDetail.dataset.panel = activeInterestPanel;
   interestSectionTabs.forEach((button) => {
     const active = button.dataset.interestPanel === activeInterestPanel;
@@ -1564,8 +1580,16 @@ function setInterestPanel(panel) {
     button.tabIndex = active ? 0 : -1;
   });
   interestTabPanels.forEach((tabPanel) => {
-    tabPanel.hidden = compactViewportQuery.matches && tabPanel.dataset.interestTabpanel !== activeInterestPanel;
+    const unavailable = tabPanel.dataset.available === 'false';
+    tabPanel.hidden = unavailable || (compactViewportQuery.matches && tabPanel.dataset.interestTabpanel !== activeInterestPanel);
   });
+}
+
+function setInterestPanelAvailability(panel, available) {
+  const tab = Array.from(interestSectionTabs).find((button) => button.dataset.interestPanel === panel);
+  const tabPanel = Array.from(interestTabPanels).find((item) => item.dataset.interestTabpanel === panel);
+  if (tab) tab.hidden = !available;
+  if (tabPanel) tabPanel.dataset.available = String(available);
 }
 
 function bindItemToInterestAnimation(item, kind, interestId) {
@@ -2155,11 +2179,19 @@ function renderResearchInterest() {
   );
   interestTag.textContent = textFor(entry.child.label);
   interestDescription.textContent = textFor(entry.child.description);
+  const repoItems = relatedRepos();
+  const paperItems = relatedPapers();
+  const postItems = relatedPosts();
+  setInterestPanelAvailability('animation', true);
+  setInterestPanelAvailability('projects', repoItems.length > 0);
+  setInterestPanelAvailability('papers', paperItems.length > 0);
+  setInterestPanelAvailability('writing', postItems.length > 0);
+  if (interestTabs) interestTabs.hidden = Array.from(interestSectionTabs).filter((button) => !button.hidden).length <= 1;
   setInterestPanel(activeInterestPanel);
   renderInterestRail();
-  renderRelatedList(interestProjects, relatedRepos(), i18n[currentLang].no_related_projects, 'repo');
-  renderRelatedList(interestPapers, relatedPapers(), i18n[currentLang].no_related_papers, 'paper');
-  if (interestPosts) renderRelatedList(interestPosts, relatedPosts(), i18n[currentLang].no_related_writing, 'post');
+  renderRelatedList(interestProjects, repoItems, i18n[currentLang].no_related_projects, 'repo');
+  renderRelatedList(interestPapers, paperItems, i18n[currentLang].no_related_papers, 'paper');
+  if (interestPosts) renderRelatedList(interestPosts, postItems, i18n[currentLang].no_related_writing, 'post');
   renderResearchShowcase();
   renderHeroPreview();
   if (isResearchViewActive()) researchCanvasFeature?.render();
