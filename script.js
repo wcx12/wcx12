@@ -67,7 +67,6 @@ const writingList = document.getElementById('writingList');
 const themeSelect = document.getElementById('themeSelect');
 const langToggle = document.getElementById('langToggle');
 const openCommand = document.getElementById('openCommand');
-const openResearch = document.getElementById('openResearch');
 const modal = document.getElementById('detailModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
@@ -108,7 +107,6 @@ const heroPreviewCanvas = document.getElementById('heroPreviewCanvas');
 const heroPreviewCtx = heroPreviewCanvas?.getContext('2d');
 const heroPreviewStatus = document.getElementById('heroPreviewStatus');
 const heroPreviewMeta = document.getElementById('heroPreviewMeta');
-const researchShowcase = document.getElementById('researchShowcase');
 const pageBackgroundElements = Array.from(document.querySelectorAll('header, main, footer'));
 const activeOverlayElements = new Set();
 
@@ -135,11 +133,37 @@ const utilityMenuToggle = document.querySelector('.utility-menu-toggle');
 const LANG_KEY = 'wcx12-lang';
 const fixedLanguage = document.documentElement.dataset.fixedLanguage;
 
+function readStorage(key, storageName = 'localStorage') {
+  try {
+    return window[storageName]?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key, value, storageName = 'localStorage') {
+  try {
+    window[storageName]?.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function removeStorage(key, storageName = 'localStorage') {
+  try {
+    window[storageName]?.removeItem(key);
+  } catch {
+    // Storage can be unavailable in hardened or sandboxed browsing contexts.
+  }
+}
+
+const storedLanguage = readStorage(LANG_KEY);
 let currentLang = ['en', 'zh'].includes(fixedLanguage)
   ? fixedLanguage
-  : (['en', 'zh'].includes(localStorage.getItem(LANG_KEY)) ? localStorage.getItem(LANG_KEY) : 'en');
-if (fixedLanguage) localStorage.setItem(LANG_KEY, currentLang);
-let currentTheme = localStorage.getItem('wcx12-theme') || 'neon';
+  : (['en', 'zh'].includes(storedLanguage) ? storedLanguage : 'en');
+if (fixedLanguage) writeStorage(LANG_KEY, currentLang);
+let currentTheme = readStorage('wcx12-theme') || 'neon';
 let allRepos = [...localRepos];
 let filteredRepos = [...localRepos];
 let repoDataSource = 'snapshot';
@@ -167,7 +191,6 @@ let activeInterestPanel = 'animation';
 const initializedViews = new Set();
 const LAZY_VIEW_IDS = new Set(['research', 'projects', 'publications', 'writing']);
 let activeInterestId = 'point-cloud-registration';
-let previewInterestId = null;
 let heroPreviewTick = 0;
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 const compactViewportQuery = window.matchMedia('(max-width: 720px)');
@@ -399,11 +422,7 @@ async function responseTextWithLimit(response, maxBytes) {
 
 function clearLegacyGithubToken() {
   for (const storageName of ['localStorage', 'sessionStorage']) {
-    try {
-      window[storageName]?.removeItem(LEGACY_GITHUB_TOKEN_KEY);
-    } catch {
-      // Storage can be unavailable in hardened or sandboxed browsing contexts.
-    }
+    removeStorage(LEGACY_GITHUB_TOKEN_KEY, storageName);
   }
 }
 
@@ -411,15 +430,15 @@ clearLegacyGithubToken();
 
 function detectOwnerTools() {
   if (window.top !== window.self) {
-    localStorage.removeItem(OWNER_TOOLS_KEY);
+    removeStorage(OWNER_TOOLS_KEY);
     return false;
   }
   const params = new URLSearchParams(window.location.search);
-  if (params.get('ownerTools') === '1') localStorage.setItem(OWNER_TOOLS_KEY, 'enabled');
+  if (params.get('ownerTools') === '1') writeStorage(OWNER_TOOLS_KEY, 'enabled');
   if (params.get('ownerTools') === '0') {
-    localStorage.removeItem(OWNER_TOOLS_KEY);
+    removeStorage(OWNER_TOOLS_KEY);
   }
-  return localStorage.getItem(OWNER_TOOLS_KEY) === 'enabled';
+  return readStorage(OWNER_TOOLS_KEY) === 'enabled';
 }
 
 const ownerToolsEnabled = detectOwnerTools();
@@ -620,7 +639,7 @@ function normalizeResearchConfig(config) {
 
 function loadResearchConfig() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    const parsed = JSON.parse(readStorage(CONFIG_KEY) || '{}');
     if (ownerToolsEnabled && parsed.interests) return normalizeResearchConfig(parsed);
   } catch {
     return defaultResearchConfig();
@@ -653,7 +672,7 @@ async function loadRemoteResearchConfig() {
     applyResearchConfig(remoteConfig);
     if (ownerToolsEnabled) {
       remoteResearchConfigHash = await sha256Hex(source);
-      localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
+      writeStorage(CONFIG_KEY, JSON.stringify(researchConfig));
     }
     updateHeroStats();
     renderHeroPreview();
@@ -676,7 +695,7 @@ async function loadRemoteResearchConfig() {
 function saveResearchConfig() {
   if (!ownerToolsEnabled) return;
   researchConfig.interests = researchInterests;
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(researchConfig));
+  writeStorage(CONFIG_KEY, JSON.stringify(researchConfig));
 }
 
 const repoState = {
@@ -703,6 +722,12 @@ const fallbackPublications = {
 const i18n = homepageI18n;
 
 const VALID_VIEW_IDS = new Set(Array.from(views, (view) => view.id));
+const LEGACY_VIEW_ALIASES = new Map([
+  ['timeline', 'profile'],
+  ['skills', 'profile'],
+  ['resources', 'profile'],
+  ['contact', 'profile']
+]);
 let lastHandledRouteUrl = '';
 
 function currentRouteUrl() {
@@ -716,17 +741,20 @@ function routeStateFromLocation() {
   let viewId = 'about';
   let interestId = null;
   let target = null;
+  let legacyView = false;
   let valid = true;
   try {
     const decodedView = decodeURIComponent(rawView || '');
-    if (VALID_VIEW_IDS.has(decodedView)) viewId = decodedView;
+    const resolvedView = LEGACY_VIEW_ALIASES.get(decodedView) || decodedView;
+    legacyView = resolvedView !== decodedView;
+    if (VALID_VIEW_IDS.has(resolvedView)) viewId = resolvedView;
     else valid = false;
     if (viewId === 'research' && rawInterest) interestId = decodeURIComponent(rawInterest);
     if (viewId === 'research' && rawTarget === 'demo') target = 'demo';
   } catch {
     return { viewId: 'about', interestId: null, valid: false };
   }
-  return { viewId, interestId, target, valid };
+  return { viewId, interestId, target, legacyView, valid };
 }
 
 function routeUrl(viewId) {
@@ -993,7 +1021,7 @@ function activateView(viewId, options = {}) {
       targetView.closest('.console')?.scrollIntoView({ behavior: 'auto', block: 'start' });
       focusViewHeading(targetView);
     });
-  } else if (scroll && targetView && ['projects', 'research', 'publications', 'writing'].includes(resolvedViewId)) {
+  } else if (scroll && targetView && ['projects', 'research', 'publications', 'writing', 'profile'].includes(resolvedViewId)) {
     requestAnimationFrame(() => {
       if (isCurrentActivation(resolvedViewId, generation)) {
         targetView.closest('.console')?.scrollIntoView({
@@ -1010,18 +1038,20 @@ function activateView(viewId, options = {}) {
 }
 
 function applyLocationRoute(options = {}) {
-  const { scroll = false, finalize = false } = options;
+  const { scroll = false, finalize = false, focusHeading = scroll } = options;
   const route = routeStateFromLocation();
   if (route.viewId === 'research' && route.interestId && interestEntryById(route.interestId)) {
     activeInterestId = route.interestId;
   }
   activateView(route.viewId, {
+    focusHeading: focusHeading && route.viewId !== 'about' && route.target !== 'demo',
     historyMode: 'none',
     scroll: scroll && route.target !== 'demo',
     scrollFeature: route.target === 'demo'
   });
   if (finalize) {
     if (!route.valid) updateRoute('about', 'replace');
+    else if (route.legacyView) updateRoute(route.viewId, 'replace');
     else if (route.viewId === 'research' && route.interestId && !interestEntryById(route.interestId)) {
       updateRoute('research', 'replace');
     }
@@ -1032,18 +1062,12 @@ function handleLocationNavigation() {
   const routeUrlValue = currentRouteUrl();
   if (routeUrlValue === lastHandledRouteUrl) return;
   lastHandledRouteUrl = routeUrlValue;
-  applyLocationRoute({ scroll: false, finalize: true });
+  applyLocationRoute({ scroll: true, focusHeading: true, finalize: true });
 }
 
 commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view, { focusHeading: true })));
 window.addEventListener('popstate', handleLocationNavigation);
 window.addEventListener('hashchange', handleLocationNavigation);
-openResearch.addEventListener('click', (event) => {
-  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-  event.preventDefault();
-  activateView('research', { focusHeading: true });
-});
-
 function commandItems() {
   const viewItems = Array.from(commands).map((btn) => ({
     title: btn.textContent,
@@ -1064,20 +1088,6 @@ function commandItems() {
         activateView('projects');
         repoSearch.focus();
       }
-    },
-    {
-      title: i18n[currentLang].command_search_research,
-      detail: i18n[currentLang].featured_research_label,
-      type: i18n[currentLang].command_search,
-      kind: 'utility',
-      action: () => activateView('research', { focusHeading: true })
-    },
-    {
-      title: i18n[currentLang].command_search_papers,
-      detail: i18n[currentLang].tab_publications,
-      type: i18n[currentLang].command_search,
-      kind: 'utility',
-      action: () => activateView('publications', { focusHeading: true })
     },
     {
       title: i18n[currentLang].command_search_writing,
@@ -1581,7 +1591,7 @@ function setInterestPanel(panel) {
   });
   interestTabPanels.forEach((tabPanel) => {
     const unavailable = tabPanel.dataset.available === 'false';
-    tabPanel.hidden = unavailable || (compactViewportQuery.matches && tabPanel.dataset.interestTabpanel !== activeInterestPanel);
+    tabPanel.hidden = unavailable || tabPanel.dataset.interestTabpanel !== activeInterestPanel;
   });
 }
 
@@ -1883,56 +1893,7 @@ function attachInteractiveCards(root = document) {
 function heroPreviewEntry() {
   const entries = allInterestChildren();
   if (!entries.length) return null;
-  return interestEntryById(previewInterestId || activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
-}
-
-function renderResearchShowcase() {
-  if (!researchShowcase) return;
-  const entries = allInterestChildren();
-  if (!entries.length) {
-    researchShowcase.innerHTML = '';
-    return;
-  }
-
-  researchShowcase.innerHTML = entries.map(({ domain, child }, index) => {
-    const metrics = interestMetrics(child.id);
-    const activeClass = child.id === activeInterestId ? 'active' : '';
-    return `
-      <a class="research-showcase-card interactive-card motion-card ${activeClass}" href="${researchPageHref(child.id)}" data-motion-card data-motion-key="research-${escapeHtml(child.id)}" data-showcase-interest="${escapeHtml(child.id)}" style="--delay:${index}">
-        <span class="panel-eyebrow">${escapeHtml(textFor(domain.title))}</span>
-        <strong>${escapeHtml(textFor(child.title))}</strong>
-        <span class="showcase-label">${escapeHtml(textFor(child.label))}</span>
-        <span class="showcase-desc">${escapeHtml(textFor(child.description))}</span>
-        <span class="showcase-metrics">
-          <span>${metrics.projects} ${i18n[currentLang].preview_projects}</span>
-          <span>${metrics.papers} ${i18n[currentLang].preview_papers}</span>
-        </span>
-      </a>
-    `;
-  }).join('');
-
-  researchShowcase.querySelectorAll('[data-showcase-interest]').forEach((button) => {
-    button.addEventListener('mouseenter', () => {
-      previewInterestId = button.dataset.showcaseInterest;
-      renderHeroPreview();
-    });
-    button.addEventListener('focus', () => {
-      previewInterestId = button.dataset.showcaseInterest;
-      renderHeroPreview();
-    });
-    button.addEventListener('click', (event) => {
-      if (!useInteractiveResearchNavigation(event)) return;
-      event.preventDefault();
-      previewInterestId = null;
-      jumpToResearchInterest(button.dataset.showcaseInterest);
-    });
-  });
-  researchShowcase.onmouseleave = () => {
-    previewInterestId = null;
-    renderHeroPreview();
-  };
-  attachInteractiveCards(researchShowcase);
-  animateGridTransition(researchShowcase);
+  return interestEntryById(activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
 }
 
 function renderHeroPreview() {
@@ -2167,7 +2128,6 @@ function renderResearchInterest() {
     interestProjects.innerHTML = `<p class="muted">${i18n[currentLang].no_related_projects}</p>`;
     interestPapers.innerHTML = `<p class="muted">${i18n[currentLang].no_related_papers}</p>`;
     if (interestPosts) interestPosts.innerHTML = `<p class="muted">${i18n[currentLang].no_related_writing}</p>`;
-    renderResearchShowcase();
     renderHeroPreview();
     return;
   }
@@ -2192,7 +2152,6 @@ function renderResearchInterest() {
   renderRelatedList(interestProjects, repoItems, i18n[currentLang].no_related_projects, 'repo');
   renderRelatedList(interestPapers, paperItems, i18n[currentLang].no_related_papers, 'paper');
   if (interestPosts) renderRelatedList(interestPosts, postItems, i18n[currentLang].no_related_writing, 'post');
-  renderResearchShowcase();
   renderHeroPreview();
   if (isResearchViewActive()) researchCanvasFeature?.render();
 }
@@ -2215,7 +2174,7 @@ function applyTheme(theme, options = {}) {
   document.documentElement.dataset.theme = currentTheme;
   themeColorCache.clear();
   themeSelect.value = currentTheme;
-  localStorage.setItem('wcx12-theme', currentTheme);
+  writeStorage('wcx12-theme', currentTheme);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', {
     neon: '#070914',
     warm: '#160d08',
@@ -2232,23 +2191,25 @@ function applyTheme(theme, options = {}) {
 }
 
 themeSelect.addEventListener('change', () => applyTheme(themeSelect.value, { source: themeSelect }));
-interestSectionTabs.forEach((button, index) => {
+interestSectionTabs.forEach((button) => {
   button.addEventListener('click', () => setInterestPanel(button.dataset.interestPanel));
   button.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    const lastIndex = interestSectionTabs.length - 1;
+    const availableTabs = Array.from(interestSectionTabs).filter((tab) => !tab.hidden);
+    const currentIndex = availableTabs.indexOf(button);
+    const lastIndex = availableTabs.length - 1;
     const nextIndex = event.key === 'Home'
       ? 0
       : event.key === 'End'
         ? lastIndex
-        : (index + (event.key === 'ArrowRight' ? 1 : -1) + interestSectionTabs.length) % interestSectionTabs.length;
-    const next = interestSectionTabs[nextIndex];
+        : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + availableTabs.length) % availableTabs.length;
+    const next = availableTabs[nextIndex];
+    if (!next) return;
     setInterestPanel(next.dataset.interestPanel);
     next.focus();
   });
 });
-compactViewportQuery.addEventListener?.('change', () => setInterestPanel(activeInterestPanel));
 
 function clearManagerUpdatePayload() {
   managerUpdatePayload.value = '';
@@ -3465,70 +3426,9 @@ function mapOrcidWorks(payload) {
     .filter(Boolean);
 }
 
-function normalizeGitHubRepo(repo, localByName) {
-  if (!isPlainRecord(repo)) throw new Error('Invalid GitHub repository entry');
-  const name = externalText(repo.name, '', 100);
-  if (!/^[A-Za-z0-9._-]+$/.test(name)) throw new Error('Invalid GitHub repository name');
-  const local = localByName.get(name);
-  const defaultBranch = externalText(repo.default_branch, local?.default_branch || 'main', 255);
-  const encodedOwner = encodeURIComponent(GITHUB_OWNER);
-  const encodedName = encodeURIComponent(name);
-  const encodedBranch = defaultBranch.split('/').map(encodeURIComponent).join('/');
-  const fallbackRepoUrl = `https://github.com/${encodedOwner}/${encodedName}`;
-  const stars = Number.isSafeInteger(repo.stargazers_count) && repo.stargazers_count >= 0
-    ? repo.stargazers_count
-    : (local?.stargazers_count || 0);
-  const remoteSource = isPlainRecord(repo.source)
-    ? repo.source
-    : (isPlainRecord(repo.parent) ? repo.parent : null);
-  const sourceName = externalText(remoteSource?.full_name, local?.source?.full_name || '', 200);
-  const sourceUrl = validatedExternalHttpUrl(remoteSource?.html_url)
-    || validatedExternalHttpUrl(local?.source?.html_url);
-  const fork = repo.fork === true || local?.fork === true;
-
-  return {
-    name,
-    description: local?.description || externalText(repo.description, '', 1000),
-    descriptionZh: local?.descriptionZh || '',
-    language: externalText(repo.language, '', 100) || local?.language || null,
-    stargazers_count: stars,
-    updated_at: externalText(repo.updated_at, local?.updated_at || '', 100),
-    default_branch: defaultBranch,
-    html_url: validatedExternalHttpUrl(repo.html_url)
-      || validatedExternalHttpUrl(local?.html_url)
-      || fallbackRepoUrl,
-    readme_url: `https://raw.githubusercontent.com/${encodedOwner}/${encodedName}/${encodedBranch}/README.md`,
-    demo_url: validatedExternalHttpUrl(local?.demo_url),
-    fork,
-    source: fork && sourceName && sourceUrl
-      ? { full_name: sourceName, html_url: sourceUrl }
-      : null,
-    stage: local?.stage || null,
-    evidence: local?.evidence || null,
-    interests: local?.interests
-  };
-}
-
 async function loadRepos() {
-  const localByName = new Map(localRepos.map((repo) => [repo.name, repo]));
-  try {
-    const response = await fetchWithTimeout(
-      `https://api.github.com/users/${GITHUB_OWNER}/repos?per_page=100&sort=updated`,
-      { headers: { Accept: 'application/vnd.github+json' } },
-      REQUEST_TIMEOUT_MS.github
-    );
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const remoteRepos = await response.json();
-    if (!Array.isArray(remoteRepos)) throw new Error('Invalid repository payload');
-    const normalizedRemoteRepos = remoteRepos.map((repo) => normalizeGitHubRepo(repo, localByName));
-    const remoteNames = new Set(normalizedRemoteRepos.map((repo) => repo.name));
-    const localOnlyRepos = localRepos.filter((repo) => !remoteNames.has(repo.name));
-    repoDataSource = localOnlyRepos.length ? 'mixed' : 'live';
-    allRepos = [...normalizedRemoteRepos, ...localOnlyRepos];
-  } catch {
-    repoDataSource = 'snapshot';
-    allRepos = [...localRepos];
-  }
+  repoDataSource = 'snapshot';
+  allRepos = [...localRepos];
   filteredRepos = [...allRepos];
   renderHeroPreview();
   refreshInitializedView('projects');
@@ -3728,7 +3628,7 @@ function updateLanguageLink() {
 }
 
 langToggle.addEventListener('click', () => {
-  localStorage.setItem(LANG_KEY, currentLang === 'zh' ? 'en' : 'zh');
+  writeStorage(LANG_KEY, currentLang === 'zh' ? 'en' : 'zh');
 });
 
 window.addEventListener('hashchange', updateLanguageLink);

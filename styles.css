@@ -479,7 +479,6 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 }
 
 .hero-preview-head,
-.featured-research-head,
 .repo-preview-top {
   display: flex;
   justify-content: space-between;
@@ -831,7 +830,6 @@ h1 { margin: 8px 0 10px; font-size: clamp(2rem, 7vw, 4rem); line-height: 1.05; }
 
 .repo-grid,
 .pub-list,
-.research-showcase,
 .writing-grid,
 .writing-list,
 .interest-rail,
@@ -1250,81 +1248,6 @@ button.research-badge:hover {
   padding: 2px 8px;
 }
 
-.featured-research {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-  border: 1px solid color-mix(in srgb, var(--cyan) 22%, transparent);
-  border-radius: 14px;
-  padding: 12px;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--cyan) 8%, transparent), color-mix(in srgb, var(--pink) 5%, transparent)),
-    var(--card-bg);
-}
-
-.research-showcase {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
-  gap: 10px;
-}
-
-.research-showcase-card {
-  min-width: 0;
-  min-height: 150px;
-  display: grid;
-  grid-template-rows: auto auto auto minmax(2.9em, 1fr) auto;
-  gap: 6px;
-  border: 1px solid color-mix(in srgb, var(--cyan) 20%, transparent);
-  border-radius: 12px;
-  padding: 12px;
-  color: var(--text);
-  text-align: left;
-  background: rgba(255, 255, 255, 0.035);
-  cursor: pointer;
-  text-decoration: none;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.research-showcase-card:hover,
-.research-showcase-card.active {
-  transform: translateY(-2px);
-  border-color: var(--cyan);
-  background: color-mix(in srgb, var(--cyan) 10%, transparent);
-}
-
-.research-showcase-card strong {
-  font-size: 1rem;
-  overflow-wrap: anywhere;
-}
-
-.showcase-label {
-  color: var(--pink);
-  font: 700 0.72rem "JetBrains Mono", monospace;
-  text-transform: uppercase;
-}
-
-.showcase-desc {
-  color: var(--muted);
-  line-height: 1.45;
-  font-size: 0.82rem;
-  overflow: hidden;
-}
-
-.showcase-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.showcase-metrics span {
-  border: 1px solid color-mix(in srgb, var(--pink) 28%, transparent);
-  border-radius: 999px;
-  padding: 3px 7px;
-  color: var(--text);
-  background: color-mix(in srgb, var(--pink) 8%, transparent);
-  font: 700 0.66rem "JetBrains Mono", monospace;
-}
-
 .research-workbench {
   display: grid;
   grid-template-columns: minmax(220px, 0.78fr) minmax(0, 1.5fr);
@@ -1405,7 +1328,7 @@ button.research-badge:hover {
 
 .interest-detail {
   display: grid;
-  grid-template-rows: auto 3.6em minmax(210px, 0.95fr) minmax(176px, 0.8fr);
+  grid-template-rows: auto minmax(3.6em, auto) auto minmax(0, 1fr);
   gap: 12px;
   overflow: hidden;
 }
@@ -1430,7 +1353,9 @@ button.research-badge:hover {
 }
 
 .interest-section-tabs {
-  display: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
 }
 
 .interest-section-tabs button {
@@ -1448,6 +1373,31 @@ button.research-badge:hover {
   color: var(--text);
   border-color: var(--pink);
   background: color-mix(in srgb, var(--pink) 14%, transparent);
+}
+
+.interest-detail[data-panel="animation"] .interest-related,
+.interest-detail[data-panel="projects"] .interest-demo,
+.interest-detail[data-panel="papers"] .interest-demo,
+.interest-detail[data-panel="writing"] .interest-demo,
+.interest-detail[data-panel="projects"] .interest-paper-panel,
+.interest-detail[data-panel="projects"] .interest-writing-panel,
+.interest-detail[data-panel="papers"] .interest-project-panel,
+.interest-detail[data-panel="papers"] .interest-writing-panel,
+.interest-detail[data-panel="writing"] .interest-project-panel,
+.interest-detail[data-panel="writing"] .interest-paper-panel {
+  display: none;
+}
+
+.interest-detail[data-panel="animation"] .interest-demo {
+  display: grid;
+}
+
+.interest-detail[data-panel="projects"] .interest-related,
+.interest-detail[data-panel="papers"] .interest-related,
+.interest-detail[data-panel="writing"] .interest-related {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 0;
 }
 
 .interest-tag {
@@ -1527,7 +1477,7 @@ button.research-badge:hover {
 
 .interest-related {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
   min-height: 0;
 }
@@ -1609,6 +1559,52 @@ button.research-badge:hover {
 .timeline { display: grid; gap: 12px; }
 .timeline article { border-left: 2px solid rgba(255, 46, 136, 0.55); padding-left: 12px; }
 .timeline time { color: var(--pink); font-family: "JetBrains Mono", monospace; }
+
+.profile-console-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 28px;
+  max-height: 58vh;
+  overflow: auto;
+  padding-right: 8px;
+}
+
+.profile-console-section {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.profile-console-section h3 {
+  margin: 0 0 12px;
+  color: var(--cyan);
+}
+
+.profile-console-timeline {
+  grid-column: 1 / -1;
+}
+
+.profile-console-timeline .timeline {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-resource-links,
+.profile-contact-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.profile-resource-links a,
+.profile-contact-list a {
+  color: var(--text);
+  font-weight: 700;
+  text-underline-offset: 4px;
+}
+
+.profile-contact-list {
+  font-style: normal;
+}
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 #chipOutput { min-height: 1.4em; font-family: "JetBrains Mono", monospace; }
@@ -2204,13 +2200,6 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
     min-height: 0;
   }
 
-  .research-showcase {
-    grid-template-columns: 1fr;
-    max-height: 360px;
-    overflow: auto;
-    padding-right: 4px;
-  }
-
   .research-workbench,
   .interest-related,
   .manager-grid {
@@ -2241,40 +2230,29 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
     scroll-snap-align: start;
   }
 
-  .interest-detail {
-    grid-template-rows: auto minmax(3.6em, auto) auto minmax(0, 1fr);
-    overflow: hidden;
+  .profile-console-grid {
+    grid-template-columns: 1fr;
+    max-height: 620px;
   }
 
-  .interest-section-tabs {
+  .command-row {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
-  .interest-detail[data-panel="animation"] .interest-related,
-  .interest-detail[data-panel="projects"] .interest-demo,
-  .interest-detail[data-panel="papers"] .interest-demo,
-  .interest-detail[data-panel="writing"] .interest-demo,
-  .interest-detail[data-panel="projects"] .interest-paper-panel,
-  .interest-detail[data-panel="projects"] .interest-writing-panel,
-  .interest-detail[data-panel="papers"] .interest-project-panel,
-  .interest-detail[data-panel="papers"] .interest-writing-panel,
-  .interest-detail[data-panel="writing"] .interest-project-panel,
-  .interest-detail[data-panel="writing"] .interest-paper-panel {
-    display: none;
+  .command-row .cmd {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
   }
 
-  .interest-detail[data-panel="animation"] .interest-demo {
-    display: grid;
+  .profile-console-timeline {
+    grid-column: auto;
   }
 
-  .interest-detail[data-panel="projects"] .interest-related,
-  .interest-detail[data-panel="papers"] .interest-related,
-  .interest-detail[data-panel="writing"] .interest-related {
-    display: grid;
+  .profile-console-timeline .timeline {
     grid-template-columns: 1fr;
-    min-height: 0;
   }
 
   .view-heading {
@@ -2448,13 +2426,6 @@ footer { text-align: center; color: #7c89b6; padding: 8px 16px 24px; font-size: 
     overflow-wrap: anywhere;
   }
 
-  .research-showcase-card {
-    min-height: 174px;
-  }
-
-  .showcase-desc {
-    overflow: visible;
-  }
 }
 
 @media (max-width: 360px) {

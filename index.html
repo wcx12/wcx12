@@ -41,7 +41,7 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <link rel="stylesheet" href="styles.css?v=f9d7e382d85b" />
+  <link rel="stylesheet" href="styles.css?v=5c695fdc949b" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -154,7 +154,7 @@
 
         <div class="hero-actions">
           <a href="./publications/" class="btn btn-primary" data-i18n="btn_publications_hero">View Publications</a>
-          <a id="openResearch" href="./research/" class="btn btn-outline" data-i18n="btn_research_hero">Explore Research</a>
+          <a href="./research/" class="btn btn-outline" data-i18n="btn_research_hero">Explore Research</a>
           <a href="mailto:c2675668@gmail.com?subject=Research%20collaboration%20with%20Chenxu%20Wang" class="btn btn-outline" data-i18n="btn_contact">Contact Me</a>
         </div>
 
@@ -213,12 +213,12 @@
       </section>
     </noscript>
 
-    <section class="console" aria-label="Interactive portfolio" data-i18n-aria="aria_interactive_portfolio">
+    <section class="console" aria-label="Interactive portfolio tools" data-i18n-aria="aria_interactive_portfolio">
       <div class="console-head">
         <span class="dot pink"></span>
         <span class="dot cyan"></span>
         <span class="dot violet"></span>
-        <p>wcx12-console</p>
+        <p>wcx12-lab</p>
       </div>
 
       <p class="hint-row">
@@ -226,16 +226,13 @@
         <span class="touch-hint" data-i18n="hints_touch">Use Command in Settings to search and navigate.</span>
       </p>
 
-      <nav class="command-row" aria-label="Portfolio sections" data-i18n-aria="aria_portfolio_sections">
-        <button class="cmd active" data-view="about" data-i18n="tab_about">about</button>
-        <button class="cmd" data-view="research" data-i18n="tab_research">research</button>
-        <button class="cmd" data-view="projects" data-i18n="tab_projects">projects</button>
-        <button class="cmd" data-view="publications" data-i18n="tab_publications">publications</button>
-        <button class="cmd" data-view="writing" data-i18n="tab_writing">writing</button>
-        <button class="cmd" data-view="timeline" data-i18n="tab_timeline">timeline</button>
-        <button class="cmd" data-view="skills" data-i18n="tab_skills">skills</button>
-        <button class="cmd" data-view="resources" data-i18n="tab_resources">resources</button>
-        <button class="cmd" data-view="contact" data-i18n="tab_contact">contact</button>
+      <nav class="command-row" aria-label="Interactive tools" data-i18n-aria="aria_interactive_tools">
+        <button class="cmd active" data-view="about" data-i18n="tab_about">overview</button>
+        <button class="cmd" data-view="research" data-i18n="tab_research">concept lab</button>
+        <button class="cmd" data-view="projects" data-i18n="tab_projects">repo explorer</button>
+        <button class="cmd" data-view="publications" data-i18n="tab_publications">paper explorer</button>
+        <button class="cmd" data-view="writing" data-i18n="tab_writing">writing search</button>
+        <button class="cmd" data-view="profile" data-i18n="tab_profile">profile summary</button>
       </nav>
 
       <div class="view active" id="about">
@@ -247,21 +244,14 @@
       <div class="view" id="research">
         <div class="view-heading">
           <div>
-            <h2 data-i18n="research_title">Research Interests</h2>
+            <h2 data-i18n="research_title">Concept Lab</h2>
             <p class="muted" data-i18n="research_intro">Choose a sub-interest to see its concept demo, projects, and papers.</p>
           </div>
           <div class="view-heading-actions">
-            <a class="btn btn-outline" href="./research/" data-i18n="research_static">Research Index</a>
+            <a class="btn btn-outline" href="./research/" data-i18n="research_static">Evidence Index</a>
             <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research" hidden>Manage Mapping</button>
           </div>
         </div>
-        <section id="featuredResearch" class="featured-research" aria-label="Featured research" data-i18n-aria="aria_featured_research">
-          <div class="featured-research-head">
-            <span class="panel-eyebrow" data-i18n="featured_research_label">Featured Research</span>
-            <span class="muted" data-i18n="featured_research_hint">Fast entry points into the concept gallery.</span>
-          </div>
-          <div id="researchShowcase" class="research-showcase"></div>
-        </section>
         <div class="research-workbench">
           <aside class="interest-rail" id="interestRail" aria-label="Research interests" data-i18n-aria="aria_research_interests"></aside>
           <section class="interest-detail">
@@ -411,60 +401,66 @@
         <div id="writingList" class="writing-list"></div>
       </div>
 
-      <div class="view" id="timeline">
-        <h2 data-i18n="timeline_title">Timeline</h2>
-        <div class="timeline">
-          <article>
-            <time>2024</time>
-            <p data-i18n="timeline_2024">Focused on strengthening ML engineering foundations and reproducible workflows.</p>
-          </article>
-          <article>
-            <time>2025</time>
-            <p data-i18n="timeline_2025">Deepening work on point-set registration, visual recognition, and sample-efficient learning.</p>
-          </article>
-          <article>
-            <time>2026</time>
-            <p data-i18n="timeline_2026">Graduation year and active applications for Master&#39;s / PhD opportunities.</p>
-          </article>
+      <div class="view" id="profile">
+        <div class="view-heading">
+          <div>
+            <h2 data-i18n="profile_view_title">Academic Profile</h2>
+            <p class="muted" data-i18n="profile_view_desc">A compact overview of my trajectory, working stack, formal profile, and contact routes.</p>
+          </div>
+          <a class="btn btn-outline" href="./resume/" data-i18n="cv_download">View Research Profile</a>
         </div>
-      </div>
 
-      <div class="view" id="skills">
-        <h2 data-i18n="skill_title">Skill Matrix</h2>
-        <div class="chips" role="group" aria-label="Technical skills" data-i18n-aria="aria_technical_skills">
-          <button class="chip" type="button" aria-pressed="false" data-tag="Python">Python</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="PyTorch">PyTorch</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="TensorFlow">TensorFlow</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="OpenCV">OpenCV</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="Scikit-learn">Scikit-learn</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="Linux">Linux</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="Git">Git</button>
+        <div class="profile-console-grid">
+          <section class="profile-console-section profile-console-timeline" aria-labelledby="profileTimelineTitle">
+            <h3 id="profileTimelineTitle" data-i18n="timeline_title">Timeline</h3>
+            <div class="timeline">
+              <article>
+                <time>2024</time>
+                <p data-i18n="timeline_2024">Focused on strengthening ML engineering foundations and reproducible workflows.</p>
+              </article>
+              <article>
+                <time>2025</time>
+                <p data-i18n="timeline_2025">Deepening work on point-set registration, visual recognition, and sample-efficient learning.</p>
+              </article>
+              <article>
+                <time>2026</time>
+                <p data-i18n="timeline_2026">Graduation year and active applications for Master&#39;s / PhD opportunities.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="profile-console-section" aria-labelledby="profileSkillsTitle">
+            <h3 id="profileSkillsTitle" data-i18n="skill_title">Skill Matrix</h3>
+            <div class="chips" role="group" aria-label="Technical skills" data-i18n-aria="aria_technical_skills">
+              <button class="chip" type="button" aria-pressed="false" data-tag="Python">Python</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="PyTorch">PyTorch</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="TensorFlow">TensorFlow</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="OpenCV">OpenCV</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="Scikit-learn">Scikit-learn</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="Linux">Linux</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="Git">Git</button>
+            </div>
+            <p id="chipOutput" role="status" aria-live="polite" data-i18n="skill_hint">Click a skill chip to highlight what I use.</p>
+          </section>
+
+          <section class="profile-console-section" aria-labelledby="profileResourcesTitle">
+            <h3 id="profileResourcesTitle" data-i18n="res_title">Profile &amp; Publications</h3>
+            <div class="profile-resource-links">
+              <a href="./resume/" data-i18n="cv_download">View Research Profile</a>
+              <a href="./publications/" data-i18n="pub_open">Open Publication Index</a>
+            </div>
+          </section>
+
+          <section class="profile-console-section" aria-labelledby="profileContactTitle">
+            <h3 id="profileContactTitle" data-i18n="contact_title">Contact</h3>
+            <address class="profile-contact-list">
+              <a href="mailto:c2675668@gmail.com">c2675668@gmail.com</a>
+              <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
+              <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327" data-i18n-aria="aria_orcid_record">ORCID</a>
+            </address>
+            <p data-i18n="contact_last">Open to research collaboration and open-source building.</p>
+          </section>
         </div>
-        <p id="chipOutput" role="status" aria-live="polite" data-i18n="skill_hint">Click a skill chip to highlight what I use.</p>
-      </div>
-
-      <div class="view" id="resources">
-        <h2 data-i18n="res_title">Resume &amp; Files</h2>
-        <div class="resource-grid">
-          <article class="resource-card">
-            <h3 data-i18n="cv_title">Resume</h3>
-            <p data-i18n="cv_desc">Open a printable research profile with education, publications, projects, and skills.</p>
-            <a class="btn btn-primary" href="./resume/" data-i18n="cv_download">View Research Profile</a>
-          </article>
-          <article class="resource-card">
-            <h3 data-i18n="pub_file_title">Publication Index</h3>
-            <p data-i18n="pub_file_desc">Open the stable publication index with author order, DOI links, and official implementations.</p>
-            <a class="btn btn-outline" href="./publications/" data-i18n="pub_open">Open Publication Index</a>
-          </article>
-        </div>
-      </div>
-
-      <div class="view" id="contact">
-        <h2 data-i18n="contact_title">Contact</h2>
-        <p>Email: <a href="mailto:c2675668@gmail.com">c2675668@gmail.com</a></p>
-        <p>GitHub: <a href="https://github.com/wcx12" target="_blank" rel="noreferrer">github.com/wcx12</a></p>
-        <p>ORCID: <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327" data-i18n-aria="aria_orcid_record">0009-0005-6139-4327</a></p>
-        <p data-i18n="contact_last">Open to research collaboration and open-source building.</p>
       </div>
     </section>
   </main>
@@ -568,6 +564,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="homepage-bootstrap.js?v=f9d7e382d85b"></script>
+  <script type="module" src="homepage-bootstrap.js?v=5c695fdc949b"></script>
 </body>
 </html>

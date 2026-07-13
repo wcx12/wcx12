@@ -140,8 +140,15 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.match(initialization, /applyTranslations\(\{ translateDocument: !fixedLanguage \}\)/);
   assert.match(scriptSource, /function applyTranslations\(\{ translateDocument = true \} = \{\}\) \{\s*if \(translateDocument\)/);
   assert.match(scriptSource, /void ensureViewData\(resolvedViewId\)/);
+  assert.match(scriptSource, /async function loadRepos\(\) \{\s*repoDataSource = 'snapshot';\s*allRepos = \[\.\.\.localRepos\]/);
+  assert.doesNotMatch(scriptSource, /api\.github\.com\/users\/\$\{GITHUB_OWNER\}\/repos/);
+  assert.equal(homepageI18n.en.repo_source_snapshot, 'published GitHub snapshot');
   assert.match(scriptSource, /rawTarget === 'demo'\) target = 'demo'/);
   assert.match(scriptSource, /scrollFeature:\s*route\.target === 'demo'/);
+  assert.match(scriptSource, /focusHeading: focusHeading && route\.viewId !== 'about' && route\.target !== 'demo'/);
+  assert.match(scriptSource, /applyLocationRoute\(\{ scroll: true, focusHeading: true, finalize: true \}\)/);
+  assert.match(scriptSource, /\['projects', 'research', 'publications', 'writing', 'profile'\]\.includes\(resolvedViewId\)/);
+  assert.match(scriptSource, /\['timeline', 'profile'\][\s\S]*?\['contact', 'profile'\]/);
   assert.match(scriptSource, /feature\.scrollIntoView\(\);[\s\S]*?querySelector\('button:not\(\[hidden\]\):not\(:disabled\)'\)[\s\S]*?\(control \|\| interestCanvas\)\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(scriptSource, /function setInterestPanelAvailability\(panel, available\)[\s\S]*?tab\.hidden = !available[\s\S]*?tabPanel\.dataset\.available = String\(available\)/);
   assert.match(scriptSource, /interestTabs\.hidden = Array\.from\(interestSectionTabs\)\.filter\(\(button\) => !button\.hidden\)\.length <= 1/);
@@ -186,6 +193,29 @@ test('homepage navigation uses the same content order and Writing label as fixed
   assert.equal(homepageI18n.en.btn_blog, 'Writing');
 });
 
+test('homepage lab is an interaction layer instead of a second copy of global navigation', () => {
+  const commandRow = indexSource.match(/<nav class="command-row"[\s\S]*?<\/nav>/)?.[0] || '';
+  assert.equal((commandRow.match(/class="cmd/g) || []).length, 6);
+  for (const label of ['overview', 'concept lab', 'repo explorer', 'paper explorer', 'writing search', 'profile summary']) {
+    assert.match(commandRow, new RegExp(`>${label}<\\/button>`));
+  }
+  assert.match(indexSource, />wcx12-lab<\/p>/);
+  assert.match(indexSource, /aria-label="Interactive tools" data-i18n-aria="aria_interactive_tools"/);
+  assert.doesNotMatch(indexSource, /featuredResearch|researchShowcase|Featured Research/);
+  assert.match(indexSource, /<div class="view" id="profile">[\s\S]*?profile-console-grid/);
+  for (const retiredView of ['timeline', 'skills', 'resources', 'contact']) {
+    assert.doesNotMatch(indexSource, new RegExp(`class="view" id="${retiredView}"`));
+  }
+});
+
+test('homepage storage preferences degrade safely when browser storage is blocked', () => {
+  assert.match(scriptSource, /function readStorage\(key, storageName = 'localStorage'\) \{[\s\S]*?catch \{[\s\S]*?return null/);
+  assert.match(scriptSource, /function writeStorage\(key, value, storageName = 'localStorage'\) \{[\s\S]*?catch \{[\s\S]*?return false/);
+  assert.match(scriptSource, /function removeStorage\(key, storageName = 'localStorage'\) \{[\s\S]*?catch \{/);
+  assert.doesNotMatch(scriptSource, /\blocalStorage\.(?:getItem|setItem|removeItem)\(/);
+  assert.doesNotMatch(scriptSource, /\bsessionStorage\.(?:getItem|setItem|removeItem)\(/);
+});
+
 test('mobile utility controls stay above content and touch instructions avoid desktop-only gestures', () => {
   assert.match(styleSource, /\.topbar\s*\{[^}]*z-index:\s*50\s*;/s, 'mobile settings need their own top-level stacking context');
   assert.match(styleSource, /\.utility-menu-panel\s*\{[^}]*right:\s*auto\s*;[^}]*left:\s*0\s*;/s, 'mobile settings panel must open into the viewport');
@@ -218,7 +248,8 @@ test('view navigation and research tabs preserve visible keyboard focus and ARIA
     assert.match(indexSource, new RegExp(`id="interestPanel${suffix}"[^>]+role="tabpanel"[^>]+aria-labelledby="interestTab${suffix}"[^>]+data-interest-tabpanel="${panel}"`));
   }
   assert.match(scriptSource, /const unavailable = tabPanel\.dataset\.available === 'false'/);
-  assert.match(scriptSource, /tabPanel\.hidden = unavailable \|\| \(compactViewportQuery\.matches && tabPanel\.dataset\.interestTabpanel !== activeInterestPanel\)/);
+  assert.match(scriptSource, /tabPanel\.hidden = unavailable \|\| tabPanel\.dataset\.interestTabpanel !== activeInterestPanel/);
+  assert.match(scriptSource, /const availableTabs = Array\.from\(interestSectionTabs\)\.filter\(\(tab\) => !tab\.hidden\)/);
   assert.match(scriptSource, /setInterestPanelAvailability\('projects', repoItems\.length > 0\)/);
   assert.match(scriptSource, /show_repo_in_research_aria\.replace\('\{repo\}', repo\.name\)/);
   assert.match(scriptSource, /open_repo_aria\.replace\('\{repo\}', repo\.name\)/);
@@ -296,7 +327,7 @@ test('owner mapping hands a token-free payload to GitHub Actions', () => {
   assert.doesNotMatch(scriptSource, /Authorization: `Bearer|api\.github\.com\/repos\/.*dispatches/);
   assert.doesNotMatch(scriptSource, /repos\/\$\{GITHUB_REPOSITORY\}\/contents\//);
   assert.match(scriptSource, /const LEGACY_GITHUB_TOKEN_KEY = 'wcx12-github-token'/);
-  assert.match(scriptSource, /for \(const storageName of \['localStorage', 'sessionStorage'\]\)[\s\S]*?removeItem\(LEGACY_GITHUB_TOKEN_KEY\)/);
+  assert.match(scriptSource, /for \(const storageName of \['localStorage', 'sessionStorage'\]\)[\s\S]*?removeStorage\(LEGACY_GITHUB_TOKEN_KEY, storageName\)/);
   assert.ok(scriptSource.indexOf('clearLegacyGithubToken();') < scriptSource.indexOf('const ownerToolsEnabled = detectOwnerTools();'));
 });
 
@@ -333,8 +364,8 @@ test('homepage source exposes crawlable research and publication routes', () => 
 });
 
 test('homepage no-JavaScript fallback contains only working primary controls and a complete static index', () => {
-  assert.match(indexSource, /<a\b[^>]*id="openResearch"[^>]*href="\.\/research\/"/i);
-  assert.match(scriptSource, /openResearch\.addEventListener\('click', \(event\) => \{[\s\S]*?event\.preventDefault\(\)[\s\S]*?activateView\('research'/);
+  assert.match(indexSource, /<a\b[^>]*href="\.\/research\/"[^>]*data-i18n="btn_research_hero"/i);
+  assert.doesNotMatch(scriptSource, /getElementById\('openResearch'\)|openResearch\.addEventListener/);
   assert.match(indexSource, /<noscript>[\s\S]*?\.console,[\s\S]*?display: none !important;[\s\S]*?<\/noscript>/i);
   assert.match(indexSource, /<noscript>[\s\S]*?\.\/projects\/[\s\S]*?\.\/publications\/[\s\S]*?\.\/blog\/[\s\S]*?\.\/resume\/[\s\S]*?mailto:c2675668@gmail\.com[\s\S]*?<\/noscript>/i);
   assert.match(chineseIndexSource, /<noscript>[\s\S]*?\.\/projects\/[\s\S]*?\.\/publications\/[\s\S]*?\.\.\/blog\/[\s\S]*?\.\/resume\/[\s\S]*?mailto:c2675668@gmail\.com[\s\S]*?<\/noscript>/i);
@@ -365,7 +396,7 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
   assert.doesNotMatch(chineseIndexSource, /href="\.\/zh\//, 'Chinese homepage must not generate nested /zh/ routes');
   assert.match(homepageI18nSource, /export const homepageI18n = \{/);
   assert.match(scriptSource, /const fixedLanguage = document\.documentElement\.dataset\.fixedLanguage/);
-  assert.match(scriptSource, /if \(fixedLanguage\) localStorage\.setItem\(LANG_KEY, currentLang\)/);
+  assert.match(scriptSource, /if \(fixedLanguage\) writeStorage\(LANG_KEY, currentLang\)/);
   assert.match(scriptSource, /target\.search = window\.location\.search/, 'language links must preserve management and preview parameters');
   assert.match(scriptSource, /target\.hash = window\.location\.hash/, 'language links must preserve the active homepage section');
   assert.equal(homepageI18n.en.lang_link_aria, '切换到中文主页');
@@ -405,11 +436,8 @@ test('canonical repository and publication data stays unique and classifiable', 
     assert.ok(demoRepos.has(name), `${name} unexpectedly lost its public demo`);
   }
   assert.ok(localRepos.filter((repo) => repo.demo_url).every((repo) => /^https:\/\//.test(repo.demo_url)));
-  assert.match(scriptSource, /stage: local\?\.stage \|\| null/);
-  assert.match(scriptSource, /evidence: local\?\.evidence \|\| null/);
-  assert.match(scriptSource, /demo_url: validatedExternalHttpUrl\(local\?\.demo_url\)/);
-  assert.match(scriptSource, /description: local\?\.description \|\| externalText\(repo\.description/);
-  assert.match(scriptSource, /descriptionZh: local\?\.descriptionZh \|\| ''/);
+  assert.match(scriptSource, /async function loadRepos\(\) \{\s*repoDataSource = 'snapshot';\s*allRepos = \[\.\.\.localRepos\];\s*filteredRepos = \[\.\.\.allRepos\]/);
+  assert.doesNotMatch(scriptSource, /function normalizeGitHubRepo|api\.github\.com\/users/);
   assert.match(scriptSource, /function repoDescription\(repo\)/);
   assert.match(scriptSource, /\.\.\.override,[\s\S]*?status: currentLang === 'zh' \? override\.statusZh : override\.status/);
 

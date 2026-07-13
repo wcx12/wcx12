@@ -28,6 +28,7 @@ import {
   slugify,
   summarizeDiagnostics
 } from './blog-content.mjs';
+import { blogTopicCounts as topicCounts, deriveBlogDiscovery } from './blog-discovery.mjs';
 import {
   assignedResearchIds,
   classifyResearchTopic,
@@ -247,11 +248,11 @@ function postHref(ctx, post) {
 
 const blogText = {
   hint_summary: 'About this area',
-  hint_hero: 'This introduction explains what the writing space is for and gives quick routes into the latest notes or the archive.',
+  hint_hero: 'This introduction explains the purpose and authorship of the writing space.',
   hint_search: 'Use this search to find posts by title, summary, category, tag, or article text.',
   hint_featured: 'Featured posts are the recommended starting points or currently important writing pieces.',
   hint_topics: 'Tags group writing by recurring themes so visitors can browse without knowing exact article titles.',
-  hint_recent: 'Recent writing shows the newest published posts, with a link to the full archive.',
+  hint_recent: 'Recent writing lists the newest published posts in one place.',
   hint_archive: 'The archive keeps all published writing in chronological order.',
   hint_archive_year: 'This year group lists posts published in the selected year.',
   hint_tag: 'This page collects all posts that share the selected tag.',
@@ -341,17 +342,10 @@ function cardHtml(ctx, post) {
   `;
 }
 
-function topicCounts(posts, key) {
-  const counts = new Map();
-  posts.forEach((post) => {
-    const values = key === 'tags' ? post.tags : [post.category];
-    values.filter(Boolean).forEach((value) => counts.set(value, (counts.get(value) || 0) + 1));
-  });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-}
-
-function renderTags(ctx, tags) {
-  return tags.map((tag) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)}</a>`).join('');
+function renderTags(ctx, tags, activeTags = new Set()) {
+  return tags.map((tag) => activeTags.has(tag)
+    ? `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)}</a>`
+    : `<span class="blog-tag">${escapeHtml(tag)}</span>`).join('');
 }
 
 function resolveSocialImage(value) {
@@ -810,6 +804,7 @@ async function computeAssetVersion(posts) {
     'resume.md',
     'resume.zh.md',
     'scripts/blog-content.mjs',
+    'scripts/blog-discovery.mjs',
     'scripts/portfolio-ranking.js',
     'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
@@ -992,20 +987,17 @@ async function renderChineseHomepage() {
 async function renderIndex(posts) {
   const filePath = path.join(outputDir, 'index.html');
   const ctx = createPageContext(filePath);
-  const featured = posts.filter((post) => post.featured).slice(0, 3);
-  const recent = posts.slice(0, 6);
-  const showSearch = posts.length >= 3;
-  const showFeatured = posts.length >= 3 && featured.length > 0;
-  const showArchive = posts.length > 0;
-  const showStats = posts.length >= 3;
-  const latestHref = posts.length === 1 ? postHref(ctx, posts[0]) : '#recent-writing';
-  const tagLinks = topicCounts(posts, 'tags')
-    .filter(([, count]) => count >= 2)
+  const discovery = deriveBlogDiscovery(posts);
+  const { featured, recent, showSearch, showStats } = discovery;
+  const showFeatured = featured.length > 0;
+  const showArchive = discovery.archive.discoverable;
+  const latestHref = posts[0] ? postHref(ctx, posts[0]) : '';
+  const tagLinks = discovery.activeTagEntries
     .slice(0, 14)
     .map(([tag, count]) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)} (${count})</a>`)
     .join('');
 
-  const recentSection = `
+  const recentSection = posts.length ? `
     <section id="recent-writing" class="blog-section blog-latest-section">
       <div class="blog-section-head">
         <div>
@@ -1018,6 +1010,11 @@ async function renderIndex(posts) {
         </div>
       </div>
       <div class="blog-grid">${recent.map((post) => cardHtml(ctx, post)).join('')}</div>
+    </section>` : `
+    <section id="recent-writing" class="blog-section blog-empty-state" aria-labelledby="empty-writing-title">
+      <p class="blog-section-label" data-blog-i18n="empty_label">Notebook</p>
+      <h2 id="empty-writing-title" data-blog-i18n="empty_title">The first fieldnote is being prepared.</h2>
+      <p class="muted" data-blog-i18n="empty_desc">Published writing will appear here as soon as it is ready.</p>
     </section>`;
 
   const body = `
@@ -1027,10 +1024,10 @@ async function renderIndex(posts) {
       <p data-blog-i18n="hero_desc">Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site.</p>
       <p class="blog-hero-author"><span data-blog-i18n="hero_byline">By</span> <a href="${ctx.link('resume/index.html')}" rel="author" data-blog-nav-en="${ctx.link('resume/index.html')}" data-blog-nav-zh="${ctx.link('zh/resume/index.html')}">Chenxu Wang</a><span aria-hidden="true">/</span><span data-blog-i18n="hero_role">Machine Learning Researcher</span></p>
       ${hintHtml('hint_hero')}
-      <div class="blog-hero-actions">
+${posts.length > 1 ? `      <div class="blog-hero-actions">
         <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>${showArchive ? `
         <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="hero_browse_archive">Browse archive</a>` : ''}
-      </div>${showStats ? `
+      </div>` : ''}${showStats ? `
       <div class="blog-stat-grid">
         <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>${posts.length}</strong></article>
         <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
@@ -1039,6 +1036,17 @@ async function renderIndex(posts) {
           : '<article class="blog-stat"><span data-blog-i18n="stat_language">Languages</span><strong data-blog-i18n="stat_bilingual">EN / 中文</strong></article>'}
       </div>` : ''}
     </section>
+
+${showFeatured ? `<section class="blog-section">
+      <div class="blog-section-head">
+        <div>
+          <p class="blog-section-label" data-blog-i18n="section_featured_label">Featured</p>
+          <h2 data-blog-i18n="section_featured_title">Start here</h2>
+        </div>
+        ${hintHtml('hint_featured')}
+      </div>
+      <div class="blog-grid">${featured.map((post) => cardHtml(ctx, post)).join('')}</div>
+    </section>` : ''}
 
 ${recentSection}
 
@@ -1052,17 +1060,6 @@ ${showSearch ? `<section class="blog-section blog-search" aria-label="Search wri
       </div>
       <input id="blogSearch" type="search" aria-label="Search writing" placeholder="Search writing..." autocomplete="off" data-blog-i18n-ph="search_placeholder" data-blog-i18n-aria="search_label" />
       <div id="blogSearchResults" class="blog-search-results" aria-live="polite"></div>
-    </section>` : ''}
-
-${showFeatured ? `<section class="blog-section">
-      <div class="blog-section-head">
-        <div>
-          <p class="blog-section-label" data-blog-i18n="section_featured_label">Featured</p>
-          <h2 data-blog-i18n="section_featured_title">Start here</h2>
-        </div>
-        ${hintHtml('hint_featured')}
-      </div>
-      <div class="blog-grid">${featured.map((post) => cardHtml(ctx, post)).join('')}</div>
     </section>` : ''}
 
 ${tagLinks ? `    <section class="blog-section">
@@ -1115,7 +1112,7 @@ async function renderPost(post, posts, renderer, options = {}) {
   const newer = !preview && index > 0 ? posts[index - 1] : null;
   const older = !preview && index < posts.length - 1 ? posts[index + 1] : null;
   const related = preview ? [] : relatedPostsFor(post, posts);
-  const tagRow = renderTags(ctx, post.tags);
+  const tagRow = renderTags(ctx, post.tags, deriveBlogDiscovery(posts).activeTags);
   const mathCss = post.math ? `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />` : '';
   const renderedToc = post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>';
   const socialImage = postSocialImage(post);
@@ -1302,12 +1299,12 @@ async function renderArchive(posts) {
     schemaType: 'CollectionPage',
     socialImagePath: 'assets/og-blog.png',
     socialImageAlt: 'Research Fieldnotes chronological writing archive',
-    robots: posts.length > 1 ? 'index,follow,max-image-preview:large' : 'noindex,follow'
+    robots: deriveBlogDiscovery(posts).archive.indexable ? 'index,follow,max-image-preview:large' : 'noindex,follow'
   }));
 }
 
 async function renderTagPages(posts) {
-  const tags = topicCounts(posts, 'tags').map(([tag]) => tag);
+  const tags = [...deriveBlogDiscovery(posts).activeTags];
   for (const tag of tags) {
     const filePath = path.join(outputDir, 'tags', slugify(tag), 'index.html');
     const ctx = createPageContext(filePath);
@@ -1318,7 +1315,6 @@ async function renderTagPages(posts) {
         <h1>${escapeHtml(tag)}</h1>
         <p><span>${tagged.length}</span> <span data-blog-note-label="${tagged.length}">${tagged.length > 1 ? 'related notes' : 'related note'}</span> <span data-blog-i18n="tag_in_topic">in this topic.</span></p>
         ${hintHtml('hint_tag')}
-        <div class="blog-hero-actions"><a class="btn btn-outline" href="${ctx.link('blog/index.html')}" data-blog-i18n="back_to_writing">Back to writing</a></div>
       </section>
       <section class="blog-section" aria-labelledby="tag-results-title">
         <div class="blog-section-head">
@@ -1339,7 +1335,7 @@ async function renderTagPages(posts) {
       schemaType: 'CollectionPage',
       socialImagePath: 'assets/og-blog.png',
       socialImageAlt: `Research Fieldnotes tagged ${tag}`,
-      robots: tagged.length >= 2 ? 'index,follow,max-image-preview:large' : 'noindex,follow'
+      robots: 'index,follow,max-image-preview:large'
     }));
   }
 }
@@ -2456,6 +2452,7 @@ ${items}
 }
 
 async function renderSitemap(posts) {
+  const discovery = deriveBlogDiscovery(posts);
   const dateOnly = (value) => {
     const date = String(value || '').slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
@@ -2495,10 +2492,10 @@ async function renderSitemap(posts) {
     { route: 'zh/', lastmod: latestHomeDate },
     ...['en', 'zh'].map((language) => ({ route: resumeRoute(language), lastmod: latestProfileDate })),
     { route: 'blog/', lastmod: latestPostDate },
-    ...(posts.length > 1 ? [{ route: 'blog/archive/', lastmod: latestPostDate }] : []),
+    ...(discovery.archive.indexable ? [{ route: 'blog/archive/', lastmod: latestPostDate }] : []),
     ...researchRoutes,
     ...posts.map((post) => ({ route: postUrl(post), lastmod: post.updated || post.date })),
-    ...topicCounts(posts, 'tags').filter(([, count]) => count >= 2).map(([tag]) => ({
+    ...discovery.activeTagEntries.map(([tag]) => ({
       route: `blog/tags/${slugify(tag)}/`,
       lastmod: posts.filter((post) => post.tags.includes(tag)).map((post) => post.updated || post.date).sort().at(-1)
     }))

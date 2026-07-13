@@ -137,6 +137,7 @@ async function expectedAssetVersion() {
     'resume.md',
     'resume.zh.md',
     'scripts/blog-content.mjs',
+    'scripts/blog-discovery.mjs',
     'scripts/portfolio-ranking.js',
     'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
@@ -343,10 +344,15 @@ test('single-post blog avoids duplicate discovery sections', async () => {
   assert.doesNotMatch(source, /data-blog-i18n="stat_search"/, 'hidden search must not be advertised as ready');
   assert.doesNotMatch(source, /class="blog-stat-grid"/, 'single-post blog should lead directly into its only article');
   assert.match(source, /class="blog-section blog-latest-section"/, 'the only article should remain immediately discoverable');
-  assert.match(source, /href="archive\/"[^>]+data-blog-i18n="hero_browse_archive"/, 'the promised writing archive needs a visible route');
+  assert.doesNotMatch(source, /class="blog-hero-actions"|href="archive\//, 'single-post mode must not duplicate its only discovery route');
+  assert.equal((source.match(/class="blog-card"/g) || []).length, 1, 'the only article must appear exactly once');
   const articleSource = await fs.readFile(path.join(rootDir, 'blog', 'posts', posts[0].slug, 'index.html'), 'utf8');
+  assert.doesNotMatch(articleSource, /href="\.\.\/\.\.\/tags\//, 'single-use tags should not lead to thin collection pages');
+  assert.match(articleSource, /<span class="blog-tag">personal-site<\/span>/);
   assert.doesNotMatch(articleSource, /class="blog-prev-next"/, 'an only article must not end with an empty post-navigation control');
   assert.doesNotMatch(articleSource, /Homepage Lab/, 'a single article must not imply a nonexistent series');
+  const sitemapSource = await fs.readFile(path.join(rootDir, 'sitemap.xml'), 'utf8');
+  assert.doesNotMatch(sitemapSource, /\/blog\/(?:archive|tags)\//, 'thin discovery pages must stay out of the sitemap');
 });
 
 test('blog presents the agreed fieldnotes identity', async () => {

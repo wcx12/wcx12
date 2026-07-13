@@ -41,7 +41,7 @@
   <meta name="twitter:description" content="Chenxu Wang（wcx12）的研究主页，涵盖点云配准、视觉地点识别、医学影像分析、大模型智能体与 AI4 教育。" />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home-zh.png" />
   <meta name="twitter:image:alt" content="wcx12 机器学习研究主页" />
-  <link rel="stylesheet" href="../styles.css?v=f9d7e382d85b" />
+  <link rel="stylesheet" href="../styles.css?v=5c695fdc949b" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -154,7 +154,7 @@
 
         <div class="hero-actions">
           <a href="./publications/" class="btn btn-primary" data-i18n="btn_publications_hero">查看论文</a>
-          <a id="openResearch" href="./research/" class="btn btn-outline" data-i18n="btn_research_hero">探索研究</a>
+          <a href="./research/" class="btn btn-outline" data-i18n="btn_research_hero">探索研究</a>
           <a href="mailto:c2675668@gmail.com?subject=Research%20collaboration%20with%20Chenxu%20Wang" class="btn btn-outline" data-i18n="btn_contact">联系我</a>
         </div>
 
@@ -213,12 +213,12 @@
       </section>
     </noscript>
 
-    <section class="console" aria-label="互动个人主页" data-i18n-aria="aria_interactive_portfolio">
+    <section class="console" aria-label="交互式个人主页工具" data-i18n-aria="aria_interactive_portfolio">
       <div class="console-head">
         <span class="dot pink"></span>
         <span class="dot cyan"></span>
         <span class="dot violet"></span>
-        <p>wcx12-console</p>
+        <p>wcx12-lab</p>
       </div>
 
       <p class="hint-row">
@@ -226,16 +226,13 @@
         <span class="touch-hint" data-i18n="hints_touch">在设置中打开“命令”即可搜索和跳转。</span>
       </p>
 
-      <nav class="command-row" aria-label="主页内容分区" data-i18n-aria="aria_portfolio_sections">
-        <button class="cmd active" data-view="about" data-i18n="tab_about">关于</button>
-        <button class="cmd" data-view="research" data-i18n="tab_research">研究</button>
-        <button class="cmd" data-view="projects" data-i18n="tab_projects">项目</button>
-        <button class="cmd" data-view="publications" data-i18n="tab_publications">论文</button>
-        <button class="cmd" data-view="writing" data-i18n="tab_writing">英文博客</button>
-        <button class="cmd" data-view="timeline" data-i18n="tab_timeline">时间线</button>
-        <button class="cmd" data-view="skills" data-i18n="tab_skills">技能</button>
-        <button class="cmd" data-view="resources" data-i18n="tab_resources">资源</button>
-        <button class="cmd" data-view="contact" data-i18n="tab_contact">联系</button>
+      <nav class="command-row" aria-label="交互工具" data-i18n-aria="aria_interactive_tools">
+        <button class="cmd active" data-view="about" data-i18n="tab_about">概览</button>
+        <button class="cmd" data-view="research" data-i18n="tab_research">概念实验室</button>
+        <button class="cmd" data-view="projects" data-i18n="tab_projects">仓库浏览</button>
+        <button class="cmd" data-view="publications" data-i18n="tab_publications">论文浏览</button>
+        <button class="cmd" data-view="writing" data-i18n="tab_writing">文章检索</button>
+        <button class="cmd" data-view="profile" data-i18n="tab_profile">履历摘要</button>
       </nav>
 
       <div class="view active" id="about">
@@ -247,21 +244,14 @@
       <div class="view" id="research">
         <div class="view-heading">
           <div>
-            <h2 data-i18n="research_title">研究兴趣</h2>
+            <h2 data-i18n="research_title">概念实验室</h2>
             <p class="muted" data-i18n="research_intro">选择一个子兴趣，查看概念演示、关联项目和论文。</p>
           </div>
           <div class="view-heading-actions">
-            <a class="btn btn-outline" href="./research/" data-i18n="research_static">研究索引</a>
+            <a class="btn btn-outline" href="./research/" data-i18n="research_static">研究证据索引</a>
             <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research" hidden>管理映射</button>
           </div>
         </div>
-        <section id="featuredResearch" class="featured-research" aria-label="精选研究" data-i18n-aria="aria_featured_research">
-          <div class="featured-research-head">
-            <span class="panel-eyebrow" data-i18n="featured_research_label">精选研究方向</span>
-            <span class="muted" data-i18n="featured_research_hint">快速查看概念演示、项目与论文。</span>
-          </div>
-          <div id="researchShowcase" class="research-showcase"></div>
-        </section>
         <div class="research-workbench">
           <aside class="interest-rail" id="interestRail" aria-label="研究兴趣" data-i18n-aria="aria_research_interests"></aside>
           <section class="interest-detail">
@@ -411,60 +401,66 @@
         <div id="writingList" class="writing-list"></div>
       </div>
 
-      <div class="view" id="timeline">
-        <h2 data-i18n="timeline_title">时间线</h2>
-        <div class="timeline">
-          <article>
-            <time>2024</time>
-            <p data-i18n="timeline_2024">强化机器学习工程基础与可复现实验流程。</p>
-          </article>
-          <article>
-            <time>2025</time>
-            <p data-i18n="timeline_2025">深入开展点集配准、视觉识别与样本高效学习。</p>
-          </article>
-          <article>
-            <time>2026</time>
-            <p data-i18n="timeline_2026">毕业年份，同时积极申请硕士/博士机会。</p>
-          </article>
+      <div class="view" id="profile">
+        <div class="view-heading">
+          <div>
+            <h2 data-i18n="profile_view_title">学术履历</h2>
+            <p class="muted" data-i18n="profile_view_desc">集中查看研究轨迹、常用技术栈、正式履历与联系方式。</p>
+          </div>
+          <a class="btn btn-outline" href="./resume/" data-i18n="cv_download">查看研究履历</a>
         </div>
-      </div>
 
-      <div class="view" id="skills">
-        <h2 data-i18n="skill_title">技能矩阵</h2>
-        <div class="chips" role="group" aria-label="技术技能" data-i18n-aria="aria_technical_skills">
-          <button class="chip" type="button" aria-pressed="false" data-tag="Python">Python</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="PyTorch">PyTorch</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="TensorFlow">TensorFlow</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="OpenCV">OpenCV</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="Scikit-learn">Scikit-learn</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="Linux">Linux</button>
-          <button class="chip" type="button" aria-pressed="false" data-tag="Git">Git</button>
+        <div class="profile-console-grid">
+          <section class="profile-console-section profile-console-timeline" aria-labelledby="profileTimelineTitle">
+            <h3 id="profileTimelineTitle" data-i18n="timeline_title">时间线</h3>
+            <div class="timeline">
+              <article>
+                <time>2024</time>
+                <p data-i18n="timeline_2024">强化机器学习工程基础与可复现实验流程。</p>
+              </article>
+              <article>
+                <time>2025</time>
+                <p data-i18n="timeline_2025">深入开展点集配准、视觉识别与样本高效学习。</p>
+              </article>
+              <article>
+                <time>2026</time>
+                <p data-i18n="timeline_2026">毕业年份，同时积极申请硕士/博士机会。</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="profile-console-section" aria-labelledby="profileSkillsTitle">
+            <h3 id="profileSkillsTitle" data-i18n="skill_title">技能矩阵</h3>
+            <div class="chips" role="group" aria-label="技术技能" data-i18n-aria="aria_technical_skills">
+              <button class="chip" type="button" aria-pressed="false" data-tag="Python">Python</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="PyTorch">PyTorch</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="TensorFlow">TensorFlow</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="OpenCV">OpenCV</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="Scikit-learn">Scikit-learn</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="Linux">Linux</button>
+              <button class="chip" type="button" aria-pressed="false" data-tag="Git">Git</button>
+            </div>
+            <p id="chipOutput" role="status" aria-live="polite" data-i18n="skill_hint">点击技能标签可查看当前使用说明。</p>
+          </section>
+
+          <section class="profile-console-section" aria-labelledby="profileResourcesTitle">
+            <h3 id="profileResourcesTitle" data-i18n="res_title">履历与论文</h3>
+            <div class="profile-resource-links">
+              <a href="./resume/" data-i18n="cv_download">查看研究履历</a>
+              <a href="./publications/" data-i18n="pub_open">打开论文索引</a>
+            </div>
+          </section>
+
+          <section class="profile-console-section" aria-labelledby="profileContactTitle">
+            <h3 id="profileContactTitle" data-i18n="contact_title">联系方式</h3>
+            <address class="profile-contact-list">
+              <a href="mailto:c2675668@gmail.com">c2675668@gmail.com</a>
+              <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
+              <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="查看 ORCID 记录 0009-0005-6139-4327" data-i18n-aria="aria_orcid_record">ORCID</a>
+            </address>
+            <p data-i18n="contact_last">欢迎研究合作与开源协作。</p>
+          </section>
         </div>
-        <p id="chipOutput" role="status" aria-live="polite" data-i18n="skill_hint">点击技能标签可查看当前使用说明。</p>
-      </div>
-
-      <div class="view" id="resources">
-        <h2 data-i18n="res_title">简历与文件</h2>
-        <div class="resource-grid">
-          <article class="resource-card">
-            <h3 data-i18n="cv_title">简历</h3>
-            <p data-i18n="cv_desc">查看可打印的研究履历，内容包括教育经历、论文、项目和技能。</p>
-            <a class="btn btn-primary" href="./resume/" data-i18n="cv_download">查看研究履历</a>
-          </article>
-          <article class="resource-card">
-            <h3 data-i18n="pub_file_title">论文索引</h3>
-            <p data-i18n="pub_file_desc">查看包含作者顺序、DOI 链接与官方实现的稳定论文页面。</p>
-            <a class="btn btn-outline" href="./publications/" data-i18n="pub_open">打开论文索引</a>
-          </article>
-        </div>
-      </div>
-
-      <div class="view" id="contact">
-        <h2 data-i18n="contact_title">联系方式</h2>
-        <p>Email: <a href="mailto:c2675668@gmail.com">c2675668@gmail.com</a></p>
-        <p>GitHub: <a href="https://github.com/wcx12" target="_blank" rel="noreferrer">github.com/wcx12</a></p>
-        <p>ORCID: <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="查看 ORCID 记录 0009-0005-6139-4327" data-i18n-aria="aria_orcid_record">0009-0005-6139-4327</a></p>
-        <p data-i18n="contact_last">欢迎研究合作与开源协作。</p>
       </div>
     </section>
   </main>
@@ -568,6 +564,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="../homepage-bootstrap.js?v=f9d7e382d85b"></script>
+  <script type="module" src="../homepage-bootstrap.js?v=5c695fdc949b"></script>
 </body>
 </html>

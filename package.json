@@ -12,7 +12,7 @@
     "build:preview": "node scripts/build-blog.mjs --preview-drafts",
     "package:pages": "node scripts/package-pages.mjs",
     "preview:blog": "node scripts/serve-preview.mjs",
-    "test:content": "node --test scripts/blog-content.test.mjs scripts/portfolio-ranking.test.mjs scripts/research-config-schema.test.mjs scripts/sync-github-repos.test.mjs",
+    "test:content": "node --test scripts/blog-content.test.mjs scripts/blog-discovery.test.mjs scripts/portfolio-ranking.test.mjs scripts/research-config-schema.test.mjs scripts/sync-github-repos.test.mjs",
     "test:homepage": "node --test scripts/homepage-runtime.test.mjs",
     "test:site": "node --test scripts/site-output.test.mjs",
     "test:pages": "node --test scripts/pages-artifact.test.mjs",
