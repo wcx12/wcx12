@@ -520,7 +520,7 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${escapeHtml(absoluteUrl('rss.xml'))}" />
   <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
   <link rel="preload" href="${ctx.link('assets/fonts/space-grotesk-latin.woff2')}" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="${versionedAssetLink(ctx, 'styles.css')}" />
+  <link rel="stylesheet" href="${versionedAssetLink(ctx, 'content.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/blog.css')}" />
 ${extraHead.trim()}
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
@@ -531,7 +531,7 @@ ${extraHead.trim()}
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
   <header class="blog-topbar">
     <a class="blog-brand" href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}>wcx12</a>
-    <details class="blog-menu">
+    <details class="blog-menu" open>
       <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}>${escapeHtml(text.nav_menu)}</summary>
       <nav id="blogSiteNav" class="blog-nav" aria-label="${escapeHtml(text.nav_landmark)}"${i18n('nav_landmark', 'aria')}>
         <a href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}${current('home')} title="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}>${escapeHtml(text.nav_home)}</a>
@@ -790,6 +790,7 @@ function versionedAssetLink(ctx, relativePath) {
 
 async function computeAssetVersion(posts) {
   const files = [
+    'content.css',
     'styles.css',
     'homepage-bootstrap.js',
     'script.js',
@@ -1205,6 +1206,7 @@ async function renderDraftPreviews(posts, renderer) {
   await fs.mkdir(previewRoot, { recursive: true });
   const scaffold = [
     '404.html',
+    'content.css',
     'styles.css',
     'homepage-bootstrap.js',
     'script.js',

@@ -1740,7 +1740,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   box-shadow: none;
 }
 
-@media (max-width: 880px) {
+@media (max-width: 1023px) {
   .blog-body.blog-menu-open::after {
     content: "";
     position: fixed;
@@ -1935,7 +1935,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 }
 
-@media (min-width: 881px) {
+@media (min-width: 1024px) {
   .blog-menu:not([open]) > .blog-nav {
     display: flex;
   }

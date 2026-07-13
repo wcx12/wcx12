@@ -8,6 +8,7 @@ const artifactDir = path.join(outputRoot, 'pages');
 
 const publicFiles = [
   '404.html',
+  'content.css',
   'favicon.svg',
   'homepage-bootstrap.js',
   'homepage-i18n.js',

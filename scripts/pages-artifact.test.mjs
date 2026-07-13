@@ -30,6 +30,7 @@ test('Pages artifact contains only the explicit public surface', async () => {
   assert.ok(paths.includes('.nojekyll'));
   for (const required of [
     'index.html',
+    'content.css',
     'homepage-bootstrap.js',
     'zh/index.html',
     'resume/index.html',

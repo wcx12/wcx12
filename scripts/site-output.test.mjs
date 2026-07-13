@@ -123,6 +123,7 @@ function structuredImageUrl(metadata) {
 async function expectedAssetVersion() {
   const { posts } = await loadPosts(rootDir);
   const files = [
+    'content.css',
     'styles.css',
     'homepage-bootstrap.js',
     'script.js',
@@ -207,7 +208,7 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
 test('shared content navigation keeps visible labels in accessible names', async () => {
   for (const relativePath of ['blog/index.html', 'research/index.html', 'resume/index.html', 'zh/research/index.html']) {
     const source = await fs.readFile(path.join(rootDir, relativePath), 'utf8');
-    assert.match(source, /<details class="blog-menu">[\s\S]*?<summary class="blog-menu-toggle"[^>]+>[^<]+<\/summary>/);
+    assert.match(source, /<details class="blog-menu" open>[\s\S]*?<summary class="blog-menu-toggle"[^>]+>[^<]+<\/summary>/);
     assert.doesNotMatch(source.match(/<summary class="blog-menu-toggle"[\s\S]*?<\/summary>/)?.[0] || '', /aria-label=/);
     const siteNav = source.match(/<nav id="blogSiteNav"[\s\S]*?<\/nav>/)?.[0] || '';
     assert.ok(siteNav, `${relativePath}: missing shared navigation`);
@@ -353,6 +354,37 @@ test('single-post blog avoids duplicate discovery sections', async () => {
   assert.doesNotMatch(articleSource, /Homepage Lab/, 'a single article must not imply a nonexistent series');
   const sitemapSource = await fs.readFile(path.join(rootDir, 'sitemap.xml'), 'utf8');
   assert.doesNotMatch(sitemapSource, /\/blog\/(?:archive|tags)\//, 'thin discovery pages must stay out of the sitemap');
+});
+
+test('generated content routes load the compact shared stylesheet', async () => {
+  const pages = [
+    ...staticRouteFiles,
+    ...await walk(path.join(rootDir, 'blog'), (file) => file.endsWith('.html'))
+  ];
+  for (const file of pages) {
+    const source = await fs.readFile(file, 'utf8');
+    const relative = path.relative(rootDir, file).replace(/\\/g, '/');
+    assert.match(source, /href="(?:\.\.\/)*content\.css\?v=[a-f0-9]{12}"/, `${relative}: compact shared stylesheet is missing`);
+    assert.doesNotMatch(source, /href="(?:\.\.\/)*styles\.css\?v=/, `${relative}: homepage stylesheet must not leak into content routes`);
+    assert.match(source, /<details class="blog-menu" open>/, `${relative}: desktop navigation must remain available without JavaScript`);
+  }
+});
+
+test('compact content styles keep homepage themes and fonts in sync', async () => {
+  const [homepageStyles, contentStyles] = await Promise.all([
+    fs.readFile(path.join(rootDir, 'styles.css'), 'utf8'),
+    fs.readFile(path.join(rootDir, 'content.css'), 'utf8')
+  ]);
+  const normalize = (value) => value.replace(/\s+/g, ' ').trim();
+  const ruleBody = (source, selector) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return source.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))?.[1] || '';
+  };
+  for (const selector of [':root', ':root[data-theme="warm"]', ':root[data-theme="mono"]']) {
+    assert.equal(normalize(ruleBody(contentStyles, selector)), normalize(ruleBody(homepageStyles, selector)), `${selector} tokens drifted`);
+  }
+  const fontFaces = (source) => matches(source, /@font-face\s*\{([^}]*)\}/g).map(([, body]) => normalize(body));
+  assert.deepEqual(fontFaces(contentStyles), fontFaces(homepageStyles));
 });
 
 test('blog presents the agreed fieldnotes identity', async () => {
@@ -996,6 +1028,9 @@ test('fixed routes ignore stored language while preserving theme selection', asy
   assert.match(source, /lang_target_aria: '切换到中文界面'/);
   assert.match(source, /lang_target_aria: 'Switch to the English interface'/);
   assert.match(source, /blogMenu\?\.addEventListener\('focusout',[\s\S]*?!blogMenu\.contains\(event\.relatedTarget\)[\s\S]*?setBlogMenuOpen\(false\)/);
+  assert.match(source, /window\.matchMedia\('\(min-width: 1024px\)'\)/);
+  assert.match(styles, /@media \(max-width: 1023px\)\s*\{[\s\S]*?\.blog-menu:not\(\[open\]\) > \.blog-nav\s*\{[^}]*display:\s*none/s);
+  assert.match(styles, /@media \(min-width: 1024px\)\s*\{[\s\S]*?\.blog-menu:not\(\[open\]\) > \.blog-nav\s*\{[^}]*display:\s*flex/s);
   assert.match(styles, /\.blog-menu:not\(\[open\]\) > \.blog-nav\s*\{[^}]*display:\s*none/s);
   assert.match(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*3px solid var\(--pink\);[^}]*outline-offset:\s*3px;/s);
   assert.doesNotMatch(styles, /\.blog-hint summary:focus-visible\s*\{[^}]*outline:\s*none/s);

@@ -6,6 +6,7 @@ const themeSelect = document.getElementById('blogThemeSelect');
 const langToggle = document.getElementById('blogLangToggle');
 const blogMenu = document.querySelector('.blog-menu');
 const blogMenuToggle = document.querySelector('.blog-menu-toggle');
+const desktopNavigation = window.matchMedia('(min-width: 1024px)');
 
 const blogI18n = {
   en: {
@@ -246,9 +247,16 @@ themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
 
 function setBlogMenuOpen(open) {
   if (!blogMenu) return;
-  blogMenu.open = Boolean(open);
+  blogMenu.open = desktopNavigation.matches || Boolean(open);
   document.body.classList.toggle('blog-menu-open', blogMenu.open);
 }
+
+function syncBlogMenuToViewport() {
+  setBlogMenuOpen(desktopNavigation.matches);
+}
+
+syncBlogMenuToViewport();
+desktopNavigation.addEventListener('change', syncBlogMenuToViewport);
 
 blogMenu?.addEventListener('toggle', () => {
   document.body.classList.toggle('blog-menu-open', blogMenu.open);
