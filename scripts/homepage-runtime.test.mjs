@@ -232,6 +232,7 @@ test('native controls keep the site typography and stable pointer targets', () =
   assert.match(styleSource, /button,\s*input,\s*select,\s*textarea\s*\{\s*font:\s*inherit;/s);
   assert.doesNotMatch(styleSource, /\.btn:hover\s*\{[^}]*transform\s*:/s);
   assert.match(styleSource, /\.btn:active\s*\{[^}]*filter:\s*brightness\(0\.9\)/s);
+  assert.match(styleSource, /@media\s*\(forced-colors:\s*active\)[\s\S]*?body\.cursor-enabled,[\s\S]*?cursor:\s*auto\s*!important;[\s\S]*?\.custom-cursor\s*\{[^}]*display:\s*none\s*!important;/s);
 });
 
 test('view navigation and research tabs preserve visible keyboard focus and ARIA relationships', () => {
@@ -256,6 +257,15 @@ test('view navigation and research tabs preserve visible keyboard focus and ARIA
   assert.match(scriptSource, /view_paper_details_aria\.replace\('\{paper\}', item\.title\)/);
   assert.match(scriptSource, /open_paper_aria\.replace\('\{paper\}', item\.title\)/);
   assert.match(scriptSource, /escapeHtml\(paperSummary\(item\)\)/);
+});
+
+test('research navigation and tab panels use compatible landmark semantics', () => {
+  assert.match(indexSource, /<nav class="interest-rail"[^>]+aria-label=/);
+  assert.doesNotMatch(indexSource, /<aside class="interest-rail"/);
+  for (const panel of ['Projects', 'Papers', 'Writing']) {
+    assert.match(indexSource, new RegExp(`<div id="interestPanel${panel}"[^>]+role="tabpanel"`));
+    assert.doesNotMatch(indexSource, new RegExp(`<article id="interestPanel${panel}"[^>]+role="tabpanel"`));
+  }
 });
 
 test('command palette exposes the active option through the combobox pattern', () => {

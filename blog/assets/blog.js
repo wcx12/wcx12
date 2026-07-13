@@ -480,6 +480,9 @@ if (searchInput && searchResults) {
 }
 
 function initProfileNavigation() {
+  const directory = document.querySelector('details.profile-directory');
+  const directoryCurrent = directory?.querySelector('[data-profile-current]');
+  const compactDirectory = window.matchMedia('(max-width: 560px)');
   const links = [...document.querySelectorAll('.profile-section-nav a[href^="#"]')];
   const items = links.map((link) => {
     try {
@@ -492,13 +495,27 @@ function initProfileNavigation() {
 
   const activate = (section) => {
     for (const item of items) {
-      if (item.section === section) item.link.setAttribute('aria-current', 'location');
-      else item.link.removeAttribute('aria-current');
+      if (item.section === section) {
+        item.link.setAttribute('aria-current', 'location');
+        if (directoryCurrent) directoryCurrent.textContent = item.link.querySelector('strong')?.textContent?.trim() || item.link.textContent.trim();
+      } else item.link.removeAttribute('aria-current');
     }
   };
 
-  for (const item of items) item.link.addEventListener('click', () => activate(item.section));
-  activate(items[0].section);
+  const syncDirectory = () => {
+    if (!directory) return;
+    if (compactDirectory.matches) directory.removeAttribute('open');
+    else directory.setAttribute('open', '');
+  };
+
+  for (const item of items) item.link.addEventListener('click', () => {
+    activate(item.section);
+    if (compactDirectory.matches) directory?.removeAttribute('open');
+  });
+  const initialItem = items.find((item) => item.link.hash === window.location.hash) || items[0];
+  activate(initialItem.section);
+  syncDirectory();
+  compactDirectory.addEventListener?.('change', syncDirectory);
   if (!('IntersectionObserver' in window)) {
     return;
   }

@@ -321,6 +321,17 @@ html {
   }
 }
 
+@media (forced-colors: active) {
+  body.cursor-enabled,
+  body.cursor-enabled * {
+    cursor: auto !important;
+  }
+
+  .custom-cursor {
+    display: none !important;
+  }
+}
+
 .topbar,
 main,
 footer { position: relative; z-index: 1; }

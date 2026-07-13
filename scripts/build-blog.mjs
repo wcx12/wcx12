@@ -1404,13 +1404,12 @@ async function renderResume(renderer, language) {
     inPressCount ? `${inPressCount} ${text.inPressUnit}` : ''
   ].filter(Boolean).join(' · ') || `${staticPublications.length} ${text.publicationUnit}`;
   const publicationMarker = 'RESUME_PUBLICATIONS_PLACEHOLDER';
-  const publicationList = `<ol class="resume-publications">${staticPublications.map((publication, publicationIndex) => {
+  const publicationList = `<ol class="resume-publications">${staticPublications.map((publication) => {
     const status = publicationStatusLabel(publication, language);
     const topic = publicationTopic(publication);
     return `<li>
       <article class="resume-publication-entry">
         <div class="resume-publication-index">
-          <span aria-hidden="true">P${String(publicationIndex + 1).padStart(2, '0')}</span>
           <time datetime="${escapeHtml(String(publication.year))}">${escapeHtml(String(publication.year))}</time>
         </div>
         <div class="resume-publication-content">
@@ -1449,10 +1448,8 @@ async function renderResume(renderer, language) {
       publicationMarkers += 1;
       return publicationList;
     });
-    const sectionNumber = String(index + 1).padStart(2, '0');
     return `<section id="${escapeHtml(section.id)}" class="profile-section" data-profile-section="${escapeHtml(section.id)}" data-profile-kind="${profileSectionKinds[index] || 'section'}" aria-labelledby="${escapeHtml(section.id)}-title">
       <header class="profile-section-head">
-        <span aria-hidden="true">${sectionNumber}</span>
         <div>
           <h2 id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
           <p>${escapeHtml(profileSectionNotes[index] || '')}</p>
@@ -1477,7 +1474,7 @@ async function renderResume(renderer, language) {
           <p class="profile-identity"><span class="profile-handle">@wcx12</span><strong>${text.role}</strong><span>${text.location}</span></p>
           <p class="profile-summary">${text.summary}</p>
         </div>
-        <aside class="profile-command">
+        <div class="profile-command">
           <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${text.status}</strong></p>
           <p class="profile-command-label">${text.commandLabel}</p>
           <div class="profile-actions">
@@ -1485,11 +1482,10 @@ async function renderResume(renderer, language) {
             <button id="printProfile" class="btn btn-outline" type="button">${text.print}</button>
           </div>
           <nav class="profile-contact-links" aria-label="${isZh ? '联系方式' : 'Contact links'}">
-            <a href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">c2675668@gmail.com</a>
             <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer" aria-label="${text.githubLabel}">GitHub</a>
             <a href="https://orcid.org/${ORCID_ID}" target="_blank" rel="me noreferrer" aria-label="${text.orcidLabel}">ORCID</a>
           </nav>
-        </aside>
+        </div>
         <dl class="profile-facts">
           <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
           <div><dt>${text.graduation}</dt><dd>2026</dd></div>
@@ -1497,10 +1493,11 @@ async function renderResume(renderer, language) {
         </dl>
       </header>
       <div class="profile-layout">
-        <aside class="profile-directory">
+        <details class="profile-directory" open>
+          <summary class="profile-directory-toggle"><span>${escapeHtml(text.sections)}</span><strong data-profile-current>${escapeHtml(profileSectionNavLabels[0])}</strong></summary>
           <p>${text.sectionsLabel}</p>
           <nav class="profile-section-nav" aria-label="${text.sections}">${sectionNavigation}</nav>
-        </aside>
+        </details>
         <div class="profile-sections">
 ${sectionHtml}
         </div>

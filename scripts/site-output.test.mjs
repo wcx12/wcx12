@@ -644,11 +644,12 @@ test('research JSON-LD follows configured topics and visible evidence exactly', 
 });
 
 test('research profile has complete English and Chinese fixed-language records', async () => {
-  const [english, chinese, chineseHome, profileStyles] = await Promise.all([
+  const [english, chinese, chineseHome, profileStyles, profileClient] = await Promise.all([
     fs.readFile(path.join(rootDir, 'resume', 'index.html'), 'utf8'),
     fs.readFile(path.join(rootDir, 'zh', 'resume', 'index.html'), 'utf8'),
     fs.readFile(path.join(rootDir, 'zh', 'index.html'), 'utf8'),
-    fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8')
+    fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8'),
+    fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8')
   ]);
   assert.match(english, /<title>Academic Profile \| Chenxu Wang \(wcx12\)<\/title>/);
   assert.match(chinese, /<title>学术履历 \| Chenxu Wang \(wcx12\)<\/title>/);
@@ -664,10 +665,13 @@ test('research profile has complete English and Chinese fixed-language records',
   for (const source of [english, chinese]) {
     assert.match(source, /<header class="profile-masthead">/);
     assert.match(source, /<p class="profile-identity"><span class="profile-handle">@wcx12<\/span>/);
-    assert.match(source, /<aside class="profile-command">[\s\S]*?<p class="profile-status">/);
+    assert.match(source, /<div class="profile-command">[\s\S]*?<p class="profile-status">/);
     assert.match(source, /<dl class="profile-facts">/);
-    assert.match(source, /<aside class="profile-directory">/);
+    assert.match(source, /<details class="profile-directory" open>[\s\S]*?<summary class="profile-directory-toggle">/);
+    assert.match(source, /<strong data-profile-current>/);
     assert.doesNotMatch(source, /class="profile-rail"/);
+    assert.doesNotMatch(source, /<header class="profile-section-head">\s*<span/);
+    assert.doesNotMatch(source, /<span aria-hidden="true">P\d{2}<\/span>/);
     assert.equal(matches(source, /data-profile-section="[^"]+"/g).length, 5);
     for (const kind of ['education', 'publications', 'interests', 'projects', 'skills']) {
       assert.match(source, new RegExp(`data-profile-kind="${kind}"`));
@@ -692,26 +696,29 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.match(english, new RegExp(`href="\\.\\.\\/publications\\/${publication.slug}\\/"`));
     assert.match(chinese, new RegExp(`href="\\.\\.\\/publications\\/${publication.slug}\\/"`));
   }
-  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(168px, 192px\) minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /\.profile-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(150px, 176px\) minmax\(0, 1fr\)/s);
   assert.match(profileStyles, /\.profile-directory\s*\{[^}]*position:\s*sticky/s);
   assert.match(profileStyles, /\.profile-section\s*\{[^}]*display:\s*block/s);
-  assert.match(profileStyles, /\.profile-section-head span\s*\{[^}]*border:\s*0[^}]*background:\s*transparent/s);
-  assert.match(profileStyles, /\.profile-section\[data-profile-kind="projects"\] \.profile-section-body > ul\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
-  assert.match(profileStyles, /\.resume-publication-entry\s*\{[^}]*border-radius:\s*8px[^}]*background:\s*var\(--profile-surface\)/s);
-  assert.equal(matches(profileStyles, /Keep the profile dense and editorial/g).length, 1);
-  assert.doesNotMatch(profileStyles, /\.research-profile\s*\{[^}]*width:\s*min\(1040px, 100%\)/s);
-  assert.doesNotMatch(profileStyles, /\.profile-section\s*\{[^}]*grid-template-columns:\s*minmax\(150px, 190px\)/s);
-  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section-nav\s*\{[^}]*display:\s*grid[^}]*overflow:\s*visible/s);
+  assert.match(profileStyles, /\.profile-section\[data-profile-kind="projects"\] \.profile-section-body > ul\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+  assert.match(profileStyles, /\.resume-publication-entry\s*\{[^}]*border-radius:\s*0[^}]*background:\s*transparent/s);
+  assert.equal(matches(profileStyles, /Present the profile as an academic dossier instead of a dashboard/g).length, 1);
+  assert.doesNotMatch(profileStyles, /\.resume-publication-entry\s*\{[^}]*border-radius:\s*8px/s);
+  assert.match(profileStyles, /\.research-profile\[lang="zh-CN"\] :is\(\.profile-heading h1, \[lang="en"\]\)/s);
+  assert.doesNotMatch(profileStyles, /\.profile-heading h1\s*\{[^}]*clamp\([^}]*vw/s);
+  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-directory-toggle\s*\{[^}]*display:\s*grid[^}]*min-height:\s*48px/s);
+  assert.match(profileStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile-section-nav\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*overflow:\s*visible/s);
   assert.match(profileStyles, /@media \(max-width: 880px\)[\s\S]*?\.profile-directory\s*\{[^}]*position:\s*static/s);
   assert.match(profileStyles, /@media \(max-width: 880px\)[\s\S]*?\.profile-section\s*\{[^}]*scroll-margin-top:\s*94px/s);
+  assert.match(profileClient, /matchMedia\('\(max-width: 560px\)'\)/);
+  assert.match(profileClient, /directory\.removeAttribute\('open'\)/);
+  assert.match(profileClient, /directoryCurrent\.textContent/);
   assert.match(profileStyles, /@page\s*\{[^}]*size:\s*A4/s);
   assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*0/s);
   assert.match(profileStyles, /@media print[\s\S]*?:root\[data-theme="warm"\],[\s\S]*?:root\[data-theme="mono"\]\s*\{/s);
   assert.match(profileStyles, /@media print[\s\S]*?html,[\s\S]*?\.blog-body\s*\{[^}]*background:\s*#ffffff !important/s);
-  assert.match(profileStyles, /@media print[\s\S]*?\.blog-shell\s*\{[^}]*padding:\s*10mm 14mm/s);
+  assert.match(profileStyles, /@media print[\s\S]*?\.blog-shell\s*\{[^}]*padding:\s*8mm 12mm/s);
   assert.match(profileStyles, /@media print[\s\S]*?\.profile-directory,[\s\S]*?display:\s*none !important/s);
   assert.match(profileStyles, /@media print[\s\S]*?\.resume-publication-index\s*\{[^}]*display:\s*block/s);
-  assert.match(profileStyles, /@media print[\s\S]*?\.resume-publication-index span\s*\{[^}]*display:\s*none/s);
   assert.doesNotMatch(profileStyles, /counter-reset:\s*profile-project/);
   assert.equal(jsonLdFor(english).inLanguage, 'en');
   assert.equal(jsonLdFor(chinese).inLanguage, 'zh-CN');
@@ -905,6 +912,14 @@ test('publication pages expose every canonical DOI record with ordered authors',
     assert.deepEqual(visibleDois, expectedDois, `${route}: visible DOI records differ from JSON-LD`);
     assert.doesNotMatch(source, /DOI-verified/i);
   }
+});
+
+test('citation export links keep touch-sized download targets', async () => {
+  const styleSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.css'), 'utf8');
+  assert.match(
+    styleSource,
+    /\.research-meta a\[download\]\s*\{[^}]*min-width:\s*44px[^}]*min-height:\s*44px/s
+  );
 });
 
 test('sitemap covers every configured fixed-language route', async () => {
