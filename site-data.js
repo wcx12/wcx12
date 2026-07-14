@@ -2,12 +2,34 @@ export const ORCID_ID = "0009-0005-6139-4327";
 
 export const localRepos = [
   {
+    "name": "HLPP-SKILL",
+    "description": "Reusable Codex skills from practical experience",
+    "descriptionZh": "从 GitHub 自动同步的公开仓库；详细说明请查看项目 README。",
+    "language": "Python",
+    "stargazers_count": 0,
+    "updated_at": "2026-07-14T07:29:00Z",
+    "default_branch": "main",
+    "html_url": "https://github.com/wcx12/HLPP-SKILL",
+    "readme_url": "https://raw.githubusercontent.com/wcx12/HLPP-SKILL/main/README.md",
+    "license_spdx": "MIT",
+    "stage_key": "public_repository",
+    "stage": {
+      "en": "Public repository",
+      "zh": "公开仓库"
+    },
+    "evidence": {
+      "en": "Automatically synchronized public repository; maturity and research classification have not yet been curated.",
+      "zh": "自动同步的公开仓库；项目阶段与研究分类尚未人工整理。"
+    },
+    "interests": []
+  },
+  {
     "name": "wcx12",
     "description": "Interactive GitHub profile and research homepage.",
     "descriptionZh": "交互式 GitHub 个人资料与研究主页。",
     "language": "JavaScript",
     "stargazers_count": 2,
-    "updated_at": "2026-07-13T06:16:00Z",
+    "updated_at": "2026-07-14T05:28:08Z",
     "default_branch": "main",
     "html_url": "https://github.com/wcx12/wcx12",
     "readme_url": "https://raw.githubusercontent.com/wcx12/wcx12/main/README.md",
