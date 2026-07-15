@@ -2,6 +2,28 @@ export const ORCID_ID = "0009-0005-6139-4327";
 
 export const localRepos = [
   {
+    "name": "wcx12",
+    "description": "Interactive GitHub profile and research homepage.",
+    "descriptionZh": "交互式 GitHub 个人资料与研究主页。",
+    "language": "JavaScript",
+    "stargazers_count": 2,
+    "updated_at": "2026-07-15T05:29:06Z",
+    "default_branch": "main",
+    "html_url": "https://github.com/wcx12/wcx12",
+    "readme_url": "https://raw.githubusercontent.com/wcx12/wcx12/main/README.md",
+    "license_spdx": null,
+    "stage_key": "deployed_website",
+    "stage": {
+      "en": "Deployed website",
+      "zh": "已部署网站"
+    },
+    "evidence": {
+      "en": "Live GitHub Pages site with tested build, publishing, and research-mapping workflows.",
+      "zh": "已上线的 GitHub Pages 站点，包含经过测试的构建、发布与研究映射工作流。"
+    },
+    "interests": []
+  },
+  {
     "name": "HLPP-SKILL",
     "description": "Reusable Codex skills from practical experience",
     "descriptionZh": "从 GitHub 自动同步的公开仓库；详细说明请查看项目 README。",
@@ -20,28 +42,6 @@ export const localRepos = [
     "evidence": {
       "en": "Automatically synchronized public repository; maturity and research classification have not yet been curated.",
       "zh": "自动同步的公开仓库；项目阶段与研究分类尚未人工整理。"
-    },
-    "interests": []
-  },
-  {
-    "name": "wcx12",
-    "description": "Interactive GitHub profile and research homepage.",
-    "descriptionZh": "交互式 GitHub 个人资料与研究主页。",
-    "language": "JavaScript",
-    "stargazers_count": 2,
-    "updated_at": "2026-07-14T05:28:08Z",
-    "default_branch": "main",
-    "html_url": "https://github.com/wcx12/wcx12",
-    "readme_url": "https://raw.githubusercontent.com/wcx12/wcx12/main/README.md",
-    "license_spdx": null,
-    "stage_key": "deployed_website",
-    "stage": {
-      "en": "Deployed website",
-      "zh": "已部署网站"
-    },
-    "evidence": {
-      "en": "Live GitHub Pages site with tested build, publishing, and research-mapping workflows.",
-      "zh": "已上线的 GitHub Pages 站点，包含经过测试的构建、发布与研究映射工作流。"
     },
     "interests": []
   },
