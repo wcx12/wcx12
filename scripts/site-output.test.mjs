@@ -655,7 +655,8 @@ test('research profile has complete English and Chinese fixed-language records',
   assert.match(chinese, /<title>学术履历 \| Chenxu Wang \(wcx12\)<\/title>/);
   assert.match(english, /<h2 id="profile-research-interests-title">Research Interests<\/h2>/);
   assert.match(chinese, /<h2 id="profile-研究兴趣-title">研究兴趣<\/h2>/);
-  assert.match(chinese, /本科阶段，2022-2026 年/);
+  assert.match(chinese, /本科阶段，2022\.09-2026\.06/);
+  assert.match(chinese, /创业者，2025\.11-至今/);
   assert.match(chinese, /创业实践中 · 深圳后浪澎湃/);
   assert.match(chinese, /深圳市后浪澎湃科技有限责任公司/);
   assert.match(english, /1 published · 1 in press/);

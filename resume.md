@@ -3,12 +3,12 @@
 ## Education
 
 - **Beijing Institute of Technology**\
-  Undergraduate study, 2022-2026
+  Undergraduate study, Sep 2022-Jun 2026
 
 ## Experience
 
 - **Shenzhen Houlang Pengpai Technology Co., Ltd.**\
-  Entrepreneurial builder; early-stage education-technology practice, Shenzhen
+  Entrepreneurial builder, Nov 2025-present; early-stage education-technology practice, Shenzhen
 
 ## Publications
 

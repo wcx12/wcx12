@@ -1492,7 +1492,7 @@ async function renderResume(renderer, language) {
         </div>
         <dl class="profile-facts">
       <div><dt>${text.affiliation}</dt><dd>${isZh ? '深圳后浪澎湃' : 'Shenzhen Houlang Pengpai'}</dd></div>
-      <div><dt>${text.graduation}</dt><dd>2022-2026</dd></div>
+      <div><dt>${text.graduation}</dt><dd>${isZh ? '2022.09-2026.06' : 'Sep 2022-Jun 2026'}</dd></div>
           <div><dt>${text.publications}</dt><dd>${publicationFact}</dd></div>
         </dl>
       </header>
