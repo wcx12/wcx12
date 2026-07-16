@@ -213,7 +213,7 @@ function personEntity() {
     },
     worksFor: {
       '@type': 'Organization',
-      name: 'Shenzhen Houlang Pengpai'
+      name: 'Shenzhen Houlang Pengpai Technology Co., Ltd.'
     },
     sameAs: [
       'https://github.com/wcx12',
@@ -1360,13 +1360,13 @@ async function renderResume(renderer, language) {
     location: '中国北京',
     summary: '研究不完整观测与有限标注下的可靠视觉智能，并落实为可复现的研究软件。',
     statusLabel: '当前状态',
-    status: '深圳后浪澎湃实习 / 创业实践',
+    status: '创业实践中 · 深圳后浪澎湃',
     commandLabel: '联系与导出',
     print: '打印 / 保存 PDF',
     contact: '邮件联系',
     sections: '履历目录',
     sectionsLabel: '快速浏览',
-    affiliation: '当前经历',
+    affiliation: '当前实践',
     graduation: '北理阶段',
     publications: '论文记录',
     publicationUnit: '篇',
@@ -1383,13 +1383,13 @@ async function renderResume(renderer, language) {
     location: 'Beijing, China',
     summary: 'Reliable visual intelligence under incomplete observations and limited labels, built as reproducible research software.',
     statusLabel: 'Current status',
-    status: 'Internship / startup practice at Shenzhen Houlang Pengpai',
+    status: 'Entrepreneurial work at Shenzhen Houlang Pengpai',
     commandLabel: 'Contact and export',
     print: 'Print / Save PDF',
     contact: 'Email me',
     sections: 'Profile sections',
     sectionsLabel: 'Quick navigation',
-    affiliation: 'Current experience',
+    affiliation: 'Current practice',
     graduation: 'BIT period',
     publications: 'Publications',
     publicationUnit: 'papers',
@@ -1439,8 +1439,8 @@ async function renderResume(renderer, language) {
   const sections = renderer.renderSections(withoutDocumentTitle);
   const profileSectionKinds = ['education', 'experience', 'publications', 'interests', 'projects', 'skills'];
   const profileSectionNotes = isZh
-    ? ['教育经历与学术节点', '实习与创业实践', '经同行评议的研究成果', '当前持续推进的研究方向', '代表性开源与研究工程', '研究方法与工程工具']
-    : ['Education and academic milestones', 'Internship and startup practice', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
+    ? ['教育经历与学术节点', '创业与实习经历', '经同行评议的研究成果', '当前持续推进的研究方向', '代表性开源与研究工程', '研究方法与工程工具']
+    : ['Education and academic milestones', 'Entrepreneurial and internship experience', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
   const profileSectionNavLabels = isZh
     ? ['教育背景', '经历', '论文', '研究兴趣', '代表项目', '技术能力']
     : ['Education', 'Experience', 'Papers', 'Research', 'Projects', 'Skills'];

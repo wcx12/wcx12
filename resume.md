@@ -7,8 +7,8 @@
 
 ## Experience
 
-- **Shenzhen Houlang Pengpai**\
-  Internship / startup practice, Shenzhen
+- **Shenzhen Houlang Pengpai Technology Co., Ltd.**\
+  Entrepreneurial builder; early-stage education-technology practice, Shenzhen
 
 ## Publications
 

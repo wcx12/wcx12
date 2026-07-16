@@ -10,7 +10,7 @@
 </p>
 
 <h1 align="center">Chenxu Wang (wcx12)</h1>
-<p align="center"><b>BIT Student · Startup Intern · ML Researcher · Public Research Software Builder</b></p>
+<p align="center"><b>BIT Student · Entrepreneurial Builder · ML Researcher · Public Research Software Builder</b></p>
 
 <p align="center">
   <a href="https://wcx12.github.io/wcx12/"><b>Open My Interactive Website</b></a>
@@ -20,7 +20,7 @@
 
 ## About Me
 - I am studying at **Beijing Institute of Technology** from **2022 to 2026**.
-- I am currently interning in a startup setting at **Shenzhen Houlang Pengpai**.
+- I am currently building in the startup setting at **Shenzhen Houlang Pengpai Technology Co., Ltd.**.
 - I study reliable visual intelligence under imperfect observations and limited labels, with work spanning **Point-set Registration**, **Visual Place Recognition**, and **Medical Image Analysis**.
 - I also build **evidence-grounded LLM systems** and exploratory **AI for Education** tools.
 - I mainly build with **Python**, machine learning frameworks, and practical engineering workflows.

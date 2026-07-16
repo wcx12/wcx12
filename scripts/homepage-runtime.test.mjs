@@ -418,7 +418,7 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
 
 test('homepage exposes navigation and hero meaning without runtime-only semantics', () => {
   assert.match(indexSource, /<nav\s+class="top-actions-nav"[^>]+aria-label="Primary navigation"/i);
-  assert.match(indexSource, /id="typeTarget"[^>]*>Applying for Master\/PhD programs<\/span>/i);
+  assert.match(indexSource, /id="typeTarget"[^>]*>Startup builder in Shenzhen<\/span>/i);
   assert.match(indexSource, /<canvas\s+id="heroPreviewCanvas"\s+aria-hidden="true"><\/canvas>/i);
   assert.match(indexSource, /id="heroPreviewMeta"[\s\S]*?\.\/research\/point-cloud-registration\/[\s\S]*?Robust point set registration/i);
   assert.match(indexSource, /limited labels\.<br \/> Research spanning/);
