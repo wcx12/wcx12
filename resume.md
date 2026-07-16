@@ -3,7 +3,12 @@
 ## Education
 
 - **Beijing Institute of Technology**\
-  Expected graduation: 2026
+  Undergraduate study, 2022-2026
+
+## Experience
+
+- **Shenzhen Houlang Pengpai**\
+  Internship / startup practice, Shenzhen
 
 ## Publications
 

@@ -128,6 +128,7 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.match(indexSource, /data-i18n="stat_focus">Research domains \/ topics<\/span><strong id="focusAreaCount">4 \/ 5<\/strong>/);
   assert.match(indexSource, /"propertyID": "ORCID"/);
   assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
+  assert.match(indexSource, /Shenzhen Houlang Pengpai/);
   assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
   assert.match(indexSource, /rel="preload" href="\.\/assets\/fonts\/space-grotesk-latin\.woff2" as="font" type="font\/woff2" crossorigin/);
   assert.doesNotMatch(indexSource, /rel="preload"[^>]+jetbrains-mono/i);

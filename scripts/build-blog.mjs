@@ -211,6 +211,10 @@ function personEntity() {
       '@type': 'CollegeOrUniversity',
       name: 'Beijing Institute of Technology'
     },
+    worksFor: {
+      '@type': 'Organization',
+      name: 'Shenzhen Houlang Pengpai'
+    },
     sameAs: [
       'https://github.com/wcx12',
       `https://orcid.org/${ORCID_ID}`
@@ -1356,14 +1360,14 @@ async function renderResume(renderer, language) {
     location: '中国北京',
     summary: '研究不完整观测与有限标注下的可靠视觉智能，并落实为可复现的研究软件。',
     statusLabel: '当前状态',
-    status: '正在申请硕士与博士项目',
+    status: '深圳后浪澎湃实习 / 创业实践',
     commandLabel: '联系与导出',
     print: '打印 / 保存 PDF',
     contact: '邮件联系',
     sections: '履历目录',
     sectionsLabel: '快速浏览',
-    affiliation: '学校',
-    graduation: '预计毕业',
+    affiliation: '当前经历',
+    graduation: '北理阶段',
     publications: '论文记录',
     publicationUnit: '篇',
     publishedUnit: '篇已发表',
@@ -1379,14 +1383,14 @@ async function renderResume(renderer, language) {
     location: 'Beijing, China',
     summary: 'Reliable visual intelligence under incomplete observations and limited labels, built as reproducible research software.',
     statusLabel: 'Current status',
-    status: "Applying for Master's and PhD opportunities",
+    status: 'Internship / startup practice at Shenzhen Houlang Pengpai',
     commandLabel: 'Contact and export',
     print: 'Print / Save PDF',
     contact: 'Email me',
     sections: 'Profile sections',
     sectionsLabel: 'Quick navigation',
-    affiliation: 'Affiliation',
-    graduation: 'Expected graduation',
+    affiliation: 'Current experience',
+    graduation: 'BIT period',
     publications: 'Publications',
     publicationUnit: 'papers',
     publishedUnit: 'published',
@@ -1433,16 +1437,16 @@ async function renderResume(renderer, language) {
   const markerMarkup = `<p>${publicationMarker}</p>`;
   let publicationMarkers = 0;
   const sections = renderer.renderSections(withoutDocumentTitle);
-  const profileSectionKinds = ['education', 'publications', 'interests', 'projects', 'skills'];
+  const profileSectionKinds = ['education', 'experience', 'publications', 'interests', 'projects', 'skills'];
   const profileSectionNotes = isZh
-    ? ['教育经历与学术节点', '经同行评议的研究成果', '当前持续推进的研究方向', '代表性开源与研究工程', '研究方法与工程工具']
-    : ['Education and academic milestones', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
+    ? ['教育经历与学术节点', '实习与创业实践', '经同行评议的研究成果', '当前持续推进的研究方向', '代表性开源与研究工程', '研究方法与工程工具']
+    : ['Education and academic milestones', 'Internship and startup practice', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
   const profileSectionNavLabels = isZh
-    ? ['教育背景', '论文', '研究兴趣', '代表项目', '技术能力']
-    : ['Education', 'Papers', 'Research', 'Projects', 'Skills'];
+    ? ['教育背景', '经历', '论文', '研究兴趣', '代表项目', '技术能力']
+    : ['Education', 'Experience', 'Papers', 'Research', 'Projects', 'Skills'];
   const profileSectionMobileLabels = isZh
     ? profileSectionNavLabels
-    : ['Edu', 'Papers', 'Topics', 'Work', 'Skills'];
+    : ['Edu', 'Exp', 'Papers', 'Topics', 'Work', 'Skills'];
   const sectionHtml = sections.map((section, index) => {
     const content = section.html.replace(markerMarkup, () => {
       publicationMarkers += 1;
@@ -1487,8 +1491,8 @@ async function renderResume(renderer, language) {
           </nav>
         </div>
         <dl class="profile-facts">
-          <div><dt>${text.affiliation}</dt><dd>${isZh ? '北京理工大学' : 'Beijing Institute of Technology'}</dd></div>
-          <div><dt>${text.graduation}</dt><dd>2026</dd></div>
+      <div><dt>${text.affiliation}</dt><dd>${isZh ? '深圳后浪澎湃' : 'Shenzhen Houlang Pengpai'}</dd></div>
+      <div><dt>${text.graduation}</dt><dd>2022-2026</dd></div>
           <div><dt>${text.publications}</dt><dd>${publicationFact}</dd></div>
         </dl>
       </header>

@@ -655,8 +655,8 @@ test('research profile has complete English and Chinese fixed-language records',
   assert.match(chinese, /<title>学术履历 \| Chenxu Wang \(wcx12\)<\/title>/);
   assert.match(english, /<h2 id="profile-research-interests-title">Research Interests<\/h2>/);
   assert.match(chinese, /<h2 id="profile-研究兴趣-title">研究兴趣<\/h2>/);
-  assert.match(chinese, /预计毕业时间：2026 年/);
-  assert.match(chinese, /正在申请硕士与博士项目/);
+  assert.match(chinese, /本科阶段，2022-2026 年/);
+  assert.match(chinese, /深圳后浪澎湃实习 \/ 创业实践/);
   assert.match(english, /1 published · 1 in press/);
   assert.match(chinese, /1 篇已发表 · 1 篇待刊/);
   assert.doesNotMatch(chinese, />Research Interests</);
@@ -672,8 +672,8 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.doesNotMatch(source, /class="profile-rail"/);
     assert.doesNotMatch(source, /<header class="profile-section-head">\s*<span/);
     assert.doesNotMatch(source, /<span aria-hidden="true">P\d{2}<\/span>/);
-    assert.equal(matches(source, /data-profile-section="[^"]+"/g).length, 5);
-    for (const kind of ['education', 'publications', 'interests', 'projects', 'skills']) {
+    assert.equal(matches(source, /data-profile-section="[^"]+"/g).length, 6);
+    for (const kind of ['education', 'experience', 'publications', 'interests', 'projects', 'skills']) {
       assert.match(source, new RegExp(`data-profile-kind="${kind}"`));
     }
     assert.ok(source.indexOf('data-profile-kind="publications"') < source.indexOf('data-profile-kind="interests"'));
@@ -681,9 +681,9 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.equal(matches(source, /class="resume-publication-index"/g).length, staticPublications.length);
     assert.equal(matches(source, /class="resume-author-self"/g).length, staticPublications.length);
     const profileNavigation = matches(source, /class="profile-section-nav"[\s\S]*?<\/nav>/g)[0][0];
-    assert.equal(profileNavigation.match(/<a href=/g)?.length, 5);
-    assert.equal(profileNavigation.match(/<a [^>]*aria-label=/g)?.length, 5);
-    assert.equal(profileNavigation.match(/data-mobile-label=/g)?.length, 5);
+    assert.equal(profileNavigation.match(/<a href=/g)?.length, 6);
+    assert.equal(profileNavigation.match(/<a [^>]*aria-label=/g)?.length, 6);
+    assert.equal(profileNavigation.match(/data-mobile-label=/g)?.length, 6);
     assert.equal(metaContent(source, 'og:type'), 'profile');
     assert.equal(metaContent(source, 'profile:first_name'), 'Chenxu');
     assert.equal(metaContent(source, 'profile:last_name'), 'Wang');
