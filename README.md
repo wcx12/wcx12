@@ -20,7 +20,7 @@
 
 ## About Me
 - I am studying at **Beijing Institute of Technology** from **Sep 2022 to Jun 2026**.
-- Since **Nov 2025**, I have been building in the startup setting at **Shenzhen Houlang Pengpai Technology Co., Ltd.**.
+- Since **Mar 2026**, I have been building in the startup setting at **Shenzhen Houlang Pengpai Technology Co., Ltd.**.
 - I study reliable visual intelligence under imperfect observations and limited labels, with work spanning **Point-set Registration**, **Visual Place Recognition**, and **Medical Image Analysis**.
 - I also build **evidence-grounded LLM systems** and exploratory **AI for Education** tools.
 - I mainly build with **Python**, machine learning frameworks, and practical engineering workflows.

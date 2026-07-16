@@ -8,7 +8,7 @@
 ## Experience
 
 - **Shenzhen Houlang Pengpai Technology Co., Ltd.**\
-  Entrepreneurial builder, Nov 2025-present; early-stage education-technology practice, Shenzhen
+  Entrepreneurial builder, Mar 2026-present; early-stage education-technology practice, Shenzhen
 
 ## Publications
 
