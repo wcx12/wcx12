@@ -17,6 +17,7 @@ const read = (relativePath) => fs.readFile(path.join(rootDir, relativePath), 'ut
 const [
   indexSource,
   bootstrapSource,
+  themeInitSource,
   scriptSource,
   researchCanvasSource,
   repoMapSource,
@@ -28,6 +29,7 @@ const [
 ] = await Promise.all([
   read('index.html'),
   read('homepage-bootstrap.js'),
+  read('theme-init.js'),
   read('script.js'),
   read('research-canvas.js'),
   read('repo-map.js'),
@@ -62,6 +64,11 @@ test('every literal DOM lookup used by the homepage modules exists', () => {
 test('homepage paints before loading its full interaction module and keeps visualizations lazy', async () => {
   const releaseVersion = indexSource.match(/<script\s+type="module"\s+src="homepage-bootstrap\.js\?v=([a-f0-9]{12})"><\/script>/i)?.[1];
   assert.ok(releaseVersion, 'homepage bootstrap must include a release version');
+  assert.match(indexSource, /<script\s+src="theme-init\.js\?v=[a-f0-9]{12}"><\/script>\s*<link rel="stylesheet" href="styles\.css\?v=[a-f0-9]{12}" \/>/);
+  assert.match(chineseIndexSource, /<script\s+src="\.\.\/theme-init\.js\?v=[a-f0-9]{12}"><\/script>\s*<link rel="stylesheet" href="\.\.\/styles\.css\?v=[a-f0-9]{12}" \/>/);
+  assert.match(themeInitSource, /localStorage[\s\S]*?getItem\('wcx12-theme'\)/);
+  assert.match(themeInitSource, /document\.documentElement\.dataset\.theme = theme/);
+  assert.match(themeInitSource, /meta\[name="theme-color"\]/);
   for (const assetPath of ['./site-data.js', './homepage-i18n.js', './scripts/research-config-schema.js', './scripts/portfolio-ranking.js']) {
     assert.doesNotMatch(indexSource, new RegExp(`rel="modulepreload"[^>]+${assetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${assetPath} must not compete with the first paint`);
   }

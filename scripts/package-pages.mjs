@@ -21,7 +21,8 @@ const publicFiles = [
   'script.js',
   'site-data.js',
   'sitemap.xml',
-  'styles.css'
+  'styles.css',
+  'theme-init.js'
 ];
 
 const publicDirectories = [

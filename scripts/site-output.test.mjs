@@ -125,6 +125,7 @@ async function expectedAssetVersion() {
   const files = [
     'content.css',
     'styles.css',
+    'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',
     'homepage-i18n.js',

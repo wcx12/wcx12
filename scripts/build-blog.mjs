@@ -524,6 +524,7 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <link rel="alternate" type="application/rss+xml" title="${escapeHtml(SITE.title)}" href="${escapeHtml(absoluteUrl('rss.xml'))}" />
   <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
   <link rel="preload" href="${ctx.link('assets/fonts/space-grotesk-latin.woff2')}" as="font" type="font/woff2" crossorigin />
+  <script src="${versionedAssetLink(ctx, 'theme-init.js')}"></script>
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'content.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/blog.css')}" />
 ${extraHead.trim()}
@@ -796,6 +797,7 @@ async function computeAssetVersion(posts) {
   const files = [
     'content.css',
     'styles.css',
+    'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',
     'homepage-i18n.js',
@@ -830,6 +832,10 @@ async function stampHomepageAssets() {
   const filePath = path.join(rootDir, 'index.html');
   const source = await fs.readFile(filePath, 'utf8');
   const replacements = [
+    {
+      pattern: /(<script\s+src="theme-init\.js)(?:\?v=[a-f0-9]{12})?("\s*><\/script>)/,
+      replacement: `$1?v=${assetVersion}$2`
+    },
     {
       pattern: /(<link\s+rel="stylesheet"\s+href="styles\.css)(?:\?v=[a-f0-9]{12})?("\s*\/?>)/,
       replacement: `$1?v=${assetVersion}$2`
@@ -969,6 +975,7 @@ async function renderChineseHomepage() {
     ['href="./sitemap.xml"', 'href="../sitemap.xml"', 'Chinese sitemap path'],
     ['href="./rss.xml"', 'href="../rss.xml"', 'Chinese RSS path'],
     ['href="./assets/fonts/space-grotesk-latin.woff2"', 'href="../assets/fonts/space-grotesk-latin.woff2"', 'Chinese font preload path'],
+    ['src="theme-init.js', 'src="../theme-init.js', 'Chinese theme bootstrap path'],
     ['href="styles.css', 'href="../styles.css', 'Chinese stylesheet path'],
     ['src="homepage-bootstrap.js', 'src="../homepage-bootstrap.js', 'Chinese bootstrap path'],
     ['<a class="brand" href="./"', '<a class="brand" href="../"', 'Chinese brand home path']
@@ -1212,6 +1219,7 @@ async function renderDraftPreviews(posts, renderer) {
     '404.html',
     'content.css',
     'styles.css',
+    'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',
     'homepage-i18n.js',
