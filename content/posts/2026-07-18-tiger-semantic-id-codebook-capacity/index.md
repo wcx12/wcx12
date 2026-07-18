@@ -1,6 +1,9 @@
 ---
 title: "当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩"
 slug: "tiger-semantic-id-codebook-capacity"
+translationKey: "tiger-semantic-id-codebook-capacity"
+translations:
+  en: "tiger-semantic-id-codebook-capacity-en"
 date: "2026-07-18"
 updated: "2026-07-18"
 description: "从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。"

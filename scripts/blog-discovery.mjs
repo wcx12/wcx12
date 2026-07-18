@@ -7,6 +7,29 @@ export function blogTopicCounts(posts, key) {
   return [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
 }
 
+export function postTranslationKey(post) {
+  return post.translationKey || post.slug;
+}
+
+export function groupBlogPosts(posts) {
+  const groups = new Map();
+  posts.forEach((post, index) => {
+    const key = postTranslationKey(post);
+    if (!groups.has(key)) groups.set(key, { key, firstIndex: index, posts: [] });
+    groups.get(key).posts.push(post);
+  });
+  return [...groups.values()].sort((left, right) => left.firstIndex - right.firstIndex);
+}
+
+export function selectLanguagePosts(posts, language = 'en') {
+  const preferredLanguage = String(language || 'en').toLowerCase().slice(0, 2);
+  return groupBlogPosts(posts).map((group) => (
+    group.posts.find((post) => String(post.lang || '').toLowerCase().slice(0, 2) === preferredLanguage)
+      || group.posts.find((post) => String(post.lang || '').toLowerCase().slice(0, 2) === 'en')
+      || group.posts[0]
+  )).filter(Boolean);
+}
+
 export function deriveBlogDiscovery(posts) {
   const state = posts.length === 0
     ? 'empty'

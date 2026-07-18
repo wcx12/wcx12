@@ -1,6 +1,9 @@
 ---
 title: "为我的主页搭建研究写作系统"
 slug: "building-a-research-writing-system-zh"
+translationKey: "building-a-research-writing-system"
+translations:
+  en: "building-a-research-writing-system"
 date: "2026-07-10"
 updated: "2026-07-18"
 description: "这个主页如何把带版本管理的 Markdown、经过校验的媒体文件和研究元数据，变成一个可维护的静态写作系统。"

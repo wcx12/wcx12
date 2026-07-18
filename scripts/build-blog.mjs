@@ -28,7 +28,12 @@ import {
   slugify,
   summarizeDiagnostics
 } from './blog-content.mjs';
-import { blogTopicCounts as topicCounts, deriveBlogDiscovery } from './blog-discovery.mjs';
+import {
+  blogTopicCounts as topicCounts,
+  deriveBlogDiscovery,
+  postTranslationKey,
+  selectLanguagePosts
+} from './blog-discovery.mjs';
 import {
   assignedResearchIds,
   classifyResearchTopic,
@@ -332,8 +337,9 @@ function hintHtml(key) {
 
 function cardHtml(ctx, post) {
   const tags = post.tags.slice(0, 4).map((tag) => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join('');
+  const lang = String(post.lang || SITE.lang).slice(0, 2);
   return `
-    <a class="blog-card" href="${postHref(ctx, post)}" lang="${escapeHtml(post.lang || SITE.lang)}">
+    <a class="blog-card" href="${postHref(ctx, post)}" lang="${escapeHtml(post.lang || SITE.lang)}" data-post-card data-post-group="${escapeHtml(postTranslationKey(post))}" data-post-lang="${escapeHtml(lang)}"${lang !== 'en' ? ' hidden' : ''}>
       <div class="blog-card-meta">
         <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
         <span>${escapeHtml(post.category)}</span>
@@ -344,6 +350,15 @@ function cardHtml(ctx, post) {
       <div class="blog-tag-row">${tags}</div>
     </a>
   `;
+}
+
+function variantsForPost(posts, post) {
+  const key = postTranslationKey(post);
+  return posts.filter((candidate) => postTranslationKey(candidate) === key);
+}
+
+function variantCardsHtml(ctx, posts, post) {
+  return variantsForPost(posts, post).map((variant) => cardHtml(ctx, variant)).join('');
 }
 
 function renderTags(ctx, tags, activeTags = new Set()) {
@@ -999,17 +1014,18 @@ async function renderChineseHomepage() {
 async function renderIndex(posts) {
   const filePath = path.join(outputDir, 'index.html');
   const ctx = createPageContext(filePath);
-  const discovery = deriveBlogDiscovery(posts);
+  const displayPosts = selectLanguagePosts(posts, 'en');
+  const discovery = deriveBlogDiscovery(displayPosts);
   const { featured, recent, showSearch, showStats } = discovery;
   const showFeatured = featured.length > 0;
   const showArchive = discovery.archive.discoverable;
-  const latestHref = posts[0] ? postHref(ctx, posts[0]) : '';
+  const latestHref = displayPosts[0] ? postHref(ctx, displayPosts[0]) : '';
   const tagLinks = discovery.activeTagEntries
     .slice(0, 14)
     .map(([tag, count]) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)} (${count})</a>`)
     .join('');
 
-  const recentSection = posts.length ? `
+  const recentSection = displayPosts.length ? `
     <section id="recent-writing" class="blog-section blog-latest-section">
       <div class="blog-section-head">
         <div>
@@ -1021,7 +1037,7 @@ async function renderIndex(posts) {
           <a class="blog-tag" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="nav_archive">Archive</a>` : ''}
         </div>
       </div>
-      <div class="blog-grid">${recent.map((post) => cardHtml(ctx, post)).join('')}</div>
+      <div class="blog-grid">${recent.map((post) => variantCardsHtml(ctx, posts, post)).join('')}</div>
     </section>` : `
     <section id="recent-writing" class="blog-section blog-empty-state" aria-labelledby="empty-writing-title">
       <p class="blog-section-label" data-blog-i18n="empty_label">Notebook</p>
@@ -1036,13 +1052,13 @@ async function renderIndex(posts) {
       <p data-blog-i18n="hero_desc">Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site.</p>
       <p class="blog-hero-author"><span data-blog-i18n="hero_byline">By</span> <a href="${ctx.link('resume/index.html')}" rel="author" data-blog-nav-en="${ctx.link('resume/index.html')}" data-blog-nav-zh="${ctx.link('zh/resume/index.html')}">Chenxu Wang</a><span aria-hidden="true">/</span><span data-blog-i18n="hero_role">Machine Learning Researcher</span></p>
       ${hintHtml('hint_hero')}
-${posts.length > 1 ? `      <div class="blog-hero-actions">
+${displayPosts.length > 1 ? `      <div class="blog-hero-actions">
         <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>${showArchive ? `
         <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="hero_browse_archive">Browse archive</a>` : ''}
       </div>` : ''}${showStats ? `
       <div class="blog-stat-grid">
-        <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>${posts.length}</strong></article>
-        <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>${topicCounts(posts, 'tags').length}</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>${displayPosts.length}</strong></article>
+        <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>${topicCounts(displayPosts, 'tags').length}</strong></article>
         ${showSearch
           ? '<article class="blog-stat"><span data-blog-i18n="stat_search">Search</span><strong data-blog-i18n="stat_ready">Ready</strong></article>'
           : '<article class="blog-stat"><span data-blog-i18n="stat_language">Languages</span><strong data-blog-i18n="stat_bilingual">EN / 中文</strong></article>'}
@@ -1057,7 +1073,7 @@ ${showFeatured ? `<section class="blog-section">
         </div>
         ${hintHtml('hint_featured')}
       </div>
-      <div class="blog-grid">${featured.map((post) => cardHtml(ctx, post)).join('')}</div>
+      <div class="blog-grid">${featured.map((post) => variantCardsHtml(ctx, posts, post)).join('')}</div>
     </section>` : ''}
 
 ${recentSection}
@@ -1100,8 +1116,9 @@ ${tagLinks ? `    <section class="blog-section">
 function relatedPostsFor(post, posts) {
   const tagSet = new Set(post.tags);
   const researchSet = new Set(post.research);
+  const translationKey = postTranslationKey(post);
   return posts
-    .filter((candidate) => candidate.slug !== post.slug)
+    .filter((candidate) => candidate.slug !== post.slug && postTranslationKey(candidate) !== translationKey)
     .map((candidate) => {
       const tagScore = candidate.tags.filter((tag) => tagSet.has(tag)).length;
       const researchScore = candidate.research.filter((id) => researchSet.has(id)).length * 2;
@@ -1120,11 +1137,12 @@ async function renderPost(post, posts, renderer, options = {}) {
   const filePath = path.join(siteRoot, relativeFile);
   const ctx = createPageContext(filePath, siteRoot);
   const { html, toc } = renderer.render(post.content, post);
-  const index = posts.findIndex((item) => item.slug === post.slug);
-  const newer = !preview && index > 0 ? posts[index - 1] : null;
-  const older = !preview && index < posts.length - 1 ? posts[index + 1] : null;
-  const related = preview ? [] : relatedPostsFor(post, posts);
-  const tagRow = renderTags(ctx, post.tags, deriveBlogDiscovery(posts).activeTags);
+  const languagePosts = selectLanguagePosts(posts, post.lang || SITE.lang);
+  const index = languagePosts.findIndex((item) => item.slug === post.slug || postTranslationKey(item) === postTranslationKey(post));
+  const newer = !preview && index > 0 ? languagePosts[index - 1] : null;
+  const older = !preview && index >= 0 && index < languagePosts.length - 1 ? languagePosts[index + 1] : null;
+  const related = preview ? [] : relatedPostsFor(post, languagePosts);
+  const tagRow = renderTags(ctx, post.tags, deriveBlogDiscovery(languagePosts).activeTags);
   const mathCss = post.math ? `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />` : '';
   const renderedToc = post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>';
   const socialImage = postSocialImage(post);
@@ -1275,8 +1293,9 @@ async function renderDraftPreviews(posts, renderer) {
 async function renderArchive(posts) {
   const filePath = path.join(outputDir, 'archive', 'index.html');
   const ctx = createPageContext(filePath);
+  const displayPosts = selectLanguagePosts(posts, 'en');
   const years = new Map();
-  posts.forEach((post) => {
+  displayPosts.forEach((post) => {
     const year = post.date.slice(0, 4);
     if (!years.has(year)) years.set(year, []);
     years.get(year).push(post);
@@ -1299,7 +1318,10 @@ async function renderArchive(posts) {
           ${hintHtml('hint_archive_year')}
         </div>
         <ul class="blog-archive-list">
-          ${items.map((post) => `<li lang="${escapeHtml(post.lang || SITE.lang)}"><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a> <span class="muted">- <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span> - ${escapeHtml(post.category)}</span></li>`).join('')}
+          ${items.map((post) => variantsForPost(posts, post).map((variant) => {
+            const lang = String(variant.lang || SITE.lang).slice(0, 2);
+            return `<li lang="${escapeHtml(variant.lang || SITE.lang)}" data-post-row data-post-group="${escapeHtml(postTranslationKey(variant))}" data-post-lang="${escapeHtml(lang)}"${lang !== 'en' ? ' hidden' : ''}><a href="${postHref(ctx, variant)}">${escapeHtml(variant.title)}</a> <span class="muted">- <span data-blog-date="${escapeHtml(variant.date)}">${escapeHtml(formatDate(variant.date))}</span> - ${escapeHtml(variant.category)}</span></li>`;
+          }).join('')).join('')}
         </ul>
       </section>
     `).join('')}
@@ -1313,16 +1335,17 @@ async function renderArchive(posts) {
     schemaType: 'CollectionPage',
     socialImagePath: 'assets/og-blog.png',
     socialImageAlt: 'Research Fieldnotes chronological writing archive',
-    robots: deriveBlogDiscovery(posts).archive.indexable ? 'index,follow,max-image-preview:large' : 'noindex,follow'
+    robots: deriveBlogDiscovery(displayPosts).archive.indexable ? 'index,follow,max-image-preview:large' : 'noindex,follow'
   }));
 }
 
 async function renderTagPages(posts) {
-  const tags = [...deriveBlogDiscovery(posts).activeTags];
+  const displayPosts = selectLanguagePosts(posts, 'en');
+  const tags = [...deriveBlogDiscovery(displayPosts).activeTags];
   for (const tag of tags) {
     const filePath = path.join(outputDir, 'tags', slugify(tag), 'index.html');
     const ctx = createPageContext(filePath);
-    const tagged = posts.filter((post) => post.tags.includes(tag));
+    const tagged = displayPosts.filter((post) => post.tags.includes(tag));
     const body = `
       <section class="blog-hero">
         <p class="blog-kicker" data-blog-i18n="tag_kicker">Tag</p>
@@ -1338,7 +1361,7 @@ async function renderTagPages(posts) {
           </div>
           ${hintHtml('hint_tag_results')}
         </div>
-        <div class="blog-grid">${tagged.map((post) => cardHtml(ctx, post)).join('')}</div>
+        <div class="blog-grid">${tagged.map((post) => variantCardsHtml(ctx, posts, post)).join('')}</div>
       </section>
     `;
     await writePage(`blog/tags/${slugify(tag)}/index.html`, renderShell({
@@ -2372,9 +2395,10 @@ async function renderPublicationsMarkdown() {
 async function renderResearchPages(posts) {
   await renderCitationFiles();
   for (const language of ['en', 'zh']) {
-    await renderResearchIndex(posts, language);
+    const languagePosts = selectLanguagePosts(posts, language);
+    await renderResearchIndex(languagePosts, language);
     await renderProjects(language);
-    for (const child of researchChildren) await renderResearchTopic(posts, child, language);
+    for (const child of researchChildren) await renderResearchTopic(languagePosts, child, language);
     for (const publication of staticPublications) await renderPublicationDetail(publication, language);
     await renderPublications(language);
   }
@@ -2392,6 +2416,8 @@ async function renderJsonFeeds(posts) {
     tags: post.tags,
     research: post.research,
     series: post.series,
+    translationKey: post.translationKey,
+    translations: post.translations,
     lang: post.lang,
     featured: post.featured,
     readingMinutes: post.readingMinutes,
@@ -2404,6 +2430,7 @@ async function renderJsonFeeds(posts) {
     category: post.category,
     tags: post.tags,
     research: post.research,
+    translationKey: post.translationKey,
     lang: post.lang,
     url: `./posts/${post.slug}/`,
     text: excerptText(post.renderedText || post.content, 420)
@@ -2414,14 +2441,15 @@ async function renderJsonFeeds(posts) {
 }
 
 async function renderRss(posts) {
-  const latestPostDate = posts
+  const feedPosts = selectLanguagePosts(posts, 'en');
+  const latestPostDate = feedPosts
     .map((post) => post.updated || post.date)
     .sort()
     .at(-1);
   const lastBuildDate = latestPostDate
     ? new Date(`${latestPostDate}T00:00:00Z`).toUTCString()
     : new Date(0).toUTCString();
-  const items = posts.slice(0, 20).map((post) => {
+  const items = feedPosts.slice(0, 20).map((post) => {
     const categories = [post.category, ...post.tags]
       .map((category) => `      <category>${escapeXml(category)}</category>`)
       .join('\n');
@@ -2463,7 +2491,8 @@ ${items}
 }
 
 async function renderSitemap(posts) {
-  const discovery = deriveBlogDiscovery(posts);
+  const discoveryPosts = selectLanguagePosts(posts, 'en');
+  const discovery = deriveBlogDiscovery(discoveryPosts);
   const dateOnly = (value) => {
     const date = String(value || '').slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
@@ -2475,19 +2504,19 @@ async function renderSitemap(posts) {
     if (item.type === 'BlogPosting') return dateOnly(item.value.updated || item.value.date);
     return '';
   };
-  const latestPostDate = latestDate(posts.map((post) => post.updated || post.date));
+  const latestPostDate = latestDate(discoveryPosts.map((post) => post.updated || post.date));
   const latestProjectDate = latestDate(localRepos.map((repo) => repo.updated_at || repo.pushed_at));
   const latestPublicationDate = latestDate(staticPublications.map((publication) => publication.updated_at));
   const topicDates = new Map(researchChildren.map((child) => [
     child.id,
-    latestDate(evidenceForTopic(child.id, posts).map(evidenceDate))
+    latestDate(evidenceForTopic(child.id, discoveryPosts).map(evidenceDate))
   ]));
   const latestResearchDate = latestDate([...topicDates.values()]);
   const latestHomeDate = latestDate([latestPostDate, latestProjectDate, latestPublicationDate, latestResearchDate]);
   const latestProfileDate = latestDate([latestProjectDate, latestPublicationDate, latestResearchDate]);
   const researchRoutes = ['en', 'zh'].flatMap((language) => [
     { route: researchRoute(language), lastmod: latestResearchDate },
-    ...researchChildren.filter((child) => shouldIndexResearchTopic(child, evidenceForTopic(child.id, posts))).map((child) => ({
+    ...researchChildren.filter((child) => shouldIndexResearchTopic(child, evidenceForTopic(child.id, discoveryPosts))).map((child) => ({
       route: researchRoute(language, `${child.id}/`),
       lastmod: topicDates.get(child.id)
     })),

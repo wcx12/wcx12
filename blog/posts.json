@@ -14,6 +14,10 @@
     ],
     "research": [],
     "series": "",
+    "translationKey": "tiger-semantic-id-codebook-capacity",
+    "translations": {
+      "zh": "tiger-semantic-id-codebook-capacity"
+    },
     "lang": "en",
     "featured": false,
     "readingMinutes": 43,
@@ -34,6 +38,10 @@
     ],
     "research": [],
     "series": "",
+    "translationKey": "tiger-semantic-id-codebook-capacity",
+    "translations": {
+      "en": "tiger-semantic-id-codebook-capacity-en"
+    },
     "lang": "zh",
     "featured": true,
     "readingMinutes": 22,
@@ -53,6 +61,10 @@
     ],
     "research": [],
     "series": "",
+    "translationKey": "building-a-research-writing-system",
+    "translations": {
+      "zh": "building-a-research-writing-system-zh"
+    },
     "lang": "en",
     "featured": true,
     "readingMinutes": 3,
@@ -72,6 +84,10 @@
     ],
     "research": [],
     "series": "",
+    "translationKey": "building-a-research-writing-system",
+    "translations": {
+      "en": "building-a-research-writing-system"
+    },
     "lang": "zh",
     "featured": false,
     "readingMinutes": 1,

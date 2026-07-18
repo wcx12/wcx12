@@ -1150,7 +1150,7 @@ function commandItems() {
     action: () => openPaperDetail(paper.title)
   }));
 
-  const postItems = blogPosts.map((post) => ({
+  const postItems = localizedBlogPosts().map((post) => ({
     title: post.title,
     detail: `${post.category || ''} ${post.date || ''}`.trim() || i18n[currentLang].tab_writing,
     type: i18n[currentLang].tab_writing,
@@ -1664,8 +1664,27 @@ function relatedPapers() {
   return currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(activeInterestId));
 }
 
+function postTranslationKey(post) {
+  return post?.translationKey || post?.slug || post?.url || post?.title || '';
+}
+
+function localizedBlogPosts(posts = blogPosts, language = currentLang) {
+  const preferredLanguage = String(language || 'en').slice(0, 2);
+  const groups = new Map();
+  (posts || []).forEach((post, index) => {
+    const key = postTranslationKey(post) || `post-${index}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(post);
+  });
+  return [...groups.values()].map((group) => (
+    group.find((post) => String(post.lang || '').slice(0, 2) === preferredLanguage)
+      || group.find((post) => String(post.lang || '').slice(0, 2) === 'en')
+      || group[0]
+  )).filter(Boolean);
+}
+
 function relatedPosts() {
-  return blogPosts.filter((post) => assignedInterestIds(post, 'post').includes(activeInterestId));
+  return localizedBlogPosts().filter((post) => assignedInterestIds(post, 'post').includes(activeInterestId));
 }
 
 function postHref(post) {
@@ -1713,7 +1732,7 @@ function renderWritingCard(post, compact = false) {
 
 function applyWritingFilter() {
   const query = (writingSearch?.value || '').trim().toLowerCase();
-  filteredBlogPosts = blogPosts.filter((post) => {
+  filteredBlogPosts = localizedBlogPosts().filter((post) => {
     const haystack = `${post.title || ''} ${post.description || ''} ${post.category || ''} ${(post.tags || []).join(' ')} ${(post.research || []).join(' ')}`.toLowerCase();
     return haystack.includes(query);
   });
@@ -1744,13 +1763,14 @@ function renderWriting() {
     return;
   }
   writingSearch.disabled = false;
-  const posts = filteredBlogPosts.length || (writingSearch?.value || '').trim() ? filteredBlogPosts : blogPosts;
+  const localizedPosts = localizedBlogPosts();
+  const posts = filteredBlogPosts.length || (writingSearch?.value || '').trim() ? filteredBlogPosts : localizedPosts;
   const featured = posts.filter((post) => post.featured).slice(0, 3);
   const featuredSlugs = new Set(featured.map((post) => post.slug));
   const listPosts = posts.filter((post) => !featuredSlugs.has(post.slug));
   writingCount.textContent = i18n[currentLang].writing_count
     .replace('{shown}', String(posts.length))
-    .replace('{total}', String(blogPosts.length));
+    .replace('{total}', String(localizedPosts.length));
 
   writingFeatured.innerHTML = featured.length
     ? featured.map((post) => renderWritingCard(post, true)).join('')
@@ -1837,7 +1857,7 @@ function interestMetrics(interestId) {
   return {
     projects: allRepos.filter((repo) => assignedInterestIds(repo, 'repo').includes(interestId)).length,
     papers: currentPublications().filter((paper) => assignedInterestIds(paper, 'paper').includes(interestId)).length,
-    posts: blogPosts.filter((post) => assignedInterestIds(post, 'post').includes(interestId)).length
+    posts: localizedBlogPosts().filter((post) => assignedInterestIds(post, 'post').includes(interestId)).length
   };
 }
 
@@ -3476,7 +3496,7 @@ async function loadBlogPosts() {
   } catch {
     blogPostsLoadState = 'error';
   }
-  filteredBlogPosts = [...blogPosts];
+  filteredBlogPosts = localizedBlogPosts();
   renderHeroPreview();
   refreshInitializedView('writing');
   refreshInitializedView('research');
@@ -3606,6 +3626,9 @@ function applyTranslations({ translateDocument = true } = {}) {
   updateHeroStats();
   updateHeroPublicationCount();
   renderHeroPreview();
+  if (blogPostsLoadState === 'ready') {
+    applyWritingFilter();
+  }
   refreshInitializedView('projects');
   refreshInitializedView('publications');
   refreshInitializedView('writing');

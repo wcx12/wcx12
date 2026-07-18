@@ -364,6 +364,7 @@ function applyLanguage(lang = currentLang) {
     }
   });
 
+  syncPostLanguageVisibility();
   if (searchInput) renderSearch(searchInput.value);
 }
 
@@ -430,6 +431,41 @@ function safeHref(value) {
   return escapeHtml(href || '#');
 }
 
+function postGroupKey(item) {
+  return item?.translationKey || item?.slug || item?.url || item?.title || '';
+}
+
+function localizedItems(items) {
+  const groups = new Map();
+  (items || []).forEach((item, index) => {
+    const key = postGroupKey(item) || `item-${index}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+  return [...groups.values()].map((group) => (
+    group.find((item) => String(item.lang || '').slice(0, 2) === currentLang)
+      || group.find((item) => String(item.lang || '').slice(0, 2) === 'en')
+      || group[0]
+  )).filter(Boolean);
+}
+
+function syncPostLanguageVisibility() {
+  const groups = new Map();
+  document.querySelectorAll('[data-post-group][data-post-lang]').forEach((node) => {
+    const key = node.dataset.postGroup || '';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(node);
+  });
+  groups.forEach((group) => {
+    const selected = group.find((node) => node.dataset.postLang === currentLang)
+      || group.find((node) => node.dataset.postLang === 'en')
+      || group[0];
+    group.forEach((node) => {
+      node.hidden = node !== selected;
+    });
+  });
+}
+
 function resultTemplate(item) {
   const tags = item.tags?.length ? ` - ${item.tags.slice(0, 3).map(escapeHtml).join(', ')}` : '';
   return `
@@ -448,7 +484,7 @@ function renderSearch(query) {
     return;
   }
   const terms = text.split(/\s+/).filter(Boolean);
-  const scored = searchItems
+  const scored = localizedItems(searchItems)
     .map((item) => {
       const haystack = normalize(`${item.title} ${item.description} ${item.category} ${(item.tags || []).join(' ')} ${item.text || ''}`);
       const score = terms.reduce((sum, term) => sum + (haystack.includes(term) ? 1 : 0), 0);

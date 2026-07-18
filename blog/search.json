@@ -11,6 +11,7 @@
       "tiger"
     ],
     "research": [],
+    "translationKey": "tiger-semantic-id-codebook-capacity",
     "lang": "en",
     "url": "./posts/tiger-semantic-id-codebook-capacity-en/",
     "text": "中文版本： 当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩 Lead: Starting from the anomaly that only 1 of 256 first-layer codewords survives, we ask across five Amazon categories: how should an item’s discrete “name” be layered so that it both reduces collisions and actually helps recommendation? An empirical study covering five datasets, four capacity layouts, and a fixed-order ablation Most recommender systems can be roughly describe..."
@@ -27,6 +28,7 @@
       "tiger"
     ],
     "research": [],
+    "translationKey": "tiger-semantic-id-codebook-capacity",
     "lang": "zh",
     "url": "./posts/tiger-semantic-id-codebook-capacity/",
     "text": "English version: When Recommenders Start to ‘Write’ Items: Why TIGER’s Semantic IDs Collapse 导语： 从首层 256 个码字只剩 1 个的异常出发，我们在五个 Amazon 类目上追问：一个商品的离散“名字”应该怎样分层，才能既减少碰撞，又真正帮助推荐？ 一项覆盖五个数据集、四类容量排列与固定顺序消融的实证研究 大多数推荐系统的工作方式可以粗略概括为“打分”：先取出一批候选商品，再给每个候选打分并排序。生成式推荐换了一个视角。它不再只问“候选 A 和候选 B 谁更合适”，而是像语言模型续写下一个词那样， 直接生成下一个商品的标识符 。 这立刻带来一个基础问题：商品原本使用的数据库 ID 只是随机编号，数字相近不代表内容相近，而且几百万个商品会形成巨大的输出词表。于是，生成式推荐需要一种更容易预测、又能保留商品语义的“名字”。 TIGER..."
@@ -42,6 +44,7 @@
       "research-workflow"
     ],
     "research": [],
+    "translationKey": "building-a-research-writing-system",
     "lang": "en",
     "url": "./posts/building-a-research-writing-system/",
     "text": "中文版本： 为我的主页搭建研究写作系统 This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material. Authoring model Creating a post produces a self-contained article directory: Create a new post npm run new:post &qu..."
@@ -57,6 +60,7 @@
       "research-workflow"
     ],
     "research": [],
+    "translationKey": "building-a-research-writing-system",
     "lang": "zh",
     "url": "./posts/building-a-research-writing-system-zh/",
     "text": "English version: Building a Research Writing System for My Homepage 这个写作空间放在互动主页旁边，而不是替代主页本身。主页仍然专注于研究方向、项目、论文和快速探索；更长的技术笔记则放在这里，用稳定的 URL、更适合阅读的排版，以及指向源材料的明确链接来承载。 写作模型 创建一篇文章会生成一个自包含的文章目录： Create a new post npm run new:post &quot;Visual Place Recognition Notes&quot; Article bundle content/posts/2026-07-11-visual-place-recognition-notes/ index.md media/ retrieval-results.webp Markdown 的 front matter 控制文章发现、研究映射、数学公式..."

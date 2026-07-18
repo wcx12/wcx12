@@ -1,6 +1,9 @@
 ---
 title: "Building a Research Writing System for My Homepage"
 slug: "building-a-research-writing-system"
+translationKey: "building-a-research-writing-system"
+translations:
+  zh: "building-a-research-writing-system-zh"
 date: "2026-07-10"
 updated: "2026-07-11"
 description: "How this homepage turns versioned Markdown, validated media, and research metadata into a maintainable static writing system."

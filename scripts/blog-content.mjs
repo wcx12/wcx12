@@ -422,7 +422,11 @@ export async function loadPosts(rootDir, options = {}) {
       featured: parsed.data.featured === true,
       math: parsed.data.math === true,
       toc: parsed.data.toc !== false,
-      lang: String(parsed.data.lang || SITE.lang).toLowerCase()
+      lang: String(parsed.data.lang || SITE.lang).toLowerCase(),
+      translationKey: String(parsed.data.translationKey || parsed.data.slug || ''),
+      translations: parsed.data.translations && typeof parsed.data.translations === 'object'
+        ? Object.fromEntries(Object.entries(parsed.data.translations).map(([lang, slug]) => [String(lang).toLowerCase(), String(slug)]))
+        : {}
     };
     const post = {
       sourcePath: file,
@@ -451,6 +455,8 @@ export async function loadPosts(rootDir, options = {}) {
         tags: data.tags,
         research: data.research,
         series: data.series || '',
+        translationKey: data.translationKey,
+        translations: data.translations,
         featured: data.featured,
         math: data.math,
         lang: data.lang,

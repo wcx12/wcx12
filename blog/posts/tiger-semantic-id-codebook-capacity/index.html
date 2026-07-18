@@ -41,10 +41,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=82cf9700366a"></script>
-  <link rel="stylesheet" href="../../../content.css?v=82cf9700366a" />
-  <link rel="stylesheet" href="../../assets/blog.css?v=82cf9700366a" />
-<link rel="stylesheet" href="../../assets/katex.min.css?v=82cf9700366a" />
+  <script src="../../../theme-init.js?v=a12ca1e3a04f"></script>
+  <link rel="stylesheet" href="../../../content.css?v=a12ca1e3a04f" />
+  <link rel="stylesheet" href="../../assets/blog.css?v=a12ca1e3a04f" />
+<link rel="stylesheet" href="../../assets/katex.min.css?v=a12ca1e3a04f" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩","description":"从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。","datePublished":"2026-07-18","dateModified":"2026-07-18","inLanguage":"zh","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/","keywords":["generative-recommendation","semantic-id","rq-vae","tiger"],"image":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/media/social-card.png?v=696a34f9f89e","width":1200,"height":630,"caption":"TIGER 语义 ID 码本坍缩与层级容量分配研究"}}</script>
 </head>
@@ -86,7 +86,7 @@
           </div>
           <p class="blog-post-subtitle">从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。</p>
           <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_post">This article page contains the full post, metadata, tags, and any code or math examples.</p></details>
-          <div class="blog-tag-row"><a class="blog-tag" href="../../tags/generative-recommendation/">generative-recommendation</a><a class="blog-tag" href="../../tags/semantic-id/">semantic-id</a><a class="blog-tag" href="../../tags/rq-vae/">rq-vae</a><a class="blog-tag" href="../../tags/tiger/">tiger</a></div>
+          <div class="blog-tag-row"><span class="blog-tag">generative-recommendation</span><span class="blog-tag">semantic-id</span><span class="blog-tag">rq-vae</span><span class="blog-tag">tiger</span></div>
         </header>
         <details class="blog-toc blog-toc-mobile">
           <summary data-blog-i18n="toc_title">Contents</summary>
@@ -1663,30 +1663,10 @@ N_{\mathrm{eff}}
 <p>hard-ST 给出了一个可靠的训练起点；中度前置给出了一个稳健但非普适的默认配置；Musical 则提醒我们，总熵、唯一 ID 比例和有效路径数都不能替代层间信息结构。下一步真正值得做的，不是再堆一个更大的码本，而是用受控实验确认：<strong>哪些数据结构需要早分，哪些需要晚分，生成模型的错误又是从路径的哪一层开始放大。</strong></p>
 
         </div>
-        <footer class="blog-post-footer"><section aria-labelledby="related-writing-title">
-            <div class="blog-section-head">
-              <div>
-                <p class="blog-section-label" data-blog-i18n="section_related_label">Related</p>
-                <h2 id="related-writing-title" data-blog-i18n="section_related_title">Related writing</h2>
-              </div>
-              <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_related">Related writing appears here when another post shares tags or research areas.</p></details>
-            </div>
-            <div class="blog-grid">
-    <a class="blog-card" href="../tiger-semantic-id-codebook-capacity-en/" lang="en">
-      <div class="blog-card-meta">
-        <span data-blog-date="2026-07-18">Jul 18, 2026</span>
-        <span>Research Notes</span>
-        <span data-blog-minutes="43">43 min</span>
-      </div>
-      <h3>When Recommenders Start to &#39;Write&#39; Items: Why TIGER&#39;s Semantic IDs Collapse</h3>
-      <p>Starting from the anomaly that only 1 of 256 first-layer codewords survives, this article analyzes TIGER codebook collapse, the hard-ST fix, and task-dependent hierarchical capacity allocation across five Amazon categories.</p>
-      <div class="blog-tag-row"><span class="blog-tag">generative-recommendation</span><span class="blog-tag">semantic-id</span><span class="blog-tag">rq-vae</span><span class="blog-tag">tiger</span></div>
-    </a>
-  </div>
-          </section><nav class="blog-prev-next" aria-label="Post navigation">
+        <footer class="blog-post-footer"><nav class="blog-prev-next" aria-label="Post navigation">
             <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_prev_next">Use these links to move between newer and older posts.</p></details>
-            <a href="../tiger-semantic-id-codebook-capacity-en/"><span data-blog-i18n="nav_newer">Newer</span>When Recommenders Start to &#39;Write&#39; Items: Why TIGER&#39;s Semantic IDs Collapse</a>
-            <a href="../building-a-research-writing-system/"><span data-blog-i18n="nav_older">Older</span>Building a Research Writing System for My Homepage</a>
+            <span></span>
+            <a href="../building-a-research-writing-system-zh/"><span data-blog-i18n="nav_older">Older</span>为我的主页搭建研究写作系统</a>
           </nav></footer>
       </article>
       <aside class="blog-toc blog-toc-desktop" aria-label="Article contents">
@@ -1704,6 +1684,6 @@ N_{\mathrm{eff}}
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327" data-blog-i18n-aria="orcid_title">ORCID</a>
     </nav>
   </footer>
-  <script type="module" src="../../assets/blog.js?v=82cf9700366a"></script>
+  <script type="module" src="../../assets/blog.js?v=a12ca1e3a04f"></script>
 </body>
 </html>
