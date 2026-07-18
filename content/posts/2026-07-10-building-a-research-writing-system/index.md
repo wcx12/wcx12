@@ -16,6 +16,8 @@ socialImage: "media/social-card.png"
 socialImageAlt: "Research Fieldnotes article on a validated Markdown publishing workflow"
 ---
 
+> 中文版本：[为我的主页搭建研究写作系统](../building-a-research-writing-system-zh/)
+
 This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material.
 
 ![Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence.](media/publishing-flow.png)

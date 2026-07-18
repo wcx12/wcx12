@@ -1,5 +1,25 @@
 [
   {
+    "title": "When Recommenders Start to 'Write' Items: Why TIGER's Semantic IDs Collapse",
+    "slug": "tiger-semantic-id-codebook-capacity-en",
+    "description": "Starting from the anomaly that only 1 of 256 first-layer codewords survives, this article analyzes TIGER codebook collapse, the hard-ST fix, and task-dependent hierarchical capacity allocation across five Amazon categories.",
+    "date": "2026-07-18",
+    "updated": "2026-07-18",
+    "category": "Research Notes",
+    "tags": [
+      "generative-recommendation",
+      "semantic-id",
+      "rq-vae",
+      "tiger"
+    ],
+    "research": [],
+    "series": "",
+    "lang": "en",
+    "featured": false,
+    "readingMinutes": 43,
+    "url": "blog/posts/tiger-semantic-id-codebook-capacity-en/"
+  },
+  {
     "title": "当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩",
     "slug": "tiger-semantic-id-codebook-capacity",
     "description": "从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。",
@@ -35,7 +55,26 @@
     "series": "",
     "lang": "en",
     "featured": true,
-    "readingMinutes": 2,
+    "readingMinutes": 3,
     "url": "blog/posts/building-a-research-writing-system/"
+  },
+  {
+    "title": "为我的主页搭建研究写作系统",
+    "slug": "building-a-research-writing-system-zh",
+    "description": "这个主页如何把带版本管理的 Markdown、经过校验的媒体文件和研究元数据，变成一个可维护的静态写作系统。",
+    "date": "2026-07-10",
+    "updated": "2026-07-18",
+    "category": "Engineering",
+    "tags": [
+      "personal-site",
+      "static-site",
+      "research-workflow"
+    ],
+    "research": [],
+    "series": "",
+    "lang": "zh",
+    "featured": false,
+    "readingMinutes": 1,
+    "url": "blog/posts/building-a-research-writing-system-zh/"
   }
 ]

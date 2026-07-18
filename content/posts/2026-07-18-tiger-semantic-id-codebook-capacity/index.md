@@ -16,6 +16,8 @@ socialImage: "media/social-card.png"
 socialImageAlt: "TIGER 语义 ID 码本坍缩与层级容量分配研究"
 ---
 
+> English version: [When Recommenders Start to 'Write' Items: Why TIGER's Semantic IDs Collapse](../tiger-semantic-id-codebook-capacity-en/)
+
 > **导语：** 从首层 256 个码字只剩 1 个的异常出发，我们在五个 Amazon 类目上追问：一个商品的离散“名字”应该怎样分层，才能既减少碰撞，又真正帮助推荐？
 
 *一项覆盖五个数据集、四类容量排列与固定顺序消融的实证研究*
