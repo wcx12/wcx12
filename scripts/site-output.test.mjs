@@ -401,7 +401,7 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(clientSource, /hero_kicker:\s*'研究 · 工程 · 思考'/);
   assert.match(
     clientSource,
-    /hero_desc:\s*'记录研究工具、可复现工作流、技术写作与本网站背后的系统。当前文章以英文发布。'/,
+    /hero_desc:\s*'记录研究工具、可复现工作流、技术写作与本网站背后的系统。文章语言以源文件为准。'/,
   );
   assert.match(indexSource, /Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site\./);
   assert.match(indexSource, /id="blogLangToggle"[^>]+lang="zh-CN"[^>]+aria-label="切换到中文界面"/);

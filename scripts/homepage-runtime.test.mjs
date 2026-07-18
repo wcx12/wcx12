@@ -403,7 +403,7 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
   assert.doesNotMatch(chineseIndexSource, /rel="modulepreload"/);
   assert.match(chineseIndexSource, /rel="preload" href="\.\.\/assets\/fonts\/space-grotesk-latin\.woff2" as="font"/);
   assert.match(chineseIndexSource, /href="\.\/research\/"[^>]*>研究<\/a>/);
-  assert.match(chineseIndexSource, /href="\.\.\/blog\/"[^>]*>英文博客<\/a>/);
+  assert.match(chineseIndexSource, /href="\.\.\/blog\/"[^>]*>博客<\/a>/);
   assert.match(chineseIndexSource, /href="\.\/resume\/"[^>]*>履历<\/a>/);
   assert.match(chineseIndexSource, /<noscript>[\s\S]*无需 JavaScript 也可以浏览研究主页[\s\S]*href="\.\.\/"[\s\S]*<\/noscript>/);
 
