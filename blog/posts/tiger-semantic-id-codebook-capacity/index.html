@@ -1,26 +1,102 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <channel>
-    <title>Research Fieldnotes</title>
-    <link>https://wcx12.github.io/wcx12/blog/</link>
-    <atom:link href="https://wcx12.github.io/wcx12/rss.xml" rel="self" type="application/rss+xml" />
-    <description>A growing research and engineering notebook by Chenxu Wang (wcx12), with reproducible workflows and fieldnotes from ongoing work.</description>
-    <language>en</language>
-    <lastBuildDate>Sat, 18 Jul 2026 00:00:00 GMT</lastBuildDate>
+<!doctype html>
+<html lang="zh-CN" data-content-lang="zh-CN" data-ui-lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
+  <title>当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩 | Research Fieldnotes</title>
+  <meta name="description" content="从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。" />
+  <meta name="author" content="Chenxu Wang" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="theme-color" content="#070914" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="canonical" href="https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/" />
 
-    <item>
-      <title>当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩</title>
-      <link>https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/</link>
-      <guid>https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/</guid>
-      <pubDate>Sat, 18 Jul 2026 00:00:00 GMT</pubDate>
-      <dc:creator>Chenxu Wang</dc:creator>
-      <description>从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。</description>
-      <category>Research Notes</category>
-      <category>generative-recommendation</category>
-      <category>semantic-id</category>
-      <category>rq-vae</category>
-      <category>tiger</category>
-      <content:encoded><![CDATA[<blockquote>
+  <link rel="icon" type="image/svg+xml" href="../../../favicon.svg" />
+  <meta property="og:title" content="当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩 | Research Fieldnotes" />
+  <meta property="og:description" content="从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。" />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/" />
+  <meta property="og:site_name" content="Research Fieldnotes" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:image" content="https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/media/social-card.png?v=696a34f9f89e" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="TIGER 语义 ID 码本坍缩与层级容量分配研究" />
+  <meta property="article:published_time" content="2026-07-18" />
+  <meta property="article:modified_time" content="2026-07-18" />
+  <meta property="article:author" content="https://wcx12.github.io/wcx12/" />
+  <meta property="article:section" content="Research Notes" />
+  <meta property="article:tag" content="generative-recommendation" />
+  <meta property="article:tag" content="semantic-id" />
+  <meta property="article:tag" content="rq-vae" />
+  <meta property="article:tag" content="tiger" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩 | Research Fieldnotes" />
+  <meta name="twitter:description" content="从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。" />
+  <meta name="twitter:image" content="https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/media/social-card.png?v=696a34f9f89e" />
+  <meta name="twitter:image:alt" content="TIGER 语义 ID 码本坍缩与层级容量分配研究" />
+  <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
+  <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
+  <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <script src="../../../theme-init.js?v=64a67fe93ee1"></script>
+  <link rel="stylesheet" href="../../../content.css?v=64a67fe93ee1" />
+  <link rel="stylesheet" href="../../assets/blog.css?v=64a67fe93ee1" />
+<link rel="stylesheet" href="../../assets/katex.min.css?v=64a67fe93ee1" />
+  <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩","description":"从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。","datePublished":"2026-07-18","dateModified":"2026-07-18","inLanguage":"zh","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/","keywords":["generative-recommendation","semantic-id","rq-vae","tiger"],"image":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/media/social-card.png?v=696a34f9f89e","width":1200,"height":630,"caption":"TIGER 语义 ID 码本坍缩与层级容量分配研究"}}</script>
+</head>
+<body class="blog-body">
+  <a class="skip-link" href="#main-content" data-blog-i18n="skip_main">Skip to main content</a>
+  <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
+  <header class="blog-topbar">
+    <a class="blog-brand" href="../../../" data-blog-nav-en="../../../" data-blog-nav-zh="../../../zh/">wcx12</a>
+    <details class="blog-menu" open>
+      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="Open site navigation" data-blog-i18n="nav_menu" data-blog-i18n-title="nav_menu_title">Menu</summary>
+      <nav id="blogSiteNav" class="blog-nav" aria-label="Site navigation" data-blog-i18n-aria="nav_landmark">
+        <a href="../../../" data-blog-nav-en="../../../" data-blog-nav-zh="../../../zh/" title="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title">Home</a>
+        <a href="../../../research/" data-blog-nav-en="../../../research/" data-blog-nav-zh="../../../zh/research/" title="Browse research topics and evidence" data-blog-i18n="nav_research" data-blog-i18n-title="nav_research_title">Research</a>
+        <a href="../../../projects/" data-blog-nav-en="../../../projects/" data-blog-nav-zh="../../../zh/projects/" title="Browse public repositories with maturity and evidence notes" data-blog-i18n="nav_projects" data-blog-i18n-title="nav_projects_title">Projects</a>
+        <a href="../../../publications/" data-blog-nav-en="../../../publications/" data-blog-nav-zh="../../../zh/publications/" title="Browse publisher-linked publications" data-blog-i18n="nav_publications" data-blog-i18n-title="nav_publications_title">Publications</a>
+        <a href="../../" data-blog-nav-en="../../" data-blog-nav-zh="../../" aria-current="location" title="Open Research Fieldnotes" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title">Writing</a>
+        <a href="../../../resume/" data-blog-nav-en="../../../resume/" data-blog-nav-zh="../../../zh/resume/" title="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title">Profile</a>
+        <button id="blogLangToggle" class="blog-nav-button" type="button" lang="zh-CN" title="Switch interface language" aria-label="切换到中文界面" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_target_aria">中文</button>
+        <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
+          <option value="neon" data-blog-i18n="theme_default">Default</option>
+          <option value="warm" data-blog-i18n="theme_warm">Warm</option>
+          <option value="mono" data-blog-i18n="theme_mono">Black &amp; White</option>
+        </select>
+      </nav>
+    </details>
+  </header>
+  <main id="main-content" class="blog-shell">
+<div class="blog-post-layout">
+      <article class="blog-post-card" lang="zh">
+
+        <header class="blog-post-header">
+          <p class="blog-kicker">Research Notes</p>
+          <h1 class="blog-post-title">当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩</h1>
+          <div class="blog-meta">
+            <a class="blog-author" href="../../../resume/" rel="author">Chenxu Wang</a>
+            <span data-blog-date="2026-07-18">Jul 18, 2026</span>
+            <span data-blog-updated="2026-07-18">Updated Jul 18, 2026</span>
+            <span data-blog-minutes-long="22">22 min read</span>
+          </div>
+          <p class="blog-post-subtitle">从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。</p>
+          <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_post">This article page contains the full post, metadata, tags, and any code or math examples.</p></details>
+          <div class="blog-tag-row"><span class="blog-tag">generative-recommendation</span><span class="blog-tag">semantic-id</span><span class="blog-tag">rq-vae</span><span class="blog-tag">tiger</span></div>
+        </header>
+        <details class="blog-toc blog-toc-mobile">
+          <summary data-blog-i18n="toc_title">Contents</summary>
+          <div class="blog-toc-mobile-body">
+            <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_toc">The contents panel links to major headings in the current article.</p></details>
+            <ol><li><a href="#tiger-是什么">TIGER 是什么</a></li><li><a href="#问题从哪里出现">问题从哪里出现</a></li><li><a href="#先说结论">先说结论</a></li><li><a href="#从一个首层只剩-1-个码字的异常开始">从一个首层只剩 1 个码字的异常开始</a></li><li><a href="#码本利用率首先是故障信号-不是成绩单">码本利用率首先是故障信号，不是成绩单</a></li><li><a href="#reset-救活了码字-却没有救活推荐">reset 救活了码字，却没有救活推荐</a></li><li><a href="#三层不能只顾着各自-用满">三层不能只顾着各自“用满”</a></li><li><a href="#soft-正则制造了一次-看起来很均匀-的假成功">soft 正则制造了一次“看起来很均匀”的假成功</a></li><li><a href="#hard-st-让训练时统计的分桶与实际使用的分桶一致">hard-ST 让训练时统计的分桶与实际使用的分桶一致</a></li><li><a href="#相同的-1-678-万条名义路径-容量放置方式仍会改变结果">相同的 1,678 万条名义路径，容量放置方式仍会改变结果</a></li><li><a href="#固定同一批语义-id-粗到细的预测顺序仍然更好">固定同一批语义 ID，粗到细的预测顺序仍然更好</a></li><li><a href="#五个数据集给出了稳定主线-也留下了一个反例">五个数据集给出了稳定主线，也留下了一个反例</a></li><li><a href="#musical-把-总路径数-和-信息放在哪层-彻底分开">Musical 把“总路径数”和“信息放在哪层”彻底分开</a></li><li><a href="#最终得到的不是一个放之四海而皆准的配置">最终得到的不是一个放之四海而皆准的配置</a></li><li><a href="#技术详解-先统一我们到底在测什么">技术详解：先统一我们到底在测什么</a></li><li><a href="#为什么码本利用率-唯一语义-id-和有效路径不是同一个量">为什么码本利用率、唯一语义 ID 和有效路径不是同一个量</a></li><li><a href="#为什么模型只能由验证集选择">为什么模型只能由验证集选择</a></li><li><a href="#官方基线到底塌成了什么样">官方基线到底塌成了什么样</a></li><li><a href="#为什么初始化和-reset-救不回下游推荐">为什么初始化和 reset 救不回下游推荐</a></li><li><a href="#逐层训练的启示-前缀不能只被冻结-也不能无限漂移">逐层训练的启示：前缀不能只被冻结，也不能无限漂移</a></li><li><a href="#为什么-soft-正则会-看起来已经均匀">为什么 soft 正则会“看起来已经均匀”</a></li><li><a href="#hard-st-让正则真正看到实际使用的离散分桶">hard-ST：让正则真正看到实际使用的离散分桶</a></li><li><a href="#同样的容量乘积-为什么不同排列不等价">同样的容量乘积，为什么不同排列不等价</a></li><li><a href="#固定语义-id-的顺序实验-路径方向不是装饰">固定语义 ID 的顺序实验：路径方向不是装饰</a></li><li><a href="#五个数据集的容量与有效路径全景">五个数据集的容量与有效路径全景</a></li><li><a href="#官方坍缩跨数据集成立-但-tuple-指标会掩盖它">官方坍缩跨数据集成立，但 tuple 指标会掩盖它</a></li><li><a href="#musical-条件有效分支过快收缩是不是原因">Musical：条件有效分支过快收缩是不是原因</a></li><li><a href="#当前最严谨的表述">当前最严谨的表述</a></li><li><a href="#哪些结论已经站住-哪些仍只是解释">哪些结论已经站住，哪些仍只是解释</a></li><li><a href="#下一步怎样把-musical-的解释变成因果证据">下一步怎样把 Musical 的解释变成因果证据</a></li><li><a href="#本文没有声称完成模型级-sota-比较">本文没有声称完成模型级 SOTA 比较</a></li><li><a href="#实验怎样保证比较公平">实验怎样保证比较公平</a></li><li><a href="#参考资料">参考资料</a></li><li><a href="#结语-不要再问-码本有没有用满-先问-信息为什么要放在这里">结语：不要再问“码本有没有用满”，先问“信息为什么要放在这里”</a></li></ol>
+          </div>
+        </details>
+        <div class="blog-content">
+<blockquote>
 <p><strong>导语：</strong> 从首层 256 个码字只剩 1 个的异常出发，我们在五个 Amazon 类目上追问：一个商品的离散“名字”应该怎样分层，才能既减少碰撞，又真正帮助推荐？</p>
 </blockquote>
 <p><em>一项覆盖五个数据集、四类容量排列与固定顺序消融的实证研究</em></p>
@@ -28,7 +104,7 @@
 <p>这立刻带来一个基础问题：商品原本使用的数据库 ID 只是随机编号，数字相近不代表内容相近，而且几百万个商品会形成巨大的输出词表。于是，生成式推荐需要一种更容易预测、又能保留商品语义的“名字”。</p>
 <h2 id="tiger-是什么">TIGER 是什么</h2>
 <p><a href="https://proceedings.neurips.cc/paper_files/paper/2023/hash/20dcab0f14046a5c6b02b61da9f13229-Abstract-Conference.html" target="_blank" rel="noreferrer">TIGER</a> 的全称是 <strong>Transformer Index for GEnerative Recommenders</strong>。这项发表于 NeurIPS 2023 的工作提出：先从商品标题、描述等文本中提取向量，再把向量量化成一串离散 token，最后训练 Transformer 根据用户历史生成目标商品的 token 序列。论文把这串 token 称为 <strong>Semantic ID，也就是语义 ID</strong>。</p>
-<p><img src="https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/media/tiger-pipeline.png?v=fd08ac8aaed3" alt="TIGER 从商品文本到三层语义 ID，再到生成式推荐的五步流程" width="918" height="214" loading="lazy" decoding="async" referrerpolicy="no-referrer"></p>
+<p><img src="media/tiger-pipeline.png?v=fd08ac8aaed3" alt="TIGER 从商品文本到三层语义 ID，再到生成式推荐的五步流程" width="918" height="214" loading="lazy" decoding="async" referrerpolicy="no-referrer"></p>
 <p>这里有三个容易混淆的词：</p>
 <ul>
 <li><strong>码本（codebook）</strong>：某一层可选 token 的词典。</li>
@@ -1582,71 +1658,29 @@ N_{\mathrm{eff}}
 <h2 id="结语-不要再问-码本有没有用满-先问-信息为什么要放在这里">结语：不要再问“码本有没有用满”，先问“信息为什么要放在这里”</h2>
 <p>这组实验最初像是在修复一个工程故障：256 个码字为什么只剩 1 个。走到最后，它变成了一个更有研究价值的问题：一个层级离散表示怎样分配早期路由、条件展开和末端消歧，才与生成式推荐的预测顺序和数据结构匹配。</p>
 <p>hard-ST 给出了一个可靠的训练起点；中度前置给出了一个稳健但非普适的默认配置；Musical 则提醒我们，总熵、唯一 ID 比例和有效路径数都不能替代层间信息结构。下一步真正值得做的，不是再堆一个更大的码本，而是用受控实验确认：<strong>哪些数据结构需要早分，哪些需要晚分，生成模型的错误又是从路径的哪一层开始放大。</strong></p>
-]]></content:encoded>
-    </item>
-  
-    <item>
-      <title>Building a Research Writing System for My Homepage</title>
-      <link>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</link>
-      <guid>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</guid>
-      <pubDate>Fri, 10 Jul 2026 00:00:00 GMT</pubDate>
-      <dc:creator>Chenxu Wang</dc:creator>
-      <description>How this homepage turns versioned Markdown, validated media, and research metadata into a maintainable static writing system.</description>
-      <category>Engineering</category>
-      <category>personal-site</category>
-      <category>static-site</category>
-      <category>research-workflow</category>
-      <content:encoded><![CDATA[<p>This writing space sits beside the interactive profile rather than replacing it. The homepage stays focused on research, projects, publications, and quick exploration. Longer technical notes live here with stable URLs, cleaner typography, and explicit links to their source material.</p>
-<p><img src="https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/media/publishing-flow.png?v=05149492835c" alt="Markdown and media pass through validation and a deterministic build before becoming public pages, search data, RSS, and research evidence." width="1200" height="460" loading="lazy" decoding="async" referrerpolicy="no-referrer"></p>
-<h2 id="authoring-model">Authoring model</h2>
-<p>Creating a post produces a self-contained article directory:</p>
-<div class="code-frame"><div class="code-head"><span>Create a new post</span></div><pre tabindex="0"><code class="hljs language-powershell">npm run new:post <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
-</code></pre></div><div class="code-frame"><div class="code-head"><span>Article bundle</span></div><pre tabindex="0"><code class="hljs language-plaintext">content/posts/2026-07-11-visual-place-recognition-notes/
-  index.md
-  media/
-    retrieval-results.webp
-</code></pre></div><p>The Markdown front matter controls discovery, research mapping, math rendering, navigation, and publication state.</p>
-<div class="code-frame"><div class="code-head"><span>Post metadata</span></div><pre tabindex="0"><code class="hljs language-yaml"><span class="hljs-attr">title:</span> <span class="hljs-string">&quot;Visual Place Recognition Notes&quot;</span>
-<span class="hljs-attr">slug:</span> <span class="hljs-string">&quot;visual-place-recognition-notes&quot;</span>
-<span class="hljs-attr">date:</span> <span class="hljs-string">&quot;2026-07-11&quot;</span>
-<span class="hljs-attr">updated:</span> <span class="hljs-string">&quot;2026-07-11&quot;</span>
-<span class="hljs-attr">category:</span> <span class="hljs-string">&quot;Computer Vision&quot;</span>
-<span class="hljs-attr">tags:</span> [<span class="hljs-string">&quot;vpr&quot;</span>, <span class="hljs-string">&quot;retrieval&quot;</span>, <span class="hljs-string">&quot;benchmark&quot;</span>]
-<span class="hljs-attr">research:</span> [<span class="hljs-string">&quot;vpr&quot;</span>]
-<span class="hljs-attr">draft:</span> <span class="hljs-literal">false</span>
-<span class="hljs-attr">math:</span> <span class="hljs-literal">true</span>
-<span class="hljs-attr">toc:</span> <span class="hljs-literal">true</span>
-</code></pre></div><p>Local article images use portable <code>media/...</code> links. The build verifies that every referenced file exists with exact casing, stays inside its article directory, is not a symbolic link, matches an allowed raster signature, and remains below the publication size limit. Published images also require meaningful alternative text. Other downloadable artifacts stay in a repository or release instead of sharing the article origin.</p>
-<h2 id="publication-states">Publication states</h2>
-<p>The repository has three explicit states:</p>
-<ul>
-<li><code>draft: true</code> keeps an article private regardless of its date.</li>
-<li>A non-draft article with a future date is scheduled.</li>
-<li>A non-draft article whose date has arrived in the site timezone is published.</li>
-</ul>
-<p>The scheduled workflow rebuilds the site shortly after midnight in Asia/Shanghai. Because every public collection is generated from the same filtered post list, a draft or scheduled article cannot leak into search, tags, RSS, the sitemap, or research evidence.</p>
-<h2 id="generated-evidence">Generated evidence</h2>
-<p>The source of truth remains plain Markdown and versioned media in GitHub. The build produces:</p>
-<ul>
-<li>stable article and archive URLs;</li>
-<li>syntax-highlighted code and optional KaTeX mathematics;</li>
-<li>tag pages, search metadata, RSS, and sitemap entries;</li>
-<li>links from relevant research areas when a post has an explicit research mapping;</li>
-<li>content fingerprints that prevent browsers from mixing resources across deployments.</li>
-</ul>
-<p>This first note is intentionally compact, but it exercises the same path intended for longer experiment logs, paper notes, tutorials, and engineering retrospectives.</p>
-<h2 id="inspect-the-implementation">Inspect the implementation</h2>
-<p>The claims above can be checked against the public implementation:</p>
-<ul>
-<li><a href="https://github.com/wcx12/wcx12" target="_blank" rel="noreferrer">homepage source repository</a>;</li>
-<li><a href="https://github.com/wcx12/wcx12/blob/main/content/posts/2026-07-10-building-a-research-writing-system/index.md" target="_blank" rel="noreferrer">this article’s versioned Markdown source</a>;</li>
-<li><a href="https://github.com/wcx12/wcx12/blob/main/scripts/blog-content.mjs" target="_blank" rel="noreferrer">content validation and media policy</a>;</li>
-<li><a href="https://github.com/wcx12/wcx12/blob/main/scripts/build-blog.mjs" target="_blank" rel="noreferrer">deterministic site generator</a>;</li>
-<li><a href="https://github.com/wcx12/wcx12/blob/main/.github/workflows/blog-build.yml" target="_blank" rel="noreferrer">scheduled build workflow</a>.</li>
-</ul>
-<p>The <a href="https://wcx12.github.io/wcx12/research/" target="_blank" rel="noreferrer">public research index</a> remains separate from this engineering case study, so site infrastructure is not presented as research evidence.</p>
-]]></content:encoded>
-    </item>
-  
-  </channel>
-</rss>
+
+        </div>
+        <footer class="blog-post-footer"><nav class="blog-prev-next" aria-label="Post navigation">
+            <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_prev_next">Use these links to move between newer and older posts.</p></details>
+            <span></span>
+            <a href="../building-a-research-writing-system/"><span data-blog-i18n="nav_older">Older</span>Building a Research Writing System for My Homepage</a>
+          </nav></footer>
+      </article>
+      <aside class="blog-toc blog-toc-desktop" aria-label="Article contents">
+        <h2 data-blog-i18n="toc_title">Contents</h2>
+        <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_toc">The contents panel links to major headings in the current article.</p></details>
+        <ol><li><a href="#tiger-是什么">TIGER 是什么</a></li><li><a href="#问题从哪里出现">问题从哪里出现</a></li><li><a href="#先说结论">先说结论</a></li><li><a href="#从一个首层只剩-1-个码字的异常开始">从一个首层只剩 1 个码字的异常开始</a></li><li><a href="#码本利用率首先是故障信号-不是成绩单">码本利用率首先是故障信号，不是成绩单</a></li><li><a href="#reset-救活了码字-却没有救活推荐">reset 救活了码字，却没有救活推荐</a></li><li><a href="#三层不能只顾着各自-用满">三层不能只顾着各自“用满”</a></li><li><a href="#soft-正则制造了一次-看起来很均匀-的假成功">soft 正则制造了一次“看起来很均匀”的假成功</a></li><li><a href="#hard-st-让训练时统计的分桶与实际使用的分桶一致">hard-ST 让训练时统计的分桶与实际使用的分桶一致</a></li><li><a href="#相同的-1-678-万条名义路径-容量放置方式仍会改变结果">相同的 1,678 万条名义路径，容量放置方式仍会改变结果</a></li><li><a href="#固定同一批语义-id-粗到细的预测顺序仍然更好">固定同一批语义 ID，粗到细的预测顺序仍然更好</a></li><li><a href="#五个数据集给出了稳定主线-也留下了一个反例">五个数据集给出了稳定主线，也留下了一个反例</a></li><li><a href="#musical-把-总路径数-和-信息放在哪层-彻底分开">Musical 把“总路径数”和“信息放在哪层”彻底分开</a></li><li><a href="#最终得到的不是一个放之四海而皆准的配置">最终得到的不是一个放之四海而皆准的配置</a></li><li><a href="#技术详解-先统一我们到底在测什么">技术详解：先统一我们到底在测什么</a></li><li><a href="#为什么码本利用率-唯一语义-id-和有效路径不是同一个量">为什么码本利用率、唯一语义 ID 和有效路径不是同一个量</a></li><li><a href="#为什么模型只能由验证集选择">为什么模型只能由验证集选择</a></li><li><a href="#官方基线到底塌成了什么样">官方基线到底塌成了什么样</a></li><li><a href="#为什么初始化和-reset-救不回下游推荐">为什么初始化和 reset 救不回下游推荐</a></li><li><a href="#逐层训练的启示-前缀不能只被冻结-也不能无限漂移">逐层训练的启示：前缀不能只被冻结，也不能无限漂移</a></li><li><a href="#为什么-soft-正则会-看起来已经均匀">为什么 soft 正则会“看起来已经均匀”</a></li><li><a href="#hard-st-让正则真正看到实际使用的离散分桶">hard-ST：让正则真正看到实际使用的离散分桶</a></li><li><a href="#同样的容量乘积-为什么不同排列不等价">同样的容量乘积，为什么不同排列不等价</a></li><li><a href="#固定语义-id-的顺序实验-路径方向不是装饰">固定语义 ID 的顺序实验：路径方向不是装饰</a></li><li><a href="#五个数据集的容量与有效路径全景">五个数据集的容量与有效路径全景</a></li><li><a href="#官方坍缩跨数据集成立-但-tuple-指标会掩盖它">官方坍缩跨数据集成立，但 tuple 指标会掩盖它</a></li><li><a href="#musical-条件有效分支过快收缩是不是原因">Musical：条件有效分支过快收缩是不是原因</a></li><li><a href="#当前最严谨的表述">当前最严谨的表述</a></li><li><a href="#哪些结论已经站住-哪些仍只是解释">哪些结论已经站住，哪些仍只是解释</a></li><li><a href="#下一步怎样把-musical-的解释变成因果证据">下一步怎样把 Musical 的解释变成因果证据</a></li><li><a href="#本文没有声称完成模型级-sota-比较">本文没有声称完成模型级 SOTA 比较</a></li><li><a href="#实验怎样保证比较公平">实验怎样保证比较公平</a></li><li><a href="#参考资料">参考资料</a></li><li><a href="#结语-不要再问-码本有没有用满-先问-信息为什么要放在这里">结语：不要再问“码本有没有用满”，先问“信息为什么要放在这里”</a></li></ol>
+      </aside>
+    </div>
+  </main>
+  <footer class="blog-footer">
+    <span>&copy; 2026 wcx12</span>
+    <nav aria-label="Profile links" data-blog-i18n-aria="profile_links">
+      <a href="../../../" data-blog-nav-en="../../../" data-blog-nav-zh="../../../zh/" data-blog-i18n="nav_home">Home</a>
+      <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
+      <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327" data-blog-i18n-aria="orcid_title">ORCID</a>
+    </nav>
+  </footer>
+  <script type="module" src="../../assets/blog.js?v=64a67fe93ee1"></script>
+</body>
+</html>

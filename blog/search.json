@@ -1,5 +1,21 @@
 [
   {
+    "title": "当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩",
+    "description": "从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。",
+    "date": "2026-07-18",
+    "category": "Research Notes",
+    "tags": [
+      "generative-recommendation",
+      "semantic-id",
+      "rq-vae",
+      "tiger"
+    ],
+    "research": [],
+    "lang": "zh",
+    "url": "./posts/tiger-semantic-id-codebook-capacity/",
+    "text": "导语： 从首层 256 个码字只剩 1 个的异常出发，我们在五个 Amazon 类目上追问：一个商品的离散“名字”应该怎样分层，才能既减少碰撞，又真正帮助推荐？ 一项覆盖五个数据集、四类容量排列与固定顺序消融的实证研究 大多数推荐系统的工作方式可以粗略概括为“打分”：先取出一批候选商品，再给每个候选打分并排序。生成式推荐换了一个视角。它不再只问“候选 A 和候选 B 谁更合适”，而是像语言模型续写下一个词那样， 直接生成下一个商品的标识符 。 这立刻带来一个基础问题：商品原本使用的数据库 ID 只是随机编号，数字相近不代表内容相近，而且几百万个商品会形成巨大的输出词表。于是，生成式推荐需要一种更容易预测、又能保留商品语义的“名字”。 TIGER 是什么 TIGER 的全称是 Transformer Index for GEnerative Recommenders 。这项发表于 NeurIPS 2023 的工作提出：先从商品标..."
+  },
+  {
     "title": "Building a Research Writing System for My Homepage",
     "description": "How this homepage turns versioned Markdown, validated media, and research metadata into a maintainable static writing system.",
     "date": "2026-07-10",

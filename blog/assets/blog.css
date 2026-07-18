@@ -1342,6 +1342,19 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   background: color-mix(in srgb, var(--cyan) 7%, transparent);
 }
 
+.blog-content .katex-block {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.blog-content .katex-display {
+  min-width: max-content;
+}
+
 .blog-content :not(pre) > code {
   border: 1px solid color-mix(in srgb, var(--cyan) 22%, transparent);
   border-radius: 6px;

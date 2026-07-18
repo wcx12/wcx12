@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://wcx12.github.io/wcx12/</loc><lastmod>2026-07-17</lastmod></url>
-  <url><loc>https://wcx12.github.io/wcx12/zh/</loc><lastmod>2026-07-17</lastmod></url>
+  <url><loc>https://wcx12.github.io/wcx12/</loc><lastmod>2026-07-18</lastmod></url>
+  <url><loc>https://wcx12.github.io/wcx12/zh/</loc><lastmod>2026-07-18</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/resume/</loc><lastmod>2026-07-17</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/zh/resume/</loc><lastmod>2026-07-17</lastmod></url>
-  <url><loc>https://wcx12.github.io/wcx12/blog/</loc><lastmod>2026-07-11</lastmod></url>
+  <url><loc>https://wcx12.github.io/wcx12/blog/</loc><lastmod>2026-07-18</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/research/</loc><lastmod>2026-07-12</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/research/point-cloud-registration/</loc><lastmod>2026-06-02</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/research/vpr/</loc><lastmod>2026-07-12</lastmod></url>
@@ -21,5 +21,6 @@
   <url><loc>https://wcx12.github.io/wcx12/zh/publications/</loc><lastmod>2026-07-12</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/zh/publications/tf-vpr/</loc><lastmod>2026-07-12</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/zh/publications/synergistic-learning-active-learning/</loc><lastmod>2026-07-12</lastmod></url>
+  <url><loc>https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/</loc><lastmod>2026-07-18</lastmod></url>
   <url><loc>https://wcx12.github.io/wcx12/blog/posts/building-a-research-writing-system/</loc><lastmod>2026-07-11</lastmod></url>
 </urlset>
