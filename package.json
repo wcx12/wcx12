@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
-    "highlight.js": "^11.11.1",
+    "highlight.js": "^11.11.2",
     "image-size": "2.0.2",
     "katex": "^0.16.47",
     "markdown-it": "^14.1.0",
