@@ -1,5 +1,5 @@
 ---
-title: "推荐系统为什么可以生成物品：重读 TIGER 的 Semantic ID 与生成式检索"
+title: "TIGER：从语义 ID 到生成式推荐"
 slug: "tiger-generative-retrieval-reading"
 date: "2026-08-30"
 updated: "2026-08-30"
@@ -13,7 +13,7 @@ math: true
 toc: true
 lang: "zh"
 socialImage: "media/social-card.png"
-socialImageAlt: "推荐系统为什么可以生成物品：TIGER 的 Semantic ID 与生成式检索"
+socialImageAlt: "TIGER：从语义 ID 到生成式推荐"
 ---
 
 > **导语：** TIGER 最值得注意的地方，也许不是它使用 Transformer 生成物品，而是它先把物品 ID 变成了一种可学习、可共享的离散语言。
