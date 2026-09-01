@@ -1729,6 +1729,112 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 }
 
+.tiger-pipeline-lanes {
+  display: grid;
+  gap: 14px;
+}
+
+.tiger-pipeline-lane {
+  --lane-accent: var(--cyan);
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--lane-accent) 34%, transparent);
+  border-radius: 8px;
+  padding: 12px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--lane-accent) 10%, transparent), transparent 52%),
+    color-mix(in srgb, var(--lane-accent) 5%, var(--panel));
+}
+
+.tiger-pipeline-lane-user {
+  --lane-accent: var(--pink);
+}
+
+.tiger-pipeline-lane-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.tiger-pipeline-lane-head > span {
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--lane-accent) 46%, transparent);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: var(--lane-accent);
+  background: color-mix(in srgb, var(--lane-accent) 10%, transparent);
+  font: 800 0.66rem/1 var(--blog-font-mono);
+  text-transform: uppercase;
+}
+
+.tiger-pipeline-lane-head div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  text-align: right;
+}
+
+.tiger-pipeline-lane-head strong {
+  color: var(--text);
+  font: 800 0.95rem/1.25 var(--blog-font-ui);
+}
+
+.tiger-pipeline-lane-head em {
+  color: var(--muted);
+  font: 700 0.68rem/1.25 var(--blog-font-mono);
+  font-style: normal;
+}
+
+.tiger-pipeline-lane .tiger-pipeline-track {
+  gap: clamp(8px, 1.4vw, 12px);
+}
+
+.tiger-pipeline-bridge {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  border: 1px solid color-mix(in srgb, var(--violet) 34%, transparent);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--violet) 10%, var(--field-bg)), color-mix(in srgb, var(--cyan) 5%, var(--field-bg)));
+}
+
+.tiger-pipeline-bridge strong {
+  color: var(--text);
+  font: 800 0.86rem/1.25 var(--blog-font-ui);
+}
+
+.tiger-pipeline-bridge p {
+  margin: 0;
+  color: var(--muted);
+  font: 600 0.78rem/1.55 var(--blog-font-ui);
+}
+
+.tiger-token-divider {
+  width: 1px;
+  min-width: 1px;
+  align-self: stretch;
+  margin-inline: 4px;
+  background: color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+:root[data-theme="mono"] .tiger-pipeline-lane,
+:root[data-theme="mono"] .tiger-pipeline-bridge {
+  background: color-mix(in srgb, var(--text) 5%, var(--panel));
+}
+
+@media (max-width: 980px) {
+  .tiger-pipeline-lane-head {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tiger-pipeline-lane-head div {
+    text-align: left;
+  }
+}
+
 .blog-hero-compact {
   gap: 12px;
   padding-block: clamp(20px, 3vw, 28px);

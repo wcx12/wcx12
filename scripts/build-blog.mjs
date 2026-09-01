@@ -245,7 +245,285 @@ const tigerPipelineCopy = {
   }
 };
 
+const tigerWorkflowCopy = {
+  en: {
+    figure: 'Figure 1',
+    title: 'Generative recommendation has an item-index path and a user-generation path',
+    aria: 'A two-lane TIGER workflow. Item text is embedded and quantized into Semantic IDs, while the user interaction sequence is fed to a generator that predicts the next semantic item.',
+    lanes: [
+      {
+        tone: 'item',
+        badge: 'Item side',
+        title: 'Build the semantic item vocabulary',
+        subtitle: 'offline item indexing',
+        steps: [
+          {
+            tone: 'source',
+            role: 'Content',
+            title: 'Item text',
+            sample: 'title / category / brand',
+            detail: 'Each item starts from textual metadata rather than an anonymous item ID.'
+          },
+          {
+            tone: 'embedding',
+            role: 'Encoder',
+            title: 'Embedding model',
+            sample: 'Sentence-T5',
+            detail: 'The text encoder maps item content into a continuous embedding space.'
+          },
+          {
+            tone: 'embedding',
+            role: 'Vector',
+            title: 'Item embedding',
+            sample: '768d content vector',
+            detail: 'This vector still behaves like a conventional retrieval representation.'
+          },
+          {
+            tone: 'quantize',
+            role: 'Quantizer',
+            title: 'RQ-VAE',
+            sample: 'residual quantization',
+            detail: 'The quantization model compresses the continuous vector into several discrete codebook choices.'
+          },
+          {
+            tone: 'semantic',
+            role: 'Vocabulary',
+            title: 'Semantic ID',
+            sample: '(12, 24, 52) -> item',
+            detail: 'The resulting token tuple becomes the semantic item identity used by the generator.'
+          }
+        ]
+      },
+      {
+        tone: 'user',
+        badge: 'User side',
+        title: 'Generate the next semantic item',
+        subtitle: 'online recommendation',
+        steps: [
+          {
+            tone: 'source',
+            role: 'History',
+            title: 'User interactions',
+            sample: 'item A -> item B -> item C',
+            detail: 'The user sequence provides the behavioral context for generation.'
+          },
+          {
+            tone: 'semantic',
+            role: 'Tokenization',
+            title: 'Semantic ID sequence',
+            sample: '(12,24,52) -> ...',
+            detail: 'Historical items are rewritten into the same Semantic ID vocabulary built on the item side.'
+          },
+          {
+            tone: 'generate',
+            role: 'Generator',
+            title: 'Generative model',
+            sample: 'Transformer',
+            detail: 'The model predicts the next item as a sequence of semantic tokens.'
+          },
+          {
+            tone: 'generate',
+            role: 'Prediction',
+            title: 'Generated semantic item',
+            sample: 'next Semantic ID',
+            detail: 'The output is not raw text; it is a generated Semantic ID tuple.'
+          },
+          {
+            tone: 'semantic',
+            role: 'Lookup',
+            title: 'Resolve to item',
+            sample: 'Semantic ID -> candidate',
+            detail: 'The predicted Semantic ID is mapped back to a real item or candidate set.'
+          }
+        ]
+      }
+    ],
+    bridge: {
+      title: 'The shared contract',
+      detail: 'The item side defines the finite Semantic ID vocabulary and the ID-to-item mapping. The user side generates inside that vocabulary, then resolves the generated ID back to actual items.'
+    },
+    tokens: ['item text', 'embedding', 'RQ-VAE', 'Semantic ID vocabulary', 'history', 'Transformer', 'semantic item'],
+    legend: [
+      ['Item indexing', 'content -> embedding -> RQ-VAE -> Semantic ID'],
+      ['Shared vocabulary', 'the generator can only produce valid semantic item tokens'],
+      ['User generation', 'interaction history -> Transformer -> next Semantic ID'],
+      ['Item lookup', 'generated Semantic ID resolves back to recommendable items']
+    ],
+    caption: 'Figure 1. The overall generative recommendation workflow has two connected paths: the item side turns item text into a Semantic ID vocabulary, and the user side feeds interaction sequences to a generator that predicts the next semantic item.'
+  },
+  zh: {
+    figure: '图 1',
+    title: '生成式推荐由“物品侧索引”和“用户侧生成”两条链路组成',
+    aria: 'TIGER 的双分支流程图。物品文本先经过嵌入模型和 RQ-VAE 量化得到 Semantic ID；用户交互序列再输入生成器，由生成模型预测下一个语义物品。',
+    lanes: [
+      {
+        tone: 'item',
+        badge: '物品侧',
+        title: '建立语义物品词表',
+        subtitle: '离线索引',
+        steps: [
+          {
+            tone: 'source',
+            role: '内容',
+            title: 'Item 文本信息',
+            sample: '标题 / 类别 / 品牌',
+            detail: '每个物品先从文本元信息出发，而不是直接使用互不相关的原子 ID。'
+          },
+          {
+            tone: 'embedding',
+            role: '编码器',
+            title: '嵌入模型',
+            sample: 'Sentence-T5',
+            detail: '文本编码器把 item 内容映射到连续的 embedding 空间。'
+          },
+          {
+            tone: 'embedding',
+            role: '向量',
+            title: 'Item embedding',
+            sample: '768 维内容向量',
+            detail: '到这一步为止，它仍然更像传统向量检索中的物品表示。'
+          },
+          {
+            tone: 'quantize',
+            role: '量化器',
+            title: 'RQ-VAE',
+            sample: '残差量化',
+            detail: '量化模型把连续向量压缩成多个离散 codeword。'
+          },
+          {
+            tone: 'semantic',
+            role: '词表',
+            title: 'Semantic ID',
+            sample: '(12, 24, 52) -> item',
+            detail: '这个 token 组合成为生成器可以使用的语义物品身份。'
+          }
+        ]
+      },
+      {
+        tone: 'user',
+        badge: '用户侧',
+        title: '生成下一个语义物品',
+        subtitle: '在线推荐',
+        steps: [
+          {
+            tone: 'source',
+            role: '历史',
+            title: '用户交互序列',
+            sample: 'item A -> item B -> item C',
+            detail: '用户历史提供生成推荐所需的行为上下文。'
+          },
+          {
+            tone: 'semantic',
+            role: '转写',
+            title: 'Semantic ID 序列',
+            sample: '(12,24,52) -> ...',
+            detail: '历史中的物品会被转写成物品侧建立好的同一套 Semantic ID 词表。'
+          },
+          {
+            tone: 'generate',
+            role: '生成器',
+            title: '生成模型',
+            sample: 'Transformer',
+            detail: '模型根据用户历史，按 token 顺序预测下一个语义物品。'
+          },
+          {
+            tone: 'generate',
+            role: '预测',
+            title: '生成的语义 item',
+            sample: 'next Semantic ID',
+            detail: '模型输出的不是普通文本，而是一个可以映射回物品库的 Semantic ID。'
+          },
+          {
+            tone: 'semantic',
+            role: '映射',
+            title: '回到真实物品',
+            sample: 'Semantic ID -> 候选物品',
+            detail: '最后再把生成出的 Semantic ID 解析为真实 item 或候选 item 集合。'
+          }
+        ]
+      }
+    ],
+    bridge: {
+      title: '两条链路的连接点',
+      detail: '物品侧提供有限的 Semantic ID 词表和 ID 到 item 的映射；用户侧只是在这套词表里生成，再把生成出的 ID 解析回真实物品。'
+    },
+    tokens: ['item 文本', 'embedding', 'RQ-VAE', 'Semantic ID 词表', '用户历史', 'Transformer', '语义 item'],
+    legend: [
+      ['物品侧索引', '内容 -> embedding -> RQ-VAE -> Semantic ID'],
+      ['共享词表', '生成器只能生成可解析的语义物品 token'],
+      ['用户侧生成', '交互历史 -> Transformer -> 下一个 Semantic ID'],
+      ['映射回物品', '生成出的 Semantic ID 需要解析成真实候选物品']
+    ],
+    caption: '图 1. 生成式推荐的整体流程包含两条相互连接的链路：物品侧先把 item 文本编码并量化为 Semantic ID 词表，用户侧再把交互序列输入生成器，预测下一个语义 item。'
+  }
+};
+
 function renderTigerPipelineFigure(lang = 'en') {
+  const copy = tigerWorkflowCopy[lang === 'zh' ? 'zh' : 'en'];
+  const lanes = copy.lanes.map((lane) => {
+    const steps = lane.steps.map((step, index) => `
+          <li class="tiger-pipeline-node tiger-pipeline-${escapeHtml(step.tone)}">
+            <details>
+              <summary>
+                <span class="tiger-pipeline-index">${String(index + 1).padStart(2, '0')}</span>
+                <span class="tiger-pipeline-main">
+                  <span class="tiger-pipeline-role">${escapeHtml(step.role)}</span>
+                  <strong>${escapeHtml(step.title)}</strong>
+                  <em>${escapeHtml(step.sample)}</em>
+                </span>
+              </summary>
+              <p>${escapeHtml(step.detail)}</p>
+            </details>
+          </li>`).join('');
+    return `
+        <section class="tiger-pipeline-lane tiger-pipeline-lane-${escapeHtml(lane.tone)}" aria-label="${escapeHtml(lane.title)}">
+          <div class="tiger-pipeline-lane-head">
+            <span>${escapeHtml(lane.badge)}</span>
+            <div>
+              <strong>${escapeHtml(lane.title)}</strong>
+              <em>${escapeHtml(lane.subtitle)}</em>
+            </div>
+          </div>
+          <ol class="tiger-pipeline-track">
+${steps}
+          </ol>
+        </section>`;
+  }).join('');
+  const tokens = copy.tokens.map((token, index) => {
+    const className = index < 4 ? 'tiger-token-source' : 'tiger-token-output';
+    const divider = index === 4 ? '<span class="tiger-token-divider" aria-hidden="true"></span>' : '';
+    return `${divider}<span class="tiger-token ${className}">${escapeHtml(token)}</span>`;
+  }).join('<span class="tiger-token-arrow">-></span>');
+  const legend = copy.legend.map(([label, detail], index) => `
+        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-${index + 1}">
+          <dt><span aria-hidden="true"></span>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(detail)}</dd>
+        </div>`).join('');
+  return `<figure id="fig-tiger-semantic-id-flow" class="tiger-pipeline-figure">
+    <div class="tiger-pipeline-surface" role="img" aria-label="${escapeHtml(copy.aria)}">
+      <div class="tiger-pipeline-heading">
+        <span>${escapeHtml(copy.figure)}</span>
+        <strong>${escapeHtml(copy.title)}</strong>
+      </div>
+      <div class="tiger-pipeline-lanes">
+${lanes}
+      </div>
+      <aside class="tiger-pipeline-bridge">
+        <strong>${escapeHtml(copy.bridge.title)}</strong>
+        <p>${escapeHtml(copy.bridge.detail)}</p>
+      </aside>
+      <div class="tiger-pipeline-token-row" aria-hidden="true">
+        ${tokens}
+      </div>
+      <dl class="tiger-pipeline-legend">
+${legend}
+      </dl>
+    </div>
+    <figcaption>${escapeHtml(copy.caption)}</figcaption>
+  </figure>`;
+}
+
+function renderTigerPipelineFigureLegacy(lang = 'en') {
   const copy = tigerPipelineCopy[lang === 'zh' ? 'zh' : 'en'];
   const steps = copy.steps.map((step, index) => `
         <li class="tiger-pipeline-node tiger-pipeline-${escapeHtml(step.tone)}">

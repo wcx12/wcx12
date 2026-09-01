@@ -68,7 +68,7 @@ Semantic ID：(12, 24, 52)
 - 让物品之间可以共享一部分 token；
 - 把开放的物品集合翻译成 Transformer 可以生成的有限词表。
 
-这条链路可以先概括为[图 1](#fig-tiger-semantic-id-flow)：商品文本先变成连续内容向量，RQ-VAE 再把它离散化为 Semantic ID，最后 Transformer 才能像生成语言一样生成候选物品。
+更完整的生成式推荐流程见[图 1](#fig-tiger-semantic-id-flow)：物品侧先把 item 文本信息编码成 embedding，再通过 RQ-VAE 这样的量化模型变成 Semantic ID；用户侧则把交互序列输入生成器，让生成模型预测下一个语义 item。
 
 ::tiger-pipeline
 
@@ -76,7 +76,7 @@ Semantic ID：(12, 24, 52)
 
 ## RQ-VAE 如何生成 Semantic ID
 
-[图 1](#fig-tiger-semantic-id-flow) 中的第三步对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
+[图 1](#fig-tiger-semantic-id-flow) 左侧的物品侧分支对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
 
 残差量化可以理解为一个逐层修正的过程。
 
@@ -267,7 +267,7 @@ Product Quantization、hierarchical k-means 和 VQ-VAE 都没有出现在同一�
 
 ## 当交互历史变成 token 序列，推荐才真正成为生成
 
-得到 Semantic ID 后，用户的交互历史会从物品序列变成 token 序列：
+得到 Semantic ID 后，用户的交互历史会从物品序列变成 token 序列。这对应[图 1](#fig-tiger-semantic-id-flow) 右侧的用户侧分支：生成模型的输入是用户历史，输出才是下一个可映射回物品库的语义 item。
 
 ```text
 Item A → Item B → Item C
