@@ -531,6 +531,25 @@ function renderMarkdown(markdown, draft) {
   return html.join('\n') || `<p>${escapeHtml(text('preview_empty'))}</p>`;
 }
 
+function renderPreviewMath() {
+  if (!elements.preview || typeof window.renderMathInElement !== 'function') return;
+  try {
+    window.renderMathInElement(elements.preview, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false }
+      ],
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+      throwOnError: false,
+      errorCallback: () => {}
+    });
+  } catch {
+    // Keep the editor responsive even if an unfinished formula is temporarily invalid.
+  }
+}
+
 function previewState(data) {
   if (data.draft === false) {
     const today = manifest?.generatedAt || new Date().toISOString().slice(0, 10);
@@ -557,7 +576,10 @@ function renderPreview() {
     ].filter(Boolean).join(' · ');
   }
   if (elements.previewMeta) elements.previewMeta.textContent = previewState(data);
-  if (elements.preview) elements.preview.innerHTML = renderMarkdown(body, activeDraft);
+  if (elements.preview) {
+    elements.preview.innerHTML = renderMarkdown(body, activeDraft);
+    renderPreviewMath();
+  }
 }
 
 function schedulePreview() {

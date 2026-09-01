@@ -136,6 +136,8 @@ async function expectedAssetVersion() {
     'blog-src/assets/blog.js',
     'blog-src/assets/draft-studio.js',
     'node_modules/katex/dist/katex.min.css',
+    'node_modules/katex/dist/katex.min.js',
+    'node_modules/katex/dist/contrib/auto-render.min.js',
     'research-config.json',
     'resume.md',
     'resume.zh.md',

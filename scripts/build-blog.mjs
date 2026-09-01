@@ -841,6 +841,8 @@ async function copyAssets() {
   if (!fontPaths.length) throw new Error('KaTeX CSS does not reference any files under dist/fonts.');
 
   await fs.copyFile(katexCssPath, path.join(outputAssetsDir, 'katex.min.css'));
+  await fs.copyFile(path.join(katexDistDir, 'katex.min.js'), path.join(outputAssetsDir, 'katex.min.js'));
+  await fs.copyFile(path.join(katexDistDir, 'contrib', 'auto-render.min.js'), path.join(outputAssetsDir, 'auto-render.min.js'));
   for (const fontPath of fontPaths) {
     const outputFontPath = path.join(outputAssetsDir, 'fonts', fontPath);
     await fs.mkdir(path.dirname(outputFontPath), { recursive: true });
@@ -876,6 +878,8 @@ async function computeAssetVersion(posts) {
     'blog-src/assets/blog.js',
     'blog-src/assets/draft-studio.js',
     'node_modules/katex/dist/katex.min.css',
+    'node_modules/katex/dist/katex.min.js',
+    'node_modules/katex/dist/contrib/auto-render.min.js',
     'research-config.json',
     'resume.md',
     'resume.zh.md',
@@ -1512,7 +1516,12 @@ async function renderDraftStudio(unpublishedPosts, today) {
     robots: 'noindex,nofollow',
     schemaType: 'WebPage',
     blogPage: true,
-    extraScripts: `<script type="module" src="${versionedAssetLink(ctx, 'blog/assets/draft-studio.js')}"></script>`,
+    extraHead: `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />`,
+    extraScripts: [
+      `<script src="${versionedAssetLink(ctx, 'blog/assets/katex.min.js')}"></script>`,
+      `<script src="${versionedAssetLink(ctx, 'blog/assets/auto-render.min.js')}"></script>`,
+      `<script type="module" src="${versionedAssetLink(ctx, 'blog/assets/draft-studio.js')}"></script>`
+    ].join('\n'),
     socialImagePath: 'assets/og-blog.png',
     socialImageAlt: 'Draft Studio for Research Fieldnotes'
   }));
