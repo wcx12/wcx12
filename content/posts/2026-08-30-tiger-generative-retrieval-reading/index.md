@@ -2,13 +2,13 @@
 title: "TIGER：从语义 ID 到生成式推荐"
 slug: "tiger-generative-retrieval-reading"
 date: "2026-08-30"
-updated: "2026-08-30"
+updated: "2026-09-02"
 description: "从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。"
 category: "Research Notes"
 tags: ["generative-recommendation", "semantic-id", "rq-vae", "tiger"]
 research: []
 featured: false
-draft: true
+draft: false
 math: true
 toc: true
 lang: "zh"

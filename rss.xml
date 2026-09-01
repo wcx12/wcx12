@@ -6,8 +6,592 @@
     <atom:link href="https://wcx12.github.io/wcx12/rss.xml" rel="self" type="application/rss+xml" />
     <description>A growing research and engineering notebook by Chenxu Wang (wcx12), with reproducible workflows and fieldnotes from ongoing work.</description>
     <language>en</language>
-    <lastBuildDate>Sat, 18 Jul 2026 00:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 02 Sep 2026 00:00:00 GMT</lastBuildDate>
 
+    <item>
+      <title>TIGER：从语义 ID 到生成式推荐</title>
+      <link>https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/</link>
+      <guid>https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/</guid>
+      <pubDate>Sun, 30 Aug 2026 00:00:00 GMT</pubDate>
+      <dc:creator>Chenxu Wang</dc:creator>
+      <description>从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。</description>
+      <category>Research Notes</category>
+      <category>generative-recommendation</category>
+      <category>semantic-id</category>
+      <category>rq-vae</category>
+      <category>tiger</category>
+      <content:encoded><![CDATA[<blockquote>
+<p><strong>导语：</strong> TIGER 最值得注意的地方，也许不是它使用 Transformer 生成物品，而是它先把物品 ID 变成了一种可学习、可共享的离散语言。</p>
+</blockquote>
+<p>我过去理解的推荐检索，大体遵循同一种结构：模型先根据用户历史得到一个用户向量，再去物品向量库中做 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-1" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-1" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span> 或 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-2" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-2" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span>，找出相似度最高的候选物品。</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">用户历史
+→ 用户/查询向量
+→ 外部物品索引
+→ ANN 或 MIPS
+→ Top-K 候选
+</code></pre></div><p>模型可以从 RNN 换成 Transformer，也可以加入文本、图像或其他辅助信息，但“先表示用户，再搜索物品”的分工通常没有改变。模型负责理解用户，外部索引负责寻找物品。</p>
+<p><a href="https://proceedings.neurips.cc/paper_files/paper/2023/hash/20dcab0f14046a5c6b02b61da9f13229-Abstract-Conference.html" target="_blank" rel="noreferrer">TIGER</a> 提出了一个很直接的问题：既然 Transformer 可以生成一段序列，推荐系统能不能不再输出用于搜索的用户向量，而是直接生成下一个物品的 ID？</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">用户历史
+→ Transformer
+→ 下一个物品的 ID
+</code></pre></div><p>这听起来像是把检索替换成生成，但很快会遇到第一个障碍：普通 Item ID 没有任何语义。</p>
+<p>编号 233 和 234 相邻，并不意味着对应的两个物品相似。如果每个物品仍然只是一个完全独立的类别，那么让 Transformer 预测 Item ID，本质上仍然接近一个超大规模分类问题。低频物品缺少训练信号，新物品也没有可以被模型直接生成的表示。</p>
+<p>所以，TIGER 真正的第一步并不是更换检索器，而是重新设计物品 ID。</p>
+<h2 id="在生成物品之前-先把物品变成一种语言">在生成物品之前，先把物品变成一种语言</h2>
+<p>TIGER 不再使用随机、原子的 Item ID，而是为每个物品构造由多个 token 组成的 <strong>Semantic ID</strong>。</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">普通 Item ID：233
+Semantic ID：(12, 24, 52)
+</code></pre></div><p>如果两个物品在内容空间中比较相似，它们可能共享部分 token：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">物品 A：(12, 24, 52)
+物品 B：(12, 24, 61)
+</code></pre></div><p>这个变化看起来不大，实际改变了模型理解物品的方式。普通 Item ID 把每个物品视为互不相关的原子；Semantic ID 则允许不同物品共享一部分离散表示。模型在高频物品上学到的 token 表示，理论上也可以被相似的低频物品使用。</p>
+<p>从这个角度看，Semantic ID 同时承担了三种作用：</p>
+<ul>
+<li>把连续的物品内容表示压缩成离散 code；</li>
+<li>让物品之间可以共享一部分 token；</li>
+<li>把开放的物品集合翻译成 Transformer 可以生成的有限词表。</li>
+</ul>
+<p>这条链路可以先概括为<a href="#fig-tiger-semantic-id-flow">图 1</a>：商品文本先变成连续内容向量，RQ-VAE 再把它离散化为 Semantic ID，最后 Transformer 才能像生成语言一样生成候选物品。</p>
+<figure id="fig-tiger-semantic-id-flow" class="tiger-pipeline-figure">
+    <div class="tiger-pipeline-surface" role="img" aria-label="TIGER 从商品文本到内容向量、残差量化、Semantic ID 与 Transformer 生成的五步流程图。">
+      <div class="tiger-pipeline-heading">
+        <span>图 1</span>
+        <strong>TIGER 把物品内容变成可生成的词表</strong>
+      </div>
+      <ol class="tiger-pipeline-track">
+
+        <li class="tiger-pipeline-node tiger-pipeline-source">
+          <details>
+            <summary>
+              <span class="tiger-pipeline-index">01</span>
+              <span class="tiger-pipeline-main">
+                <span class="tiger-pipeline-role">输入</span>
+                <strong>商品文本</strong>
+                <em>标题 / 类别 / 品牌</em>
+              </span>
+            </summary>
+            <p>先把商品元信息写成文本，让语言编码器把物品放进一个共享的内容空间。</p>
+          </details>
+        </li>
+        <li class="tiger-pipeline-node tiger-pipeline-embedding">
+          <details>
+            <summary>
+              <span class="tiger-pipeline-index">02</span>
+              <span class="tiger-pipeline-main">
+                <span class="tiger-pipeline-role">表示</span>
+                <strong>内容向量</strong>
+                <em>Sentence-T5, 768 维</em>
+              </span>
+            </summary>
+            <p>文本编码器输出连续 embedding；到这里为止，它仍然像传统向量检索里的物品表示。</p>
+          </details>
+        </li>
+        <li class="tiger-pipeline-node tiger-pipeline-quantize">
+          <details>
+            <summary>
+              <span class="tiger-pipeline-index">03</span>
+              <span class="tiger-pipeline-main">
+                <span class="tiger-pipeline-role">离散化</span>
+                <strong>RQ-VAE</strong>
+                <em>逐层修正残差</em>
+              </span>
+            </summary>
+            <p>残差量化逐层选择码本，把连续向量压成多个离散 codeword。</p>
+          </details>
+        </li>
+        <li class="tiger-pipeline-node tiger-pipeline-semantic">
+          <details>
+            <summary>
+              <span class="tiger-pipeline-index">04</span>
+              <span class="tiger-pipeline-main">
+                <span class="tiger-pipeline-role">词表</span>
+                <strong>Semantic ID</strong>
+                <em>(12, 24, 52)</em>
+              </span>
+            </summary>
+            <p>被选中的 codeword 组成物品 ID；相似物品可以共享其中一部分 token。</p>
+          </details>
+        </li>
+        <li class="tiger-pipeline-node tiger-pipeline-generate">
+          <details>
+            <summary>
+              <span class="tiger-pipeline-index">05</span>
+              <span class="tiger-pipeline-main">
+                <span class="tiger-pipeline-role">生成</span>
+                <strong>Transformer</strong>
+                <em>逐 token 预测候选</em>
+              </span>
+            </summary>
+            <p>推荐任务被改写为序列生成：模型按顺序生成可映射回物品库的 ID。</p>
+          </details>
+        </li>
+      </ol>
+      <div class="tiger-pipeline-token-row" aria-hidden="true">
+        <span class="tiger-token tiger-token-source">text</span>
+        <span class="tiger-token-arrow">→</span>
+        <span class="tiger-token tiger-token-vector">768d</span>
+        <span class="tiger-token-arrow">→</span>
+        <span class="tiger-token tiger-token-code">12</span>
+        <span class="tiger-token tiger-token-code">24</span>
+        <span class="tiger-token tiger-token-code">52</span>
+        <span class="tiger-token-arrow">→</span>
+        <span class="tiger-token tiger-token-output">item</span>
+      </div>
+      <dl class="tiger-pipeline-legend">
+
+        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-1">
+          <dt><span aria-hidden="true"></span>内容信号</dt>
+          <dd>原始物品信息与编码器输出</dd>
+        </div>
+        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-2">
+          <dt><span aria-hidden="true"></span>量化步骤</dt>
+          <dd>从连续空间转为离散码本</dd>
+        </div>
+        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-3">
+          <dt><span aria-hidden="true"></span>语义 token</dt>
+          <dd>可共享的 codeword 编号</dd>
+        </div>
+        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-4">
+          <dt><span aria-hidden="true"></span>生成步骤</dt>
+          <dd>自回归地产生候选物品</dd>
+        </div>
+      </dl>
+    </div>
+    <figcaption>图 1. TIGER 的关键变化不是单纯更换检索模型，而是先把物品内容转成有限、可共享、可生成的 token 词表。</figcaption>
+  </figure><p>不过，这里需要提前埋下一个问题：Semantic ID 的相似性首先继承自物品的内容 embedding。它究竟是 RQ-VAE 额外学出来的，还是文本模型原本就已经提供的？这个问题会影响我们后面对冷启动和语义层次的判断。</p>
+<h2 id="rq-vae-如何生成-semantic-id">RQ-VAE 如何生成 Semantic ID</h2>
+<p><a href="#fig-tiger-semantic-id-flow">图 1</a> 中的第三步对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。</p>
+<p>残差量化可以理解为一个逐层修正的过程。</p>
+<p>第一层码本先选择一个最接近当前向量的 codeword。这个 codeword 无法完全重构原向量，于是计算它留下的残差。第二层码本继续近似这个残差，第三层再修正剩余部分。</p>
+<p>设初始潜在向量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span></span></span></span>：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>r</mi><mn>0</mn></msub><mo>=</mo><mi>z</mi><mo separator="true">,</mo><mspace width="2em"/><msub><mi>r</mi><mrow><mi>d</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi>r</mi><mi>d</mi></msub><mo>−</mo><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">r_0=z,\qquad r_{d+1}=r_d-e_{c_d}.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6389em;vertical-align:-0.2083em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">d</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2083em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6864em;vertical-align:-0.2559em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mord">.</span></span></span></span></span></p>
+<p>经过 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">m</span></span></span></span> 层后：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>r</mi><mi>m</mi></msub><mo>=</mo><mi>z</mi><mo>−</mo><munderover><mo>∑</mo><mrow><mi>d</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>m</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">r_m=z-\sum_{d=0}^{m-1}e_{c_d}.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">m</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:3.1032em;vertical-align:-1.3021em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8011em;"><span style="top:-1.8479em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">d</span><span class="mrel mtight">=</span><span class="mord mtight">0</span></span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">m</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.3021em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mord">.</span></span></span></span></span></p>
+<p>因此，量化表示自然写成：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><mi>z</mi><mo>^</mo></mover><mo>=</mo><munderover><mo>∑</mo><mrow><mi>d</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>m</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">\hat z=\sum_{d=0}^{m-1}e_{c_d}.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.6944em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.1944em;"><span class="mord">^</span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:3.1032em;vertical-align:-1.3021em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8011em;"><span style="top:-1.8479em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">d</span><span class="mrel mtight">=</span><span class="mord mtight">0</span></span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">m</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.3021em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mord">.</span></span></span></span></span></p>
+<p>各层 codeword 的编号组成物品的 Semantic ID：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">内容 embedding
+→ RQ-VAE encoder
+→ 第一层量化整体向量
+→ 第二层量化第一层残差
+→ 第三层量化第二层残差
+→ Semantic ID (c₁,c₂,c₃)
+</code></pre></div><p>各层码向量最后相加，并不是额外设计出来的技巧。量化时逐层做减法，重构时自然需要把各层近似结果加回来。最终残差 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mi>m</mi></msub><mo>=</mo><mi>z</mi><mo>−</mo><mover accent="true"><mi>z</mi><mo>^</mo></mover></mrow><annotation encoding="application/x-tex">r_m=z-\hat z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">m</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.6944em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.1944em;"><span class="mord">^</span></span></span></span></span></span></span></span></span></span> 越小，量化表示就越接近原始潜在向量。</p>
+<h3 id="损失函数为什么要拆成两项">损失函数为什么要拆成两项</h3>
+<p>RQ-VAE 中最值得仔细解释的公式是：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>L</mi><mi>d</mi></msub><mo>=</mo><mo stretchy="false">∥</mo><mi mathvariant="normal">sg</mi><mo>⁡</mo><mo stretchy="false">[</mo><msub><mi>r</mi><mi>d</mi></msub><mo stretchy="false">]</mo><mo>−</mo><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><msup><mo stretchy="false">∥</mo><mn>2</mn></msup><mo>+</mo><mi>β</mi><mo stretchy="false">∥</mo><msub><mi>r</mi><mi>d</mi></msub><mo>−</mo><mi mathvariant="normal">sg</mi><mo>⁡</mo><mo stretchy="false">[</mo><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><mo stretchy="false">]</mo><msup><mo stretchy="false">∥</mo><mn>2</mn></msup><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">L_d=
+\lVert \operatorname{sg}[r_d]-e_{c_d}\rVert^2
++\beta\lVert r_d-\operatorname{sg}[e_{c_d}]\rVert^2.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">∥</span><span class="mop"><span class="mord mathrm" style="margin-right:0.0139em;">sg</span></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">]</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.12em;vertical-align:-0.2559em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mclose"><span class="mclose">∥</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0528em;">β</span><span class="mopen">∥</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.12em;vertical-align:-0.2559em;"></span><span class="mop"><span class="mord mathrm" style="margin-right:0.0139em;">sg</span></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mclose">]</span><span class="mclose"><span class="mclose">∥</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mord">.</span></span></span></span></span></p>
+<p>其中，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">sg</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\operatorname{sg}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mop"><span class="mord mathrm" style="margin-right:0.0139em;">sg</span></span></span></span></span> 表示 stop-gradient：前向计算时保留原值，反向传播时梯度为零。</p>
+<p>第一项固定当前 residual，只更新被选中的 code embedding：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>L</mi><mrow><mi>c</mi><mi>o</mi><mi>d</mi><mi>e</mi></mrow></msub><mo>=</mo><mo stretchy="false">∥</mo><mi mathvariant="normal">sg</mi><mo>⁡</mo><mo stretchy="false">[</mo><msub><mi>r</mi><mi>d</mi></msub><mo stretchy="false">]</mo><mo>−</mo><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><msup><mo stretchy="false">∥</mo><mn>2</mn></msup><mo separator="true">,</mo></mrow><annotation encoding="application/x-tex">L_{code}=\lVert \operatorname{sg}[r_d]-e_{c_d}\rVert^2,
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">e</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">∥</span><span class="mop"><span class="mord mathrm" style="margin-right:0.0139em;">sg</span></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">]</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.12em;vertical-align:-0.2559em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mclose"><span class="mclose">∥</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mpunct">,</span></span></span></span></span></p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi mathvariant="normal">∂</mi><msub><mi>L</mi><mrow><mi>c</mi><mi>o</mi><mi>d</mi><mi>e</mi></mrow></msub></mrow><mrow><mi mathvariant="normal">∂</mi><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub></mrow></mfrac><mo>=</mo><mn>2</mn><mo stretchy="false">(</mo><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><mo>−</mo><msub><mi>r</mi><mi>d</mi></msub><mo stretchy="false">)</mo><mo separator="true">,</mo><mspace width="2em"/><mfrac><mrow><mi mathvariant="normal">∂</mi><msub><mi>L</mi><mrow><mi>c</mi><mi>o</mi><mi>d</mi><mi>e</mi></mrow></msub></mrow><mrow><mi mathvariant="normal">∂</mi><msub><mi>r</mi><mi>d</mi></msub></mrow></mfrac><mo>=</mo><mn>0.</mn></mrow><annotation encoding="application/x-tex">\frac{\partial L_{code}}{\partial e_{c_d}}
+=2(e_{c_d}-r_d),
+\qquad
+\frac{\partial L_{code}}{\partial r_d}=0.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.3133em;vertical-align:-0.9419em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3714em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">e</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9419em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0059em;vertical-align:-0.2559em;"></span><span class="mord">2</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:2.2074em;vertical-align:-0.836em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3714em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">e</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.836em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.</span></span></span></span></span></p>
+<p>它的作用是把被选中的码字拉向当前 residual，让码本逐渐贴近数据分布。</p>
+<p>第二项固定 code embedding，只更新产生 residual 的编码器：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>L</mi><mrow><mi>c</mi><mi>o</mi><mi>m</mi><mi>m</mi><mi>i</mi><mi>t</mi></mrow></msub><mo>=</mo><mi>β</mi><mo stretchy="false">∥</mo><msub><mi>r</mi><mi>d</mi></msub><mo>−</mo><mi mathvariant="normal">sg</mi><mo>⁡</mo><mo stretchy="false">[</mo><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><mo stretchy="false">]</mo><msup><mo stretchy="false">∥</mo><mn>2</mn></msup><mo separator="true">,</mo></mrow><annotation encoding="application/x-tex">L_{commit}=\beta\lVert r_d-\operatorname{sg}[e_{c_d}]\rVert^2,
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">mmi</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0528em;">β</span><span class="mopen">∥</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.12em;vertical-align:-0.2559em;"></span><span class="mop"><span class="mord mathrm" style="margin-right:0.0139em;">sg</span></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mclose">]</span><span class="mclose"><span class="mclose">∥</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mpunct">,</span></span></span></span></span></p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi mathvariant="normal">∂</mi><msub><mi>L</mi><mrow><mi>c</mi><mi>o</mi><mi>m</mi><mi>m</mi><mi>i</mi><mi>t</mi></mrow></msub></mrow><mrow><mi mathvariant="normal">∂</mi><msub><mi>r</mi><mi>d</mi></msub></mrow></mfrac><mo>=</mo><mn>2</mn><mi>β</mi><mo stretchy="false">(</mo><msub><mi>r</mi><mi>d</mi></msub><mo>−</mo><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub><mo stretchy="false">)</mo><mo separator="true">,</mo><mspace width="2em"/><mfrac><mrow><mi mathvariant="normal">∂</mi><msub><mi>L</mi><mrow><mi>c</mi><mi>o</mi><mi>m</mi><mi>m</mi><mi>i</mi><mi>t</mi></mrow></msub></mrow><mrow><mi mathvariant="normal">∂</mi><msub><mi>e</mi><msub><mi>c</mi><mi>d</mi></msub></msub></mrow></mfrac><mo>=</mo><mn>0.</mn></mrow><annotation encoding="application/x-tex">\frac{\partial L_{commit}}{\partial r_d}
+=2\beta(r_d-e_{c_d}),
+\qquad
+\frac{\partial L_{commit}}{\partial e_{c_d}}=0.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.2074em;vertical-align:-0.836em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3714em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">mmi</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.836em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.0528em;">β</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:2.3133em;vertical-align:-0.9419em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3714em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2559em;"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.0556em;">∂</span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">mmi</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9419em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.</span></span></span></span></span></p>
+<p>它要求编码器输出靠近自己选择的 codeword，也就是 commitment。参数 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>β</mi></mrow><annotation encoding="application/x-tex">\beta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.0528em;">β</span></span></span></span> 控制这种约束的强度。</p>
+<p>将两项拆开，是为了明确两类参数的职责：一个项让码本学习数据分布，另一个项让编码结果适应离散码本，避免编码器与码本在同一个误差项里无约束地相互追逐。完整模型还包含重构损失，它与这两项一起训练 encoder、decoder 和量化表示。</p>
+<h3 id="为什么使用-k-means-初始化码本">为什么使用 K-means 初始化码本</h3>
+<p>如果码本随机初始化，一些 code vector 可能远离任何训练样本。最近邻选择是离散操作：一个 code 如果从未成为任何样本的最近邻，就收不到有效更新，最后成为 dead code。大量样本集中选择少数 code，就会形成 codebook collapse。</p>
+<p>论文在第一个训练 batch 上做 K-means，并用聚类中心初始化码本。这能让初始 code 落在数据密集区域，提高它们在训练早期被选中的机会。</p>
+<p>这项设计是合理的，但它只能降低 collapse 风险，并不能保证后续训练不再发生坍缩。实际复现时仍然需要持续观察每层 code usage、选择频率分布、perplexity 和 dead code 数量，而不能只在训练结束时检查一次利用率。</p>
+<p>关于这个问题，我后来又做了一组更完整的实验。结果比“使用 K-means 就能避免坍缩”复杂得多：提高利用率不一定提高推荐指标，真正的问题还包括 hard assignment、条件路径和下游预测任务是否对齐。完整实验见：<a href="https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/">TIGER 的语义 ID 为什么会坍缩</a>。</p>
+<h3 id="碰撞发生后怎么办">碰撞发生后怎么办</h3>
+<p>不同物品可能得到相同的三元 Semantic ID。RQ-VAE 训练结束后，论文会检测这些碰撞，并在碰撞组内部追加一个局部编号：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">(12,24,52) → (12,24,52,0)
+(12,24,52) → (12,24,52,1)
+</code></pre></div><p>即使没有碰撞，也使用 0 补齐第四位，让所有 ID 长度一致。</p>
+<p>第四个 token 不属于残差量化过程，也不一定带有内容语义。它只是同一碰撞组内部的唯一标识。这是一个实用的小技巧，但也提醒我们：前三位负责语义表示，第四位主要负责恢复唯一性，两者的性质并不相同。</p>
+<h2 id="理论容量并不等于实际有效容量">理论容量并不等于实际有效容量</h2>
+<p>论文每层使用 256 个 codeword，RQ-VAE 共三层，并要求训练后的 codebook usage 达到 80% 以上。这里很容易把几个不同概念混在一起。</p>
+<p>单层码本的设计容量是 256；usage 80% 表示一层中至少约 205 个 code 被物品实际选中过。它并不表示所有 code 组合中有 80% 是有效的。</p>
+<p>三层 RQ-VAE 的理论组合空间是：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mn>256</mn><mn>3</mn></msup><mo>=</mo><mn>16,777,216.</mn></mrow><annotation encoding="application/x-tex">256^3=16{,}777{,}216.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8641em;"></span><span class="mord">25</span><span class="mord"><span class="mord">6</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8389em;vertical-align:-0.1944em;"></span><span class="mord">16</span><span class="mord"><span class="mpunct">,</span></span><span class="mord">777</span><span class="mord"><span class="mpunct">,</span></span><span class="mord">216.</span></span></span></span></span></p>
+<p>但实际出现过的三元组最多不超过数据集中的物品数，而且不同层 code 之间存在相关性，不会均匀覆盖笛卡尔积空间。</p>
+<p>如果把第四个 collision token 也当作拥有 256 种可能，完整四位空间为：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mn>256</mn><mn>4</mn></msup><mo>=</mo><mn>4,294,967,296.</mn></mrow><annotation encoding="application/x-tex">256^4=4{,}294{,}967{,}296.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8641em;"></span><span class="mord">25</span><span class="mord"><span class="mord">6</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8389em;vertical-align:-0.1944em;"></span><span class="mord">4</span><span class="mord"><span class="mpunct">,</span></span><span class="mord">294</span><span class="mord"><span class="mpunct">,</span></span><span class="mord">967</span><span class="mord"><span class="mpunct">,</span></span><span class="mord">296.</span></span></span></span></span></p>
+<p>也就是约 42.95 亿。原论文把它写成了“约 4 trillion”，这里存在明显的数量级错误。</p>
+<p>最终真正有效的唯一 ID 数基本等于语料中的物品数。在论文使用的数据集上，这个数字只有 10K–20K。因此至少需要区分：</p>
+<ul>
+<li>单层 codebook 的名义大小；</li>
+<li>每层真正活跃的 code 数；</li>
+<li>多层 code 的理论组合空间；</li>
+<li>数据中实际出现的语义前缀；</li>
+<li>追加碰撞编号后的有效物品 ID。</li>
+</ul>
+<p>三层、每层 256、usage 80% 都是论文采用的工程设置，不是被消融实验证明的最优选择。为什么不是两层 512、四层 128，论文没有给出系统解释。</p>
+<h2 id="从粗到细-究竟是什么意思">“从粗到细”究竟是什么意思</h2>
+<p>论文反复强调 RQ-VAE 能获得 coarse-to-fine 的 Semantic ID。但“粗到细”至少有三种不同含义。</p>
+<p>第一种是<strong>重构意义上的粗到细</strong>。第一层解释较大部分向量，后续层逐步修正残差。这是 RQ-VAE 结构本身能够支持的说法。</p>
+<p>第二种是<strong>几何意义上的层次</strong>。共享更多前缀的物品，在 embedding 空间中是否确实更接近？这需要额外统计验证。</p>
+<p>第三种是<strong>人工标签意义上的层次</strong>。第一位代表大类别，第二位代表子类别，第三位代表更细的属性。这个结论不会由残差量化自动产生。</p>
+<p>逐层降低重构误差，只能说明后面的 codeword 在修正前面未解释的部分，不能直接推出：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">第一位 = 大类
+第二位 = 子类
+第三位 = 细粒度属性
+</code></pre></div><p>论文确实提供了层次性可视化，但在这部分实验中使用的三层码本大小是 4、16、256，而主实验通常是 256、256、256。当前两层容量被人为限制得很小时，大量物品必然共享前缀，更容易呈现从大类到细分的视觉效果。</p>
+<p>因此，这项实验不能干净地证明：当每层容量都为 256 时，RQ-VAE 仍会自然形成同样清晰的语义标签层次。</p>
+<p>更准确的判断是：RQ-VAE 提供了逐层残差修正结构，也可能形成有用的前缀相似性；但论文把这种数值近似进一步解释成可控的语义层级，现有证据还不完全充分。</p>
+<h2 id="为什么选择-rq-vae-而不是其他量化方式">为什么选择 RQ-VAE，而不是其他量化方式</h2>
+<p>可以把论文提到的方案放在同一个坐标系里理解。</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>基本思路</th>
+<th>优点</th>
+<th>主要问题</th>
+<th>论文是否直接实验</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Random ID</td>
+<td>随机分配多个 code</td>
+<td>提供无语义对照</td>
+<td>不保留内容相似性</td>
+<td>是</td>
+</tr>
+<tr>
+<td>LSH / SimHash</td>
+<td>用随机超平面产生多组 hash code</td>
+<td>快、无需训练、容易扩展</td>
+<td>不适应具体数据分布，也不优化重构</td>
+<td>是</td>
+</tr>
+<tr>
+<td>Product Quantization</td>
+<td>拆分向量子空间，分别量化</td>
+<td>压缩和 ANN 检索成熟</td>
+<td>各位 code 对应不同子空间，不天然粗到细</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Hierarchical k-means</td>
+<td>递归进行硬聚类，ID 表示树路径</td>
+<td>层级直观</td>
+<td>早期硬边界不可逆，跨分支相似性被截断</td>
+<td>否</td>
+</tr>
+<tr>
+<td>VQ-VAE</td>
+<td>用单层学习码本量化 latent vector</td>
+<td>能学习数据相关的离散表示</td>
+<td>没有逐层残差结构</td>
+<td>只在文字中声称试过</td>
+</tr>
+<tr>
+<td>RQ-VAE</td>
+<td>多层码本逐层量化残差</td>
+<td>学习数据分布并逐步降低残差</td>
+<td>训练复杂，有坍缩、碰撞与层次解释问题</td>
+<td>是</td>
+</tr>
+</tbody>
+</table>
+<p>Hierarchical k-means 的问题并不是聚类完全没有语义，而是语义相似性容易被树的硬边界截断。两个非常相近的物品如果在第一层被分到不同父簇，后续就永远在不同子树中细分，ID 的第一个 token 完全不同；而同一个父簇中距离较远的物品却仍然共享前缀。</p>
+<p>换句话说，树路径保留的是分区关系，而不是连续的全局距离；上层的错误也无法被下层修正。RQ 的残差量化至少允许后续 codeword 继续修正整体向量，而不是只在一个隔离子树内部继续切分。</p>
+<p>论文真正给出的量化对照只有 Random ID、LSH SID 和 RQ-VAE SID：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align:right">Sports R@5 / R@10</th>
+<th style="text-align:right">Beauty R@5 / R@10</th>
+<th style="text-align:right">Toys R@5 / R@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Random ID</td>
+<td style="text-align:right">0.0070 / 0.0116</td>
+<td style="text-align:right">0.0296 / 0.0434</td>
+<td style="text-align:right">0.0362 / 0.0448</td>
+</tr>
+<tr>
+<td>LSH SID</td>
+<td style="text-align:right">0.0215 / 0.0321</td>
+<td style="text-align:right">0.0379 / 0.0533</td>
+<td style="text-align:right">0.0412 / 0.0566</td>
+</tr>
+<tr>
+<td>RQ-VAE SID</td>
+<td style="text-align:right">0.0264 / 0.0400</td>
+<td style="text-align:right">0.0454 / 0.0648</td>
+<td style="text-align:right">0.0521 / 0.0712</td>
+</tr>
+</tbody>
+</table>
+<p>RQ-VAE 相对 LSH 的 Recall 和 NDCG 在三个数据集上均有大约 20%–26% 的相对提升。这足以支持“在 TIGER 中，学习式 RQ-VAE ID 比随机超平面 LSH 更有效”，但不能推出 RQ-VAE 优于所有量化方法。</p>
+<p>Product Quantization、hierarchical k-means 和 VQ-VAE 都没有出现在同一张实验表里。RQ-VAE 的收益究竟来自残差结构、非线性编码器，还是更充分的训练，也没有被进一步拆开。</p>
+<h2 id="当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</h2>
+<p>得到 Semantic ID 后，用户的交互历史会从物品序列变成 token 序列：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">Item A → Item B → Item C
+
+变为：
+
+(a₁,a₂,a₃,a₄)
+→ (b₁,b₂,b₃,b₄)
+→ (c₁,c₂,c₃,c₄)
+</code></pre></div><p>这些 ID 被直接展平，输入编码器—解码器 Transformer。模型根据用户历史逐 token 预测下一个物品的完整 Semantic ID。</p>
+<p>传统检索与 TIGER 的差别可以压缩成：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">传统推荐：
+User History → Query Embedding → External ANN Index → Item
+
+TIGER：
+User History → Transformer → Generate Semantic ID → Item
+</code></pre></div><p>论文把这种设计称为 <strong>Transformer memory acts as an index</strong>。</p>
+<p>&lt;details&gt;
+&lt;summary&gt;Hint：Transformer memory 为什么可以被叫作索引？&lt;/summary&gt;</p>
+<p>这里的 memory 指 Transformer 的模型参数，不是 KV Cache，也不是额外的存储模块。训练把“用户交互 token 序列更可能对应哪个后续 Semantic ID”的关系编码进参数。</p>
+<p>传统索引显式保存 item embedding，并使用 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-3" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-3" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span>/<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-4" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-4" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span> 查询；TIGER 则通过模型前向计算，从参数化条件分布中生成候选 ID。因此它更接近 parameterized index，而不是传统意义上可以直接枚举和更新的索引表。</p>
+<p>&lt;/details&gt;</p>
+<p>参数化索引并不意味着所有外部结构都消失了。系统仍然需要维护 Item ID 与 Semantic ID 的双向映射，而且模型参数不像 ANN 索引那样容易插入、删除或直接检查某个物品。更新成本只是从“重建向量索引”部分转移到了“更新量化映射或模型参数”。</p>
+<h3 id="模型会不会主要学习同一物品内部的-token-转移">模型会不会主要学习同一物品内部的 token 转移</h3>
+<p>将四位 ID 直接展平后，next-token objective 会同时学习两类关系：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">同一 item 内部：c₁ → c₂ → c₃ → c₄
+不同 item 之间：上一 item 的 c₄ → 下一 item 的 c₁
+</code></pre></div><p>这带来一个论文没有回答的问题：模型是否花费了大量能力去补全同一个物品内部的 Semantic ID，而不是学习真正的物品行为转移？</p>
+<p>另一种可能是，item 内部的 token 组合学习恰好帮助模型掌握“什么样的 ID 是合法的”，从而解释为什么生成无效 ID 的概率很低。后续可以通过比较不同 token 位置的 loss、加入 item boundary、只在 item 级位置计算损失，或者并行预测四位 ID 来验证。</p>
+<h3 id="用户-token-为什么可能有效">用户 token 为什么可能有效</h3>
+<p>论文还把 raw user ID 固定哈希到 2000 个 bucket token。它不是每次随机映射，但多个用户会发生哈希碰撞。</p>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th style="text-align:right">Recall@5</th>
+<th style="text-align:right">NDCG@5</th>
+<th style="text-align:right">Recall@10</th>
+<th style="text-align:right">NDCG@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无用户信息</td>
+<td style="text-align:right">0.04458</td>
+<td style="text-align:right">0.0302</td>
+<td style="text-align:right">0.06479</td>
+<td style="text-align:right">0.0367</td>
+</tr>
+<tr>
+<td>加用户 token</td>
+<td style="text-align:right">0.0454</td>
+<td style="text-align:right">0.0321</td>
+<td style="text-align:right">0.0648</td>
+<td style="text-align:right">0.0384</td>
+</tr>
+</tbody>
+</table>
+<p>Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显。这更像是候选位置和个性化有所改善，而不是召回能力全面上升。</p>
+<p>哈希 token 为什么有用，论文没有给出充分解释。一个可能原因是历史最多只保留 20 个 item，用户 token 提供了稳定的长期条件；也可能是 2000 个 bucket 提供了粗粒度用户偏置，碰撞同时产生了一种参数共享或正则化。它也可能受到额外参数量或单次运行波动影响。不同 bucket 数量、多随机种子以及唯一 user embedding 的对照仍然有必要。</p>
+<h2 id="模型如何从概率分布变成-top-k-物品">模型如何从概率分布变成 Top-K 物品</h2>
+<p>生成器使用 4 层 Transformer encoder 和 4 层 decoder，每层有 6 个 attention head，head dimension 为 64，模型约 13M 参数。</p>
+<p>论文对 3、4、5 层做了消融：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:right">层数</th>
+<th style="text-align:right">Recall@5</th>
+<th style="text-align:right">NDCG@5</th>
+<th style="text-align:right">Recall@10</th>
+<th style="text-align:right">NDCG@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right">3</td>
+<td style="text-align:right">0.04499</td>
+<td style="text-align:right">0.03062</td>
+<td style="text-align:right">0.06699</td>
+<td style="text-align:right">0.03768</td>
+</tr>
+<tr>
+<td style="text-align:right">4</td>
+<td style="text-align:right">0.04540</td>
+<td style="text-align:right">0.03210</td>
+<td style="text-align:right">0.06480</td>
+<td style="text-align:right">0.03840</td>
+</tr>
+<tr>
+<td style="text-align:right">5</td>
+<td style="text-align:right">0.04633</td>
+<td style="text-align:right">0.03206</td>
+<td style="text-align:right">0.06596</td>
+<td style="text-align:right">0.03834</td>
+</tr>
+</tbody>
+</table>
+<p>这个结果不能简单概括成“层数越多越好”：5 层的 Recall@5 最高，3 层的 Recall@10 反而最高，4 层在 NDCG 上略好。更稳妥的判断是，模型在 3–5 层之间不太敏感，4 层是一种折中配置，而不是被实验明确证明的最优层数。</p>
+<h3 id="beam-search-在这里做了什么">Beam search 在这里做了什么</h3>
+<p>模型在第一个位置输出 token 概率，beam search 保留累计 log-probability 最高的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span></span></span></span> 条前缀；下一步分别扩展这些前缀，再从全部扩展结果中保留最优的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span></span></span></span> 条。不断重复，直到生成完整 ID。</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">保留 B 个高概率前缀
+→ 扩展每条前缀
+→ 再保留累计得分最高的 B 条
+→ 得到多个完整 Semantic ID
+</code></pre></div><p>Beam search 的目标是近似寻找若干条高概率序列。它比 greedy decoding 覆盖更多候选，但默认仍然偏向模型概率最高的区域，本身不等于多样性采样。</p>
+<h3 id="生成无效-id-怎么办">生成无效 ID 怎么办</h3>
+<p>模型可以生成一个语法上完整、但数据库中不存在的 Semantic ID。论文没有通过约束解码从结构上消除这种情况，只是观察到 Top-10 的 invalid ID 比例约为 0.1%–1.6%；Top-20 时，不同数据集约为 0.3%–6%。</p>
+<p>这只是实验现象，并不是理论保证。</p>
+<p>论文建议扩大 beam size，生成更多候选后过滤无效 ID，直到留下足够的有效结果；还提出未来可以用 prefix matching 将无效 ID 映射到共享有效前缀的物品。</p>
+<p>另一个更直接的方案是维护 Semantic ID trie，在每一步解码时屏蔽无法组成有效 ID 的 token。这样可以保证生成结果有效，但也会重新引入一个外部合法前缀结构。</p>
+<h2 id="冷启动-tiger-的能力-还是内容模型的能力">冷启动：TIGER 的能力，还是内容模型的能力</h2>
+<p>论文将推荐新物品视为 TIGER 的重要能力。在 Beauty 数据集上，它从测试 item 中选择 5%，删除这些 item 在训练 split 中的交互，把它们当作 unseen items。</p>
+<p>训练完成后，冻结的 RQ-VAE 仍然可以根据内容为 unseen item 生成前三个语义 token。模型预测一个四位 Semantic ID 时：</p>
+<ol>
+<li>使用完整 ID 匹配 seen item；</li>
+<li>将前三位语义 token 相同的 unseen items 加入候选；</li>
+<li>用参数 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϵ</mi></mrow><annotation encoding="application/x-tex">\epsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">ϵ</span></span></span></span> 限制最终 Top-K 中 unseen items 的最大比例。</li>
+</ol>
+<p>这个设置是合理的 item cold-start 模拟：它阻断物品的行为交互，但保留新物品在现实中通常能够获得的文本内容。</p>
+<p>问题在于，这种能力并不是生成式推荐天然独有。只要一种推荐方法能够使用文本、图像或其他模态为新物品计算表示，它原则上也拥有内容冷启动通路。</p>
+<p>因此，更精确的评价应该是：</p>
+<blockquote>
+<p>TIGER 证明了 Semantic ID 与生成式检索可以接入 unseen item，但没有证明只有生成式推荐能够解决冷启动。它真正特殊的是，新物品不需要在序列模型的原子 Item ID 词表中出现；只要能被内容编码器映射到已有的语义 token 空间，就有机会进入候选。</p>
+</blockquote>
+<p>实验还有一些没有交代清楚的地方：多个 unseen item 共享前三位前缀时如何排序，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϵ</mi><mi>K</mi></mrow><annotation encoding="application/x-tex">\epsilon K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">ϵK</span></span></span></span> 的 unseen 配额如何与 seen 候选合并，以及新物品的第四位碰撞 token 如何处理。论文主要与 Semantic_KNN 比较，也没有覆盖所有内容增强的 sequential recommender。</p>
+<p>所以，这项实验支持的是“TIGER 在这套 protocol 下优于 Semantic_KNN”，而不是“传统方法不能处理冷启动”。</p>
+<h2 id="多样性-温度提高了熵-但这是谁的贡献">多样性：温度提高了熵，但这是谁的贡献</h2>
+<p>论文通过 temperature-based decoding 增加推荐多样性。若模型输出 logits <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">z_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.044em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>，温度 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span></span></span></span> 后的分布为：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>p</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>T</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>z</mi><mi>i</mi></msub><mi mathvariant="normal">/</mi><mi>T</mi><mo stretchy="false">)</mo></mrow><mrow><munder><mo>∑</mo><mi>j</mi></munder><mi>exp</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>z</mi><mi>j</mi></msub><mi mathvariant="normal">/</mi><mi>T</mi><mo stretchy="false">)</mo></mrow></mfrac><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">p_i(T)=\frac{\exp(z_i/T)}{\sum_j\exp(z_j/T)}.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.5488em;vertical-align:-1.1218em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.427em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.162em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0572em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4358em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">exp</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.044em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0572em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop">exp</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.044em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.1218em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord">.</span></span></span></span></span></p>
+<p>当 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">T&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span> 时，概率分布被压平，原本概率较低的 token 更容易被采样，因此输出通常更分散；当 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>&lt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">T&lt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span> 时，分布变尖，模型更集中地选择头部 token。</p>
+<p>这与 beam search 并不是一回事：</p>
+<ul>
+<li>Beam search 从概率分布中近似寻找得分最高的若干条序列；</li>
+<li>温度采样先改变概率分布，再随机抽取 token；</li>
+<li>二者可以组合，但论文没有清楚交代多样性实验是否采用了 stochastic beam search。</li>
+</ul>
+<p>Beauty 数据集上的结果是：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:right">温度</th>
+<th style="text-align:right">Entropy@10</th>
+<th style="text-align:right">Entropy@20</th>
+<th style="text-align:right">Entropy@50</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right">1.0</td>
+<td style="text-align:right">0.76</td>
+<td style="text-align:right">1.14</td>
+<td style="text-align:right">1.70</td>
+</tr>
+<tr>
+<td style="text-align:right">1.5</td>
+<td style="text-align:right">1.14</td>
+<td style="text-align:right">1.52</td>
+<td style="text-align:right">2.06</td>
+</tr>
+<tr>
+<td style="text-align:right">2.0</td>
+<td style="text-align:right">1.38</td>
+<td style="text-align:right">1.76</td>
+<td style="text-align:right">2.28</td>
+</tr>
+</tbody>
+</table>
+<p>它说明提高温度会增加 Top-K 物品类别分布的熵。但这是生成模型普遍具有的解码性质，很难单独算作 TIGER 的特有贡献。</p>
+<p>TIGER 更独特的主张是：在 Semantic ID 的第一位采样可以改变粗类别，在第二、三位采样可以改变类内物品。但这个能力依赖 Semantic ID 是否真的形成了稳定的粗到细语义层次。既然层次性证据本身仍有疑问，多样性的“可控层级”也不能仅凭温度实验得到证明。</p>
+<h2 id="它真的更容易扩展吗">它真的更容易扩展吗</h2>
+<p>TIGER 在表示存储上确实有吸引力。传统模型可能为每个物品维护独立 embedding；TIGER 的物品 token embedding 只需要覆盖各层 codeword。主设置中是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><mn>256</mn><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">4\times256=1024</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">256</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1024</span></span></span></span> 个 token embedding，而数据集有 10K–20K 个物品。</p>
+<p>但生成式检索没有消灭检索成本，只是重新分配了成本。ANN 能够并行搜索候选，而 TIGER 需要逐 token 自回归解码，并通过 beam search 获取 Top-K。beam 越大，找到足够多有效候选的机会越高，推理成本也越大。</p>
+<p>更准确的权衡是：</p>
+<blockquote>
+<p>TIGER 用紧凑、可共享的结构化物品表示，交换了更复杂的自回归候选生成过程。</p>
+</blockquote>
+<h3 id="数据集融合实验验证了什么">数据集融合实验验证了什么</h3>
+<p>论文把 Beauty、Sports 和 Toys 的全部物品合并起来生成统一 Semantic ID，然后只在 Beauty 推荐任务上使用这些 ID，并与只使用 Beauty 物品训练的码本比较。</p>
+<table>
+<thead>
+<tr>
+<th>Semantic ID 来源</th>
+<th style="text-align:right">Recall@5</th>
+<th style="text-align:right">NDCG@5</th>
+<th style="text-align:right">Recall@10</th>
+<th style="text-align:right">NDCG@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>三个数据集合并</td>
+<td style="text-align:right">0.04355</td>
+<td style="text-align:right">约 0.03047</td>
+<td style="text-align:right">0.06314</td>
+<td style="text-align:right">0.03676</td>
+</tr>
+<tr>
+<td>仅 Beauty</td>
+<td style="text-align:right">0.0454</td>
+<td style="text-align:right">0.0321</td>
+<td style="text-align:right">0.0648</td>
+<td style="text-align:right">0.0384</td>
+</tr>
+</tbody>
+</table>
+<p>原表将 combined 的 NDCG@5 印成 0.3047，按其他指标的量级，应当是漏写了一个 0。</p>
+<p>合并数据后，Beauty 指标下降约 2.6%–5.1%。这可以说明固定容量码本面对三个相近 Amazon 类别的物品时，表示质量只出现小幅退化。</p>
+<p>但这不是完整的 scalability 证明。实验没有测量更大数量级的物品、训练时间、推理延迟、持续新增物品、跨域用户迁移或码本重训后的 ID 稳定性。与其称为“扩展性实验”，更适合把它理解为“统一码本在小规模语料扩张下的稳健性测试”。</p>
+<h3 id="未报告的-6-64-实验">未报告的 6×64 实验</h3>
+<p>论文还提到尝试过六层、每层 64 个 codeword，并称推荐指标对这种变化比较稳健，但没有提供具体结果。</p>
+<p>它也不是严格的等容量比较：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mn>256</mn><mn>3</mn></msup><mo>=</mo><msup><mn>2</mn><mn>24</mn></msup><mo separator="true">,</mo><mspace width="2em"/><msup><mn>64</mn><mn>6</mn></msup><mo>=</mo><msup><mn>2</mn><mn>36</mn></msup><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">256^3=2^{24},\qquad 64^6=2^{36}.
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8641em;"></span><span class="mord">25</span><span class="mord"><span class="mord">6</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0585em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">24</span></span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">6</span><span class="mord"><span class="mord">4</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">6</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8641em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">36</span></span></span></span></span></span></span></span></span><span class="mord">.</span></span></span></span></span></p>
+<p>六层配置的理论组合空间更大，同时每个物品需要更多 token，输入长度和自回归解码成本也会增加。后续如果重新实验，需要分别控制理论容量、序列长度和计算量，而不能只比较最终推荐指标。</p>
+<h2 id="tiger-真正改变了什么">TIGER 真正改变了什么</h2>
+<p>读完 TIGER 后，最容易得到的结论是“推荐也可以像语言模型一样生成物品”。但把方法拆开后会发现，生成并不是故事的起点。</p>
+<p>真正让生成式检索成立的，是物品表示先发生了变化：物品不再是互不相关的原子 ID，而是由多个可共享 token 组成的 Semantic ID。RQ-VAE 将连续内容空间翻译成有限离散词表，Transformer 才能够像生成语言一样生成物品。</p>
+<p>这条路线带来了真实的启发：</p>
+<ul>
+<li>物品 ID 可以被学习，而不必只是数据库编号；</li>
+<li>相似物品可以通过共享 code 获得参数和训练信号共享；</li>
+<li>新物品可以依赖内容映射到已有 token 空间；</li>
+<li>推荐检索关系可以被部分吸收到模型参数中。</li>
+</ul>
+<p>但论文的一些更强主张仍然需要保留距离：</p>
+<ul>
+<li>冷启动能力很大程度上来自内容表示，不是生成式推荐独有；</li>
+<li>温度增加多样性是通用生成机制，不是 TIGER 特有贡献；</li>
+<li>残差量化的逐层修正不等于真实标签的语义层次；</li>
+<li>RQ-VAE 只与 LSH 和 Random ID 做了完整表格对照；</li>
+<li>统一码本实验只能提供有限的扩展性证据；</li>
+<li>自回归 beam search 带来的推理成本不能被忽略。</li>
+</ul>
+<p>所以，如果后续真正实现 TIGER，我最想验证的不是能否复现某一张主结果表，而是下面这条因果链：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">内容相似
+→ Semantic ID 共享
+→ 参数和训练信号共享
+→ 低频或新物品获得收益
+→ 推荐效果改善
+</code></pre></div><p>只有这条链条成立，Semantic ID 才不只是给物品换了一套更复杂的编号。</p>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li><a href="https://proceedings.neurips.cc/paper_files/paper/2023/hash/20dcab0f14046a5c6b02b61da9f13229-Abstract-Conference.html" target="_blank" rel="noreferrer">Recommender Systems with Generative Retrieval，NeurIPS 2023</a></li>
+<li><a href="https://openaccess.thecvf.com/content/CVPR2022/html/Lee_Autoregressive_Image_Generation_Using_Residual_Quantization_CVPR_2022_paper.html" target="_blank" rel="noreferrer">Autoregressive Image Generation Using Residual Quantization，CVPR 2022</a></li>
+<li><a href="https://aclanthology.org/2022.findings-acl.146/" target="_blank" rel="noreferrer">Sentence-T5: Scalable Sentence Encoders from Pre-trained Text-to-Text Models</a></li>
+<li><a href="https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/">后续实验：TIGER 的语义 ID 为什么会坍缩</a></li>
+</ul>
+]]></content:encoded>
+    </item>
+  
     <item>
       <title>When Recommenders Start to &apos;Write&apos; Items: Why TIGER&apos;s Semantic IDs Collapse</title>
       <link>https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity-en/</link>

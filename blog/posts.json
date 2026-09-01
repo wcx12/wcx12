@@ -1,5 +1,27 @@
 [
   {
+    "title": "TIGER：从语义 ID 到生成式推荐",
+    "slug": "tiger-generative-retrieval-reading",
+    "description": "从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。",
+    "date": "2026-08-30",
+    "updated": "2026-09-02",
+    "category": "Research Notes",
+    "tags": [
+      "generative-recommendation",
+      "semantic-id",
+      "rq-vae",
+      "tiger"
+    ],
+    "research": [],
+    "series": "",
+    "translationKey": "tiger-generative-retrieval-reading",
+    "translations": {},
+    "lang": "zh",
+    "featured": false,
+    "readingMinutes": 8,
+    "url": "blog/posts/tiger-generative-retrieval-reading/"
+  },
+  {
     "title": "When Recommenders Start to 'Write' Items: Why TIGER's Semantic IDs Collapse",
     "slug": "tiger-semantic-id-codebook-capacity-en",
     "description": "Starting from the anomaly that only 1 of 256 first-layer codewords survives, this article analyzes TIGER codebook collapse, the hard-ST fix, and task-dependent hierarchical capacity allocation across five Amazon categories.",

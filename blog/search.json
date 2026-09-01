@@ -1,5 +1,22 @@
 [
   {
+    "title": "TIGER：从语义 ID 到生成式推荐",
+    "description": "从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。",
+    "date": "2026-08-30",
+    "category": "Research Notes",
+    "tags": [
+      "generative-recommendation",
+      "semantic-id",
+      "rq-vae",
+      "tiger"
+    ],
+    "research": [],
+    "translationKey": "tiger-generative-retrieval-reading",
+    "lang": "zh",
+    "url": "./posts/tiger-generative-retrieval-reading/",
+    "text": "导语： TIGER 最值得注意的地方，也许不是它使用 Transformer 生成物品，而是它先把物品 ID 变成了一种可学习、可共享的离散语言。 我过去理解的推荐检索，大体遵循同一种结构：模型先根据用户历史得到一个用户向量，再去物品向量库中做 ANN 近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。 或 MIPS 最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。 ，找出相似度最高的候选物品。 text 用户历史 → 用户/查询向量 → 外部物品索引 → ANN 或 MIPS → Top-K 候选 模型可以从 RNN 换成 Transformer，也可以加入文本、图像或其他辅助信息，但“先表示用户，再搜索物品”的分工通常没有改变。模型负责理解用户，外部索引负责寻找物品。 TIGER 提出了一个很直接的问题：既然 Transformer 可以生成..."
+  },
+  {
     "title": "When Recommenders Start to 'Write' Items: Why TIGER's Semantic IDs Collapse",
     "description": "Starting from the anomaly that only 1 of 256 first-layer codewords survives, this article analyzes TIGER codebook collapse, the hard-ST fix, and task-dependent hierarchical capacity allocation across five Amazon categories.",
     "date": "2026-07-18",
