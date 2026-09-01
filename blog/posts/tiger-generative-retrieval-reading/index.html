@@ -41,10 +41,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=625f88b908c9"></script>
-  <link rel="stylesheet" href="../../../content.css?v=625f88b908c9" />
-  <link rel="stylesheet" href="../../assets/blog.css?v=625f88b908c9" />
-<link rel="stylesheet" href="../../assets/katex.min.css?v=625f88b908c9" />
+  <script src="../../../theme-init.js?v=960433477194"></script>
+  <link rel="stylesheet" href="../../../content.css?v=960433477194" />
+  <link rel="stylesheet" href="../../assets/blog.css?v=960433477194" />
+<link rel="stylesheet" href="../../assets/katex.min.css?v=960433477194" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"TIGER：从语义 ID 到生成式推荐","description":"从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。","datePublished":"2026-08-30","dateModified":"2026-09-02","inLanguage":"zh","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","keywords":["generative-recommendation","semantic-id","rq-vae","tiger"],"image":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/media/social-card.png?v=cd98c818dd18","width":1200,"height":630,"caption":"TIGER：从语义 ID 到生成式推荐"}}</script>
 </head>
@@ -130,196 +130,115 @@ Semantic ID：(12, 24, 52)
 </ul>
 <p>更完整的生成式推荐流程见<a href="#fig-tiger-semantic-id-flow">图 1</a>：物品侧先把 item 文本信息编码成 embedding，再通过 RQ-VAE 这样的量化模型变成 Semantic ID；用户侧则把交互序列输入生成器，让生成模型预测下一个语义 item。</p>
 <figure id="fig-tiger-semantic-id-flow" class="tiger-pipeline-figure">
-    <div class="tiger-pipeline-surface" role="img" aria-label="TIGER 的双分支流程图。物品文本先经过嵌入模型和 RQ-VAE 量化得到 Semantic ID；用户交互序列再输入生成器，由生成模型预测下一个语义物品。">
+    <div class="tiger-pipeline-surface" role="group" aria-label="TIGER 的概念流程图，包含两条链路：物品内容被压缩成 Semantic ID 词表，用户历史再驱动模型生成下一个语义物品。">
       <div class="tiger-pipeline-heading">
         <span>图 1</span>
-        <strong>生成式推荐由“物品侧索引”和“用户侧生成”两条链路组成</strong>
+        <strong>TIGER：把推荐变成 Semantic ID 的下一词预测</strong>
       </div>
-      <div class="tiger-pipeline-lanes">
+      <div class="tiger-flow-map">
 
-        <section class="tiger-pipeline-lane tiger-pipeline-lane-item" aria-label="建立语义物品词表">
-          <div class="tiger-pipeline-lane-head">
-            <span>物品侧</span>
+        <section class="tiger-flow-lane tiger-flow-lane-item" aria-label="Item 内容变成 Semantic ID 词表">
+          <div class="tiger-flow-lane-head">
             <div>
-              <strong>建立语义物品词表</strong>
-              <em>离线索引</em>
+              <span>01 物品语言</span>
+              <strong class="tiger-flow-lane-title">Item 内容变成 Semantic ID 词表</strong>
+              <p>文本信息先被编码成 embedding，再由 RQ-VAE 离散化为生成器可以输出的 token。</p>
             </div>
+            <strong>content -&gt; vocabulary</strong>
           </div>
-          <ol class="tiger-pipeline-track">
+          <ol class="tiger-flow-track">
 
-          <li class="tiger-pipeline-node tiger-pipeline-source">
-            <details>
+          <li class="tiger-flow-step tiger-flow-source">
+            <details class="tiger-flow-card">
               <summary>
-                <span class="tiger-pipeline-index">01</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">内容</span>
+                <span class="tiger-flow-glyph tiger-flow-glyph-item" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="tiger-flow-copy">
                   <strong>Item 文本信息</strong>
                   <em>标题 / 类别 / 品牌</em>
                 </span>
               </summary>
-              <p>每个物品先从文本元信息出发，而不是直接使用互不相关的原子 ID。</p>
+              <p>物品先以普通文本元信息出现，而不是一个彼此孤立的原子 ID。</p>
             </details>
           </li>
-          <li class="tiger-pipeline-node tiger-pipeline-embedding">
-            <details>
+          <li class="tiger-flow-step tiger-flow-model">
+            <details class="tiger-flow-card">
               <summary>
-                <span class="tiger-pipeline-index">02</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">编码器</span>
-                  <strong>嵌入模型</strong>
-                  <em>Sentence-T5</em>
+                <span class="tiger-flow-glyph tiger-flow-glyph-model" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="tiger-flow-copy">
+                  <strong>Encoder + RQ-VAE</strong>
+                  <em>embedding -&gt; 量化</em>
                 </span>
               </summary>
-              <p>文本编码器把 item 内容映射到连续的 embedding 空间。</p>
+              <p>文本编码器先得到 item embedding；RQ-VAE 再把它压缩成多层离散 codeword。</p>
             </details>
           </li>
-          <li class="tiger-pipeline-node tiger-pipeline-embedding">
-            <details>
+          <li class="tiger-flow-step tiger-flow-semantic featured">
+            <details class="tiger-flow-card">
               <summary>
-                <span class="tiger-pipeline-index">03</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">向量</span>
-                  <strong>Item embedding</strong>
-                  <em>768 维内容向量</em>
-                </span>
-              </summary>
-              <p>到这一步为止，它仍然更像传统向量检索中的物品表示。</p>
-            </details>
-          </li>
-          <li class="tiger-pipeline-node tiger-pipeline-quantize">
-            <details>
-              <summary>
-                <span class="tiger-pipeline-index">04</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">量化器</span>
-                  <strong>RQ-VAE</strong>
-                  <em>残差量化</em>
-                </span>
-              </summary>
-              <p>量化模型把连续向量压缩成多个离散 codeword。</p>
-            </details>
-          </li>
-          <li class="tiger-pipeline-node tiger-pipeline-semantic">
-            <details>
-              <summary>
-                <span class="tiger-pipeline-index">05</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">词表</span>
-                  <strong>Semantic ID</strong>
+                <span class="tiger-flow-glyph tiger-flow-glyph-semantic" aria-hidden="true"><b>12</b><b>24</b><b>52</b></span>
+                <span class="tiger-flow-copy">
+                  <strong>Semantic ID 词表</strong>
                   <em>(12, 24, 52) -&gt; item</em>
                 </span>
               </summary>
-              <p>这个 token 组合成为生成器可以使用的语义物品身份。</p>
+              <p>这是 TIGER 的关键接口：物品变成可生成的 token 序列，同时仍能映射回真实 item。</p>
             </details>
           </li>
           </ol>
         </section>
-        <section class="tiger-pipeline-lane tiger-pipeline-lane-user" aria-label="生成下一个语义物品">
-          <div class="tiger-pipeline-lane-head">
-            <span>用户侧</span>
+        <section class="tiger-flow-lane tiger-flow-lane-user" aria-label="用户历史驱动模型生成下一个语义 item">
+          <div class="tiger-flow-lane-head">
             <div>
-              <strong>生成下一个语义物品</strong>
-              <em>在线推荐</em>
+              <span>02 下一词预测</span>
+              <strong class="tiger-flow-lane-title">用户历史驱动模型生成下一个语义 item</strong>
+              <p>交互序列被转写成 Semantic ID 序列，Transformer 再预测下一个 ID。</p>
             </div>
+            <strong>history -&gt; item</strong>
           </div>
-          <ol class="tiger-pipeline-track">
+          <ol class="tiger-flow-track">
 
-          <li class="tiger-pipeline-node tiger-pipeline-source">
-            <details>
+          <li class="tiger-flow-step tiger-flow-history">
+            <details class="tiger-flow-card">
               <summary>
-                <span class="tiger-pipeline-index">01</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">历史</span>
-                  <strong>用户交互序列</strong>
+                <span class="tiger-flow-glyph tiger-flow-glyph-history" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span class="tiger-flow-copy">
+                  <strong>用户交互历史</strong>
                   <em>item A -&gt; item B -&gt; item C</em>
                 </span>
               </summary>
-              <p>用户历史提供生成推荐所需的行为上下文。</p>
+              <p>推荐上下文来自用户已经点击、购买或浏览过的物品序列。</p>
             </details>
           </li>
-          <li class="tiger-pipeline-node tiger-pipeline-semantic">
-            <details>
+          <li class="tiger-flow-step tiger-flow-generate">
+            <details class="tiger-flow-card">
               <summary>
-                <span class="tiger-pipeline-index">02</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">转写</span>
-                  <strong>Semantic ID 序列</strong>
-                  <em>(12,24,52) -&gt; ...</em>
-                </span>
-              </summary>
-              <p>历史中的物品会被转写成物品侧建立好的同一套 Semantic ID 词表。</p>
-            </details>
-          </li>
-          <li class="tiger-pipeline-node tiger-pipeline-generate">
-            <details>
-              <summary>
-                <span class="tiger-pipeline-index">03</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">生成器</span>
+                <span class="tiger-flow-glyph tiger-flow-glyph-generator" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span class="tiger-flow-copy">
                   <strong>生成模型</strong>
-                  <em>Transformer</em>
+                  <em>Transformer over ID tokens</em>
                 </span>
               </summary>
-              <p>模型根据用户历史，按 token 顺序预测下一个语义物品。</p>
+              <p>模型把推荐任务视为在 Semantic ID 词表上的序列生成。</p>
             </details>
           </li>
-          <li class="tiger-pipeline-node tiger-pipeline-generate">
-            <details>
+          <li class="tiger-flow-step tiger-flow-output featured">
+            <details class="tiger-flow-card">
               <summary>
-                <span class="tiger-pipeline-index">04</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">预测</span>
-                  <strong>生成的语义 item</strong>
-                  <em>next Semantic ID</em>
+                <span class="tiger-flow-glyph tiger-flow-glyph-output" aria-hidden="true"><b>ID</b><i></i></span>
+                <span class="tiger-flow-copy">
+                  <strong>推荐结果</strong>
+                  <em>next Semantic ID -&gt; 候选物品</em>
                 </span>
               </summary>
-              <p>模型输出的不是普通文本，而是一个可以映射回物品库的 Semantic ID。</p>
-            </details>
-          </li>
-          <li class="tiger-pipeline-node tiger-pipeline-semantic">
-            <details>
-              <summary>
-                <span class="tiger-pipeline-index">05</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">映射</span>
-                  <strong>回到真实物品</strong>
-                  <em>Semantic ID -&gt; 候选物品</em>
-                </span>
-              </summary>
-              <p>最后再把生成出的 Semantic ID 解析为真实 item 或候选 item 集合。</p>
+              <p>生成出的 Semantic ID 最后会被解析成真实 item 或候选 item 集合。</p>
             </details>
           </li>
           </ol>
         </section>
       </div>
-      <aside class="tiger-pipeline-bridge">
-        <strong>两条链路的连接点</strong>
-        <p>物品侧提供有限的 Semantic ID 词表和 ID 到 item 的映射；用户侧只是在这套词表里生成，再把生成出的 ID 解析回真实物品。</p>
-      </aside>
-      <div class="tiger-pipeline-token-row" aria-hidden="true">
-        <span class="tiger-token tiger-token-source">item 文本</span><span class="tiger-token-arrow">-></span><span class="tiger-token tiger-token-source">embedding</span><span class="tiger-token-arrow">-></span><span class="tiger-token tiger-token-source">RQ-VAE</span><span class="tiger-token-arrow">-></span><span class="tiger-token tiger-token-source">Semantic ID 词表</span><span class="tiger-token-arrow">-></span><span class="tiger-token-divider" aria-hidden="true"></span><span class="tiger-token tiger-token-output">用户历史</span><span class="tiger-token-arrow">-></span><span class="tiger-token tiger-token-output">Transformer</span><span class="tiger-token-arrow">-></span><span class="tiger-token tiger-token-output">语义 item</span>
-      </div>
-      <dl class="tiger-pipeline-legend">
-
-        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-1">
-          <dt><span aria-hidden="true"></span>物品侧索引</dt>
-          <dd>内容 -&gt; embedding -&gt; RQ-VAE -&gt; Semantic ID</dd>
-        </div>
-        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-2">
-          <dt><span aria-hidden="true"></span>共享词表</dt>
-          <dd>生成器只能生成可解析的语义物品 token</dd>
-        </div>
-        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-3">
-          <dt><span aria-hidden="true"></span>用户侧生成</dt>
-          <dd>交互历史 -&gt; Transformer -&gt; 下一个 Semantic ID</dd>
-        </div>
-        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-4">
-          <dt><span aria-hidden="true"></span>映射回物品</dt>
-          <dd>生成出的 Semantic ID 需要解析成真实候选物品</dd>
-        </div>
-      </dl>
+      <p class="tiger-flow-note">Recommendation = 在 Semantic ID 词表上的下一词预测，而不是在自然语言词表里造句。</p>
     </div>
-    <figcaption>图 1. 生成式推荐的整体流程包含两条相互连接的链路：物品侧先把 item 文本编码并量化为 Semantic ID 词表，用户侧再把交互序列输入生成器，预测下一个语义 item。</figcaption>
+    <figcaption>图 1. TIGER 先从 item 内容建立 Semantic ID 词表，再用用户交互历史生成下一个语义 item。</figcaption>
   </figure><p>不过，这里需要提前埋下一个问题：Semantic ID 的相似性首先继承自物品的内容 embedding。它究竟是 RQ-VAE 额外学出来的，还是文本模型原本就已经提供的？这个问题会影响我们后面对冷启动和语义层次的判断。</p>
 <h2 id="rq-vae-如何生成-semantic-id">RQ-VAE 如何生成 Semantic ID</h2>
 <p><a href="#fig-tiger-semantic-id-flow">图 1</a> 左侧的物品侧分支对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。</p>
@@ -795,6 +714,6 @@ User History → Transformer → Generate Semantic ID → Item
     </nav>
   </footer>
 
-  <script type="module" src="../../assets/blog.js?v=625f88b908c9"></script>
+  <script type="module" src="../../assets/blog.js?v=960433477194"></script>
 </body>
 </html>

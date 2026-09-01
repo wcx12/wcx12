@@ -1835,6 +1835,451 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 }
 
+.tiger-pipeline-surface {
+  border-color: color-mix(in srgb, var(--cyan) 22%, var(--border));
+  padding: clamp(18px, 3vw, 28px);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--cyan) 8%, transparent), transparent 42%),
+    linear-gradient(315deg, color-mix(in srgb, var(--pink) 7%, transparent), transparent 48%),
+    color-mix(in srgb, var(--panel) 92%, var(--bg));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text) 9%, transparent),
+    0 18px 44px rgba(0, 0, 0, 0.2);
+}
+
+.tiger-pipeline-heading {
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.tiger-pipeline-heading strong {
+  max-width: 740px;
+  font-size: clamp(1.02rem, 2.05vw, 1.28rem);
+}
+
+.tiger-flow-map {
+  display: grid;
+  gap: 12px;
+}
+
+.tiger-flow-lane {
+  --lane-accent: var(--cyan);
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--lane-accent) 26%, transparent);
+  border-radius: 8px;
+  padding: clamp(12px, 2vw, 16px);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--lane-accent) 8%, transparent), transparent 60%),
+    color-mix(in srgb, var(--lane-accent) 4%, var(--field-bg));
+}
+
+.tiger-flow-lane-user {
+  --lane-accent: color-mix(in srgb, var(--pink) 84%, var(--violet));
+}
+
+.tiger-flow-lane-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.tiger-flow-lane-head div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tiger-flow-lane-head span,
+.tiger-flow-lane-head > strong {
+  color: var(--lane-accent);
+  font: 800 0.68rem/1 var(--blog-font-mono);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.tiger-flow-lane-title {
+  display: block;
+  color: var(--text);
+  font: 800 clamp(0.95rem, 1.8vw, 1.08rem)/1.2 var(--blog-font-ui);
+}
+
+.tiger-flow-lane-head p {
+  max-width: 640px;
+  margin: 0;
+  color: var(--muted);
+  font: 600 0.78rem/1.5 var(--blog-font-ui);
+}
+
+.tiger-flow-lane-head > strong {
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--lane-accent) 34%, transparent);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--lane-accent) 9%, transparent);
+  white-space: nowrap;
+}
+
+.tiger-flow-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(10px, 1.7vw, 14px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tiger-flow-track::before {
+  content: "";
+  position: absolute;
+  top: 38px;
+  right: 15%;
+  left: 15%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--lane-accent) 24%, transparent), var(--lane-accent), color-mix(in srgb, var(--lane-accent) 24%, transparent));
+  opacity: 0.76;
+  pointer-events: none;
+}
+
+.tiger-flow-step {
+  --node-accent: var(--lane-accent);
+  position: relative;
+  min-width: 0;
+}
+
+.tiger-flow-model,
+.tiger-flow-generate {
+  --node-accent: color-mix(in srgb, var(--violet) 78%, var(--cyan));
+}
+
+.tiger-flow-semantic,
+.tiger-flow-output {
+  --node-accent: color-mix(in srgb, var(--pink) 72%, var(--cyan));
+}
+
+.tiger-flow-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 34px;
+  right: -9px;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  border-top: 2px solid var(--lane-accent);
+  border-right: 2px solid var(--lane-accent);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.tiger-flow-card {
+  position: relative;
+  height: 100%;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 30%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--node-accent) 7%, var(--bg));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 7%, transparent);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.tiger-flow-step.featured .tiger-flow-card {
+  border-color: color-mix(in srgb, var(--node-accent) 58%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--node-accent) 16%, transparent), transparent 70%),
+    color-mix(in srgb, var(--node-accent) 10%, var(--bg));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent),
+    0 12px 30px color-mix(in srgb, var(--node-accent) 14%, transparent);
+}
+
+.tiger-flow-card[open] {
+  background: color-mix(in srgb, var(--node-accent) 12%, var(--bg));
+}
+
+.tiger-flow-card summary {
+  position: relative;
+  display: flex;
+  min-height: 118px;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px 34px 14px 14px;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  touch-action: manipulation;
+}
+
+.tiger-flow-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.tiger-flow-card summary::after {
+  content: "+";
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  color: var(--node-accent);
+  font: 900 1rem/1 var(--blog-font-mono);
+}
+
+.tiger-flow-card[open] summary::after {
+  content: "-";
+}
+
+.tiger-flow-card summary:hover,
+.tiger-flow-card summary:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--node-accent) 8%, transparent);
+}
+
+.tiger-flow-card summary:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-accent) 24%, transparent);
+}
+
+.tiger-flow-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tiger-flow-copy strong {
+  color: var(--text);
+  font: 850 clamp(0.92rem, 1.7vw, 1.02rem)/1.18 var(--blog-font-ui);
+}
+
+.tiger-flow-copy em {
+  color: var(--muted);
+  font: 700 0.72rem/1.35 var(--blog-font-mono);
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+.tiger-flow-card p {
+  margin: 0;
+  padding: 0 14px 14px;
+  color: var(--muted);
+  font: 600 0.78rem/1.55 var(--blog-font-ui);
+}
+
+.tiger-flow-glyph {
+  display: inline-flex;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 45%, transparent);
+  border-radius: 8px;
+  color: var(--node-accent);
+  background: color-mix(in srgb, var(--node-accent) 9%, var(--panel));
+}
+
+.tiger-flow-step.featured .tiger-flow-glyph {
+  width: 64px;
+  min-width: 64px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--node-accent) 22%, var(--panel));
+}
+
+.tiger-flow-glyph-item,
+.tiger-flow-glyph-model {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tiger-flow-glyph-item i,
+.tiger-flow-glyph-model i {
+  display: block;
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.tiger-flow-glyph-item i:nth-child(2) {
+  width: 20px;
+  opacity: 0.72;
+}
+
+.tiger-flow-glyph-item i:nth-child(3) {
+  width: 24px;
+  opacity: 0.55;
+}
+
+.tiger-flow-glyph-model i {
+  width: 30px;
+  height: 4px;
+}
+
+.tiger-flow-glyph-model i:nth-child(2) {
+  width: 22px;
+}
+
+.tiger-flow-glyph-model i:nth-child(3) {
+  width: 14px;
+}
+
+.tiger-flow-glyph-semantic {
+  width: auto;
+  min-width: 84px;
+  gap: 4px;
+  padding-inline: 8px;
+}
+
+.tiger-flow-glyph-semantic b {
+  display: inline-flex;
+  min-width: 23px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--node-accent) 24%, var(--bg));
+  font: 900 0.7rem/1 var(--blog-font-mono);
+}
+
+.tiger-flow-glyph-history {
+  gap: 5px;
+}
+
+.tiger-flow-glyph-history i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.tiger-flow-glyph-history i:nth-child(2),
+.tiger-flow-glyph-history i:nth-child(4) {
+  opacity: 0.58;
+}
+
+.tiger-flow-glyph-generator {
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.tiger-flow-glyph-generator i {
+  width: 6px;
+  border-radius: 999px 999px 2px 2px;
+  background: currentColor;
+}
+
+.tiger-flow-glyph-generator i:nth-child(1) {
+  height: 18px;
+  opacity: 0.62;
+}
+
+.tiger-flow-glyph-generator i:nth-child(2) {
+  height: 28px;
+}
+
+.tiger-flow-glyph-generator i:nth-child(3) {
+  height: 23px;
+  opacity: 0.76;
+}
+
+.tiger-flow-glyph-generator i:nth-child(4) {
+  height: 34px;
+}
+
+.tiger-flow-glyph-output {
+  position: relative;
+  gap: 4px;
+}
+
+.tiger-flow-glyph-output b {
+  font: 900 0.82rem/1 var(--blog-font-mono);
+}
+
+.tiger-flow-glyph-output i {
+  width: 18px;
+  height: 18px;
+  border: 2px solid currentColor;
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(45deg);
+}
+
+.tiger-flow-note {
+  margin: 14px 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+  padding-top: 12px;
+  color: var(--text);
+  font: 850 clamp(0.82rem, 1.6vw, 0.92rem)/1.5 var(--blog-font-ui);
+}
+
+:root[data-theme="mono"] .tiger-flow-lane,
+:root[data-theme="mono"] .tiger-flow-card,
+:root[data-theme="mono"] .tiger-flow-glyph {
+  background: color-mix(in srgb, var(--text) 5%, var(--bg));
+}
+
+:root[data-theme="mono"] .tiger-flow-step.featured .tiger-flow-card {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+@media (max-width: 700px) {
+  .blog-content > .tiger-pipeline-figure {
+    max-width: 100%;
+  }
+
+  .tiger-pipeline-surface {
+    padding: 14px;
+  }
+
+  .tiger-pipeline-heading {
+    gap: 10px;
+  }
+
+  .tiger-pipeline-heading strong {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .tiger-flow-lane-head {
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .tiger-flow-lane-head > strong {
+    align-self: flex-start;
+  }
+
+  .tiger-flow-track {
+    grid-template-columns: 1fr;
+  }
+
+  .tiger-flow-track::before,
+  .tiger-flow-step::after {
+    display: none;
+  }
+
+  .tiger-flow-card summary {
+    min-height: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 34px 12px 12px;
+  }
+
+  .tiger-flow-glyph,
+  .tiger-flow-step.featured .tiger-flow-glyph {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+  }
+
+  .tiger-flow-glyph-semantic {
+    min-width: 72px;
+  }
+
+  .tiger-flow-card p {
+    padding: 0 12px 12px 12px;
+  }
+}
+
 .blog-hero-compact {
   gap: 12px;
   padding-block: clamp(20px, 3vw, 28px);

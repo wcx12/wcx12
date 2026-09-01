@@ -547,16 +547,104 @@ const tigerWorkflowCopy = {
   }
 };
 
+const tigerFlowFigureCopy = {
+  en: {
+    figure: 'Figure 1',
+    title: 'TIGER turns recommendation into next-token prediction over Semantic IDs',
+    aria: 'A conceptual TIGER workflow with two lanes: item content is compressed into a Semantic ID vocabulary, and user history is used to generate the next semantic item.',
+    lanes: [
+      {
+        tone: 'item',
+        badge: '01 Item language',
+        title: 'Item content becomes a Semantic ID vocabulary',
+        subtitle: 'Text metadata is encoded, then RQ-VAE discretizes the embedding into tokens the generator can produce.',
+        direction: 'content -> vocabulary',
+        steps: [
+          ['source', 'item', 'Item content', 'title / category / brand', 'The item first appears as ordinary text metadata, not as an isolated atomic ID.'],
+          ['model', 'model', 'Encoder + RQ-VAE', 'embedding -> quantization', 'A text encoder produces the item embedding; RQ-VAE then compresses it into discrete residual codewords.'],
+          ['semantic featured', 'semantic', 'Semantic ID vocabulary', '(12, 24, 52) -> item', 'This vocabulary is the key interface: items become token sequences that can be generated and resolved back to real products.']
+        ]
+      },
+      {
+        tone: 'user',
+        badge: '02 Next-token prediction',
+        title: 'User history asks the model for the next semantic item',
+        subtitle: 'The interaction sequence is rewritten as Semantic IDs, then a Transformer predicts the next ID.',
+        direction: 'history -> item',
+        steps: [
+          ['history', 'history', 'User history', 'item A -> item B -> item C', 'The recommendation context starts from the user interaction sequence.'],
+          ['generate', 'generator', 'Generative model', 'Transformer over ID tokens', 'The model treats recommendation as sequence generation over the Semantic ID vocabulary.'],
+          ['output featured', 'output', 'Recommended item', 'next Semantic ID -> candidate', 'The generated Semantic ID is mapped back to a concrete item or candidate set.']
+        ]
+      }
+    ],
+    note: 'Recommendation = next-token prediction over a vocabulary whose tokens are Semantic IDs, not ordinary words.',
+    caption: 'Figure 1. TIGER first builds a Semantic ID vocabulary from item content, then uses user interaction history to generate the next semantic item.'
+  },
+  zh: {
+    figure: '图 1',
+    title: 'TIGER：把推荐变成 Semantic ID 的下一词预测',
+    aria: 'TIGER 的概念流程图，包含两条链路：物品内容被压缩成 Semantic ID 词表，用户历史再驱动模型生成下一个语义物品。',
+    lanes: [
+      {
+        tone: 'item',
+        badge: '01 物品语言',
+        title: 'Item 内容变成 Semantic ID 词表',
+        subtitle: '文本信息先被编码成 embedding，再由 RQ-VAE 离散化为生成器可以输出的 token。',
+        direction: 'content -> vocabulary',
+        steps: [
+          ['source', 'item', 'Item 文本信息', '标题 / 类别 / 品牌', '物品先以普通文本元信息出现，而不是一个彼此孤立的原子 ID。'],
+          ['model', 'model', 'Encoder + RQ-VAE', 'embedding -> 量化', '文本编码器先得到 item embedding；RQ-VAE 再把它压缩成多层离散 codeword。'],
+          ['semantic featured', 'semantic', 'Semantic ID 词表', '(12, 24, 52) -> item', '这是 TIGER 的关键接口：物品变成可生成的 token 序列，同时仍能映射回真实 item。']
+        ]
+      },
+      {
+        tone: 'user',
+        badge: '02 下一词预测',
+        title: '用户历史驱动模型生成下一个语义 item',
+        subtitle: '交互序列被转写成 Semantic ID 序列，Transformer 再预测下一个 ID。',
+        direction: 'history -> item',
+        steps: [
+          ['history', 'history', '用户交互历史', 'item A -> item B -> item C', '推荐上下文来自用户已经点击、购买或浏览过的物品序列。'],
+          ['generate', 'generator', '生成模型', 'Transformer over ID tokens', '模型把推荐任务视为在 Semantic ID 词表上的序列生成。'],
+          ['output featured', 'output', '推荐结果', 'next Semantic ID -> 候选物品', '生成出的 Semantic ID 最后会被解析成真实 item 或候选 item 集合。']
+        ]
+      }
+    ],
+    note: 'Recommendation = 在 Semantic ID 词表上的下一词预测，而不是在自然语言词表里造句。',
+    caption: '图 1. TIGER 先从 item 内容建立 Semantic ID 词表，再用用户交互历史生成下一个语义 item。'
+  }
+};
+
+function tigerFlowGlyphHtml(name = 'item') {
+  const safeName = escapeAttribute(name);
+  if (name === 'semantic') {
+    return `<span class="tiger-flow-glyph tiger-flow-glyph-semantic" aria-hidden="true"><b>12</b><b>24</b><b>52</b></span>`;
+  }
+  if (name === 'history') {
+    return `<span class="tiger-flow-glyph tiger-flow-glyph-history" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
+  }
+  if (name === 'generator') {
+    return `<span class="tiger-flow-glyph tiger-flow-glyph-generator" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
+  }
+  if (name === 'output') {
+    return `<span class="tiger-flow-glyph tiger-flow-glyph-output" aria-hidden="true"><b>ID</b><i></i></span>`;
+  }
+  if (name === 'model') {
+    return `<span class="tiger-flow-glyph tiger-flow-glyph-model" aria-hidden="true"><i></i><i></i><i></i></span>`;
+  }
+  return `<span class="tiger-flow-glyph tiger-flow-glyph-${safeName}" aria-hidden="true"><i></i><i></i><i></i></span>`;
+}
+
 function tigerPipelineFigureHtml(lang = 'en') {
-  const copy = tigerWorkflowCopy[lang === 'zh' ? 'zh' : 'en'];
+  const copy = tigerFlowFigureCopy[lang === 'zh' ? 'zh' : 'en'];
   const lanes = copy.lanes.map((lane) => {
-    const steps = lane.steps.map(([tone, role, title, sample, detail], index) => `
-          <li class="tiger-pipeline-node tiger-pipeline-${escapeAttribute(tone)}">
-            <details>
+    const steps = lane.steps.map(([tone, visual, title, sample, detail]) => `
+          <li class="tiger-flow-step tiger-flow-${escapeAttribute(tone)}">
+            <details class="tiger-flow-card">
               <summary>
-                <span class="tiger-pipeline-index">${String(index + 1).padStart(2, '0')}</span>
-                <span class="tiger-pipeline-main">
-                  <span class="tiger-pipeline-role">${escapeHtml(role)}</span>
+                ${tigerFlowGlyphHtml(visual)}
+                <span class="tiger-flow-copy">
                   <strong>${escapeHtml(title)}</strong>
                   <em>${escapeHtml(sample)}</em>
                 </span>
@@ -565,48 +653,30 @@ function tigerPipelineFigureHtml(lang = 'en') {
             </details>
           </li>`).join('');
     return `
-        <section class="tiger-pipeline-lane tiger-pipeline-lane-${escapeAttribute(lane.tone)}" aria-label="${escapeAttribute(lane.title)}">
-          <div class="tiger-pipeline-lane-head">
-            <span>${escapeHtml(lane.badge)}</span>
+        <section class="tiger-flow-lane tiger-flow-lane-${escapeAttribute(lane.tone)}" aria-label="${escapeAttribute(lane.title)}">
+          <div class="tiger-flow-lane-head">
             <div>
-              <strong>${escapeHtml(lane.title)}</strong>
-              <em>${escapeHtml(lane.subtitle)}</em>
+              <span>${escapeHtml(lane.badge)}</span>
+              <strong class="tiger-flow-lane-title">${escapeHtml(lane.title)}</strong>
+              <p>${escapeHtml(lane.subtitle)}</p>
             </div>
+            <strong>${escapeHtml(lane.direction)}</strong>
           </div>
-          <ol class="tiger-pipeline-track">
+          <ol class="tiger-flow-track">
 ${steps}
           </ol>
         </section>`;
   }).join('');
-  const tokens = copy.tokens.map((token, index) => {
-    const className = index < 4 ? 'tiger-token-source' : 'tiger-token-output';
-    const divider = index === 4 ? '<span class="tiger-token-divider" aria-hidden="true"></span>' : '';
-    return `${divider}<span class="tiger-token ${className}">${escapeHtml(token)}</span>`;
-  }).join('<span class="tiger-token-arrow">-></span>');
-  const legend = copy.legend.map(([label, detail], index) => `
-        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-${index + 1}">
-          <dt><span aria-hidden="true"></span>${escapeHtml(label)}</dt>
-          <dd>${escapeHtml(detail)}</dd>
-        </div>`).join('');
   return `<figure id="fig-tiger-semantic-id-flow" class="tiger-pipeline-figure">
-    <div class="tiger-pipeline-surface" role="img" aria-label="${escapeAttribute(copy.aria)}">
+    <div class="tiger-pipeline-surface" role="group" aria-label="${escapeAttribute(copy.aria)}">
       <div class="tiger-pipeline-heading">
         <span>${escapeHtml(copy.figure)}</span>
         <strong>${escapeHtml(copy.title)}</strong>
       </div>
-      <div class="tiger-pipeline-lanes">
+      <div class="tiger-flow-map">
 ${lanes}
       </div>
-      <aside class="tiger-pipeline-bridge">
-        <strong>${escapeHtml(copy.bridge[0])}</strong>
-        <p>${escapeHtml(copy.bridge[1])}</p>
-      </aside>
-      <div class="tiger-pipeline-token-row" aria-hidden="true">
-        ${tokens}
-      </div>
-      <dl class="tiger-pipeline-legend">
-${legend}
-      </dl>
+      <p class="tiger-flow-note">${escapeHtml(copy.note)}</p>
     </div>
     <figcaption>${escapeHtml(copy.caption)}</figcaption>
   </figure>`;
