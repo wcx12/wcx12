@@ -18,7 +18,7 @@ socialImageAlt: "TIGER：从语义 ID 到生成式推荐"
 
 > **导语：** TIGER 最值得注意的地方，也许不是它使用 Transformer 生成物品，而是它先把物品 ID 变成了一种可学习、可共享的离散语言。
 
-我过去理解的推荐检索，大体遵循同一种结构：模型先根据用户历史得到一个用户向量，再去物品向量库中做 ANN 或 MIPS，找出相似度最高的候选物品。
+我过去理解的推荐检索，大体遵循同一种结构：模型先根据用户历史得到一个用户向量，再去物品向量库中做 [ANN](term:ann) 或 [MIPS](term:mips)，找出相似度最高的候选物品。
 
 ```text
 用户历史
@@ -296,7 +296,7 @@ User History → Transformer → Generate Semantic ID → Item
 
 这里的 memory 指 Transformer 的模型参数，不是 KV Cache，也不是额外的存储模块。训练把“用户交互 token 序列更可能对应哪个后续 Semantic ID”的关系编码进参数。
 
-传统索引显式保存 item embedding，并使用 ANN/MIPS 查询；TIGER 则通过模型前向计算，从参数化条件分布中生成候选 ID。因此它更接近 parameterized index，而不是传统意义上可以直接枚举和更新的索引表。
+传统索引显式保存 item embedding，并使用 [ANN](term:ann)/[MIPS](term:mips) 查询；TIGER 则通过模型前向计算，从参数化条件分布中生成候选 ID。因此它更接近 parameterized index，而不是传统意义上可以直接枚举和更新的索引表。
 
 </details>
 

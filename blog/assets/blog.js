@@ -438,6 +438,28 @@ document.querySelectorAll('.code-frame').forEach((frame) => {
   });
 });
 
+function closeTermChips(except = null) {
+  document.querySelectorAll('[data-term-chip][aria-expanded="true"]').forEach((chip) => {
+    if (chip !== except) chip.setAttribute('aria-expanded', 'false');
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const chip = event.target.closest?.('[data-term-chip]');
+  if (!chip) {
+    closeTermChips();
+    return;
+  }
+  event.preventDefault();
+  const expanded = chip.getAttribute('aria-expanded') === 'true';
+  closeTermChips(chip);
+  chip.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeTermChips();
+});
+
 const searchInput = document.getElementById('blogSearch');
 const searchResults = document.getElementById('blogSearchResults');
 let searchItems = [];

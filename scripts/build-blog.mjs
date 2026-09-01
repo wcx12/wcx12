@@ -57,6 +57,16 @@ const researchChildren = researchConfig.interests.flatMap((interest) => interest
 const GITHUB_REPOSITORY = 'wcx12/wcx12';
 const GITHUB_BRANCH = 'main';
 const BLOG_DRAFT_UPDATE_WORKFLOW = 'blog-draft-update.yml';
+const glossaryTerms = {
+  ann: {
+    en: 'Approximate Nearest Neighbor: a fast search method that looks for vectors close enough to the query in a large vector database, instead of exhaustively checking every item.',
+    zh: '近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。'
+  },
+  mips: {
+    en: 'Maximum Inner Product Search: ranks candidates by the inner product between the query vector and item vectors; it is a common retrieval objective in recommendation systems.',
+    zh: '最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。'
+  }
+};
 const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 for (const [kind, id] of [
   ...researchConfig.interests.map((interest) => ['domain', interest.id]),
@@ -108,6 +118,30 @@ function escapeXml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+function termFromHref(href, lang = 'en') {
+  const match = /^term:([a-z0-9-]+)$/i.exec(String(href || '').trim());
+  if (!match) return null;
+  const id = match[1].toLowerCase();
+  const term = glossaryTerms[id];
+  if (!term) return null;
+  return { id, definition: term[lang] || term.en || '' };
+}
+
+function renderTermChipOpen(term, env) {
+  env.termCounter = (env.termCounter || 0) + 1;
+  const postSlug = env.post?.slug || 'page';
+  const tooltipId = `term-${slugify(postSlug)}-${term.id}-${env.termCounter}`;
+  env.termStack = env.termStack || [];
+  env.termStack.push({ ...term, tooltipId });
+  return `<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="${escapeHtml(tooltipId)}" data-term-chip><span class="term-chip-label">`;
+}
+
+function renderTermChipClose(env) {
+  const term = env.termStack?.pop();
+  if (!term) return '';
+  return `</span></button><span class="term-chip-card" id="${escapeHtml(term.tooltipId)}" role="tooltip">${escapeHtml(term.definition)}</span></span>`;
 }
 
 function stripHtml(html) {
@@ -648,14 +682,23 @@ function createMarkdownRenderer() {
   };
 
   const defaultLinkOpen = md.renderer.rules.link_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+  const defaultLinkClose = md.renderer.rules.link_close || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
-    const href = versionPostMedia(tokens[idx].attrGet('href') || '', env.post);
+    const rawHref = tokens[idx].attrGet('href') || '';
+    const term = termFromHref(rawHref, env.post?.lang || 'en');
+    if (term) return renderTermChipOpen(term, env);
+
+    const href = versionPostMedia(rawHref, env.post);
     tokens[idx].attrSet('href', href);
     if (/^https?:\/\//i.test(href)) {
       tokens[idx].attrSet('target', '_blank');
       tokens[idx].attrSet('rel', 'noreferrer');
     }
     return defaultLinkOpen(tokens, idx, options, env, self);
+  };
+  md.renderer.rules.link_close = (tokens, idx, options, env, self) => {
+    if (env.termStack?.length) return renderTermChipClose(env);
+    return defaultLinkClose(tokens, idx, options, env, self);
   };
 
   const defaultHeadingOpen = md.renderer.rules.heading_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
@@ -673,12 +716,12 @@ function createMarkdownRenderer() {
 
   return {
     render(markdown, post = null) {
-      const env = { toc: [], headingCounts: new Map(), post };
+      const env = { toc: [], headingCounts: new Map(), post, termCounter: 0, termStack: [] };
       const html = md.render(markdown, env);
       return { html, toc: env.toc };
     },
     renderSections(markdown, post = null) {
-      const env = { toc: [], headingCounts: new Map(), post };
+      const env = { toc: [], headingCounts: new Map(), post, termCounter: 0, termStack: [] };
       const tokens = md.parse(markdown, env);
       const sections = [];
       let current = null;

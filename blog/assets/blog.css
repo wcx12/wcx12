@@ -1296,6 +1296,83 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   word-break: break-word;
 }
 
+.term-chip-wrap {
+  position: relative;
+  display: inline-flex;
+  vertical-align: baseline;
+}
+
+.term-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.72em;
+  margin: 0 0.08em;
+  border: 1px solid color-mix(in srgb, var(--cyan) 45%, transparent);
+  border-radius: 999px;
+  padding: 0.06em 0.52em;
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 10%, transparent);
+  font: 800 0.78em/1.25 var(--blog-font-mono);
+  letter-spacing: 0;
+  cursor: help;
+}
+
+.term-chip:hover,
+.term-chip:focus-visible,
+.term-chip[aria-expanded="true"] {
+  color: #021014;
+  background: var(--cyan);
+  outline: none;
+}
+
+.term-chip:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 25%, transparent);
+}
+
+.term-chip-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 35;
+  width: min(330px, calc(100vw - 36px));
+  border: 1px solid color-mix(in srgb, var(--cyan) 34%, transparent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg) 94%, #000000 6%);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36);
+  font: 600 0.82rem/1.55 var(--blog-font-ui);
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  visibility: hidden;
+}
+
+.term-chip-card::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: calc(50% - 5px);
+  width: 9px;
+  height: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--cyan) 34%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--cyan) 34%, transparent);
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.term-chip:hover + .term-chip-card,
+.term-chip:focus-visible + .term-chip-card,
+.term-chip[aria-expanded="true"] + .term-chip-card {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+
 .blog-content blockquote {
   border-left: 3px solid var(--cyan);
   padding: 8px 0 8px 16px;
@@ -1748,6 +1825,24 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 :root[data-theme="mono"] .blog-content a,
 :root[data-theme="mono"] .research-meta a {
   color: var(--text);
+}
+
+:root[data-theme="mono"] .term-chip {
+  border-color: var(--line);
+  color: var(--text);
+  background: #111111;
+}
+
+:root[data-theme="mono"] .term-chip:hover,
+:root[data-theme="mono"] .term-chip:focus-visible,
+:root[data-theme="mono"] .term-chip[aria-expanded="true"] {
+  color: #050505;
+  background: #f4f4f4;
+}
+
+:root[data-theme="mono"] .term-chip-card {
+  border-color: var(--line);
+  background: #111111;
 }
 
 :root[data-theme="mono"] .blog-nav a,

@@ -29,6 +29,17 @@ const categoryLabels = {
   }
 };
 
+const glossaryTerms = {
+  ann: {
+    en: 'Approximate Nearest Neighbor: a fast search method that looks for vectors close enough to the query in a large vector database, instead of exhaustively checking every item.',
+    zh: '近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。'
+  },
+  mips: {
+    en: 'Maximum Inner Product Search: ranks candidates by the inner product between the query vector and item vectors; it is a common retrieval objective in recommendation systems.',
+    zh: '最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。'
+  }
+};
+
 const copy = {
   en: {
     kicker: 'Owner Tools',
@@ -155,6 +166,7 @@ let drafts = [];
 let activeDraft = null;
 let syncingFields = false;
 let previewTimer = 0;
+let termCounter = 0;
 
 function normalizeLang(value) {
   return languages.includes(value) ? value : 'en';
@@ -391,6 +403,22 @@ function resolvePreviewUrl(url, draft) {
   return draft?.media?.[pathPart] || raw;
 }
 
+function termFromUrl(url, draft) {
+  const match = /^term:([a-z0-9-]+)$/i.exec(String(url || '').trim());
+  if (!match) return null;
+  const id = match[1].toLowerCase();
+  const term = glossaryTerms[id];
+  if (!term) return null;
+  const lang = normalizeLang(draft?.lang || currentLang());
+  return { id, definition: term[lang] || term.en || '' };
+}
+
+function termChipHtml(label, term) {
+  termCounter += 1;
+  const tooltipId = `draft-term-${term.id}-${termCounter}`;
+  return `<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="${escapeAttribute(tooltipId)}" data-term-chip><span class="term-chip-label">${escapeHtml(label)}</span></button><span class="term-chip-card" id="${escapeAttribute(tooltipId)}" role="tooltip">${escapeHtml(term.definition)}</span></span>`;
+}
+
 function inlineMarkdown(value, draft) {
   const placeholders = [];
   const stash = (html) => {
@@ -400,6 +428,8 @@ function inlineMarkdown(value, draft) {
   let source = String(value || '')
     .replace(/`([^`]+)`/g, (_, code) => stash(`<code>${escapeHtml(code)}</code>`))
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+      const term = termFromUrl(url, draft);
+      if (term) return stash(termChipHtml(label, term));
       const href = resolvePreviewUrl(url, draft);
       return stash(`<a href="${escapeAttribute(href)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`);
     });
@@ -511,6 +541,7 @@ function previewState(data) {
 
 function renderPreview() {
   if (!activeDraft || !elements.editor) return;
+  termCounter = 0;
   const source = normalizeLf(elements.editor.value);
   const { data, body } = parseFrontMatter(source);
   const title = String(data.title || activeDraft.title || '');
