@@ -1,0 +1,108 @@
+name: Update blog draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft_update_payload_base64:
+        description: Payload copied from Draft Studio
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: portfolio-publish-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  update-draft:
+    if: ${{ github.repository_owner == 'wcx12' && github.ref_name == github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: read
+    environment: github-pages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Synchronize target branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git fetch origin "${DEFAULT_BRANCH}"
+          git merge --ff-only "origin/${DEFAULT_BRANCH}"
+
+      - name: Apply draft update
+        env:
+          BLOG_DRAFT_UPDATE_BASE64: ${{ inputs.draft_update_payload_base64 }}
+        run: node scripts/apply-blog-draft-update.mjs
+
+      - name: Build site
+        run: npm run build:site
+
+      - name: Validate generated site
+        run: npm run validate
+
+      - name: Package public Pages artifact
+        run: npm run package:pages
+
+      - name: Validate public Pages artifact
+        run: npm run test:pages
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: output/pages
+          include-hidden-files: true
+
+      - name: Commit blog draft
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git add content/posts blog index.html research projects publications resume zh publications.md rss.xml sitemap.xml package-lock.json
+          if git diff --cached --quiet; then
+            echo "Blog draft is already current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update blog draft and rebuild site"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${DEFAULT_BRANCH}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  deploy-pages:
+    if: ${{ github.repository_owner == 'wcx12' && github.ref_name == github.event.repository.default_branch }}
+    needs: update-draft
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5

@@ -134,6 +134,7 @@ async function expectedAssetVersion() {
     'repo-map.js',
     'blog-src/assets/blog.css',
     'blog-src/assets/blog.js',
+    'blog-src/assets/draft-studio.js',
     'node_modules/katex/dist/katex.min.css',
     'research-config.json',
     'resume.md',

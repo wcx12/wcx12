@@ -1,9 +1,11 @@
 const THEME_KEY = 'wcx12-theme';
 const LANG_KEY = 'wcx12-lang';
+const OWNER_TOOLS_KEY = 'wcx12-owner-tools';
 const themes = ['neon', 'warm', 'mono'];
 const languages = ['en', 'zh'];
 const themeSelect = document.getElementById('blogThemeSelect');
 const langToggle = document.getElementById('blogLangToggle');
+const draftStudioLink = document.getElementById('blogDraftStudioLink');
 const blogMenu = document.querySelector('.blog-menu');
 const blogMenuToggle = document.querySelector('.blog-menu-toggle');
 const desktopNavigation = window.matchMedia('(min-width: 1024px)');
@@ -201,6 +203,11 @@ const blogI18n = {
   }
 };
 
+blogI18n.en.draft_studio = 'Draft Studio';
+blogI18n.en.draft_studio_title = 'Open the owner draft editor';
+blogI18n.zh.draft_studio = '草稿工作台';
+blogI18n.zh.draft_studio_title = '打开站主草稿编辑器';
+
 function normalizeLang(lang) {
   return languages.includes(lang) ? lang : 'en';
 }
@@ -220,6 +227,28 @@ function writeStorage(key, value) {
     // Storage can be unavailable in private or policy-restricted contexts.
   }
 }
+
+function removeStorage(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Storage can be unavailable in private or policy-restricted contexts.
+  }
+}
+
+function detectOwnerTools() {
+  if (window.top !== window.self) {
+    removeStorage(OWNER_TOOLS_KEY);
+    return false;
+  }
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('ownerTools') === '1') writeStorage(OWNER_TOOLS_KEY, 'enabled');
+  if (params.get('ownerTools') === '0') removeStorage(OWNER_TOOLS_KEY);
+  return readStorage(OWNER_TOOLS_KEY) === 'enabled';
+}
+
+const ownerToolsEnabled = detectOwnerTools();
+if (draftStudioLink) draftStudioLink.hidden = !ownerToolsEnabled;
 
 const fixedLanguage = document.documentElement.dataset.fixedLanguage;
 let currentLang = normalizeLang(fixedLanguage || readStorage(LANG_KEY, 'en'));
@@ -366,6 +395,7 @@ function applyLanguage(lang = currentLang) {
 
   syncPostLanguageVisibility();
   if (searchInput) renderSearch(searchInput.value);
+  window.dispatchEvent(new CustomEvent('blog-language-change', { detail: { language: currentLang } }));
 }
 
 langToggle?.addEventListener('click', () => {

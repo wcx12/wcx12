@@ -1760,7 +1760,217 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   box-shadow: none;
 }
 
+.draft-studio-hero {
+  padding-bottom: clamp(22px, 4vw, 38px);
+}
+
+.draft-locked {
+  display: grid;
+  gap: 14px;
+}
+
+.draft-studio {
+  display: grid;
+  gap: 18px;
+}
+
+.draft-command,
+.draft-fields,
+.draft-submit,
+.draft-pane {
+  border: 1px solid color-mix(in srgb, var(--cyan) 22%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 58%, transparent);
+}
+
+.draft-command {
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: end;
+  padding: 16px;
+}
+
+.draft-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+}
+
+.draft-command label,
+.draft-fields label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: var(--muted);
+  font: 700 0.75rem/1.35 var(--blog-font-mono);
+  text-transform: uppercase;
+}
+
+.draft-checkbox {
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  min-height: 48px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+  text-transform: none;
+}
+
+.draft-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--cyan);
+}
+
+.draft-command select,
+.draft-fields input,
+.draft-fields select,
+.draft-fields textarea,
+.draft-editor,
+.draft-payload {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--cyan) 28%, transparent);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+}
+
+.draft-command select,
+.draft-fields input,
+.draft-fields select,
+.draft-fields textarea {
+  min-height: 48px;
+  padding: 10px 12px;
+  font: 600 0.95rem/1.45 var(--blog-font-ui);
+}
+
+.draft-fields textarea {
+  resize: vertical;
+}
+
+.draft-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.draft-pane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: clamp(560px, 72vh, 820px);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.draft-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+
+.draft-pane-head h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.draft-actions .btn {
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.86rem;
+}
+
+.draft-status,
+.draft-preview-meta {
+  margin: 0;
+  font: 700 0.76rem/1.45 var(--blog-font-mono);
+}
+
+.draft-editor,
+.draft-payload {
+  resize: vertical;
+  padding: 14px;
+  font: 500 0.9rem/1.58 var(--blog-font-mono);
+  tab-size: 2;
+}
+
+.draft-editor {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: auto;
+}
+
+.draft-preview {
+  height: 100%;
+  min-height: 0;
+  padding: 18px;
+  overflow: auto;
+  scrollbar-color: var(--cyan) var(--scroll-track);
+}
+
+.draft-preview .blog-post-header {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+.draft-preview .blog-post-title {
+  font-size: clamp(1.8rem, 3.2vw, 3rem);
+}
+
+.draft-preview .blog-content > * {
+  max-width: 100%;
+}
+
+.draft-submit {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 14px;
+}
+
+.draft-payload {
+  width: calc(100% - 28px);
+  margin: 0 14px;
+  min-height: 120px;
+}
+
+.draft-submit > p {
+  margin: 0 14px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
 @media (max-width: 1023px) {
+  .draft-command,
+  .draft-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-pane {
+    height: 520px;
+  }
+
   .blog-body.blog-menu-open::after {
     content: "";
     position: fixed;

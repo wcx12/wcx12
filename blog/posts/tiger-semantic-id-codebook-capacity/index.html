@@ -41,10 +41,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=a0ca32630b36"></script>
-  <link rel="stylesheet" href="../../../content.css?v=a0ca32630b36" />
-  <link rel="stylesheet" href="../../assets/blog.css?v=a0ca32630b36" />
-<link rel="stylesheet" href="../../assets/katex.min.css?v=a0ca32630b36" />
+  <script src="../../../theme-init.js?v=6c38db57001c"></script>
+  <link rel="stylesheet" href="../../../content.css?v=6c38db57001c" />
+  <link rel="stylesheet" href="../../assets/blog.css?v=6c38db57001c" />
+<link rel="stylesheet" href="../../assets/katex.min.css?v=6c38db57001c" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩","description":"从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。","datePublished":"2026-07-18","dateModified":"2026-07-18","inLanguage":"zh","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/","keywords":["generative-recommendation","semantic-id","rq-vae","tiger"],"image":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity/media/social-card.png?v=696a34f9f89e","width":1200,"height":630,"caption":"TIGER 语义 ID 码本坍缩与层级容量分配研究"}}</script>
 </head>
@@ -61,6 +61,7 @@
         <a href="../../../projects/" data-blog-nav-en="../../../projects/" data-blog-nav-zh="../../../zh/projects/" title="Browse public repositories with maturity and evidence notes" data-blog-i18n="nav_projects" data-blog-i18n-title="nav_projects_title">Projects</a>
         <a href="../../../publications/" data-blog-nav-en="../../../publications/" data-blog-nav-zh="../../../zh/publications/" title="Browse publisher-linked publications" data-blog-i18n="nav_publications" data-blog-i18n-title="nav_publications_title">Publications</a>
         <a href="../../" data-blog-nav-en="../../" data-blog-nav-zh="../../" aria-current="location" title="Open Research Fieldnotes" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title">Writing</a>
+        <a id="blogDraftStudioLink" href="../../drafts/" title="Open the owner draft editor" data-blog-i18n="draft_studio" data-blog-i18n-title="draft_studio_title" hidden>Draft Studio</a>
         <a href="../../../resume/" data-blog-nav-en="../../../resume/" data-blog-nav-zh="../../../zh/resume/" title="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title">Profile</a>
         <button id="blogLangToggle" class="blog-nav-button" type="button" lang="zh-CN" title="Switch interface language" aria-label="切换到中文界面" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_target_aria">中文</button>
         <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
@@ -1684,6 +1685,7 @@ N_{\mathrm{eff}}
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327" data-blog-i18n-aria="orcid_title">ORCID</a>
     </nav>
   </footer>
-  <script type="module" src="../../assets/blog.js?v=a0ca32630b36"></script>
+
+  <script type="module" src="../../assets/blog.js?v=6c38db57001c"></script>
 </body>
 </html>
