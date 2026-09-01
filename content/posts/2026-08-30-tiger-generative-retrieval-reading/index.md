@@ -68,13 +68,15 @@ Semantic ID：(12, 24, 52)
 - 让物品之间可以共享一部分 token；
 - 把开放的物品集合翻译成 Transformer 可以生成的有限词表。
 
-![TIGER 从商品内容到 Semantic ID，再到生成式推荐的基本流程](media/tiger-pipeline.png)
+这条链路可以先概括为[图 1](#fig-tiger-semantic-id-flow)：商品文本先变成连续内容向量，RQ-VAE 再把它离散化为 Semantic ID，最后 Transformer 才能像生成语言一样生成候选物品。
+
+::tiger-pipeline
 
 不过，这里需要提前埋下一个问题：Semantic ID 的相似性首先继承自物品的内容 embedding。它究竟是 RQ-VAE 额外学出来的，还是文本模型原本就已经提供的？这个问题会影响我们后面对冷启动和语义层次的判断。
 
 ## RQ-VAE 如何生成 Semantic ID
 
-TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
+[图 1](#fig-tiger-semantic-id-flow) 中的第三步对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
 
 残差量化可以理解为一个逐层修正的过程。
 

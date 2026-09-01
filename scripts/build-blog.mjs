@@ -144,6 +144,156 @@ function renderTermChipClose(env) {
   return `</span></button><span class="term-chip-card" id="${escapeHtml(term.tooltipId)}" role="tooltip">${escapeHtml(term.definition)}</span></span>`;
 }
 
+const tigerPipelineCopy = {
+  en: {
+    figure: 'Figure 1',
+    title: 'TIGER turns item content into a generative vocabulary',
+    aria: 'A five step TIGER flow from item text to content embedding, residual quantization, Semantic ID, and Transformer generation.',
+    steps: [
+      {
+        tone: 'source',
+        role: 'Input',
+        title: 'Item text',
+        sample: 'title / category / brand',
+        detail: 'Product metadata is first written as text so a language encoder can place items in a shared content space.'
+      },
+      {
+        tone: 'embedding',
+        role: 'Representation',
+        title: 'Content vector',
+        sample: 'Sentence-T5, 768d',
+        detail: 'The text encoder produces a continuous embedding that still behaves like a conventional retrieval vector.'
+      },
+      {
+        tone: 'quantize',
+        role: 'Discretization',
+        title: 'RQ-VAE',
+        sample: 'coarse-to-fine residuals',
+        detail: 'Residual quantization maps the continuous vector to several codebook choices, one layer at a time.'
+      },
+      {
+        tone: 'semantic',
+        role: 'Vocabulary',
+        title: 'Semantic ID',
+        sample: '(12, 24, 52)',
+        detail: 'The selected codewords become a compact token sequence that similar items can partially share.'
+      },
+      {
+        tone: 'generate',
+        role: 'Generation',
+        title: 'Transformer',
+        sample: 'next item tokens',
+        detail: 'Recommendation becomes sequence generation: the model predicts a valid item ID token by token.'
+      }
+    ],
+    legend: [
+      ['Content signal', 'raw item information and encoder output'],
+      ['Quantization', 'continuous-to-discrete conversion'],
+      ['Semantic token', 'shared codeword identity'],
+      ['Generative step', 'autoregressive candidate production']
+    ],
+    caption: 'Figure 1. The key shift is not only replacing the retrieval model, but converting item content into a finite token vocabulary before generation.'
+  },
+  zh: {
+    figure: '图 1',
+    title: 'TIGER 把物品内容变成可生成的词表',
+    aria: 'TIGER 从商品文本到内容向量、残差量化、Semantic ID 与 Transformer 生成的五步流程图。',
+    steps: [
+      {
+        tone: 'source',
+        role: '输入',
+        title: '商品文本',
+        sample: '标题 / 类别 / 品牌',
+        detail: '先把商品元信息写成文本，让语言编码器把物品放进一个共享的内容空间。'
+      },
+      {
+        tone: 'embedding',
+        role: '表示',
+        title: '内容向量',
+        sample: 'Sentence-T5, 768 维',
+        detail: '文本编码器输出连续 embedding；到这里为止，它仍然像传统向量检索里的物品表示。'
+      },
+      {
+        tone: 'quantize',
+        role: '离散化',
+        title: 'RQ-VAE',
+        sample: '逐层修正残差',
+        detail: '残差量化逐层选择码本，把连续向量压成多个离散 codeword。'
+      },
+      {
+        tone: 'semantic',
+        role: '词表',
+        title: 'Semantic ID',
+        sample: '(12, 24, 52)',
+        detail: '被选中的 codeword 组成物品 ID；相似物品可以共享其中一部分 token。'
+      },
+      {
+        tone: 'generate',
+        role: '生成',
+        title: 'Transformer',
+        sample: '逐 token 预测候选',
+        detail: '推荐任务被改写为序列生成：模型按顺序生成可映射回物品库的 ID。'
+      }
+    ],
+    legend: [
+      ['内容信号', '原始物品信息与编码器输出'],
+      ['量化步骤', '从连续空间转为离散码本'],
+      ['语义 token', '可共享的 codeword 编号'],
+      ['生成步骤', '自回归地产生候选物品']
+    ],
+    caption: '图 1. TIGER 的关键变化不是单纯更换检索模型，而是先把物品内容转成有限、可共享、可生成的 token 词表。'
+  }
+};
+
+function renderTigerPipelineFigure(lang = 'en') {
+  const copy = tigerPipelineCopy[lang === 'zh' ? 'zh' : 'en'];
+  const steps = copy.steps.map((step, index) => `
+        <li class="tiger-pipeline-node tiger-pipeline-${escapeHtml(step.tone)}">
+          <details>
+            <summary>
+              <span class="tiger-pipeline-index">${String(index + 1).padStart(2, '0')}</span>
+              <span class="tiger-pipeline-main">
+                <span class="tiger-pipeline-role">${escapeHtml(step.role)}</span>
+                <strong>${escapeHtml(step.title)}</strong>
+                <em>${escapeHtml(step.sample)}</em>
+              </span>
+            </summary>
+            <p>${escapeHtml(step.detail)}</p>
+          </details>
+        </li>`).join('');
+  const legend = copy.legend.map(([label, detail], index) => `
+        <div class="tiger-pipeline-legend-item tiger-pipeline-legend-${index + 1}">
+          <dt><span aria-hidden="true"></span>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(detail)}</dd>
+        </div>`).join('');
+  return `<figure id="fig-tiger-semantic-id-flow" class="tiger-pipeline-figure">
+    <div class="tiger-pipeline-surface" role="img" aria-label="${escapeHtml(copy.aria)}">
+      <div class="tiger-pipeline-heading">
+        <span>${escapeHtml(copy.figure)}</span>
+        <strong>${escapeHtml(copy.title)}</strong>
+      </div>
+      <ol class="tiger-pipeline-track">
+${steps}
+      </ol>
+      <div class="tiger-pipeline-token-row" aria-hidden="true">
+        <span class="tiger-token tiger-token-source">text</span>
+        <span class="tiger-token-arrow">→</span>
+        <span class="tiger-token tiger-token-vector">768d</span>
+        <span class="tiger-token-arrow">→</span>
+        <span class="tiger-token tiger-token-code">12</span>
+        <span class="tiger-token tiger-token-code">24</span>
+        <span class="tiger-token tiger-token-code">52</span>
+        <span class="tiger-token-arrow">→</span>
+        <span class="tiger-token tiger-token-output">item</span>
+      </div>
+      <dl class="tiger-pipeline-legend">
+${legend}
+      </dl>
+    </div>
+    <figcaption>${escapeHtml(copy.caption)}</figcaption>
+  </figure>`;
+}
+
 function stripHtml(html) {
   return String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -641,6 +791,18 @@ function createMarkdownRenderer() {
 
   md.renderer.rules.fence = (tokens, idx) => renderCodeFence(tokens[idx].content, tokens[idx].info);
   md.renderer.rules.code_block = (tokens, idx) => renderCodeFence(tokens[idx].content, 'text');
+  md.block.ruler.before('paragraph', 'tiger_pipeline', (state, startLine, endLine, silent) => {
+    const pos = state.bMarks[startLine] + state.tShift[startLine];
+    const max = state.eMarks[startLine];
+    if (state.src.slice(pos, max).trim() !== '::tiger-pipeline') return false;
+    if (silent) return true;
+    const token = state.push('tiger_pipeline', '', 0);
+    token.block = true;
+    token.map = [startLine, startLine + 1];
+    state.line = startLine + 1;
+    return true;
+  });
+  md.renderer.rules.tiger_pipeline = (tokens, idx, options, env) => renderTigerPipelineFigure(env.post?.lang || 'en');
 
   const versionPostMedia = (value, post) => {
     if (!post?.mediaFiles?.length) return value;
