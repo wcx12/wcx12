@@ -1373,6 +1373,76 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   visibility: visible;
 }
 
+.blog-disclosure {
+  margin: 1.05em 0 1.2em;
+  border: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
+  border-radius: 8px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--cyan) 6%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 6%, transparent);
+  overflow: hidden;
+}
+
+.blog-disclosure summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 14px;
+  color: var(--text);
+  font: 800 0.96rem/1.45 var(--blog-font-ui);
+  cursor: pointer;
+  list-style: none;
+}
+
+.blog-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.blog-disclosure summary::after {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 34%, transparent);
+  border-radius: 50%;
+  color: var(--cyan);
+  font: 900 0.9rem/1 var(--blog-font-mono);
+}
+
+.blog-disclosure[open] summary::after {
+  content: "-";
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--pink) 46%, transparent);
+}
+
+.blog-disclosure summary:hover,
+.blog-disclosure summary:focus-visible {
+  background: color-mix(in srgb, var(--cyan) 8%, transparent);
+}
+
+.blog-disclosure summary:focus-visible {
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
+}
+
+.blog-disclosure-body {
+  border-top: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
+  padding: 0 14px 14px;
+  color: var(--muted);
+}
+
+.blog-disclosure-body > :first-child {
+  margin-top: 0.85em;
+}
+
+.blog-disclosure-body > :last-child {
+  margin-bottom: 0;
+}
+
 .blog-content blockquote {
   border-left: 3px solid var(--cyan);
   padding: 8px 0 8px 16px;

@@ -755,6 +755,7 @@ function inlineMarkdown(value, draft) {
 function isMarkdownBlockStart(line) {
   return /^```/.test(line)
     || /^::tiger-pipeline\s*$/.test(line.trim())
+    || /^::disclosure\[[^\]]+]\s*$/.test(line.trim())
     || /^#{1,6}\s+/.test(line)
     || /^>\s?/.test(line)
     || /^\s*[-*]\s+/.test(line)
@@ -777,6 +778,19 @@ function renderMarkdown(markdown, draft) {
     if (line.trim() === '::tiger-pipeline') {
       html.push(tigerPipelineFigureHtml(normalizeLang(draft?.lang || currentLang())));
       index += 1;
+      continue;
+    }
+
+    const disclosure = /^::disclosure\[([^\]]+)]\s*$/.exec(line.trim());
+    if (disclosure) {
+      const body = [];
+      index += 1;
+      while (index < lines.length && lines[index].trim() !== '::') {
+        body.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length) index += 1;
+      html.push(`<details class="blog-disclosure"><summary>${inlineMarkdown(disclosure[1], draft)}</summary><div class="blog-disclosure-body">${renderMarkdown(body.join('\n'), draft)}</div></details>`);
       continue;
     }
 

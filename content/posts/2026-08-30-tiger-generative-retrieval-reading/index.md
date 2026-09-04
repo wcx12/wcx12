@@ -138,10 +138,9 @@ $$
 
 这里 $L_{\text{recon}}$ 负责“能不能重构 item 内容”，$L_{\text{rqvae}}$ 负责“残差和离散码本能不能对齐”。
 
-<details>
-<summary>为什么量化损失还要拆成两项？</summary>
-<p>因为最近邻量化会把连续向量接到离散 codeword 上。训练时一边要让 codeword 靠近真实 residual，另一边要让 encoder 输出愿意稳定地落到自己选中的 codeword 附近。如果只写成一个普通误差项，码本和编码器会在同一个目标里互相追逐，职责不清。</p>
-</details>
+::disclosure[为什么量化损失还要拆成两项？]
+因为最近邻量化会把连续向量接到离散 codeword 上。训练时一边要让 codeword 靠近真实 residual，另一边要让 encoder 输出愿意稳定地落到自己选中的 codeword 附近。如果只写成一个普通误差项，码本和编码器会在同一个目标里互相追逐，职责不清。
+::
 
 具体到第 $d$ 层，论文使用的量化损失是：
 
@@ -321,14 +320,11 @@ User History → Transformer → Generate Semantic ID → Item
 
 论文把这种设计称为 **Transformer memory acts as an index**。
 
-<details>
-<summary>Hint：Transformer memory 为什么可以被叫作索引？</summary>
-
+::disclosure[Hint：Transformer memory 为什么可以被叫作索引？]
 这里的 memory 指 Transformer 的模型参数，不是 KV Cache，也不是额外的存储模块。训练把“用户交互 token 序列更可能对应哪个后续 Semantic ID”的关系编码进参数。
 
 传统索引显式保存 item embedding，并使用 [ANN](term:ann)/[MIPS](term:mips) 查询；TIGER 则通过模型前向计算，从参数化条件分布中生成候选 ID。因此它更接近 parameterized index，而不是传统意义上可以直接枚举和更新的索引表。
-
-</details>
+::
 
 参数化索引并不意味着所有外部结构都消失了。系统仍然需要维护 Item ID 与 Semantic ID 的双向映射，而且模型参数不像 ANN 索引那样容易插入、删除或直接检查某个物品。更新成本只是从“重建向量索引”部分转移到了“更新量化映射或模型参数”。
 

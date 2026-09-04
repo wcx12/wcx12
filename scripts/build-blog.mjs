@@ -1223,6 +1223,38 @@ function createMarkdownRenderer() {
     return true;
   });
   md.renderer.rules.tiger_pipeline = (tokens, idx, options, env) => renderTigerPipelineFigure(env.post?.lang || 'en');
+  md.block.ruler.before('paragraph', 'blog_disclosure', (state, startLine, endLine, silent) => {
+    const pos = state.bMarks[startLine] + state.tShift[startLine];
+    const max = state.eMarks[startLine];
+    const match = /^::disclosure\[([^\]]+)]\s*$/.exec(state.src.slice(pos, max).trim());
+    if (!match) return false;
+
+    let nextLine = startLine + 1;
+    const bodyLines = [];
+    while (nextLine < endLine) {
+      const lineStart = state.bMarks[nextLine] + state.tShift[nextLine];
+      const lineEnd = state.eMarks[nextLine];
+      const line = state.src.slice(lineStart, lineEnd);
+      if (line.trim() === '::') break;
+      bodyLines.push(line);
+      nextLine += 1;
+    }
+    if (nextLine >= endLine) return false;
+    if (silent) return true;
+
+    const token = state.push('blog_disclosure', '', 0);
+    token.block = true;
+    token.info = match[1].trim();
+    token.content = bodyLines.join('\n').trim();
+    token.map = [startLine, nextLine + 1];
+    state.line = nextLine + 1;
+    return true;
+  });
+  md.renderer.rules.blog_disclosure = (tokens, idx, options, env) => {
+    const title = tokens[idx].info || (env.post?.lang === 'zh' ? '展开说明' : 'Details');
+    const body = md.render(tokens[idx].content || '', env).trim();
+    return `<details class="blog-disclosure"><summary>${escapeHtml(title)}</summary><div class="blog-disclosure-body">${body}</div></details>`;
+  };
 
   const versionPostMedia = (value, post) => {
     if (!post?.mediaFiles?.length) return value;

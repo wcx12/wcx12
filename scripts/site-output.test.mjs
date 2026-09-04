@@ -453,6 +453,11 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /href="https:\/\/github\.com\/wcx12\/wcx12\/blob\/main\/\.github\/workflows\/blog-build\.yml"/);
       assert.match(source, /href="https:\/\/wcx12\.github\.io\/wcx12\/research\/"/);
     }
+    if (file.includes('tiger-generative-retrieval-reading')) {
+      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>为什么量化损失还要拆成两项？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>Hint：Transformer memory 为什么可以被叫作索引？<\/summary>/);
+      assert.doesNotMatch(source, /&lt;\/?(?:details|summary)&gt;/);
+    }
   }
   assert.match(clientSource, /document\.createElement\('button'\)[\s\S]*?button\.className = 'code-copy'/);
   assert.match(clientSource, /button\.setAttribute\('aria-live', 'polite'\)/);
