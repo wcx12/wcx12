@@ -456,6 +456,8 @@ test('generated code blocks and article contents remain keyboard reachable', asy
     if (file.includes('tiger-generative-retrieval-reading')) {
       assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>为什么这个损失函数要拆成两项？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
+      assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
       assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>Hint：Transformer memory 为什么可以被叫作索引？<\/summary>/);
       assert.doesNotMatch(source, /&lt;\/?(?:details|summary)&gt;/);
     }
