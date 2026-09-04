@@ -190,8 +190,7 @@ $$
 
 因此，完整 RQ-VAE 训练可以理解成三件事同时发生：重构损失要求 $\hat x$ 保留 item 内容信息；$L_{code}$ 让码本学习 residual 的分布；$L_{commit}$ 让 encoder 输出适应离散码本。三者一起训练 encoder、decoder 和 codebook，最后得到可重构、可生成的 Semantic ID。
 
-### 为什么使用 K-means 初始化码本
-
+::disclosure[补充：为什么使用 K-means 初始化码本？]
 如果码本随机初始化，一些 code vector 可能远离任何训练样本。最近邻选择是离散操作：一个 code 如果从未成为任何样本的最近邻，就收不到有效更新，最后成为 dead code。大量样本集中选择少数 code，就会形成 codebook collapse。
 
 论文在第一个训练 batch 上做 K-means，并用聚类中心初始化码本。这能让初始 code 落在数据密集区域，提高它们在训练早期被选中的机会。
@@ -199,6 +198,7 @@ $$
 这项设计是合理的，但它只能降低 collapse 风险，并不能保证后续训练不再发生坍缩。实际复现时仍然需要持续观察每层 code usage、选择频率分布、perplexity 和 dead code 数量，而不能只在训练结束时检查一次利用率。
 
 关于这个问题，我后来又做了一组更完整的实验。结果比“使用 K-means 就能避免坍缩”复杂得多：提高利用率不一定提高推荐指标，真正的问题还包括 hard assignment、条件路径和下游预测任务是否对齐。完整实验见：[TIGER 的语义 ID 为什么会坍缩](../tiger-semantic-id-codebook-capacity/)。
+::
 
 ### 碰撞发生后怎么办
 
