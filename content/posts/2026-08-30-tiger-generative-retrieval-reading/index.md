@@ -138,10 +138,6 @@ $$
 
 这里 $L_{\text{recon}}$ 负责“能不能重构 item 内容”，$L_{\text{rqvae}}$ 负责“残差和离散码本能不能对齐”。
 
-::disclosure[为什么量化损失还要拆成两项？]
-因为最近邻量化会把连续向量接到离散 codeword 上。训练时一边要让 codeword 靠近真实 residual，另一边要让 encoder 输出愿意稳定地落到自己选中的 codeword 附近。如果只写成一个普通误差项，码本和编码器会在同一个目标里互相追逐，职责不清。
-::
-
 具体到第 $d$ 层，论文使用的量化损失是：
 
 $$
@@ -152,11 +148,16 @@ $$
 
 其中，$L_d$ 是第 $d$ 层的量化损失，$r_d$ 是该层 residual，$e_{c_d}$ 是该层被选中的 codeword，$\beta$ 是 commitment 项权重；$\operatorname{sg}$ 表示 stop-gradient：前向计算时保留原值，反向传播时梯度为零。
 
-第一项固定当前 residual，只更新被选中的 code embedding：
+这个公式的关键不是“又多写了两个平方误差”，而是 stop-gradient 把同一层量化里的两类更新方向拆开了：一边更新码本，让选中的 codeword 靠近当前 residual；另一边更新编码器，让它输出的 residual 愿意稳定地落到这个 codeword 附近。
+
+::disclosure[为什么这个损失函数要拆成两项？]
+先看第一项：
 
 $$
 L_{code}=\lVert \operatorname{sg}[r_d]-e_{c_d}\rVert^2,
 $$
+
+这里的 $\operatorname{sg}[r_d]$ 表示把当前 residual 当作常量。反向传播时，梯度不会回到 $r_d$，只会更新被选中的 codeword $e_{c_d}$：
 
 $$
 \frac{\partial L_{code}}{\partial e_{c_d}}
@@ -165,13 +166,15 @@ $$
 \frac{\partial L_{code}}{\partial r_d}=0.
 $$
 
-它的作用是把被选中的码字拉向当前 residual，让码本逐渐贴近数据分布。
+所以这一项的作用是训练码本：哪个 codeword 被选中了，就把哪个 codeword 拉向当前 residual，让码本逐渐贴近数据分布。
 
-第二项固定 code embedding，只更新产生 residual 的编码器：
+再看第二项：
 
 $$
 L_{commit}=\beta\lVert r_d-\operatorname{sg}[e_{c_d}]\rVert^2,
 $$
+
+这里的 $\operatorname{sg}[e_{c_d}]$ 表示把 codeword 当作常量。反向传播时，梯度不会更新这个 codeword，而是回到产生 $r_d$ 的编码器：
 
 $$
 \frac{\partial L_{commit}}{\partial r_d}
@@ -180,9 +183,12 @@ $$
 \frac{\partial L_{commit}}{\partial e_{c_d}}=0.
 $$
 
-它要求编码器输出靠近自己选择的 codeword，也就是 commitment。参数 $\beta$ 控制这种约束的强度。
+所以这一项的作用是训练编码器：既然它已经选择了这个 codeword，就要让自己的输出靠近这个 codeword，也就是 commitment。参数 $\beta$ 控制这种约束的强度。
 
-将两项拆开，是为了明确两类参数的职责：一个项让码本学习数据分布，另一个项让编码结果适应离散码本，避免编码器与码本在同一个误差项里无约束地相互追逐。完整模型把重构损失与这些量化项一起使用，共同训练 encoder、decoder 和码本。
+把两项放在一起看，$L_{code}$ 主要回答“码本应该往哪里移动”，$L_{commit}$ 主要回答“编码器应该如何适应离散码本”。这样拆开后，码本和编码器各自有清楚的梯度方向，而不是在同一个普通误差项里互相追逐。
+::
+
+因此，完整 RQ-VAE 训练可以理解成三件事同时发生：重构损失要求 $\hat x$ 保留 item 内容信息；$L_{code}$ 让码本学习 residual 的分布；$L_{commit}$ 让 encoder 输出适应离散码本。三者一起训练 encoder、decoder 和 codebook，最后得到可重构、可生成的 Semantic ID。
 
 ### 为什么使用 K-means 初始化码本
 
