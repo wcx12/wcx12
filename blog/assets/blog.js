@@ -460,6 +460,27 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeTermChips();
 });
 
+function decodedHashId() {
+  const raw = window.location.hash.slice(1);
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function openHashDisclosure() {
+  const target = document.getElementById(decodedHashId());
+  const disclosure = target?.matches?.('details.blog-disclosure')
+    ? target
+    : target?.closest?.('details.blog-disclosure');
+  if (disclosure) disclosure.open = true;
+}
+
+openHashDisclosure();
+window.addEventListener('hashchange', openHashDisclosure);
+
 const searchInput = document.getElementById('blogSearch');
 const searchResults = document.getElementById('blogSearchResults');
 let searchItems = [];

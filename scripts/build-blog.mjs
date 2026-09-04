@@ -1252,8 +1252,12 @@ function createMarkdownRenderer() {
   });
   md.renderer.rules.blog_disclosure = (tokens, idx, options, env) => {
     const title = tokens[idx].info || (env.post?.lang === 'zh' ? '展开说明' : 'Details');
+    const baseSlug = slugify(title);
+    const count = env.disclosureCounts.get(baseSlug) || 0;
+    env.disclosureCounts.set(baseSlug, count + 1);
+    const id = count ? `${baseSlug}-${count + 1}` : baseSlug;
     const body = md.render(tokens[idx].content || '', env).trim();
-    return `<details class="blog-disclosure"><summary>${escapeHtml(title)}</summary><div class="blog-disclosure-body">${body}</div></details>`;
+    return `<details class="blog-disclosure" id="${escapeHtml(id)}"><summary>${escapeHtml(title)}</summary><div class="blog-disclosure-body">${body}</div></details>`;
   };
 
   const versionPostMedia = (value, post) => {
@@ -1330,12 +1334,12 @@ function createMarkdownRenderer() {
 
   return {
     render(markdown, post = null) {
-      const env = { toc: [], headingCounts: new Map(), post, termCounter: 0, termStack: [] };
+      const env = { toc: [], headingCounts: new Map(), disclosureCounts: new Map(), post, termCounter: 0, termStack: [] };
       const html = md.render(markdown, env);
       return { html, toc: env.toc };
     },
     renderSections(markdown, post = null) {
-      const env = { toc: [], headingCounts: new Map(), post, termCounter: 0, termStack: [] };
+      const env = { toc: [], headingCounts: new Map(), disclosureCounts: new Map(), post, termCounter: 0, termStack: [] };
       const tokens = md.parse(markdown, env);
       const sections = [];
       let current = null;

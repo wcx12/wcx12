@@ -454,18 +454,21 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /href="https:\/\/wcx12\.github\.io\/wcx12\/research\/"/);
     }
     if (file.includes('tiger-generative-retrieval-reading')) {
-      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>为什么这个损失函数要拆成两项？<\/summary>/);
-      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
+      assert.match(source, /残差量化可以理解为一个逐层修正、<a href="#[^"]+">从粗到细<\/a>的过程。/);
+      assert.match(source, /<details class="blog-disclosure" id="讨论-从粗到细-究竟是什么意思">[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>为什么这个损失函数要拆成两项？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>“从粗到细”究竟是什么意思<\/h2>/);
-      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
-      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
-      assert.match(source, /<details class="blog-disclosure">[\s\S]*?<summary>Hint：Transformer memory 为什么可以被叫作索引？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>Hint：Transformer memory 为什么可以被叫作索引？<\/summary>/);
       assert.doesNotMatch(source, /&lt;\/?(?:details|summary)&gt;/);
     }
   }
   assert.match(clientSource, /document\.createElement\('button'\)[\s\S]*?button\.className = 'code-copy'/);
   assert.match(clientSource, /button\.setAttribute\('aria-live', 'polite'\)/);
+  assert.match(clientSource, /function openHashDisclosure\(\)[\s\S]*?details\.blog-disclosure/);
 });
 
 test('bundled post media is copied, fingerprinted, and rendered accessibly', async () => {

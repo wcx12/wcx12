@@ -267,6 +267,16 @@ function escapeAttribute(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
+function slugify(value) {
+  const normalized = String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || 'untitled';
+}
+
 function frontMatterBounds(source) {
   const normalized = normalizeLf(source);
   if (!normalized.startsWith('---\n')) return null;
@@ -790,7 +800,7 @@ function renderMarkdown(markdown, draft) {
         index += 1;
       }
       if (index < lines.length) index += 1;
-      html.push(`<details class="blog-disclosure"><summary>${inlineMarkdown(disclosure[1], draft)}</summary><div class="blog-disclosure-body">${renderMarkdown(body.join('\n'), draft)}</div></details>`);
+      html.push(`<details class="blog-disclosure" id="${escapeAttribute(slugify(disclosure[1]))}"><summary>${inlineMarkdown(disclosure[1], draft)}</summary><div class="blog-disclosure-body">${renderMarkdown(body.join('\n'), draft)}</div></details>`);
       continue;
     }
 

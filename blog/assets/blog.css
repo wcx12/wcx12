@@ -1375,6 +1375,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
 .blog-disclosure {
   margin: 1.05em 0 1.2em;
+  scroll-margin-top: 96px;
   border: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
   border-radius: 8px;
   color: var(--text);
