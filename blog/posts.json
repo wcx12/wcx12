@@ -4,7 +4,7 @@
     "slug": "tiger-generative-retrieval-reading",
     "description": "从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。",
     "date": "2026-08-30",
-    "updated": "2026-09-02",
+    "updated": "2026-09-04",
     "category": "Research Notes",
     "tags": [
       "generative-recommendation",
@@ -18,7 +18,7 @@
     "translations": {},
     "lang": "zh",
     "featured": false,
-    "readingMinutes": 9,
+    "readingMinutes": 10,
     "url": "blog/posts/tiger-generative-retrieval-reading/"
   },
   {

@@ -2,7 +2,7 @@
 title: "TIGER：从语义 ID 到生成式推荐"
 slug: "tiger-generative-retrieval-reading"
 date: "2026-08-30"
-updated: "2026-09-02"
+updated: "2026-09-04"
 description: "从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。"
 category: "Research Notes"
 tags: ["generative-recommendation", "semantic-id", "rq-vae", "tiger"]
@@ -72,15 +72,23 @@ Semantic ID：(12, 24, 52)
 
 ::tiger-pipeline
 
-不过，这里需要提前埋下一个问题：Semantic ID 的相似性首先继承自物品的内容 embedding。它究竟是 RQ-VAE 额外学出来的，还是文本模型原本就已经提供的？这个问题会影响我们后面对冷启动和语义层次的判断。
-
 ## RQ-VAE 如何生成 Semantic ID
 
-[图 1](#fig-tiger-semantic-id-flow) 左侧的物品侧分支对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
+[图 1](https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/#fig-tiger-semantic-id-flow) 上方的物品侧分支对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
 
 残差量化可以理解为一个逐层修正的过程。
 
 第一层码本先选择一个最接近当前向量的 codeword。这个 codeword 无法完全重构原向量，于是计算它留下的残差。第二层码本继续近似这个残差，第三层再修正剩余部分。
+
+这里先把符号说清楚。TIGER 的 RQ-VAE 不是直接量化原始文本，而是先把 item 内容 embedding 记为 $x$，再用编码器 $E(\cdot)$ 得到潜在向量 $z=E(x)$。第 $d$ 层码本记为 $C_d$，里面有若干 codeword 向量；$c_d$ 是第 $d$ 层选中的 codeword 编号，$e_{c_d}$ 是对应的 codeword 向量。$r_d$ 表示进入第 $d$ 层量化器的残差，$m$ 表示残差量化层数。TIGER 主实验里前三位 Semantic ID 来自 $m=3$ 层 RQ-VAE，后面为了处理碰撞还会补一个额外 token。
+
+在第 $d$ 层，量化器做的最近邻选择可以写成：
+
+$$
+c_d=\arg\min_k \lVert r_d-e_k^{(d)}\rVert_2^2.
+$$
+
+为避免后面符号太重，下面把第 $d$ 层选中的 $e_{c_d}^{(d)}$ 简写为 $e_{c_d}$。
 
 设初始潜在向量为 $z$：
 
@@ -108,14 +116,34 @@ $$
 → 第一层量化整体向量
 → 第二层量化第一层残差
 → 第三层量化第二层残差
-→ Semantic ID (c₁,c₂,c₃)
+→ Semantic ID (c_0,c_1,c_2)
 ```
 
 各层码向量最后相加，并不是额外设计出来的技巧。量化时逐层做减法，重构时自然需要把各层近似结果加回来。最终残差 $r_m=z-\hat z$ 越小，量化表示就越接近原始潜在向量。
 
-### 损失函数为什么要拆成两项
+### RQ-VAE 的损失函数
 
-RQ-VAE 中最值得仔细解释的公式是：
+从训练目标看，RQ-VAE 仍然先是一个 autoencoder。编码器把内容 embedding $x$ 压成 $z$，残差量化得到 $\hat z$，解码器再从 $\hat z$ 重构出 $\hat x$。因此最基本的信号是重构损失：
+
+$$
+L_{\text{recon}}=\lVert x-\hat x\rVert^2.
+$$
+
+这个重构项就是这里 “VAE / AutoEncoder” 含义最直观的部分：Semantic ID 不是只要离散就可以，它必须保留足够多的 item 内容信息，才能让 decoder 把输入 embedding 还原回来。TIGER 论文里的 RQ-VAE 总损失可以理解为：
+
+$$
+L(x)=L_{\text{recon}}+L_{\text{rqvae}},\qquad
+L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
+$$
+
+这里 $L_{\text{recon}}$ 负责“能不能重构 item 内容”，$L_{\text{rqvae}}$ 负责“残差和离散码本能不能对齐”。
+
+<details>
+<summary>为什么量化损失还要拆成两项？</summary>
+<p>因为最近邻量化会把连续向量接到离散 codeword 上。训练时一边要让 codeword 靠近真实 residual，另一边要让 encoder 输出愿意稳定地落到自己选中的 codeword 附近。如果只写成一个普通误差项，码本和编码器会在同一个目标里互相追逐，职责不清。</p>
+</details>
+
+具体到第 $d$ 层，论文使用的量化损失是：
 
 $$
 L_d=
@@ -123,7 +151,7 @@ L_d=
 +\beta\lVert r_d-\operatorname{sg}[e_{c_d}]\rVert^2.
 $$
 
-其中，$\operatorname{sg}$ 表示 stop-gradient：前向计算时保留原值，反向传播时梯度为零。
+其中，$L_d$ 是第 $d$ 层的量化损失，$r_d$ 是该层 residual，$e_{c_d}$ 是该层被选中的 codeword，$\beta$ 是 commitment 项权重；$\operatorname{sg}$ 表示 stop-gradient：前向计算时保留原值，反向传播时梯度为零。
 
 第一项固定当前 residual，只更新被选中的 code embedding：
 
@@ -155,7 +183,7 @@ $$
 
 它要求编码器输出靠近自己选择的 codeword，也就是 commitment。参数 $\beta$ 控制这种约束的强度。
 
-将两项拆开，是为了明确两类参数的职责：一个项让码本学习数据分布，另一个项让编码结果适应离散码本，避免编码器与码本在同一个误差项里无约束地相互追逐。完整模型还包含重构损失，它与这两项一起训练 encoder、decoder 和量化表示。
+将两项拆开，是为了明确两类参数的职责：一个项让码本学习数据分布，另一个项让编码结果适应离散码本，避免编码器与码本在同一个误差项里无约束地相互追逐。完整模型把重构损失与这些量化项一起使用，共同训练 encoder、decoder 和码本。
 
 ### 为什么使用 K-means 初始化码本
 
