@@ -465,16 +465,21 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：RQ-VAE 的对照实验到底证明了什么？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>为什么选择 RQ-VAE，而不是其他量化方式<\/h2>/);
       assert.match(source, /id="fig-tiger-quantizer-atlas"/);
+      assert.match(source, /class="tiger-quantizer-axis"/);
       for (const method of ['random', 'lsh', 'pq', 'tree', 'vq', 'rq']) {
         assert.match(source, new RegExp(`class="tiger-quantizer-method tiger-quantizer-${method}"`));
       }
+      assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?无内容[\s\S]*?随机[\s\S]*?基线/);
+      assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?内容[\s\S]*?学习码本[\s\S]*?残差 token/);
       assert.match(source, /Product Quantization[\s\S]*?Hierarchical k-means[\s\S]*?VQ-VAE[\s\S]*?RQ-VAE/);
       assert.match(source, /id="fig-tiger-index-map"/);
-      assert.match(source, /传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);
+      assert.match(source, /索引：从查询到候选地址的路径[\s\S]*?传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>/);
       assert.doesNotMatch(source, /Hint：Transformer memory 为什么可以被叫作索引？/);
+      assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">索引<\/span>[\s\S]*?把查询快速指向候选结果地址的机制/);
       assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">ANN<\/span>[\s\S]*?近似最近邻搜索/);
       assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">MIPS<\/span>[\s\S]*?最大内积搜索/);
+      assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">beam search<\/span>[\s\S]*?束搜索：一种自回归解码策略/);
       assert.doesNotMatch(source, /&lt;\/?(?:details|summary)&gt;/);
     }
   }

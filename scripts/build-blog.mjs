@@ -58,6 +58,10 @@ const GITHUB_REPOSITORY = 'wcx12/wcx12';
 const GITHUB_BRANCH = 'main';
 const BLOG_DRAFT_UPDATE_WORKFLOW = 'blog-draft-update.yml';
 const glossaryTerms = {
+  index: {
+    en: 'Index: the mechanism that maps a query to candidate result addresses without scanning every item. It can be an explicit structure such as a vector index, or a learned query-to-ID mapping, but the learned version is not a table you can directly browse or edit.',
+    zh: '索引：把查询快速指向候选结果地址的机制，目的是不用逐个扫描所有物品。它可以是显式数据结构，比如向量索引；也可以是模型学到的“查询 -> 目标 ID”映射，但后者不是一张能直接浏览或增删改查的表。'
+  },
   ann: {
     en: 'Approximate Nearest Neighbor: a fast search method that looks for vectors close enough to the query in a large vector database, instead of exhaustively checking every item.',
     zh: '近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。'
@@ -65,6 +69,10 @@ const glossaryTerms = {
   mips: {
     en: 'Maximum Inner Product Search: ranks candidates by the inner product between the query vector and item vectors; it is a common retrieval objective in recommendation systems.',
     zh: '最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。'
+  },
+  'beam-search': {
+    en: 'Beam search: an autoregressive decoding strategy that keeps the best B partial sequences at each step, expands them, and repeats until complete candidates are formed. It is broader than greedy decoding, but still biased toward high-probability sequences.',
+    zh: '束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。'
   }
 };
 const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -611,7 +619,8 @@ const tigerQuantizerAtlasCopy = {
         label: 'control baseline',
         route: 'item -> sampled tokens',
         point: 'The item receives random codewords, so the ID has capacity but carries no content similarity.',
-        takeaway: 'Good for proving that semantic structure matters.'
+        takeaway: 'Good for proving that semantic structure matters.',
+        traits: ['no content', 'random', 'baseline']
       },
       {
         id: 'lsh',
@@ -619,7 +628,8 @@ const tigerQuantizerAtlasCopy = {
         label: 'random projections',
         route: 'embedding -> hyperplane signs -> hash code',
         point: 'Random hyperplanes split the embedding space; nearby vectors are more likely to share bits, but the split is not learned for the data distribution.',
-        takeaway: 'Fast and content based, but not optimized for reconstruction.'
+        takeaway: 'Fast and content based, but not optimized for reconstruction.',
+        traits: ['content', 'fixed split', 'hash tokens']
       },
       {
         id: 'pq',
@@ -627,7 +637,8 @@ const tigerQuantizerAtlasCopy = {
         label: 'subspace codes',
         route: 'vector slices -> separate codebooks',
         point: 'The vector dimensions are partitioned into subspaces, and each subspace is quantized independently.',
-        takeaway: 'Strong for compression and vector search, less natural for coarse-to-fine residual IDs.'
+        takeaway: 'Strong for compression and vector search, less natural for coarse-to-fine residual IDs.',
+        traits: ['content', 'sub-codebooks', 'compression']
       },
       {
         id: 'tree',
@@ -635,7 +646,8 @@ const tigerQuantizerAtlasCopy = {
         label: 'tree path',
         route: 'root cluster -> child cluster -> leaf',
         point: 'The ID is a path in a clustering tree; early branch decisions constrain every later decision.',
-        takeaway: 'Readable hierarchy, but early hard boundaries cannot be repaired downstream.'
+        takeaway: 'Readable hierarchy, but early hard boundaries cannot be repaired downstream.',
+        traits: ['content', 'clusters', 'path ID']
       },
       {
         id: 'vq',
@@ -643,7 +655,8 @@ const tigerQuantizerAtlasCopy = {
         label: 'single learned codebook',
         route: 'encoder latent -> nearest codeword -> decoder',
         point: 'A learned codebook turns the latent vector into one discrete choice while reconstruction trains the code space.',
-        takeaway: 'Learns data-aware codes, but does not naturally produce multi-token residual refinement.'
+        takeaway: 'Learns data-aware codes, but does not naturally produce multi-token residual refinement.',
+        traits: ['content', 'learned', 'single token']
       },
       {
         id: 'rq',
@@ -651,7 +664,8 @@ const tigerQuantizerAtlasCopy = {
         label: 'residual correction',
         route: 'latent -> code + residual -> next code',
         point: 'Each layer quantizes what the previous layer did not explain, so the final ID is a sequence of residual codewords.',
-        takeaway: 'This is the method TIGER uses for its Semantic ID.'
+        takeaway: 'This is the method TIGER uses for its Semantic ID.',
+        traits: ['content', 'learned', 'residual tokens']
       }
     ],
     legend: [
@@ -672,7 +686,8 @@ const tigerQuantizerAtlasCopy = {
         label: '随机基线',
         route: 'item -> 随机抽 token',
         point: '不看内容，直接给 item 分配随机 codeword。ID 有组合容量，但相似物品不一定共享任何 token。',
-        takeaway: '适合证明“语义结构是否真的有用”。'
+        takeaway: '适合证明“语义结构是否真的有用”。',
+        traits: ['无内容', '随机', '基线']
       },
       {
         id: 'lsh',
@@ -680,7 +695,8 @@ const tigerQuantizerAtlasCopy = {
         label: '随机投影',
         route: 'embedding -> 超平面正负号 -> hash code',
         point: '用随机超平面切分 embedding 空间；近邻向量更可能有相同 bit，但切分方式不是为当前数据分布学出来的。',
-        takeaway: '快、基于内容，但不优化重构。'
+        takeaway: '快、基于内容，但不优化重构。',
+        traits: ['内容', '固定切分', 'hash token']
       },
       {
         id: 'pq',
@@ -688,7 +704,8 @@ const tigerQuantizerAtlasCopy = {
         label: '子空间码',
         route: '向量切片 -> 各子空间单独量化',
         point: '先把向量维度切成几段，每段进入自己的码本，最后把几个子空间编号拼成一个 ID。',
-        takeaway: '适合压缩和向量检索，不天然表达从粗到细的残差修正。'
+        takeaway: '适合压缩和向量检索，不天然表达从粗到细的残差修正。',
+        traits: ['内容', '子码本', '偏压缩']
       },
       {
         id: 'tree',
@@ -696,7 +713,8 @@ const tigerQuantizerAtlasCopy = {
         label: '树路径',
         route: '根簇 -> 子簇 -> 叶子簇',
         point: 'ID 是聚类树上的一条路径。第一层选错父簇后，后面只能在这个子树里继续细分。',
-        takeaway: '层次直观，但早期硬边界很难被下层修正。'
+        takeaway: '层次直观，但早期硬边界很难被下层修正。',
+        traits: ['内容', '聚类', '路径 ID']
       },
       {
         id: 'vq',
@@ -704,7 +722,8 @@ const tigerQuantizerAtlasCopy = {
         label: '单层学习码本',
         route: 'encoder latent -> 最近 codeword -> decoder',
         point: '用一个学习到的码本把 latent vector 变成一个离散选择，再通过重构损失训练码本和编码器。',
-        takeaway: '能学习数据相关 code，但没有多 token 的残差细化。'
+        takeaway: '能学习数据相关 code，但没有多 token 的残差细化。',
+        traits: ['内容', '学习码本', '单 token']
       },
       {
         id: 'rq',
@@ -712,7 +731,8 @@ const tigerQuantizerAtlasCopy = {
         label: '残差修正',
         route: 'latent -> code + residual -> 下一层 code',
         point: '第一层先解释主要部分，第二层解释剩余残差，第三层继续修正，最终 ID 是多层 codeword 序列。',
-        takeaway: '这是 TIGER 用来生成 Semantic ID 的方法。'
+        takeaway: '这是 TIGER 用来生成 Semantic ID 的方法。',
+        traits: ['内容', '学习码本', '残差 token']
       }
     ],
     legend: [
@@ -727,8 +747,8 @@ const tigerQuantizerAtlasCopy = {
 const tigerIndexMapCopy = {
   en: {
     figure: 'Figure 3',
-    title: 'Where does the index live?',
-    aria: 'A two-row comparison showing traditional vector retrieval using an external ANN or MIPS index and TIGER using Transformer parameters to generate Semantic IDs before item lookup.',
+    title: 'An index is a route from query to candidate address',
+    aria: 'A two-row comparison showing how traditional vector retrieval and TIGER both map a user context to candidate item addresses.',
     rows: [
       {
         id: 'external',
@@ -737,7 +757,7 @@ const tigerIndexMapCopy = {
         representation: 'query embedding',
         engine: 'external ANN / MIPS index',
         output: 'Top-K item IDs',
-        note: 'The external index stores candidate item embeddings and performs nearest-neighbor or inner-product search.'
+        note: 'The index is a visible search structure: it stores item vectors and returns nearby item addresses.'
       },
       {
         id: 'tiger',
@@ -746,16 +766,16 @@ const tigerIndexMapCopy = {
         representation: 'decoder prefixes',
         engine: 'Transformer parameters',
         output: 'Semantic ID -> Item ID',
-        note: 'The model generates the address of the next item; a mapping table still resolves that address back to real items.'
+        note: 'The model learns the route from history to Semantic ID; the mapping table resolves that generated address.'
       }
     ],
-    bridge: 'The word index describes the retrieval interface: given a user context, return candidate item addresses.',
-    caption: 'Figure 3. TIGER moves candidate generation from an external vector index into the Transformer decoding process, but it still needs a Semantic-ID-to-item mapping.'
+    bridge: 'Same job, different mechanism: search a stored vector structure, or decode a likely Semantic ID.',
+    caption: 'Figure 3. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
   },
   zh: {
     figure: '图 3',
-    title: '“索引”到底放在哪里？',
-    aria: '传统向量检索使用外部 ANN 或 MIPS 索引，TIGER 使用 Transformer 参数生成 Semantic ID，再通过映射表回到真实 item 的双行对比图。',
+    title: '索引：从查询到候选地址的路径',
+    aria: '传统向量检索和 TIGER 都把用户上下文映射到候选物品地址，但实现机制不同的双行对比图。',
     rows: [
       {
         id: 'external',
@@ -764,7 +784,7 @@ const tigerIndexMapCopy = {
         representation: 'query embedding',
         engine: '外部 ANN / MIPS 索引',
         output: 'Top-K Item ID',
-        note: '外部索引显式保存候选 item embedding，并负责近邻搜索或最大内积搜索。'
+        note: '索引是看得见的搜索结构：保存 item embedding，查询时返回相近 item 的地址。'
       },
       {
         id: 'tiger',
@@ -773,11 +793,11 @@ const tigerIndexMapCopy = {
         representation: 'decoder 前缀',
         engine: 'Transformer 参数',
         output: 'Semantic ID -> Item ID',
-        note: '模型生成下一个 item 的“地址”；映射表仍然负责把这个地址解析回真实物品。'
+        note: '模型学会从历史生成 Semantic ID；映射表仍然负责把这个生成地址解析回真实物品。'
       }
     ],
-    bridge: '这里的“索引”指候选生成接口：给定用户上下文，返回候选物品地址。',
-    caption: '图 3. TIGER 把候选生成从外部向量索引迁移到 Transformer 解码过程里，但 Semantic ID 到真实 item 的映射仍然存在。'
+    bridge: '两条路径做同一件事：把用户上下文变成候选地址；区别是查外部结构，还是解码一个语义 ID。',
+    caption: '图 3. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
   }
 };
 
@@ -845,7 +865,9 @@ function renderTigerQuantizerVisual(id) {
 
 function renderTigerQuantizerAtlasFigure(lang = 'en') {
   const copy = tigerQuantizerAtlasCopy[lang === 'zh' ? 'zh' : 'en'];
-  const methods = copy.methods.map((method) => `
+  const methods = copy.methods.map((method) => {
+    const traits = method.traits.map((trait) => `<li>${escapeHtml(trait)}</li>`).join('');
+    return `
         <section class="tiger-quantizer-method tiger-quantizer-${escapeHtml(method.id)}">
           ${renderTigerQuantizerVisual(method.id)}
           <div class="tiger-quantizer-copy">
@@ -853,10 +875,12 @@ function renderTigerQuantizerAtlasFigure(lang = 'en') {
             <h3>${escapeHtml(method.name)}</h3>
             <em>${escapeHtml(method.route)}</em>
             <p>${escapeHtml(method.point)}</p>
+            <ul class="tiger-quantizer-traits">${traits}</ul>
             <strong>${escapeHtml(method.takeaway)}</strong>
           </div>
-        </section>`).join('');
-  const legend = copy.legend.map(([label, detail]) => `
+        </section>`;
+  }).join('');
+  const axes = copy.legend.map(([label, detail]) => `
         <div>
           <dt>${escapeHtml(label)}</dt>
           <dd>${escapeHtml(detail)}</dd>
@@ -867,12 +891,12 @@ function renderTigerQuantizerAtlasFigure(lang = 'en') {
         <span>${escapeHtml(copy.figure)}</span>
         <strong>${escapeHtml(copy.title)}</strong>
       </div>
+      <dl class="tiger-quantizer-axis">
+${axes}
+      </dl>
       <div class="tiger-quantizer-grid">
 ${methods}
       </div>
-      <dl class="tiger-quantizer-legend">
-${legend}
-      </dl>
     </div>
     <figcaption>${escapeHtml(copy.caption)}</figcaption>
   </figure>`;

@@ -2301,19 +2301,19 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .tiger-quantizer-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .tiger-quantizer-method {
   --method-accent: var(--cyan);
   display: grid;
-  grid-template-columns: minmax(132px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(148px, 0.76fr) minmax(0, 1.24fr);
   gap: 14px;
   align-items: stretch;
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--method-accent) 24%, transparent);
   border-radius: 8px;
-  padding: 12px;
+  padding: 13px;
   background: color-mix(in srgb, var(--method-accent) 5%, var(--field-bg));
 }
 
@@ -2334,7 +2334,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .tiger-quantizer-visual {
   position: relative;
   display: flex;
-  min-height: 138px;
+  min-height: 152px;
   min-width: 0;
   align-items: center;
   justify-content: center;
@@ -2351,7 +2351,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .tiger-quantizer-copy {
   display: grid;
   align-content: start;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -2360,7 +2360,15 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   color: var(--method-accent);
   font: 800 0.66rem/1.25 var(--blog-font-mono);
   font-style: normal;
+}
+
+.tiger-quantizer-copy span {
   text-transform: uppercase;
+}
+
+.tiger-quantizer-copy em {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .tiger-quantizer-copy h3 {
@@ -2381,6 +2389,30 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   padding-left: 8px;
   color: var(--text);
   font: 800 0.78rem/1.42 var(--blog-font-ui);
+}
+
+.tiger-quantizer-traits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tiger-quantizer-traits li {
+  display: inline-flex;
+  min-height: 26px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--method-accent) 34%, transparent);
+  border-radius: 6px;
+  padding: 5px 7px;
+  color: color-mix(in srgb, var(--method-accent) 82%, var(--text));
+  background: color-mix(in srgb, var(--method-accent) 10%, var(--bg));
+  font: 800 0.62rem/1.2 var(--blog-font-ui);
+  text-align: center;
 }
 
 .tiger-q-item,
@@ -2586,6 +2618,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   width: min(62%, 98px);
 }
 
+.tiger-quantizer-axis,
 .tiger-quantizer-legend {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2593,18 +2626,25 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   margin: 14px 0 0;
 }
 
+.tiger-quantizer-axis {
+  margin: 0 0 14px;
+}
+
+.tiger-quantizer-axis div,
 .tiger-quantizer-legend div {
   min-width: 0;
   border-top: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
   padding-top: 9px;
 }
 
+.tiger-quantizer-axis dt,
 .tiger-quantizer-legend dt {
   margin: 0 0 3px;
   color: var(--text);
   font: 850 0.75rem/1.25 var(--blog-font-ui);
 }
 
+.tiger-quantizer-axis dd,
 .tiger-quantizer-legend dd {
   margin: 0;
   color: var(--muted);
@@ -2776,6 +2816,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
 :root[data-theme="mono"] .tiger-quantizer-method,
 :root[data-theme="mono"] .tiger-quantizer-visual,
+:root[data-theme="mono"] .tiger-quantizer-traits li,
 :root[data-theme="mono"] .tiger-index-lane,
 :root[data-theme="mono"] .tiger-index-stage,
 :root[data-theme="mono"] .tiger-index-engine {
@@ -2841,6 +2882,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 
   .tiger-quantizer-grid,
+  .tiger-quantizer-axis,
   .tiger-quantizer-legend {
     grid-template-columns: 1fr;
   }
@@ -2851,6 +2893,10 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .tiger-quantizer-visual {
     min-height: 112px;
+  }
+
+  .tiger-quantizer-traits {
+    grid-template-columns: 1fr;
   }
 
   .tiger-index-lane-head {
