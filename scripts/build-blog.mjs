@@ -821,46 +821,167 @@ function renderTigerFlowGlyph(name = 'item') {
   return `<span class="tiger-flow-glyph tiger-flow-glyph-${safeName}" aria-hidden="true"><i></i><i></i><i></i></span>`;
 }
 
+function renderTigerQuantizerSvg(id, body) {
+  return `<div class="tiger-quantizer-visual tiger-quantizer-visual-${escapeHtml(id)}" aria-hidden="true">
+      <svg class="tiger-q-svg tiger-q-svg-${escapeHtml(id)}" viewBox="0 0 280 156" focusable="false">
+        <defs>
+          <marker id="tiger-q-arrow-${escapeHtml(id)}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path class="tiger-q-marker" d="M 0 0 L 10 5 L 0 10 z"></path>
+          </marker>
+        </defs>
+${body}
+      </svg>
+    </div>`;
+}
+
 function renderTigerQuantizerVisual(id) {
   if (id === 'random') {
-    return `<div class="tiger-quantizer-visual tiger-quantizer-visual-random" aria-hidden="true">
-      <span class="tiger-q-item">item</span>
-      <span class="tiger-q-pool"><b>07</b><b>188</b><b>42</b><b>251</b></span>
-      <span class="tiger-q-tuple"><b>c1</b><b>c2</b><b>c3</b><b>c4</b></span>
-    </div>`;
+    return renderTigerQuantizerSvg(id, `
+        <rect class="tiger-q-box" x="16" y="28" width="60" height="44" rx="10"></rect>
+        <text class="tiger-q-label" x="46" y="55">item</text>
+        <path class="tiger-q-arrow" d="M 82 50 H 110" marker-end="url(#tiger-q-arrow-random)"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="116" y="18" width="58" height="64" rx="12"></rect>
+        <circle class="tiger-q-dot" cx="133" cy="37" r="3"></circle>
+        <circle class="tiger-q-dot" cx="156" cy="37" r="3"></circle>
+        <circle class="tiger-q-dot" cx="145" cy="51" r="3"></circle>
+        <circle class="tiger-q-dot" cx="133" cy="65" r="3"></circle>
+        <circle class="tiger-q-dot" cx="156" cy="65" r="3"></circle>
+        <text class="tiger-q-caption" x="145" y="101">ignore content</text>
+        <path class="tiger-q-arrow" d="M 180 50 H 206" marker-end="url(#tiger-q-arrow-random)"></path>
+        <g class="tiger-q-token-row">
+          <rect x="210" y="25" width="28" height="26" rx="7"></rect>
+          <rect x="242" y="25" width="28" height="26" rx="7"></rect>
+          <rect x="210" y="57" width="28" height="26" rx="7"></rect>
+          <rect x="242" y="57" width="28" height="26" rx="7"></rect>
+          <text x="224" y="42">07</text>
+          <text x="256" y="42">188</text>
+          <text x="224" y="74">42</text>
+          <text x="256" y="74">251</text>
+        </g>
+        <text class="tiger-q-caption" x="240" y="123">sampled ID</text>`);
   }
   if (id === 'lsh') {
-    return `<div class="tiger-quantizer-visual tiger-quantizer-visual-lsh" aria-hidden="true">
-      <span class="tiger-q-space"><i></i><i></i><i></i><b></b></span>
-      <span class="tiger-q-bits"><b>1</b><b>0</b><b>1</b><b>1</b></span>
-    </div>`;
+    return renderTigerQuantizerSvg(id, `
+        <rect class="tiger-q-plot" x="18" y="18" width="122" height="96" rx="12"></rect>
+        <path class="tiger-q-line" d="M 34 92 L 126 30"></path>
+        <path class="tiger-q-line" d="M 32 38 L 128 96"></path>
+        <path class="tiger-q-line tiger-q-muted-stroke" d="M 74 22 L 96 110"></path>
+        <circle class="tiger-q-point" cx="84" cy="68" r="6"></circle>
+        <text class="tiger-q-caption" x="79" y="132">hyperplane signs</text>
+        <path class="tiger-q-arrow" d="M 148 66 H 176" marker-end="url(#tiger-q-arrow-lsh)"></path>
+        <g class="tiger-q-token-row tiger-q-bit-row">
+          <rect x="182" y="34" width="26" height="28" rx="7"></rect>
+          <rect x="214" y="34" width="26" height="28" rx="7"></rect>
+          <rect x="246" y="34" width="26" height="28" rx="7"></rect>
+          <rect x="198" y="72" width="26" height="28" rx="7"></rect>
+          <text x="195" y="52">1</text>
+          <text x="227" y="52">0</text>
+          <text x="259" y="52">1</text>
+          <text x="211" y="90">1</text>
+        </g>
+        <text class="tiger-q-caption" x="226" y="123">hash code</text>`);
   }
   if (id === 'pq') {
-    return `<div class="tiger-quantizer-visual tiger-quantizer-visual-pq" aria-hidden="true">
-      <span class="tiger-q-vector"><i></i><i></i><i></i></span>
-      <span class="tiger-q-codebooks"><b>A7</b><b>B3</b><b>C9</b></span>
-    </div>`;
+    return renderTigerQuantizerSvg(id, `
+        <text class="tiger-q-caption" x="140" y="16">split embedding dimensions</text>
+        <g class="tiger-q-vector-bar">
+          <rect x="24" y="28" width="232" height="28" rx="8"></rect>
+          <path d="M 101 28 V 56"></path>
+          <path d="M 179 28 V 56"></path>
+          <text x="63" y="47">z1</text>
+          <text x="140" y="47">z2</text>
+          <text x="218" y="47">z3</text>
+        </g>
+        <path class="tiger-q-arrow" d="M 63 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path>
+        <path class="tiger-q-arrow" d="M 140 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path>
+        <path class="tiger-q-arrow" d="M 218 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path>
+        <g class="tiger-q-codebooks">
+          <rect x="37" y="84" width="52" height="34" rx="8"></rect>
+          <rect x="114" y="84" width="52" height="34" rx="8"></rect>
+          <rect x="192" y="84" width="52" height="34" rx="8"></rect>
+          <text x="63" y="105">C1</text>
+          <text x="140" y="105">C2</text>
+          <text x="218" y="105">C3</text>
+        </g>
+        <g class="tiger-q-token-row tiger-q-output-row">
+          <rect x="45" y="128" width="36" height="22" rx="6"></rect>
+          <rect x="122" y="128" width="36" height="22" rx="6"></rect>
+          <rect x="200" y="128" width="36" height="22" rx="6"></rect>
+          <text x="63" y="143">A7</text>
+          <text x="140" y="143">B3</text>
+          <text x="218" y="143">C9</text>
+        </g>`);
   }
   if (id === 'tree') {
-    return `<div class="tiger-quantizer-visual tiger-quantizer-visual-tree" aria-hidden="true">
-      <span class="tiger-q-root">root</span>
-      <span class="tiger-q-branch tiger-q-branch-active">A</span>
-      <span class="tiger-q-branch">B</span>
-      <span class="tiger-q-leaf tiger-q-branch-active">A2</span>
-      <span class="tiger-q-leaf">A5</span>
-    </div>`;
+    return renderTigerQuantizerSvg(id, `
+        <rect class="tiger-q-box tiger-q-active-fill" x="106" y="12" width="68" height="30" rx="8"></rect>
+        <text class="tiger-q-label" x="140" y="32">root</text>
+        <path class="tiger-q-arrow tiger-q-active-stroke" d="M 128 44 L 76 66" marker-end="url(#tiger-q-arrow-tree)"></path>
+        <path class="tiger-q-line" d="M 152 44 L 204 66"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="48" y="70" width="56" height="30" rx="8"></rect>
+        <rect class="tiger-q-box" x="176" y="70" width="56" height="30" rx="8"></rect>
+        <text class="tiger-q-label" x="76" y="90">A</text>
+        <text class="tiger-q-label" x="204" y="90">B</text>
+        <path class="tiger-q-arrow tiger-q-active-stroke" d="M 68 102 L 47 122" marker-end="url(#tiger-q-arrow-tree)"></path>
+        <path class="tiger-q-line" d="M 86 102 L 109 122"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="22" y="124" width="48" height="26" rx="7"></rect>
+        <rect class="tiger-q-box" x="88" y="124" width="48" height="26" rx="7"></rect>
+        <rect class="tiger-q-box" x="176" y="124" width="48" height="26" rx="7"></rect>
+        <text class="tiger-q-label" x="46" y="141">A2</text>
+        <text class="tiger-q-label" x="112" y="141">A5</text>
+        <text class="tiger-q-label" x="200" y="141">B4</text>`);
   }
   if (id === 'vq') {
-    return `<div class="tiger-quantizer-visual tiger-quantizer-visual-vq" aria-hidden="true">
-      <span>x</span><i></i><span>E</span><i></i><span>z</span><i></i><span>code 18</span><i></i><span>D</span>
-    </div>`;
+    return renderTigerQuantizerSvg(id, `
+        <rect class="tiger-q-box" x="16" y="26" width="38" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="35" y="47">x</text>
+        <path class="tiger-q-arrow" d="M 60 42 H 78" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-box" x="84" y="26" width="38" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="103" y="47">E</text>
+        <path class="tiger-q-arrow" d="M 128 42 H 146" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="152" y="26" width="38" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="171" y="47">z</text>
+        <path class="tiger-q-arrow" d="M 196 42 H 210" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-plot" x="216" y="16" width="50" height="54" rx="12"></rect>
+        <circle class="tiger-q-code-dot" cx="229" cy="35" r="4.5"></circle>
+        <circle class="tiger-q-code-dot tiger-q-active-dot" cx="242" cy="51" r="5.5"></circle>
+        <circle class="tiger-q-code-dot" cx="253" cy="31" r="4.5"></circle>
+        <text class="tiger-q-caption" x="241" y="83">nearest</text>
+        <path class="tiger-q-arrow" d="M 242 74 V 98" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <g class="tiger-q-token-row">
+          <rect x="178" y="106" width="58" height="28" rx="7"></rect>
+          <text x="207" y="124">code 18</text>
+        </g>
+        <path class="tiger-q-arrow" d="M 240 120 H 252" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-box" x="258" y="104" width="22" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="269" y="125">D</text>`);
   }
-  return `<div class="tiger-quantizer-visual tiger-quantizer-visual-rq" aria-hidden="true">
-      <span class="tiger-q-residual tiger-q-residual-1"><b>z</b><i>c1</i></span>
-      <span class="tiger-q-residual tiger-q-residual-2"><b>r1</b><i>c2</i></span>
-      <span class="tiger-q-residual tiger-q-residual-3"><b>r2</b><i>c3</i></span>
-      <span class="tiger-q-tuple"><b>12</b><b>24</b><b>52</b></span>
-    </div>`;
+  return renderTigerQuantizerSvg(id, `
+        <text class="tiger-q-caption" x="142" y="18">quantize the remaining residual</text>
+        <rect class="tiger-q-residual-bar tiger-q-residual-bar-1" x="32" y="32" width="150" height="18" rx="9"></rect>
+        <text class="tiger-q-label" x="20" y="47">z</text>
+        <rect class="tiger-q-code-chip" x="202" y="26" width="42" height="28" rx="8"></rect>
+        <text class="tiger-q-label" x="223" y="45">c1</text>
+        <path class="tiger-q-arrow" d="M 184 41 H 196" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <path class="tiger-q-arrow tiger-q-muted-stroke" d="M 108 55 V 70" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <rect class="tiger-q-residual-bar tiger-q-residual-bar-2" x="54" y="76" width="112" height="18" rx="9"></rect>
+        <text class="tiger-q-label" x="36" y="91">r1</text>
+        <rect class="tiger-q-code-chip" x="186" y="70" width="42" height="28" rx="8"></rect>
+        <text class="tiger-q-label" x="207" y="89">c2</text>
+        <path class="tiger-q-arrow" d="M 168 85 H 180" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <path class="tiger-q-arrow tiger-q-muted-stroke" d="M 110 99 V 114" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <rect class="tiger-q-residual-bar tiger-q-residual-bar-3" x="74" y="120" width="76" height="18" rx="9"></rect>
+        <text class="tiger-q-label" x="56" y="135">r2</text>
+        <rect class="tiger-q-code-chip" x="166" y="114" width="42" height="28" rx="8"></rect>
+        <text class="tiger-q-label" x="187" y="133">c3</text>
+        <g class="tiger-q-token-row tiger-q-rq-output">
+          <rect x="218" y="116" width="18" height="22" rx="5"></rect>
+          <rect x="240" y="116" width="18" height="22" rx="5"></rect>
+          <rect x="262" y="116" width="18" height="22" rx="5"></rect>
+          <text x="227" y="131">12</text>
+          <text x="249" y="131">24</text>
+          <text x="271" y="131">52</text>
+        </g>`);
 }
 
 function renderTigerQuantizerAtlasFigure(lang = 'en') {

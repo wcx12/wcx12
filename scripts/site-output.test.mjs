@@ -468,7 +468,11 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /class="tiger-quantizer-axis"/);
       for (const method of ['random', 'lsh', 'pq', 'tree', 'vq', 'rq']) {
         assert.match(source, new RegExp(`class="tiger-quantizer-method tiger-quantizer-${method}"`));
+        assert.match(source, new RegExp(`class="tiger-q-svg tiger-q-svg-${method}"`));
       }
+      assert.match(source, /split embedding dimensions/);
+      assert.match(source, /quantize the remaining residual/);
+      assert.match(source, /code 18[\s\S]*?<text class="tiger-q-label" x="269" y="125">D<\/text>/);
       assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?无内容[\s\S]*?随机[\s\S]*?基线/);
       assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?内容[\s\S]*?学习码本[\s\S]*?残差 token/);
       assert.match(source, /Product Quantization[\s\S]*?Hierarchical k-means[\s\S]*?VQ-VAE[\s\S]*?RQ-VAE/);

@@ -2301,20 +2301,21 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .tiger-quantizer-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 15px;
 }
 
 .tiger-quantizer-method {
   --method-accent: var(--cyan);
   display: grid;
-  grid-template-columns: minmax(148px, 0.76fr) minmax(0, 1.24fr);
-  gap: 14px;
-  align-items: stretch;
+  grid-template-rows: auto 1fr;
+  gap: 11px;
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--method-accent) 24%, transparent);
   border-radius: 8px;
-  padding: 13px;
-  background: color-mix(in srgb, var(--method-accent) 5%, var(--field-bg));
+  padding: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--method-accent) 7%, transparent), transparent 42%),
+    color-mix(in srgb, var(--method-accent) 4%, var(--field-bg));
 }
 
 .tiger-quantizer-lsh,
@@ -2334,35 +2335,40 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .tiger-quantizer-visual {
   position: relative;
   display: flex;
-  min-height: 152px;
+  min-height: 178px;
   min-width: 0;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--method-accent) 28%, transparent);
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   color: var(--text);
   background:
-    radial-gradient(circle at 22% 20%, color-mix(in srgb, var(--method-accent) 16%, transparent), transparent 34%),
-    color-mix(in srgb, var(--method-accent) 7%, var(--bg));
+    linear-gradient(135deg, color-mix(in srgb, var(--method-accent) 10%, transparent), transparent 52%),
+    color-mix(in srgb, var(--method-accent) 5%, var(--bg));
 }
 
 .tiger-quantizer-copy {
   display: grid;
-  align-content: start;
-  gap: 8px;
+  grid-template-rows: auto auto auto 1fr auto auto;
+  gap: 7px;
   min-width: 0;
 }
 
 .tiger-quantizer-copy span,
 .tiger-quantizer-copy em {
   color: var(--method-accent);
-  font: 800 0.66rem/1.25 var(--blog-font-mono);
+  font: 800 0.65rem/1.28 var(--blog-font-mono);
   font-style: normal;
 }
 
 .tiger-quantizer-copy span {
+  justify-self: start;
+  border: 1px solid color-mix(in srgb, var(--method-accent) 30%, transparent);
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: color-mix(in srgb, var(--method-accent) 8%, transparent);
   text-transform: uppercase;
 }
 
@@ -2374,17 +2380,16 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .tiger-quantizer-copy h3 {
   margin: 0;
   color: var(--text);
-  font: 850 1rem/1.2 var(--blog-font-ui);
+  font: 850 1rem/1.18 var(--blog-font-ui);
 }
 
 .tiger-quantizer-copy p {
   margin: 0;
   color: var(--muted);
-  font: 600 0.8rem/1.56 var(--blog-font-ui);
+  font: 600 0.79rem/1.55 var(--blog-font-ui);
 }
 
 .tiger-quantizer-copy strong {
-  align-self: end;
   border-left: 2px solid color-mix(in srgb, var(--method-accent) 64%, transparent);
   padding-left: 8px;
   color: var(--text);
@@ -2415,207 +2420,135 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   text-align: center;
 }
 
-.tiger-q-item,
-.tiger-q-pool b,
-.tiger-q-tuple b,
-.tiger-q-bits b,
-.tiger-q-codebooks b,
-.tiger-quantizer-visual-vq span,
-.tiger-q-root,
-.tiger-q-branch,
-.tiger-q-leaf,
-.tiger-q-residual {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--method-accent) 38%, transparent);
-  border-radius: 8px;
+.tiger-q-svg {
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+  max-height: 172px;
+  overflow: visible;
   color: var(--text);
-  background: color-mix(in srgb, var(--method-accent) 11%, var(--panel));
-  font: 850 0.72rem/1 var(--blog-font-mono);
-  white-space: nowrap;
 }
 
-.tiger-quantizer-visual-random,
-.tiger-quantizer-visual-rq {
-  flex-direction: column;
-  gap: 9px;
+.tiger-q-svg text {
+  fill: currentColor;
+  font-family: var(--blog-font-mono);
+  font-variant-ligatures: none;
+  text-anchor: middle;
 }
 
-.tiger-q-item {
-  min-width: 58px;
-  min-height: 34px;
+.tiger-q-label,
+.tiger-q-token-row text,
+.tiger-q-codebooks text,
+.tiger-q-vector-bar text {
+  font-size: 10px;
+  font-weight: 850;
 }
 
-.tiger-q-pool,
-.tiger-q-tuple,
-.tiger-q-bits,
-.tiger-q-codebooks {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 5px;
+.tiger-q-caption {
+  color: var(--muted);
+  fill: currentColor;
+  font-family: var(--blog-font-ui) !important;
+  font-size: 9px;
+  font-weight: 750;
 }
 
-.tiger-q-pool b,
-.tiger-q-tuple b,
-.tiger-q-bits b,
-.tiger-q-codebooks b {
-  min-width: 30px;
-  min-height: 28px;
-  padding: 4px 7px;
+.tiger-q-box,
+.tiger-q-plot,
+.tiger-q-codebooks rect,
+.tiger-q-code-chip,
+.tiger-q-token-row rect {
+  fill: color-mix(in srgb, var(--method-accent) 8%, var(--panel));
+  stroke: color-mix(in srgb, var(--method-accent) 35%, transparent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
 }
 
-.tiger-q-pool b:nth-child(2n) {
-  opacity: 0.68;
+.tiger-q-active-fill,
+.tiger-q-code-chip,
+.tiger-q-token-row rect,
+.tiger-q-codebooks rect {
+  fill: color-mix(in srgb, var(--method-accent) 13%, var(--bg));
 }
 
-.tiger-q-tuple b {
-  color: var(--method-accent);
-  background: color-mix(in srgb, var(--method-accent) 18%, var(--bg));
+.tiger-q-plot {
+  fill: color-mix(in srgb, var(--method-accent) 4%, var(--bg));
 }
 
-.tiger-quantizer-visual-lsh {
-  flex-direction: column;
-  gap: 10px;
+.tiger-q-line,
+.tiger-q-arrow,
+.tiger-q-vector-bar path {
+  fill: none;
+  stroke: color-mix(in srgb, var(--method-accent) 66%, var(--text));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.62;
+  vector-effect: non-scaling-stroke;
 }
 
-.tiger-q-space {
-  position: relative;
-  width: min(100%, 138px);
-  height: 86px;
-  border: 1px solid color-mix(in srgb, var(--method-accent) 34%, transparent);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--method-accent) 12%, transparent), transparent),
-    color-mix(in srgb, var(--method-accent) 6%, var(--bg));
+.tiger-q-arrow,
+.tiger-q-active-stroke {
+  opacity: 0.86;
+  stroke: var(--method-accent);
 }
 
-.tiger-q-space i {
-  position: absolute;
-  left: 16px;
-  width: 106px;
-  height: 2px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--method-accent) 64%, transparent);
-  transform-origin: center;
+.tiger-q-muted-stroke {
+  opacity: 0.34;
 }
 
-.tiger-q-space i:nth-child(1) {
-  top: 25px;
-  transform: rotate(24deg);
+.tiger-q-marker {
+  fill: var(--method-accent);
 }
 
-.tiger-q-space i:nth-child(2) {
-  top: 42px;
-  transform: rotate(-35deg);
+.tiger-q-dot,
+.tiger-q-point,
+.tiger-q-active-dot {
+  fill: var(--method-accent);
 }
 
-.tiger-q-space i:nth-child(3) {
-  top: 58px;
-  transform: rotate(70deg);
+.tiger-q-dot {
+  opacity: 0.82;
 }
 
-.tiger-q-space b {
-  position: absolute;
-  top: 35px;
-  left: 67px;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--method-accent);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--method-accent) 56%, transparent);
+.tiger-q-point,
+.tiger-q-active-dot {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--method-accent) 44%, transparent));
 }
 
-.tiger-quantizer-visual-pq {
-  flex-direction: column;
-  gap: 12px;
+.tiger-q-code-dot {
+  fill: color-mix(in srgb, var(--method-accent) 18%, var(--panel));
+  stroke: color-mix(in srgb, var(--method-accent) 52%, transparent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
 }
 
-.tiger-q-vector {
-  display: grid;
-  width: min(100%, 150px);
-  height: 36px;
-  grid-template-columns: repeat(3, 1fr);
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--method-accent) 40%, transparent);
-  border-radius: 8px;
+.tiger-q-vector-bar rect {
+  fill: color-mix(in srgb, var(--method-accent) 9%, var(--panel));
+  stroke: color-mix(in srgb, var(--method-accent) 38%, transparent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
 }
 
-.tiger-q-vector i {
-  background: color-mix(in srgb, var(--method-accent) 18%, var(--bg));
+.tiger-q-vector-bar path {
+  opacity: 0.44;
 }
 
-.tiger-q-vector i + i {
-  border-left: 1px solid color-mix(in srgb, var(--method-accent) 36%, transparent);
+.tiger-q-residual-bar {
+  stroke: color-mix(in srgb, var(--method-accent) 38%, transparent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
 }
 
-.tiger-q-vector i:nth-child(2) {
-  background: color-mix(in srgb, var(--violet) 18%, var(--bg));
+.tiger-q-residual-bar-1 {
+  fill: color-mix(in srgb, var(--method-accent) 26%, var(--bg));
 }
 
-.tiger-q-vector i:nth-child(3) {
-  background: color-mix(in srgb, var(--pink) 16%, var(--bg));
+.tiger-q-residual-bar-2 {
+  fill: color-mix(in srgb, var(--method-accent) 17%, var(--bg));
 }
 
-.tiger-quantizer-visual-tree {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.tiger-q-root {
-  grid-column: 1 / -1;
-  min-height: 30px;
-}
-
-.tiger-q-branch,
-.tiger-q-leaf {
-  min-height: 30px;
-}
-
-.tiger-q-branch-active,
-.tiger-q-leaf.tiger-q-branch-active {
-  border-color: color-mix(in srgb, var(--method-accent) 72%, transparent);
-  color: var(--method-accent);
-  background: color-mix(in srgb, var(--method-accent) 18%, var(--bg));
-}
-
-.tiger-quantizer-visual-vq {
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tiger-quantizer-visual-vq span {
-  min-height: 30px;
-  padding: 5px 8px;
-}
-
-.tiger-quantizer-visual-vq i {
-  width: 14px;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--method-accent);
-}
-
-.tiger-q-residual {
-  width: min(100%, 152px);
-  min-height: 28px;
-  justify-content: space-between;
-  padding: 5px 8px;
-}
-
-.tiger-q-residual i {
-  color: var(--method-accent);
-  font-style: normal;
-}
-
-.tiger-q-residual-2 {
-  width: min(82%, 124px);
-}
-
-.tiger-q-residual-3 {
-  width: min(62%, 98px);
+.tiger-q-residual-bar-3 {
+  fill: color-mix(in srgb, var(--method-accent) 10%, var(--bg));
 }
 
 .tiger-quantizer-axis,
@@ -2823,6 +2756,15 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   background: color-mix(in srgb, var(--text) 5%, var(--bg));
 }
 
+:root[data-theme="mono"] .tiger-quantizer-method {
+  --method-accent: var(--text);
+}
+
+:root[data-theme="mono"] .tiger-q-point,
+:root[data-theme="mono"] .tiger-q-active-dot {
+  filter: none;
+}
+
 @media (max-width: 700px) {
   .blog-content > .tiger-pipeline-figure {
     max-width: 100%;
@@ -2892,7 +2834,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 
   .tiger-quantizer-visual {
-    min-height: 112px;
+    min-height: 164px;
   }
 
   .tiger-quantizer-traits {
