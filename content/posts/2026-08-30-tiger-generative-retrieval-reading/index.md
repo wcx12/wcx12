@@ -74,13 +74,17 @@ Semantic ID：(12, 24, 52)
 
 ## RQ-VAE 如何生成 Semantic ID
 
-[图 1](https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/#fig-tiger-semantic-id-flow) 上方的物品侧分支对应这里的核心操作。TIGER 首先把物品的标题、类别、品牌等信息组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
+[图 1](https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/#fig-tiger-semantic-id-flow) 上方的物品侧分支对应这里的核心操作。TIGER 首先把物品的标题、价格、品牌、类别等内容特征组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
 
 残差量化可以理解为一个逐层修正、[从粗到细](#讨论-从粗到细-究竟是什么意思)的过程。
 
 第一层码本先选择一个最接近当前向量的 codeword。这个 codeword 无法完全重构原向量，于是计算它留下的残差。第二层码本继续近似这个残差，第三层再修正剩余部分。
 
 TIGER 主实验采用 3 层残差码本，每层码本包含 256 个 codeword；因此 RQ-VAE 先为每个 item 生成三位 Semantic ID。
+
+从训练阶段看，这不是一个独立的最近邻量化器，而是一个 autoencoder 闭环：内容 embedding $x$ 进入 DNN encoder 得到 32 维潜在向量 $z$；三层 residual quantizer 把 $z$ 量化为 $\hat z$；DNN decoder 再从 $\hat z$ 重构出 $\hat x$，并用重构损失和量化损失联合训练 encoder、decoder 与码本。[图 2](#fig-tiger-rqvae-training)把论文明确给出的维度和训练结构放在一起。这里需要注意，原文只明确给出了 encoder 的中间层尺寸，没有说明 decoder 的隐藏层尺寸，所以图里不补一个论文没有写的 decoder 层表。
+
+::tiger-rqvae-training
 
 这里先把符号说清楚。TIGER 的 RQ-VAE 不是直接量化原始文本，而是先把 item 内容 embedding 记为 $x$，再用编码器 $E(\cdot)$ 得到潜在向量 $z=E(x)$。第 $d$ 层码本记为 $C_d$，里面有若干 codeword 向量；$c_d$ 是第 $d$ 层选中的 codeword 编号，$e_{c_d}$ 是对应的 codeword 向量。$r_d$ 表示进入第 $d$ 层量化器的残差，$m$ 表示残差量化层数。在主实验设定下，$m=3$，每层 $C_d$ 包含 256 个 codeword；如果多个 item 得到相同的三元 ID，论文会在后面的[碰撞处理](#碰撞发生后怎么办)阶段追加一个额外 token。这个 token 用来恢复 item 唯一性，不属于残差量化层本身，也不会参与 RQ-VAE 的重构或量化损失。
 
@@ -273,7 +277,7 @@ $$
 ::disclosure[讨论：RQ-VAE 的对照实验到底证明了什么？]
 这部分更适合理解为“论文做过哪些 ID 生成对照”，而不是“RQ-VAE 已经被证明优于所有量化方法”。[原文第 4.2 节](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。
 
-如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 2](#fig-tiger-quantizer-atlas)按这三个问题重新摆放这些方法。
+如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 3](#fig-tiger-quantizer-atlas)按这三个问题重新摆放这些方法。
 
 ::tiger-quantizers
 
@@ -287,7 +291,7 @@ $$
 
 这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。
 
-这里可以按[图 2](#fig-tiger-quantizer-atlas)里的三条判断标签再拆开理解：
+这里可以按[图 3](#fig-tiger-quantizer-atlas)里的三条判断标签再拆开理解：
 
 - Random ID 是“容量对照”：它告诉我们，单纯给 item 一个多 token 编号并不够。如果编号不来自内容，相似物品之间没有共享结构，冷启动和低频泛化都很难指望它自然变好。
 - LSH / SimHash 是“内容但不学习”的对照：它确实从 item embedding 出发，但用的是随机超平面。它保留了一部分局部相似性，却不会为了重构或推荐数据主动调整边界。
@@ -317,7 +321,7 @@ Decoder 训练目标：
 <BOS>  d1 d2 d3 d4  <EOS>
 ```
 
-其中 `a* / b* / c*` 是历史物品的 Semantic ID token，`d*` 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。这个过程见[图 3](#fig-tiger-generator-input)。
+其中 `a* / b* / c*` 是历史物品的 Semantic ID token，`d*` 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。[图 4](#fig-tiger-generator-input)把这条输入输出路径和论文里的 Transformer 配置放在一起。
 
 ::tiger-generator-input
 
@@ -330,16 +334,26 @@ $$
 推理时，decoder 第一步预测 `d1`，第二步在 `d1` 的基础上预测 `d2`，一直到生成完整 Semantic ID。生成结束后，系统再用 Semantic ID -> Item ID 的映射表，把这个语义地址还原成真实物品。换句话说，TIGER 的“生成”不是生成自然语言句子，而是生成一个可以映射回物品库的离散地址。
 
 ::disclosure[补充：用户 token 为什么可能有效？]
-论文还把 raw user ID 固定哈希到 2000 个 bucket token。它不是每次随机映射，但多个用户会发生哈希碰撞。放在生成器输入里看，这个 token 相当于给 decoder 一个稳定的长期条件：同样的历史 item 序列，在不同用户 bucket 下可以有不同的偏置。
+原文的做法是：除了 1024 个 semantic codeword token（$256\times4$）之外，再额外向 seq2seq 词表加入 2000 个 user-specific token。为了限制词表规模，论文没有给每个原始用户都建一个唯一 token，而是用 Hashing Trick 把 raw user ID 映射到这 2000 个 user ID token 中的一个。也就是说，映射是确定性的；同一个 raw user ID 会落到同一个 bucket，但不同用户可能因为哈希碰撞共用同一个 user token。
+
+放到生成器输入里看，这个 token 相当于在历史序列最前面加了一个粗粒度用户条件：
+
+```text
+raw user ID --hashing trick--> user bucket token
+
+[user_137]  history semantic tokens  ->  next item semantic tokens
+```
+
+这件事“可能合理”的地方在于：TIGER 的历史窗口最多只包含近期交互，user token 可以提供一个稳定的长期偏置；而且哈希到 2000 个 bucket 后，用户之间会共享参数，某种程度上也像正则化。
 
 | 设置 | Recall@5 | NDCG@5 | Recall@10 | NDCG@10 |
 |---|---:|---:|---:|---:|
 | 无用户信息 | 0.04458 | 0.0302 | 0.06479 | 0.0367 |
 | 加用户 token | 0.0454 | 0.0321 | 0.0648 | 0.0384 |
 
-Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显。这更像是候选排序位置和个性化有所改善，而不是召回能力全面上升。
+但我觉得它的解释力度仍然有限。Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显；这更像是候选排序位置被略微推前，而不是召回能力全面上升。论文只报告了“加 user ID 有帮助”，没有进一步拆出提升来自哪里。
 
-一个可能原因是历史最多只保留 20 个 item，user token 提供了历史窗口之外的长期用户条件；也可能是 2000 个 bucket 提供了粗粒度用户偏置，碰撞同时带来参数共享或正则化。严格来说，这里还需要不同 bucket 数量、多随机种子以及唯一 user embedding 的对照，才能判断提升到底来自“用户信息”还是额外参数/随机波动。
+要判断这个设计是不是真的在学“用户个性”，至少还需要几组对照：不同 bucket 数量、不同哈希种子、唯一 user embedding、随机 user token、以及不加 user token 但增加等量参数的模型。否则，现有结果只能谨慎地说：这个 user bucket token 在实验里改善了部分指标，但它具体是在提供长期用户偏置、群体偏置、参数共享，还是只是带来额外容量，论文没有完全解释清楚。
 ::
 
 ::disclosure[疑问：模型会不会主要学习同一物品内部的 token 转移？]
@@ -362,7 +376,7 @@ Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显。这�
 
 传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 [ANN](term:ann) / [MIPS](term:mips) 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。
 
-TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址。传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见[图 4](#fig-tiger-index-map)。
+TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址。传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见[图 5](#fig-tiger-index-map)。
 
 ::tiger-index-map
 
