@@ -136,7 +136,7 @@ $$
 
 第一种是**重构意义上的粗到细**。第一层 codeword 先近似潜在向量里最主要、最容易解释的部分，后续层继续近似前一层没有解释掉的 residual。这个说法和 RQ-VAE 结构本身是一致的：量化时逐层做减法，重构时再把各层 codeword 加回来。
 
-第三种是**人工标签意义上的层次**。也就是把三位 Semantic ID 进一步解释成：
+第二种是**人工标签意义上的层次**。也就是把三位 Semantic ID 进一步解释成：
 
 ```text
 第一位 = 大类
@@ -296,7 +296,7 @@ Decoder 训练目标：
 <BOS>  d1 d2 d3 d4  <EOS>
 ```
 
-其中 `a* / b* / c*` 是历史物品的 Semantic ID token，`d*` 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。[图 4](#fig-tiger-generator-input)把这条输入输出路径和论文里的 Transformer 配置放在一起。
+其中 `a* / b* / c*` 是历史物品的 Semantic ID token，`d*` 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。[图 3](#fig-tiger-generator-input)把这条输入输出路径和论文里的 Transformer 配置放在一起。
 
 ::tiger-generator-input
 
@@ -362,7 +362,7 @@ raw user ID --hashing trick--> user bucket token
 
 这部分更适合理解为“论文做过哪些 ID 生成对照”，而不是“RQ-VAE 已经被证明优于所有量化方法”。[原文第 4.2 节](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。
 
-如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 3](#fig-tiger-quantizer-atlas)按这三个问题重新摆放这些方法。
+如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 5](#fig-tiger-quantizer-atlas)按这三个问题重新摆放这些方法。
 
 ::tiger-quantizers
 
@@ -376,7 +376,7 @@ raw user ID --hashing trick--> user bucket token
 
 这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。
 
-这里可以按[图 3](#fig-tiger-quantizer-atlas)里的三条判断标签再拆开理解：
+这里可以按[图 5](#fig-tiger-quantizer-atlas)里的三条判断标签再拆开理解：
 
 - Random ID 是“容量对照”：它告诉我们，单纯给 item 一个多 token 编号并不够。如果编号不来自内容，相似物品之间没有共享结构，冷启动和低频泛化都很难指望它自然变好。
 - LSH / SimHash 是“内容但不学习”的对照：它确实从 item embedding 出发，但用的是随机超平面。它保留了一部分局部相似性，却不会为了重构或推荐数据主动调整边界。

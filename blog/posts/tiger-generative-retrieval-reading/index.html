@@ -41,10 +41,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=0958949d84f0"></script>
-  <link rel="stylesheet" href="../../../content.css?v=0958949d84f0" />
-  <link rel="stylesheet" href="../../assets/blog.css?v=0958949d84f0" />
-<link rel="stylesheet" href="../../assets/katex.min.css?v=0958949d84f0" />
+  <script src="../../../theme-init.js?v=7186fd598496"></script>
+  <link rel="stylesheet" href="../../../content.css?v=7186fd598496" />
+  <link rel="stylesheet" href="../../assets/blog.css?v=7186fd598496" />
+<link rel="stylesheet" href="../../assets/katex.min.css?v=7186fd598496" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"TIGER：从语义 ID 到生成式推荐","description":"从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。","datePublished":"2026-08-30","dateModified":"2026-09-07","inLanguage":"zh","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","keywords":["generative-recommendation","semantic-id","rq-vae","tiger"],"image":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/media/social-card.png?v=cd98c818dd18","width":1200,"height":630,"caption":"TIGER：从语义 ID 到生成式推荐"}}</script>
 </head>
@@ -373,7 +373,7 @@ Semantic ID：(12, 24, 52)
 </code></pre></div><p>各层码向量最后相加，并不是额外设计出来的技巧。量化时逐层做减法，重构时自然需要把各层近似结果加回来。最终残差 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mi>m</mi></msub><mo>=</mo><mi>z</mi><mo>−</mo><mover accent="true"><mi>z</mi><mo>^</mo></mover></mrow><annotation encoding="application/x-tex">r_m=z-\hat z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">m</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.6944em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.1944em;"><span class="mord">^</span></span></span></span></span></span></span></span></span></span> 越小，量化表示就越接近原始潜在向量。</p>
 <details class="blog-disclosure" id="讨论-从粗到细-究竟是什么意思"><summary>讨论：“从粗到细”究竟是什么意思？</summary><div class="blog-disclosure-body"><p>论文反复强调 RQ-VAE 能获得 coarse-to-fine 的 Semantic ID。这里需要先区分两件事：一种是模型重构过程里的“粗到细”，另一种是人能直接读懂的标签层次。</p>
 <p>第一种是<strong>重构意义上的粗到细</strong>。第一层 codeword 先近似潜在向量里最主要、最容易解释的部分，后续层继续近似前一层没有解释掉的 residual。这个说法和 RQ-VAE 结构本身是一致的：量化时逐层做减法，重构时再把各层 codeword 加回来。</p>
-<p>第三种是<strong>人工标签意义上的层次</strong>。也就是把三位 Semantic ID 进一步解释成：</p>
+<p>第二种是<strong>人工标签意义上的层次</strong>。也就是把三位 Semantic ID 进一步解释成：</p>
 <div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">第一位 = 大类
 第二位 = 子类
 第三位 = 细粒度属性
@@ -456,11 +456,11 @@ Encoder 输入：
 Decoder 训练目标：
 
 &lt;BOS&gt;  d1 d2 d3 d4  &lt;EOS&gt;
-</code></pre></div><p>其中 <code>a* / b* / c*</code> 是历史物品的 Semantic ID token，<code>d*</code> 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。<a href="#fig-tiger-generator-input">图 4</a>把这条输入输出路径和论文里的 Transformer 配置放在一起。</p>
+</code></pre></div><p>其中 <code>a* / b* / c*</code> 是历史物品的 Semantic ID token，<code>d*</code> 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。<a href="#fig-tiger-generator-input">图 3</a>把这条输入输出路径和论文里的 Transformer 配置放在一起。</p>
 <figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure">
     <div class="tiger-pipeline-surface tiger-generator-surface" role="group" aria-label="一张示意图，展示 TIGER 生成器输入 token、encoder-decoder 架构和训练设置。">
       <div class="tiger-pipeline-heading">
-        <span>图 4</span>
+        <span>图 3</span>
         <strong>生成器输入与 Transformer 架构</strong>
       </div>
       <div class="tiger-generator-board">
@@ -622,7 +622,7 @@ Decoder 训练目标：
       </div>
       <p class="tiger-flow-note">关键点：历史不是三个原始 Item ID，而是 user token 加展平后的历史 Semantic ID tokens；训练目标也不是自然语言，而是下一个物品的语义地址。</p>
     </div>
-    <figcaption>图 4. TIGER 把 user ID token 接在用户历史 Semantic ID tokens 前面作为 encoder 输入，再训练 4 层 encoder 与 4 层 decoder 逐 token 预测下一个物品的 Semantic ID。</figcaption>
+    <figcaption>图 3. TIGER 把 user ID token 接在用户历史 Semantic ID tokens 前面作为 encoder 输入，再训练 4 层 encoder 与 4 层 decoder 逐 token 预测下一个物品的 Semantic ID。</figcaption>
   </figure><p>这也是“生成式推荐”的核心：模型不是先把用户历史编码成 query embedding，再去候选库里做 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-3" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-3" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span> / <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-4" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-4" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span> 检索；而是在 Semantic ID 词表上直接学习</p>
 <p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><msub><mi>d</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>d</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>d</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>d</mi><mn>4</mn></msub><mo>∣</mo><mtext>user token</mtext><mo separator="true">,</mo><mtext>history Semantic ID tokens</mtext><mo stretchy="false">)</mo><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">P(d_1,d_2,d_3,d_4 \mid \text{user token}, \text{history Semantic ID tokens}).
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">user token</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord text"><span class="mord">history Semantic ID tokens</span></span><span class="mclose">)</span><span class="mord">.</span></span></span></span></span></p>
@@ -666,7 +666,7 @@ Decoder 训练目标：
 <figure id="fig-tiger-inference-loop" class="tiger-pipeline-figure tiger-inference-figure">
     <div class="tiger-pipeline-surface tiger-inference-surface" role="group" aria-label="五步示意图，展示 decoder token 概率如何变成候选前缀、完整 Semantic ID、映射表查询和 Top-K 物品结果。">
       <div class="tiger-pipeline-heading">
-        <span>图 5</span>
+        <span>图 4</span>
         <strong>推理闭环：概率最终要变回真实物品</strong>
       </div>
       <div class="tiger-inference-board">
@@ -734,7 +734,7 @@ Decoder 训练目标：
       </div>
       <p class="tiger-flow-note">生成器不会把 token 概率直接展示给用户；它先搜索可能的 Semantic ID 序列，再把这些语义地址还原成真实物品。</p>
     </div>
-    <figcaption>图 5. 服务阶段中，TIGER 先解码 Semantic ID 候选，再通过 Semantic ID 到 Item ID 的映射表得到 Top-K 推荐结果。</figcaption>
+    <figcaption>图 4. 服务阶段中，TIGER 先解码 Semantic ID 候选，再通过 Semantic ID 到 Item ID 的映射表得到 Top-K 推荐结果。</figcaption>
   </figure><p>先把这件事放在架构里看就够了：decoder 逐位给出 token 概率，搜索过程保留若干高分前缀，完整 Semantic ID 生成后再查 Semantic ID -&gt; Item ID 映射表。至于 beam search、无效 ID、推理成本这些细节，我放到主实验之后再讨论；否则读者还没看到 TIGER 是否有效，就先陷进了解码工程问题。</p>
 <h2 id="主实验-tiger-到底有没有赢">主实验：TIGER 到底有没有赢？</h2>
 <p>理解模型架构之后，下一步应该先看主结果，而不是马上讨论 beam search 或无效 ID。论文第 4.1 节把 TIGER 和 GRU4Rec、Caser、HGN、SASRec、BERT4Rec、FDSA、S3-Rec、P5 等 sequential recommendation baseline 放在一起比较，指标是 Recall@5/10 和 NDCG@5/10。</p>
@@ -798,11 +798,11 @@ Decoder 训练目标：
 <p>但这个主结果本身还不能告诉我们“为什么赢”。可能是因为 Semantic ID 让相似 item 共享 token，也可能是因为内容 embedding 帮助低频 item，也可能只是某些解码和训练细节更合适。因此后面应该一步步拆开：先看 ID 表示本身，再看冷启动和多样性，最后讨论生成解码过程中的风险。</p>
 <h2 id="表示实验-为什么不是随机-id-或-lsh">表示实验：为什么不是随机 ID 或 LSH？</h2>
 <p>这部分更适合理解为“论文做过哪些 ID 生成对照”，而不是“RQ-VAE 已经被证明优于所有量化方法”。<a href="https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf" target="_blank" rel="noreferrer">原文第 4.2 节</a>真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。</p>
-<p>如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。<a href="#fig-tiger-quantizer-atlas">图 3</a>按这三个问题重新摆放这些方法。</p>
+<p>如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。<a href="#fig-tiger-quantizer-atlas">图 5</a>按这三个问题重新摆放这些方法。</p>
 <figure id="fig-tiger-quantizer-atlas" class="tiger-pipeline-figure tiger-quantizer-figure">
     <div class="tiger-pipeline-surface tiger-quantizer-surface" role="group" aria-label="Random ID、LSH、Product Quantization、Hierarchical k-means、VQ-VAE 和 RQ-VAE 将 item embedding 变成离散标识的可视化对比。">
       <div class="tiger-pipeline-heading">
-        <span>图 3</span>
+        <span>图 5</span>
         <strong>不同 ID 构造方式保留的是不同结构</strong>
       </div>
       <dl class="tiger-quantizer-axis">
@@ -1075,7 +1075,7 @@ Decoder 训练目标：
         </section>
       </div>
     </div>
-    <figcaption>图 3. TIGER 论文真正进入同一张实验表的是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID；其它方法更适合作为理解量化设计空间的参照。</figcaption>
+    <figcaption>图 5. TIGER 论文真正进入同一张实验表的是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID；其它方法更适合作为理解量化设计空间的参照。</figcaption>
   </figure><p>原文在 LSH 对照里使用 <code>h = 8</code>、<code>m = 4</code>；Random ID 使用 <code>m = 4</code>、<code>K = 255</code>，目的是让组合空间与 RQ-VAE 的设置接近。为了不把表写得过重，下面只摘出 Recall；原表还同时报告了 NDCG。</p>
 <table>
 <thead>
@@ -1108,7 +1108,7 @@ Decoder 训练目标：
 </tbody>
 </table>
 <p>这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。</p>
-<p>这里可以按<a href="#fig-tiger-quantizer-atlas">图 3</a>里的三条判断标签再拆开理解：</p>
+<p>这里可以按<a href="#fig-tiger-quantizer-atlas">图 5</a>里的三条判断标签再拆开理解：</p>
 <ul>
 <li>Random ID 是“容量对照”：它告诉我们，单纯给 item 一个多 token 编号并不够。如果编号不来自内容，相似物品之间没有共享结构，冷启动和低频泛化都很难指望它自然变好。</li>
 <li>LSH / SimHash 是“内容但不学习”的对照：它确实从 item embedding 出发，但用的是随机超平面。它保留了一部分局部相似性，却不会为了重构或推荐数据主动调整边界。</li>
@@ -1402,6 +1402,6 @@ Decoder 训练目标：
     </nav>
   </footer>
 
-  <script type="module" src="../../assets/blog.js?v=0958949d84f0"></script>
+  <script type="module" src="../../assets/blog.js?v=7186fd598496"></script>
 </body>
 </html>

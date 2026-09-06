@@ -456,6 +456,8 @@ test('generated code blocks and article contents remain keyboard reachable', asy
     if (file.includes('tiger-generative-retrieval-reading')) {
       assert.match(source, /残差量化可以理解为一个逐层修正、<a href="#[^"]+">从粗到细<\/a>的过程。/);
       assert.match(source, /<details class="blog-disclosure" id="讨论-从粗到细-究竟是什么意思">[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
+      assert.match(source, /第一种是<strong>重构意义上的粗到细<\/strong>[\s\S]*?第二种是<strong>人工标签意义上的层次<\/strong>/);
+      assert.doesNotMatch(source, /第三种是<strong>人工标签意义上的层次<\/strong>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>为什么这个损失函数要拆成两项？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>“从粗到细”究竟是什么意思<\/h2>/);
@@ -479,6 +481,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(rqvaeFigure, /Lrecon = \|\|x - x-hat\|\|\^2/);
       assert.match(source, /id="fig-tiger-generator-input"/);
       const generatorFigure = source.match(/<figure id="fig-tiger-generator-input"[\s\S]*?<\/figure>/)?.[0] ?? '';
+      assert.match(generatorFigure, /<span>图 3<\/span>/);
       assert.match(generatorFigure, /class="tiger-generator-token tiger-generator-token-user"[\s\S]*?user_5/);
       assert.match(generatorFigure, /class="tiger-generator-strip tiger-generator-strip-input"[\s\S]*?a1[\s\S]*?b1[\s\S]*?c1/);
       assert.match(generatorFigure, /class="tiger-transformer-tower tiger-transformer-encoder"/);
@@ -493,6 +496,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /2000 个 user-specific token[\s\S]*?Hashing Trick[\s\S]*?raw user ID[\s\S]*?2000 个 user ID token[\s\S]*?不同用户可能因为哈希碰撞共用同一个 user token/);
       assert.match(source, /id="fig-tiger-inference-loop"/);
       const inferenceFigure = source.match(/<figure id="fig-tiger-inference-loop"[\s\S]*?<\/figure>/)?.[0] ?? '';
+      assert.match(inferenceFigure, /<span>图 4<\/span>/);
       for (const stage of ['prob', 'beam', 'sid', 'lookup', 'topk']) {
         assert.match(inferenceFigure, new RegExp(`class="tiger-inference-stage tiger-inference-${stage}"`));
       }
@@ -515,6 +519,8 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?无内容[\s\S]*?随机[\s\S]*?基线/);
       assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?内容[\s\S]*?学习码本[\s\S]*?残差 token/);
       assert.match(source, /Product Quantization[\s\S]*?Hierarchical k-means[\s\S]*?VQ-VAE[\s\S]*?RQ-VAE/);
+      const quantizerFigure = source.match(/<figure id="fig-tiger-quantizer-atlas"[\s\S]*?<\/figure>/)?.[0] ?? '';
+      assert.match(quantizerFigure, /<span>图 5<\/span>/);
       assert.match(source, /id="fig-tiger-index-map"/);
       assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 6<\/span>/);
       assert.match(source, /索引：从查询到候选地址的路径[\s\S]*?传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);

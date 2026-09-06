@@ -674,7 +674,7 @@ const tigerRqvaeTrainingCopy = {
 
 const tigerQuantizerAtlasCopy = {
   en: {
-    figure: 'Figure 3',
+    figure: 'Figure 5',
     title: 'Different ID builders preserve different structure',
     aria: 'A visual comparison of Random ID, LSH, Product Quantization, Hierarchical k-means, VQ-VAE, and RQ-VAE for turning item embeddings into discrete identifiers.',
     methods: [
@@ -738,10 +738,10 @@ const tigerQuantizerAtlasCopy = {
       ['Learned', 'code boundaries are trained from data'],
       ['Sequential ID', 'produces several tokens that can be generated autoregressively']
     ],
-    caption: 'Figure 3. The TIGER comparison is mainly Random ID and LSH against RQ-VAE; other quantizers explain nearby design choices rather than fully controlled baselines in the paper.'
+    caption: 'Figure 5. The TIGER comparison is mainly Random ID and LSH against RQ-VAE; other quantizers explain nearby design choices rather than fully controlled baselines in the paper.'
   },
   zh: {
-    figure: '图 3',
+    figure: '图 5',
     title: '不同 ID 构造方式保留的是不同结构',
     aria: 'Random ID、LSH、Product Quantization、Hierarchical k-means、VQ-VAE 和 RQ-VAE 将 item embedding 变成离散标识的可视化对比。',
     methods: [
@@ -805,7 +805,7 @@ const tigerQuantizerAtlasCopy = {
       ['是否学习边界', '码本或划分是否由数据训练得到'],
       ['是否天然多 token', '是否容易作为自回归生成目标']
     ],
-    caption: '图 3. TIGER 论文真正进入同一张实验表的是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID；其它方法更适合作为理解量化设计空间的参照。'
+    caption: '图 5. TIGER 论文真正进入同一张实验表的是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID；其它方法更适合作为理解量化设计空间的参照。'
   }
 };
 
@@ -868,7 +868,7 @@ const tigerIndexMapCopy = {
 
 const tigerInferenceLoopCopy = {
   en: {
-    figure: 'Figure 5',
+    figure: 'Figure 4',
     title: 'Inference loop: probabilities become real items',
     aria: 'A five-step diagram showing decoder token probabilities becoming beam prefixes, complete Semantic IDs, table lookups, and Top-K item results.',
     stages: [
@@ -909,10 +909,10 @@ const tigerInferenceLoopCopy = {
       }
     ],
     note: 'The generator does not directly display token probabilities. It searches likely Semantic ID sequences first, then resolves those addresses back to item IDs.',
-    caption: 'Figure 5. At serving time, TIGER decodes Semantic ID candidates and uses the Semantic ID to Item ID mapping to produce Top-K recommendations.'
+    caption: 'Figure 4. At serving time, TIGER decodes Semantic ID candidates and uses the Semantic ID to Item ID mapping to produce Top-K recommendations.'
   },
   zh: {
-    figure: '图 5',
+    figure: '图 4',
     title: '推理闭环：概率最终要变回真实物品',
     aria: '五步示意图，展示 decoder token 概率如何变成候选前缀、完整 Semantic ID、映射表查询和 Top-K 物品结果。',
     stages: [
@@ -953,13 +953,13 @@ const tigerInferenceLoopCopy = {
       }
     ],
     note: '生成器不会把 token 概率直接展示给用户；它先搜索可能的 Semantic ID 序列，再把这些语义地址还原成真实物品。',
-    caption: '图 5. 服务阶段中，TIGER 先解码 Semantic ID 候选，再通过 Semantic ID 到 Item ID 的映射表得到 Top-K 推荐结果。'
+    caption: '图 4. 服务阶段中，TIGER 先解码 Semantic ID 候选，再通过 Semantic ID 到 Item ID 的映射表得到 Top-K 推荐结果。'
   }
 };
 
 const tigerGeneratorInputCopy = {
   en: {
-    figure: 'Figure 4',
+    figure: 'Figure 3',
     title: 'Generator input and Transformer architecture',
     aria: 'A diagram showing TIGER generator input tokens, encoder decoder architecture, and training settings.',
     inputLabel: 'Encoder input',
@@ -976,10 +976,10 @@ const tigerGeneratorInputCopy = {
     trainSpecs: ['about 13M parameters', 'batch size 256', '200k steps for Beauty/Sports', '100k steps for Toys', 'LR 0.01 for 10k steps, then inverse-square-root decay'],
     probs: ['P(d1 | context)', 'P(d2 | context, d1)', 'P(d3 | context, d1,d2)', 'P(d4 | context, d1,d2,d3)'],
     note: 'The history is not three raw item IDs. It is a user token followed by flattened Semantic ID tokens, and the target is the next item address.',
-    caption: 'Figure 4. TIGER constructs the input sequence as a user ID token followed by the Semantic ID tokens for the user interaction history, then trains a 4-layer encoder and 4-layer decoder to predict the next item Semantic ID token by token.'
+    caption: 'Figure 3. TIGER constructs the input sequence as a user ID token followed by the Semantic ID tokens for the user interaction history, then trains a 4-layer encoder and 4-layer decoder to predict the next item Semantic ID token by token.'
   },
   zh: {
-    figure: '图 4',
+    figure: '图 3',
     title: '生成器输入与 Transformer 架构',
     aria: '一张示意图，展示 TIGER 生成器输入 token、encoder-decoder 架构和训练设置。',
     inputLabel: 'Encoder 输入',
@@ -996,7 +996,7 @@ const tigerGeneratorInputCopy = {
     trainSpecs: ['约 13M 参数', 'batch size 256', 'Beauty/Sports 训练 200k steps', 'Toys 训练 100k steps', '前 10k steps 学习率 0.01，之后 inverse-square-root decay'],
     probs: ['P(d1 | context)', 'P(d2 | context, d1)', 'P(d3 | context, d1,d2)', 'P(d4 | context, d1,d2,d3)'],
     note: '关键点：历史不是三个原始 Item ID，而是 user token 加展平后的历史 Semantic ID tokens；训练目标也不是自然语言，而是下一个物品的语义地址。',
-    caption: '图 4. TIGER 把 user ID token 接在用户历史 Semantic ID tokens 前面作为 encoder 输入，再训练 4 层 encoder 与 4 层 decoder 逐 token 预测下一个物品的 Semantic ID。'
+    caption: '图 3. TIGER 把 user ID token 接在用户历史 Semantic ID tokens 前面作为 encoder 输入，再训练 4 层 encoder 与 4 层 decoder 逐 token 预测下一个物品的 Semantic ID。'
   }
 };
 
