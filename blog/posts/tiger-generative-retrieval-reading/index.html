@@ -41,10 +41,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=9a15113cf2fa"></script>
-  <link rel="stylesheet" href="../../../content.css?v=9a15113cf2fa" />
-  <link rel="stylesheet" href="../../assets/blog.css?v=9a15113cf2fa" />
-<link rel="stylesheet" href="../../assets/katex.min.css?v=9a15113cf2fa" />
+  <script src="../../../theme-init.js?v=0b09b68d1563"></script>
+  <link rel="stylesheet" href="../../../content.css?v=0b09b68d1563" />
+  <link rel="stylesheet" href="../../assets/blog.css?v=0b09b68d1563" />
+<link rel="stylesheet" href="../../assets/katex.min.css?v=0b09b68d1563" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"TIGER：从语义 ID 到生成式推荐","description":"从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。","datePublished":"2026-08-30","dateModified":"2026-09-04","inLanguage":"zh","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","keywords":["generative-recommendation","semantic-id","rq-vae","tiger"],"image":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/media/social-card.png?v=cd98c818dd18","width":1200,"height":630,"caption":"TIGER：从语义 ID 到生成式推荐"}}</script>
 </head>
@@ -93,7 +93,7 @@
           <summary data-blog-i18n="toc_title">Contents</summary>
           <div class="blog-toc-mobile-body">
             <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_toc">The contents panel links to major headings in the current article.</p></details>
-            <ol><li><a href="#在生成物品之前-先把物品变成一种语言">在生成物品之前，先把物品变成一种语言</a></li><li><a href="#rq-vae-如何生成-semantic-id">RQ-VAE 如何生成 Semantic ID</a></li><li><a href="#rq-vae-的损失函数">RQ-VAE 的损失函数</a></li><li><a href="#碰撞发生后怎么办">碰撞发生后怎么办</a></li><li><a href="#当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</a></li><li><a href="#模型会不会主要学习同一物品内部的-token-转移">模型会不会主要学习同一物品内部的 token 转移</a></li><li><a href="#用户-token-为什么可能有效">用户 token 为什么可能有效</a></li><li><a href="#模型如何从概率分布变成-top-k-物品">模型如何从概率分布变成 Top-K 物品</a></li><li><a href="#beam-search-在这里做了什么">Beam search 在这里做了什么</a></li><li><a href="#生成无效-id-怎么办">生成无效 ID 怎么办</a></li><li><a href="#冷启动-tiger-的能力-还是内容模型的能力">冷启动：TIGER 的能力，还是内容模型的能力</a></li><li><a href="#多样性-温度提高了熵-但这是谁的贡献">多样性：温度提高了熵，但这是谁的贡献</a></li><li><a href="#它真的更容易扩展吗">它真的更容易扩展吗</a></li><li><a href="#数据集融合实验验证了什么">数据集融合实验验证了什么</a></li><li><a href="#未报告的-6-64-实验">未报告的 6×64 实验</a></li><li><a href="#tiger-真正改变了什么">TIGER 真正改变了什么</a></li><li><a href="#参考资料">参考资料</a></li></ol>
+            <ol><li><a href="#在生成物品之前-先把物品变成一种语言">在生成物品之前，先把物品变成一种语言</a></li><li><a href="#rq-vae-如何生成-semantic-id">RQ-VAE 如何生成 Semantic ID</a></li><li><a href="#rq-vae-的损失函数">RQ-VAE 的损失函数</a></li><li><a href="#碰撞发生后怎么办">碰撞发生后怎么办</a></li><li><a href="#当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</a></li><li><a href="#模型如何从概率分布变成-top-k-物品">模型如何从概率分布变成 Top-K 物品</a></li><li><a href="#beam-search-在这里做了什么">Beam search 在这里做了什么</a></li><li><a href="#生成无效-id-怎么办">生成无效 ID 怎么办</a></li><li><a href="#冷启动-tiger-的能力-还是内容模型的能力">冷启动：TIGER 的能力，还是内容模型的能力</a></li><li><a href="#多样性-温度提高了熵-但这是谁的贡献">多样性：温度提高了熵，但这是谁的贡献</a></li><li><a href="#它真的更容易扩展吗">它真的更容易扩展吗</a></li><li><a href="#数据集融合实验验证了什么">数据集融合实验验证了什么</a></li><li><a href="#未报告的-6-64-实验">未报告的 6×64 实验</a></li><li><a href="#tiger-真正改变了什么">TIGER 真正改变了什么</a></li><li><a href="#参考资料">参考资料</a></li></ol>
           </div>
         </details>
         <div class="blog-content">
@@ -660,21 +660,100 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 <li>RQ-VAE 是“逐层修 residual”：它既使用内容 embedding，又用学习式码本，还天然输出多 token ID。这些 token 才能被后面的 Transformer 当成一个可生成的 Semantic ID 序列。</li>
 </ul>
 <p>所以更严谨的表述应该是：RQ-VAE 在论文选择的对照组里更适合 TIGER，但“为什么更好”还没有被完全拆开。收益可能来自残差结构，也可能来自非线性编码器、训练目标，或者这些因素共同作用。</p></div></details><h2 id="当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</h2>
-<p>得到 Semantic ID 后，用户的交互历史会从物品序列变成 token 序列。这对应<a href="#fig-tiger-semantic-id-flow">图 1</a> 右侧的用户侧分支：生成模型的输入是用户历史，输出才是下一个可映射回物品库的语义 item。</p>
-<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">Item A → Item B → Item C
+<p>得到 Semantic ID 后，重点就从“物品怎么编号”转到“生成器到底看见什么”。TIGER 的生成器不是直接读 item 文本，也不是读原始 Item ID；在论文实现里，输入序列由一个 <strong>user token</strong> 开头，后面接用户历史中每个 item 的 Semantic ID tokens。这对应<a href="#fig-tiger-semantic-id-flow">图 1</a>右侧的用户侧分支，也就是把“用户做过什么”翻译成生成模型可以处理的离散语言。</p>
+<p>如果一个用户依次交互了 Item A、Item B、Item C，而每个 item 的 Semantic ID 有四位，那么进入 encoder 的不是三个物品节点，而是一串 token：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">Item A -&gt; Item B -&gt; Item C
 
-变为：
+Encoder 输入：
 
-(a₁,a₂,a₃,a₄)
-→ (b₁,b₂,b₃,b₄)
-→ (c₁,c₂,c₃,c₄)
-</code></pre></div><p>这些 ID 被直接展平，输入编码器—解码器 Transformer。模型根据用户历史逐 token 预测下一个物品的完整 Semantic ID。</p>
-<p>先把<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-index-4" data-term-chip><span class="term-chip-label">索引</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-index-4" role="tooltip">索引：把查询快速指向候选结果地址的机制，目的是不用逐个扫描所有物品。它可以是显式数据结构，比如向量索引；也可以是模型学到的“查询 -&gt; 目标 ID”映射，但后者不是一张能直接浏览或增删改查的表。</span></span>这个词说白一点：在检索系统里，它不一定是一张数据库表，也不一定是一份文件；它更像“查询进入系统后，如何快速指到候选结果地址”的那套机制。书的目录把主题指到页码，倒排索引把词指到文档，向量索引把 query embedding 指到 item ID。推荐里的问题也是类似的：给定用户历史，系统要尽快找出下一批候选物品。</p>
-<p>传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见<a href="#fig-tiger-index-map">图 3</a>。</p>
+[user_5]  a1 a2 a3 a4  b1 b2 b3 b4  c1 c2 c3 c4
+
+Decoder 训练目标：
+
+&lt;BOS&gt;  d1 d2 d3 d4  &lt;EOS&gt;
+</code></pre></div><p>其中 <code>a* / b* / c*</code> 是历史物品的 Semantic ID token，<code>d*</code> 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。这个过程见<a href="#fig-tiger-generator-input">图 3</a>。</p>
+<figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure">
+    <div class="tiger-pipeline-surface tiger-generator-surface" role="group" aria-label="一张示意图，展示 TIGER 把用户 token 和展平后的历史 Semantic ID tokens 输入 encoder，再让 decoder 生成下一个物品的 Semantic ID。">
+      <div class="tiger-pipeline-heading">
+        <span>图 3</span>
+        <strong>生成器实际看到的输入</strong>
+      </div>
+      <div class="tiger-generator-board">
+        <section class="tiger-generator-strip tiger-generator-strip-input">
+          <span class="tiger-generator-label">Encoder 输入</span>
+          <div class="tiger-generator-tokens">
+            <i class="tiger-generator-token tiger-generator-token-user">user_5</i><span class="tiger-generator-item"><b>Item A</b><i class="tiger-generator-token">a1</i><i class="tiger-generator-token">a2</i><i class="tiger-generator-token">a3</i><i class="tiger-generator-token">a4</i></span><span class="tiger-generator-item"><b>Item B</b><i class="tiger-generator-token">b1</i><i class="tiger-generator-token">b2</i><i class="tiger-generator-token">b3</i><i class="tiger-generator-token">b4</i></span><span class="tiger-generator-item"><b>Item C</b><i class="tiger-generator-token">c1</i><i class="tiger-generator-token">c2</i><i class="tiger-generator-token">c3</i><i class="tiger-generator-token">c4</i></span>
+          </div>
+        </section>
+        <section class="tiger-generator-core">
+          <div>
+            <span>双向 Encoder</span>
+            <strong>历史上下文</strong>
+          </div>
+          <i aria-hidden="true"></i>
+          <div>
+            <span>自回归 Decoder</span>
+            <strong>下一个 Semantic ID</strong>
+          </div>
+        </section>
+        <section class="tiger-generator-strip tiger-generator-strip-target">
+          <span class="tiger-generator-label">Decoder 训练目标</span>
+          <div class="tiger-generator-tokens tiger-generator-target-tokens">
+            <i class="tiger-generator-token tiger-generator-token-control">&lt;BOS&gt;</i><span class="tiger-generator-item"><b>下一个 item</b><i class="tiger-generator-token">d1</i><i class="tiger-generator-token">d2</i><i class="tiger-generator-token">d3</i><i class="tiger-generator-token">d4</i></span><i class="tiger-generator-token tiger-generator-token-control">&lt;EOS&gt;</i>
+          </div>
+          <ol class="tiger-generator-probs">
+            <li>P(d1 | context)</li><li>P(d2 | context, d1)</li><li>P(d3 | context, d1,d2)</li><li>P(d4 | context, d1,d2,d3)</li>
+          </ol>
+        </section>
+      </div>
+      <p class="tiger-flow-note">关键点：历史不是三个原始 Item ID，而是 user token 加展平后的历史 Semantic ID tokens；训练目标也不是自然语言，而是下一个物品的语义地址。</p>
+    </div>
+    <figcaption>图 3. TIGER 把 user ID token 接在用户历史 Semantic ID tokens 前面作为 encoder 输入，再训练 decoder 逐 token 预测下一个物品的 Semantic ID。</figcaption>
+  </figure><p>这也是“生成式推荐”的核心：模型不是先把用户历史编码成 query embedding，再去候选库里做 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-4" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-4" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span> / <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-5" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-5" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span> 检索；而是在 Semantic ID 词表上直接学习</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><msub><mi>d</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>d</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>d</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>d</mi><mn>4</mn></msub><mo>∣</mo><mtext>user token</mtext><mo separator="true">,</mo><mtext>history Semantic ID tokens</mtext><mo stretchy="false">)</mo><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">P(d_1,d_2,d_3,d_4 \mid \text{user token}, \text{history Semantic ID tokens}).
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">user token</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord text"><span class="mord">history Semantic ID tokens</span></span><span class="mclose">)</span><span class="mord">.</span></span></span></span></span></p>
+<p>推理时，decoder 第一步预测 <code>d1</code>，第二步在 <code>d1</code> 的基础上预测 <code>d2</code>，一直到生成完整 Semantic ID。生成结束后，系统再用 Semantic ID -&gt; Item ID 的映射表，把这个语义地址还原成真实物品。换句话说，TIGER 的“生成”不是生成自然语言句子，而是生成一个可以映射回物品库的离散地址。</p>
+<details class="blog-disclosure" id="补充-用户-token-为什么可能有效"><summary>补充：用户 token 为什么可能有效？</summary><div class="blog-disclosure-body"><p>论文还把 raw user ID 固定哈希到 2000 个 bucket token。它不是每次随机映射，但多个用户会发生哈希碰撞。放在生成器输入里看，这个 token 相当于给 decoder 一个稳定的长期条件：同样的历史 item 序列，在不同用户 bucket 下可以有不同的偏置。</p>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th style="text-align:right">Recall@5</th>
+<th style="text-align:right">NDCG@5</th>
+<th style="text-align:right">Recall@10</th>
+<th style="text-align:right">NDCG@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无用户信息</td>
+<td style="text-align:right">0.04458</td>
+<td style="text-align:right">0.0302</td>
+<td style="text-align:right">0.06479</td>
+<td style="text-align:right">0.0367</td>
+</tr>
+<tr>
+<td>加用户 token</td>
+<td style="text-align:right">0.0454</td>
+<td style="text-align:right">0.0321</td>
+<td style="text-align:right">0.0648</td>
+<td style="text-align:right">0.0384</td>
+</tr>
+</tbody>
+</table>
+<p>Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显。这更像是候选排序位置和个性化有所改善，而不是召回能力全面上升。</p>
+<p>一个可能原因是历史最多只保留 20 个 item，user token 提供了历史窗口之外的长期用户条件；也可能是 2000 个 bucket 提供了粗粒度用户偏置，碰撞同时带来参数共享或正则化。严格来说，这里还需要不同 bucket 数量、多随机种子以及唯一 user embedding 的对照，才能判断提升到底来自“用户信息”还是额外参数/随机波动。</p></div></details><details class="blog-disclosure" id="疑问-模型会不会主要学习同一物品内部的-token-转移"><summary>疑问：模型会不会主要学习同一物品内部的 token 转移？</summary><div class="blog-disclosure-body"><p>将四位 ID 直接展平后，next-token objective 会同时学习两类关系：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">同一 item 内部：c1 -&gt; c2 -&gt; c3 -&gt; c4
+不同 item 之间：上一 item 的 c4 -&gt; 下一 item 的 c1
+</code></pre></div><p>这带来一个论文没有回答的问题：模型是否花费了大量能力去补全同一个物品内部的 Semantic ID，而不是学习真正的物品行为转移？</p>
+<p>另一种可能是，item 内部的 token 组合学习恰好帮助模型掌握“什么样的 ID 是合法的”，从而解释为什么生成无效 ID 的概率很低。后续可以通过比较不同 token 位置的 loss、加入 item boundary、只在 item 级位置计算损失，或者并行预测四位 ID 来验证。这个判断目前更像我的疑问和实验建议，不应该被当成论文已经证明的结论。</p></div></details><details class="blog-disclosure" id="讨论-transformer-参数为什么被说成索引"><summary>讨论：Transformer 参数为什么被说成索引？</summary><div class="blog-disclosure-body"><p>理解了生成器的输入和输出之后，再看论文里的 <strong>Transformer memory acts as an index</strong> 会更自然。这里的 memory 指 Transformer 的模型参数；index 指“从用户上下文得到候选物品地址”的能力。它不是说模型参数里真的有一张可以像数据库一样直接增删改查的表。</p>
+<p>先把<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-index-6" data-term-chip><span class="term-chip-label">索引</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-index-6" role="tooltip">索引：把查询快速指向候选结果地址的机制，目的是不用逐个扫描所有物品。它可以是显式数据结构，比如向量索引；也可以是模型学到的“查询 -&gt; 目标 ID”映射，但后者不是一张能直接浏览或增删改查的表。</span></span>这个词说白一点：在检索系统里，它不一定是一张数据库表，也不一定是一份文件；它更像“查询进入系统后，如何快速指到候选结果地址”的那套机制。书的目录把主题指到页码，倒排索引把词指到文档，向量索引把 query embedding 指到 item ID。推荐里的问题也是类似的：给定用户历史，系统要尽快找出下一批候选物品。</p>
+<p>传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-7" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-7" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span> / <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-8" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-8" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span> 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。</p>
+<p>TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址。传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见<a href="#fig-tiger-index-map">图 4</a>。</p>
 <figure id="fig-tiger-index-map" class="tiger-pipeline-figure tiger-index-figure">
     <div class="tiger-pipeline-surface tiger-index-surface" role="group" aria-label="传统向量检索和 TIGER 都把用户上下文映射到候选物品地址，但实现机制不同的双行对比图。">
       <div class="tiger-pipeline-heading">
-        <span>图 3</span>
+        <span>图 4</span>
         <strong>索引：从查询到候选地址的路径</strong>
       </div>
       <div class="tiger-index-map">
@@ -710,53 +789,13 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
       </div>
       <p class="tiger-flow-note">两条路径做同一件事：把用户上下文变成候选地址；区别是查外部结构，还是解码一个语义 ID。</p>
     </div>
-    <figcaption>图 3. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。</figcaption>
-  </figure><p>论文把这种设计称为 <strong>Transformer memory acts as an index</strong>。这里的 memory 指 Transformer 的模型参数；index 指“从用户上下文得到候选物品地址”的能力。它不是说模型参数里真的有一张可以像数据库一样直接增删改查的表。</p>
-<details class="blog-disclosure" id="讨论-transformer-参数为什么被说成索引"><summary>讨论：Transformer 参数为什么被说成索引？</summary><div class="blog-disclosure-body"><p>更直观地说，索引回答的是这个问题：<strong>我有一个很大的候选集合，怎样不用逐个看，就能把查询带到可能相关的候选位置？</strong></p>
-<p>传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-5" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-5" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span> / <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-6" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-6" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span> 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。</p>
-<p>TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址：</p>
+    <figcaption>图 4. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。</figcaption>
+  </figure><p>推理时，decoder 每一步都在 Semantic ID 词表上给出 token 概率：</p>
 <p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><msub><mi>c</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>c</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>c</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>c</mi><mn>4</mn></msub><mo>∣</mo><mtext>history</mtext><mo stretchy="false">)</mo><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">P(c_1,c_2,c_3,c_4 \mid \text{history}).
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">history</span></span><span class="mclose">)</span><span class="mord">.</span></span></span></span></span></p>
-<p>decoder 每一步都在 Semantic ID 词表上给出 token 概率，<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-7" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-7" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 保留概率较高的前缀。前缀越长，候选地址越具体；生成完整 ID 后，再通过 Semantic ID → Item ID 映射表回到真实物品。</p>
-<p>所以，把 Transformer 参数说成索引，是在“功能”上成立：它接收用户上下文，并给出候选 item 的地址。它在“工程结构”上又不像传统索引：你不能像更新向量库那样直接插入一行 item embedding，也不能直接遍历参数来检查某个 item 的邻居。</p></div></details><p>因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成 Semantic ID、维护映射，并让生成模型有机会生成到这个 ID”。这也是为什么“Transformer 参数像索引”不能被理解成“推荐系统不再需要任何索引相关数据结构”。</p>
-<h3 id="模型会不会主要学习同一物品内部的-token-转移">模型会不会主要学习同一物品内部的 token 转移</h3>
-<p>将四位 ID 直接展平后，next-token objective 会同时学习两类关系：</p>
-<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">同一 item 内部：c₁ → c₂ → c₃ → c₄
-不同 item 之间：上一 item 的 c₄ → 下一 item 的 c₁
-</code></pre></div><p>这带来一个论文没有回答的问题：模型是否花费了大量能力去补全同一个物品内部的 Semantic ID，而不是学习真正的物品行为转移？</p>
-<p>另一种可能是，item 内部的 token 组合学习恰好帮助模型掌握“什么样的 ID 是合法的”，从而解释为什么生成无效 ID 的概率很低。后续可以通过比较不同 token 位置的 loss、加入 item boundary、只在 item 级位置计算损失，或者并行预测四位 ID 来验证。</p>
-<h3 id="用户-token-为什么可能有效">用户 token 为什么可能有效</h3>
-<p>论文还把 raw user ID 固定哈希到 2000 个 bucket token。它不是每次随机映射，但多个用户会发生哈希碰撞。</p>
-<table>
-<thead>
-<tr>
-<th>设置</th>
-<th style="text-align:right">Recall@5</th>
-<th style="text-align:right">NDCG@5</th>
-<th style="text-align:right">Recall@10</th>
-<th style="text-align:right">NDCG@10</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>无用户信息</td>
-<td style="text-align:right">0.04458</td>
-<td style="text-align:right">0.0302</td>
-<td style="text-align:right">0.06479</td>
-<td style="text-align:right">0.0367</td>
-</tr>
-<tr>
-<td>加用户 token</td>
-<td style="text-align:right">0.0454</td>
-<td style="text-align:right">0.0321</td>
-<td style="text-align:right">0.0648</td>
-<td style="text-align:right">0.0384</td>
-</tr>
-</tbody>
-</table>
-<p>Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显。这更像是候选位置和个性化有所改善，而不是召回能力全面上升。</p>
-<p>哈希 token 为什么有用，论文没有给出充分解释。一个可能原因是历史最多只保留 20 个 item，用户 token 提供了稳定的长期条件；也可能是 2000 个 bucket 提供了粗粒度用户偏置，碰撞同时产生了一种参数共享或正则化。它也可能受到额外参数量或单次运行波动影响。不同 bucket 数量、多随机种子以及唯一 user embedding 的对照仍然有必要。</p>
-<h2 id="模型如何从概率分布变成-top-k-物品">模型如何从概率分布变成 Top-K 物品</h2>
+<p><span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-9" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-9" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 保留概率较高的前缀。前缀越长，候选地址越具体；生成完整 ID 后，再通过 Semantic ID -&gt; Item ID 映射表回到真实物品。</p>
+<p>所以，把 Transformer 参数说成索引，是在“功能”上成立：它接收用户上下文，并给出候选 item 的地址。它在“工程结构”上又不像传统索引：你不能像更新向量库那样直接插入一行 item embedding，也不能直接遍历参数来检查某个 item 的邻居。</p>
+<p>因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成 Semantic ID、维护映射，并让生成模型有机会生成到这个 ID”。这也是为什么“Transformer 参数像索引”不能被理解成“推荐系统不再需要任何索引相关数据结构”。</p></div></details><h2 id="模型如何从概率分布变成-top-k-物品">模型如何从概率分布变成 Top-K 物品</h2>
 <p>生成器使用 4 层 Transformer encoder 和 4 层 decoder，每层有 6 个 attention head，head dimension 为 64，模型约 13M 参数。</p>
 <p>论文对 3、4、5 层做了消融：</p>
 <table>
@@ -795,16 +834,16 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 </table>
 <p>这个结果不能简单概括成“层数越多越好”：5 层的 Recall@5 最高，3 层的 Recall@10 反而最高，4 层在 NDCG 上略好。更稳妥的判断是，模型在 3–5 层之间不太敏感，4 层是一种折中配置，而不是被实验明确证明的最优层数。</p>
 <h3 id="beam-search-在这里做了什么">Beam search 在这里做了什么</h3>
-<p>模型在第一个位置输出 token 概率，<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-8" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-8" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 保留累计 log-probability 最高的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span></span></span></span> 条前缀；下一步分别扩展这些前缀，再从全部扩展结果中保留最优的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span></span></span></span> 条。不断重复，直到生成完整 ID。</p>
+<p>模型在第一个位置输出 token 概率，<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-10" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-10" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 保留累计 log-probability 最高的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span></span></span></span> 条前缀；下一步分别扩展这些前缀，再从全部扩展结果中保留最优的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span></span></span></span> 条。不断重复，直到生成完整 ID。</p>
 <div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">保留 B 个高概率前缀
 → 扩展每条前缀
 → 再保留累计得分最高的 B 条
 → 得到多个完整 Semantic ID
-</code></pre></div><p><span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-9" data-term-chip><span class="term-chip-label">Beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-9" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 的目标是近似寻找若干条高概率序列。它比 greedy decoding 覆盖更多候选，但默认仍然偏向模型概率最高的区域，本身不等于多样性采样。</p>
+</code></pre></div><p><span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-11" data-term-chip><span class="term-chip-label">Beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-11" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 的目标是近似寻找若干条高概率序列。它比 greedy decoding 覆盖更多候选，但默认仍然偏向模型概率最高的区域，本身不等于多样性采样。</p>
 <h3 id="生成无效-id-怎么办">生成无效 ID 怎么办</h3>
 <p>模型可以生成一个语法上完整、但数据库中不存在的 Semantic ID。论文没有通过约束解码从结构上消除这种情况，只是观察到 Top-10 的 invalid ID 比例约为 0.1%–1.6%；Top-20 时，不同数据集约为 0.3%–6%。</p>
 <p>这只是实验现象，并不是理论保证。</p>
-<p>论文建议扩大 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-10" data-term-chip><span class="term-chip-label">beam size</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-10" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span>，生成更多候选后过滤无效 ID，直到留下足够的有效结果；还提出未来可以用 prefix matching 将无效 ID 映射到共享有效前缀的物品。</p>
+<p>论文建议扩大 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-12" data-term-chip><span class="term-chip-label">beam size</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-12" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span>，生成更多候选后过滤无效 ID，直到留下足够的有效结果；还提出未来可以用 prefix matching 将无效 ID 映射到共享有效前缀的物品。</p>
 <p>另一个更直接的方案是维护 Semantic ID trie，在每一步解码时屏蔽无法组成有效 ID 的 token。这样可以保证生成结果有效，但也会重新引入一个外部合法前缀结构。</p>
 <h2 id="冷启动-tiger-的能力-还是内容模型的能力">冷启动：TIGER 的能力，还是内容模型的能力</h2>
 <p>论文将推荐新物品视为 TIGER 的重要能力。在 Beauty 数据集上，它从测试 item 中选择 5%，删除这些 item 在训练 split 中的交互，把它们当作 unseen items。</p>
@@ -827,11 +866,11 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 <p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>p</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>T</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>z</mi><mi>i</mi></msub><mi mathvariant="normal">/</mi><mi>T</mi><mo stretchy="false">)</mo></mrow><mrow><munder><mo>∑</mo><mi>j</mi></munder><mi>exp</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>z</mi><mi>j</mi></msub><mi mathvariant="normal">/</mi><mi>T</mi><mo stretchy="false">)</mo></mrow></mfrac><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">p_i(T)=\frac{\exp(z_i/T)}{\sum_j\exp(z_j/T)}.
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.5488em;vertical-align:-1.1218em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.427em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.162em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0572em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4358em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">exp</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.044em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0572em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop">exp</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.044em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.1218em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord">.</span></span></span></span></span></p>
 <p>当 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">T&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span> 时，概率分布被压平，原本概率较低的 token 更容易被采样，因此输出通常更分散；当 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>&lt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">T&lt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span> 时，分布变尖，模型更集中地选择头部 token。</p>
-<p>这与 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-11" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-11" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 并不是一回事：</p>
+<p>这与 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-13" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-13" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 并不是一回事：</p>
 <ul>
-<li><span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-12" data-term-chip><span class="term-chip-label">Beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-12" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 从概率分布中近似寻找得分最高的若干条序列；</li>
+<li><span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-14" data-term-chip><span class="term-chip-label">Beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-14" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 从概率分布中近似寻找得分最高的若干条序列；</li>
 <li>温度采样先改变概率分布，再随机抽取 token；</li>
-<li>二者可以组合，但论文没有清楚交代多样性实验是否采用了 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-13" data-term-chip><span class="term-chip-label">stochastic beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-13" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span>。</li>
+<li>二者可以组合，但论文没有清楚交代多样性实验是否采用了 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-15" data-term-chip><span class="term-chip-label">stochastic beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-15" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span>。</li>
 </ul>
 <p>Beauty 数据集上的结果是：</p>
 <table>
@@ -868,7 +907,7 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 <p>TIGER 更独特的主张是：在 Semantic ID 的第一位采样可以改变粗类别，在第二、三位采样可以改变类内物品。但这个能力依赖 Semantic ID 是否真的形成了稳定的粗到细语义层次。既然层次性证据本身仍有疑问，多样性的“可控层级”也不能仅凭温度实验得到证明。</p>
 <h2 id="它真的更容易扩展吗">它真的更容易扩展吗</h2>
 <p>TIGER 在表示存储上确实有吸引力。传统模型可能为每个物品维护独立 embedding；TIGER 的物品 token embedding 只需要覆盖各层 codeword。主设置中是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><mn>256</mn><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">4\times256=1024</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">256</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1024</span></span></span></span> 个 token embedding，而数据集有 10K–20K 个物品。</p>
-<p>但生成式检索没有消灭检索成本，只是重新分配了成本。ANN 能够并行搜索候选，而 TIGER 需要逐 token 自回归解码，并通过 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-14" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-14" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 获取 Top-K。<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-15" data-term-chip><span class="term-chip-label">beam</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-15" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 越大，找到足够多有效候选的机会越高，推理成本也越大。</p>
+<p>但生成式检索没有消灭检索成本，只是重新分配了成本。ANN 能够并行搜索候选，而 TIGER 需要逐 token 自回归解码，并通过 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-16" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-16" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 获取 Top-K。<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-17" data-term-chip><span class="term-chip-label">beam</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-17" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 越大，找到足够多有效候选的机会越高，推理成本也越大。</p>
 <p>更准确的权衡是：</p>
 <blockquote>
 <p>TIGER 用紧凑、可共享的结构化物品表示，交换了更复杂的自回归候选生成过程。</p>
@@ -928,7 +967,7 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 <li>残差量化的逐层修正不等于真实标签的语义层次；</li>
 <li>RQ-VAE 只与 LSH 和 Random ID 做了完整表格对照；</li>
 <li>统一码本实验只能提供有限的扩展性证据；</li>
-<li>自回归 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-16" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-16" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 带来的推理成本不能被忽略。</li>
+<li>自回归 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-beam-search-18" data-term-chip><span class="term-chip-label">beam search</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-beam-search-18" role="tooltip">束搜索：一种自回归解码策略。每一步先保留得分最高的 B 条候选前缀，再分别扩展它们，循环直到得到完整序列。它比贪心解码覆盖更多候选，但仍偏向高概率路径。</span></span> 带来的推理成本不能被忽略。</li>
 </ul>
 <p>所以，如果后续真正实现 TIGER，我最想验证的不是能否复现某一张主结果表，而是下面这条因果链：</p>
 <div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">内容相似
@@ -975,7 +1014,7 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
       <aside class="blog-toc blog-toc-desktop" aria-label="Article contents">
         <h2 data-blog-i18n="toc_title">Contents</h2>
         <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_toc">The contents panel links to major headings in the current article.</p></details>
-        <ol><li><a href="#在生成物品之前-先把物品变成一种语言">在生成物品之前，先把物品变成一种语言</a></li><li><a href="#rq-vae-如何生成-semantic-id">RQ-VAE 如何生成 Semantic ID</a></li><li><a href="#rq-vae-的损失函数">RQ-VAE 的损失函数</a></li><li><a href="#碰撞发生后怎么办">碰撞发生后怎么办</a></li><li><a href="#当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</a></li><li><a href="#模型会不会主要学习同一物品内部的-token-转移">模型会不会主要学习同一物品内部的 token 转移</a></li><li><a href="#用户-token-为什么可能有效">用户 token 为什么可能有效</a></li><li><a href="#模型如何从概率分布变成-top-k-物品">模型如何从概率分布变成 Top-K 物品</a></li><li><a href="#beam-search-在这里做了什么">Beam search 在这里做了什么</a></li><li><a href="#生成无效-id-怎么办">生成无效 ID 怎么办</a></li><li><a href="#冷启动-tiger-的能力-还是内容模型的能力">冷启动：TIGER 的能力，还是内容模型的能力</a></li><li><a href="#多样性-温度提高了熵-但这是谁的贡献">多样性：温度提高了熵，但这是谁的贡献</a></li><li><a href="#它真的更容易扩展吗">它真的更容易扩展吗</a></li><li><a href="#数据集融合实验验证了什么">数据集融合实验验证了什么</a></li><li><a href="#未报告的-6-64-实验">未报告的 6×64 实验</a></li><li><a href="#tiger-真正改变了什么">TIGER 真正改变了什么</a></li><li><a href="#参考资料">参考资料</a></li></ol>
+        <ol><li><a href="#在生成物品之前-先把物品变成一种语言">在生成物品之前，先把物品变成一种语言</a></li><li><a href="#rq-vae-如何生成-semantic-id">RQ-VAE 如何生成 Semantic ID</a></li><li><a href="#rq-vae-的损失函数">RQ-VAE 的损失函数</a></li><li><a href="#碰撞发生后怎么办">碰撞发生后怎么办</a></li><li><a href="#当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</a></li><li><a href="#模型如何从概率分布变成-top-k-物品">模型如何从概率分布变成 Top-K 物品</a></li><li><a href="#beam-search-在这里做了什么">Beam search 在这里做了什么</a></li><li><a href="#生成无效-id-怎么办">生成无效 ID 怎么办</a></li><li><a href="#冷启动-tiger-的能力-还是内容模型的能力">冷启动：TIGER 的能力，还是内容模型的能力</a></li><li><a href="#多样性-温度提高了熵-但这是谁的贡献">多样性：温度提高了熵，但这是谁的贡献</a></li><li><a href="#它真的更容易扩展吗">它真的更容易扩展吗</a></li><li><a href="#数据集融合实验验证了什么">数据集融合实验验证了什么</a></li><li><a href="#未报告的-6-64-实验">未报告的 6×64 实验</a></li><li><a href="#tiger-真正改变了什么">TIGER 真正改变了什么</a></li><li><a href="#参考资料">参考资料</a></li></ol>
       </aside>
     </div>
   </main>
@@ -988,6 +1027,6 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
     </nav>
   </footer>
 
-  <script type="module" src="../../assets/blog.js?v=9a15113cf2fa"></script>
+  <script type="module" src="../../assets/blog.js?v=0b09b68d1563"></script>
 </body>
 </html>

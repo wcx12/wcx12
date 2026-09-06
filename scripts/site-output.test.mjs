@@ -464,6 +464,13 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：RQ-VAE 的对照实验到底证明了什么？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>为什么选择 RQ-VAE，而不是其他量化方式<\/h2>/);
+      assert.match(source, /id="fig-tiger-generator-input"/);
+      assert.match(source, /生成器实际看到的输入[\s\S]*?Encoder 输入[\s\S]*?user_5[\s\S]*?a1[\s\S]*?b1[\s\S]*?c1[\s\S]*?Decoder 训练目标[\s\S]*?d1/);
+      assert.match(source, /P\(d1 \| context\)[\s\S]*?P\(d4 \| context, d1,d2,d3\)/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：用户 token 为什么可能有效？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>疑问：模型会不会主要学习同一物品内部的 token 转移？<\/summary>/);
+      assert.doesNotMatch(source, /<h3[^>]*>用户 token 为什么可能有效<\/h3>/);
+      assert.doesNotMatch(source, /<h3[^>]*>模型会不会主要学习同一物品内部的 token 转移<\/h3>/);
       assert.match(source, /id="fig-tiger-quantizer-atlas"/);
       assert.match(source, /class="tiger-quantizer-axis"/);
       for (const method of ['random', 'lsh', 'pq', 'tree', 'vq', 'rq']) {
@@ -477,6 +484,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?内容[\s\S]*?学习码本[\s\S]*?残差 token/);
       assert.match(source, /Product Quantization[\s\S]*?Hierarchical k-means[\s\S]*?VQ-VAE[\s\S]*?RQ-VAE/);
       assert.match(source, /id="fig-tiger-index-map"/);
+      assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 4<\/span>/);
       assert.match(source, /索引：从查询到候选地址的路径[\s\S]*?传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>/);
       assert.doesNotMatch(source, /Hint：Transformer memory 为什么可以被叫作索引？/);

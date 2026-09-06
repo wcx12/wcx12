@@ -746,7 +746,7 @@ const tigerQuantizerAtlasCopy = {
 
 const tigerIndexMapCopy = {
   en: {
-    figure: 'Figure 3',
+    figure: 'Figure 4',
     title: 'An index is a route from query to candidate address',
     aria: 'A two-row comparison showing how traditional vector retrieval and TIGER both map a user context to candidate item addresses.',
     rows: [
@@ -770,10 +770,10 @@ const tigerIndexMapCopy = {
       }
     ],
     bridge: 'Same job, different mechanism: search a stored vector structure, or decode a likely Semantic ID.',
-    caption: 'Figure 3. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
+    caption: 'Figure 4. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
   },
   zh: {
-    figure: '图 3',
+    figure: '图 4',
     title: '索引：从查询到候选地址的路径',
     aria: '传统向量检索和 TIGER 都把用户上下文映射到候选物品地址，但实现机制不同的双行对比图。',
     rows: [
@@ -797,7 +797,44 @@ const tigerIndexMapCopy = {
       }
     ],
     bridge: '两条路径做同一件事：把用户上下文变成候选地址；区别是查外部结构，还是解码一个语义 ID。',
-    caption: '图 3. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
+    caption: '图 4. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
+  }
+};
+
+const tigerGeneratorInputCopy = {
+  en: {
+    figure: 'Figure 3',
+    title: 'What the generator actually receives',
+    aria: 'A diagram showing that TIGER feeds a user token plus flattened history Semantic ID tokens into the encoder, then trains the decoder to generate the next item Semantic ID.',
+    inputLabel: 'Encoder input',
+    targetLabel: 'Decoder training target',
+    user: 'user_5',
+    items: ['Item A', 'Item B', 'Item C'],
+    target: 'Next item',
+    encoder: 'Bidirectional encoder',
+    context: 'history context',
+    decoder: 'Autoregressive decoder',
+    output: 'next Semantic ID',
+    probs: ['P(d1 | context)', 'P(d2 | context, d1)', 'P(d3 | context, d1,d2)', 'P(d4 | context, d1,d2,d3)'],
+    note: 'The history is not three raw item IDs. It is a user token followed by flattened Semantic ID tokens, and the target is the next item address.',
+    caption: 'Figure 3. TIGER constructs the input sequence as a user ID token followed by the Semantic ID tokens for the user interaction history, then predicts the next item Semantic ID token by token.'
+  },
+  zh: {
+    figure: '图 3',
+    title: '生成器实际看到的输入',
+    aria: '一张示意图，展示 TIGER 把用户 token 和展平后的历史 Semantic ID tokens 输入 encoder，再让 decoder 生成下一个物品的 Semantic ID。',
+    inputLabel: 'Encoder 输入',
+    targetLabel: 'Decoder 训练目标',
+    user: 'user_5',
+    items: ['Item A', 'Item B', 'Item C'],
+    target: '下一个 item',
+    encoder: '双向 Encoder',
+    context: '历史上下文',
+    decoder: '自回归 Decoder',
+    output: '下一个 Semantic ID',
+    probs: ['P(d1 | context)', 'P(d2 | context, d1)', 'P(d3 | context, d1,d2)', 'P(d4 | context, d1,d2,d3)'],
+    note: '关键点：历史不是三个原始 Item ID，而是 user token 加展平后的历史 Semantic ID tokens；训练目标也不是自然语言，而是下一个物品的语义地址。',
+    caption: '图 3. TIGER 把 user ID token 接在用户历史 Semantic ID tokens 前面作为 encoder 输入，再训练 decoder 逐 token 预测下一个物品的 Semantic ID。'
   }
 };
 
@@ -1057,6 +1094,69 @@ function renderTigerIndexMapFigure(lang = 'en') {
 ${rows}
       </div>
       <p class="tiger-flow-note">${escapeHtml(copy.bridge)}</p>
+    </div>
+    <figcaption>${escapeHtml(copy.caption)}</figcaption>
+  </figure>`;
+}
+
+function renderTigerGeneratorToken(value, kind = '') {
+  return `<i class="tiger-generator-token${kind ? ` tiger-generator-token-${escapeHtml(kind)}` : ''}">${escapeHtml(value)}</i>`;
+}
+
+function renderTigerGeneratorItem(label, tokens) {
+  const tokenHtml = tokens.map((token) => renderTigerGeneratorToken(token)).join('');
+  return `<span class="tiger-generator-item"><b>${escapeHtml(label)}</b>${tokenHtml}</span>`;
+}
+
+function renderTigerGeneratorInputFigure(lang = 'en') {
+  const copy = tigerGeneratorInputCopy[lang === 'zh' ? 'zh' : 'en'];
+  const history = [
+    renderTigerGeneratorToken(copy.user, 'user'),
+    renderTigerGeneratorItem(copy.items[0], ['a1', 'a2', 'a3', 'a4']),
+    renderTigerGeneratorItem(copy.items[1], ['b1', 'b2', 'b3', 'b4']),
+    renderTigerGeneratorItem(copy.items[2], ['c1', 'c2', 'c3', 'c4'])
+  ].join('');
+  const target = [
+    renderTigerGeneratorToken('<BOS>', 'control'),
+    renderTigerGeneratorItem(copy.target, ['d1', 'd2', 'd3', 'd4']),
+    renderTigerGeneratorToken('<EOS>', 'control')
+  ].join('');
+  const probs = copy.probs.map((prob) => `<li>${escapeHtml(prob)}</li>`).join('');
+  return `<figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure">
+    <div class="tiger-pipeline-surface tiger-generator-surface" role="group" aria-label="${escapeHtml(copy.aria)}">
+      <div class="tiger-pipeline-heading">
+        <span>${escapeHtml(copy.figure)}</span>
+        <strong>${escapeHtml(copy.title)}</strong>
+      </div>
+      <div class="tiger-generator-board">
+        <section class="tiger-generator-strip tiger-generator-strip-input">
+          <span class="tiger-generator-label">${escapeHtml(copy.inputLabel)}</span>
+          <div class="tiger-generator-tokens">
+            ${history}
+          </div>
+        </section>
+        <section class="tiger-generator-core">
+          <div>
+            <span>${escapeHtml(copy.encoder)}</span>
+            <strong>${escapeHtml(copy.context)}</strong>
+          </div>
+          <i aria-hidden="true"></i>
+          <div>
+            <span>${escapeHtml(copy.decoder)}</span>
+            <strong>${escapeHtml(copy.output)}</strong>
+          </div>
+        </section>
+        <section class="tiger-generator-strip tiger-generator-strip-target">
+          <span class="tiger-generator-label">${escapeHtml(copy.targetLabel)}</span>
+          <div class="tiger-generator-tokens tiger-generator-target-tokens">
+            ${target}
+          </div>
+          <ol class="tiger-generator-probs">
+            ${probs}
+          </ol>
+        </section>
+      </div>
+      <p class="tiger-flow-note">${escapeHtml(copy.note)}</p>
     </div>
     <figcaption>${escapeHtml(copy.caption)}</figcaption>
   </figure>`;
@@ -1670,6 +1770,7 @@ function createMarkdownRenderer() {
   };
   addSimpleDirective('tiger_pipeline', '::tiger-pipeline', renderTigerPipelineFigure);
   addSimpleDirective('tiger_quantizers', '::tiger-quantizers', renderTigerQuantizerAtlasFigure);
+  addSimpleDirective('tiger_generator_input', '::tiger-generator-input', renderTigerGeneratorInputFigure);
   addSimpleDirective('tiger_index_map', '::tiger-index-map', renderTigerIndexMapFigure);
   md.block.ruler.before('paragraph', 'tiger_pipeline_legacy', (state, startLine, endLine, silent) => {
     const pos = state.bMarks[startLine] + state.tShift[startLine];

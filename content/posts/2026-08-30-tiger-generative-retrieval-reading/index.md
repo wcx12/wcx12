@@ -301,71 +301,83 @@ $$
 
 ## 当交互历史变成 token 序列，推荐才真正成为生成
 
-得到 Semantic ID 后，用户的交互历史会从物品序列变成 token 序列。这对应[图 1](#fig-tiger-semantic-id-flow) 右侧的用户侧分支：生成模型的输入是用户历史，输出才是下一个可映射回物品库的语义 item。
+得到 Semantic ID 后，重点就从“物品怎么编号”转到“生成器到底看见什么”。TIGER 的生成器不是直接读 item 文本，也不是读原始 Item ID；在论文实现里，输入序列由一个 **user token** 开头，后面接用户历史中每个 item 的 Semantic ID tokens。这对应[图 1](#fig-tiger-semantic-id-flow)右侧的用户侧分支，也就是把“用户做过什么”翻译成生成模型可以处理的离散语言。
+
+如果一个用户依次交互了 Item A、Item B、Item C，而每个 item 的 Semantic ID 有四位，那么进入 encoder 的不是三个物品节点，而是一串 token：
 
 ```text
-Item A → Item B → Item C
+Item A -> Item B -> Item C
 
-变为：
+Encoder 输入：
 
-(a₁,a₂,a₃,a₄)
-→ (b₁,b₂,b₃,b₄)
-→ (c₁,c₂,c₃,c₄)
+[user_5]  a1 a2 a3 a4  b1 b2 b3 b4  c1 c2 c3 c4
+
+Decoder 训练目标：
+
+<BOS>  d1 d2 d3 d4  <EOS>
 ```
 
-这些 ID 被直接展平，输入编码器—解码器 Transformer。模型根据用户历史逐 token 预测下一个物品的完整 Semantic ID。
+其中 `a* / b* / c*` 是历史物品的 Semantic ID token，`d*` 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。这个过程见[图 3](#fig-tiger-generator-input)。
 
-先把[索引](term:index)这个词说白一点：在检索系统里，它不一定是一张数据库表，也不一定是一份文件；它更像“查询进入系统后，如何快速指到候选结果地址”的那套机制。书的目录把主题指到页码，倒排索引把词指到文档，向量索引把 query embedding 指到 item ID。推荐里的问题也是类似的：给定用户历史，系统要尽快找出下一批候选物品。
+::tiger-generator-input
 
-传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见[图 3](#fig-tiger-index-map)。
-
-::tiger-index-map
-
-论文把这种设计称为 **Transformer memory acts as an index**。这里的 memory 指 Transformer 的模型参数；index 指“从用户上下文得到候选物品地址”的能力。它不是说模型参数里真的有一张可以像数据库一样直接增删改查的表。
-
-::disclosure[讨论：Transformer 参数为什么被说成索引？]
-更直观地说，索引回答的是这个问题：**我有一个很大的候选集合，怎样不用逐个看，就能把查询带到可能相关的候选位置？**
-
-传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 [ANN](term:ann) / [MIPS](term:mips) 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。
-
-TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址：
+这也是“生成式推荐”的核心：模型不是先把用户历史编码成 query embedding，再去候选库里做 [ANN](term:ann) / [MIPS](term:mips) 检索；而是在 Semantic ID 词表上直接学习
 
 $$
-P(c_1,c_2,c_3,c_4 \mid \text{history}).
+P(d_1,d_2,d_3,d_4 \mid \text{user token}, \text{history Semantic ID tokens}).
 $$
 
-decoder 每一步都在 Semantic ID 词表上给出 token 概率，[beam search](term:beam-search) 保留概率较高的前缀。前缀越长，候选地址越具体；生成完整 ID 后，再通过 Semantic ID → Item ID 映射表回到真实物品。
+推理时，decoder 第一步预测 `d1`，第二步在 `d1` 的基础上预测 `d2`，一直到生成完整 Semantic ID。生成结束后，系统再用 Semantic ID -> Item ID 的映射表，把这个语义地址还原成真实物品。换句话说，TIGER 的“生成”不是生成自然语言句子，而是生成一个可以映射回物品库的离散地址。
 
-所以，把 Transformer 参数说成索引，是在“功能”上成立：它接收用户上下文，并给出候选 item 的地址。它在“工程结构”上又不像传统索引：你不能像更新向量库那样直接插入一行 item embedding，也不能直接遍历参数来检查某个 item 的邻居。
-::
-
-因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成 Semantic ID、维护映射，并让生成模型有机会生成到这个 ID”。这也是为什么“Transformer 参数像索引”不能被理解成“推荐系统不再需要任何索引相关数据结构”。
-
-### 模型会不会主要学习同一物品内部的 token 转移
-
-将四位 ID 直接展平后，next-token objective 会同时学习两类关系：
-
-```text
-同一 item 内部：c₁ → c₂ → c₃ → c₄
-不同 item 之间：上一 item 的 c₄ → 下一 item 的 c₁
-```
-
-这带来一个论文没有回答的问题：模型是否花费了大量能力去补全同一个物品内部的 Semantic ID，而不是学习真正的物品行为转移？
-
-另一种可能是，item 内部的 token 组合学习恰好帮助模型掌握“什么样的 ID 是合法的”，从而解释为什么生成无效 ID 的概率很低。后续可以通过比较不同 token 位置的 loss、加入 item boundary、只在 item 级位置计算损失，或者并行预测四位 ID 来验证。
-
-### 用户 token 为什么可能有效
-
-论文还把 raw user ID 固定哈希到 2000 个 bucket token。它不是每次随机映射，但多个用户会发生哈希碰撞。
+::disclosure[补充：用户 token 为什么可能有效？]
+论文还把 raw user ID 固定哈希到 2000 个 bucket token。它不是每次随机映射，但多个用户会发生哈希碰撞。放在生成器输入里看，这个 token 相当于给 decoder 一个稳定的长期条件：同样的历史 item 序列，在不同用户 bucket 下可以有不同的偏置。
 
 | 设置 | Recall@5 | NDCG@5 | Recall@10 | NDCG@10 |
 |---|---:|---:|---:|---:|
 | 无用户信息 | 0.04458 | 0.0302 | 0.06479 | 0.0367 |
 | 加用户 token | 0.0454 | 0.0321 | 0.0648 | 0.0384 |
 
-Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显。这更像是候选位置和个性化有所改善，而不是召回能力全面上升。
+Recall@10 几乎不变，Recall@5 小幅提高，NDCG 的提升更明显。这更像是候选排序位置和个性化有所改善，而不是召回能力全面上升。
 
-哈希 token 为什么有用，论文没有给出充分解释。一个可能原因是历史最多只保留 20 个 item，用户 token 提供了稳定的长期条件；也可能是 2000 个 bucket 提供了粗粒度用户偏置，碰撞同时产生了一种参数共享或正则化。它也可能受到额外参数量或单次运行波动影响。不同 bucket 数量、多随机种子以及唯一 user embedding 的对照仍然有必要。
+一个可能原因是历史最多只保留 20 个 item，user token 提供了历史窗口之外的长期用户条件；也可能是 2000 个 bucket 提供了粗粒度用户偏置，碰撞同时带来参数共享或正则化。严格来说，这里还需要不同 bucket 数量、多随机种子以及唯一 user embedding 的对照，才能判断提升到底来自“用户信息”还是额外参数/随机波动。
+::
+
+::disclosure[疑问：模型会不会主要学习同一物品内部的 token 转移？]
+将四位 ID 直接展平后，next-token objective 会同时学习两类关系：
+
+```text
+同一 item 内部：c1 -> c2 -> c3 -> c4
+不同 item 之间：上一 item 的 c4 -> 下一 item 的 c1
+```
+
+这带来一个论文没有回答的问题：模型是否花费了大量能力去补全同一个物品内部的 Semantic ID，而不是学习真正的物品行为转移？
+
+另一种可能是，item 内部的 token 组合学习恰好帮助模型掌握“什么样的 ID 是合法的”，从而解释为什么生成无效 ID 的概率很低。后续可以通过比较不同 token 位置的 loss、加入 item boundary、只在 item 级位置计算损失，或者并行预测四位 ID 来验证。这个判断目前更像我的疑问和实验建议，不应该被当成论文已经证明的结论。
+::
+
+::disclosure[讨论：Transformer 参数为什么被说成索引？]
+理解了生成器的输入和输出之后，再看论文里的 **Transformer memory acts as an index** 会更自然。这里的 memory 指 Transformer 的模型参数；index 指“从用户上下文得到候选物品地址”的能力。它不是说模型参数里真的有一张可以像数据库一样直接增删改查的表。
+
+先把[索引](term:index)这个词说白一点：在检索系统里，它不一定是一张数据库表，也不一定是一份文件；它更像“查询进入系统后，如何快速指到候选结果地址”的那套机制。书的目录把主题指到页码，倒排索引把词指到文档，向量索引把 query embedding 指到 item ID。推荐里的问题也是类似的：给定用户历史，系统要尽快找出下一批候选物品。
+
+传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 [ANN](term:ann) / [MIPS](term:mips) 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。
+
+TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址。传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见[图 4](#fig-tiger-index-map)。
+
+::tiger-index-map
+
+推理时，decoder 每一步都在 Semantic ID 词表上给出 token 概率：
+
+$$
+P(c_1,c_2,c_3,c_4 \mid \text{history}).
+$$
+
+[beam search](term:beam-search) 保留概率较高的前缀。前缀越长，候选地址越具体；生成完整 ID 后，再通过 Semantic ID -> Item ID 映射表回到真实物品。
+
+所以，把 Transformer 参数说成索引，是在“功能”上成立：它接收用户上下文，并给出候选 item 的地址。它在“工程结构”上又不像传统索引：你不能像更新向量库那样直接插入一行 item embedding，也不能直接遍历参数来检查某个 item 的邻居。
+
+因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成 Semantic ID、维护映射，并让生成模型有机会生成到这个 ID”。这也是为什么“Transformer 参数像索引”不能被理解成“推荐系统不再需要任何索引相关数据结构”。
+::
 
 ## 模型如何从概率分布变成 Top-K 物品
 
