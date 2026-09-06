@@ -174,83 +174,98 @@ Semantic ID：(12, 24, 52)
         <span>图 2</span>
         <strong>Semantic ID 分词训练阶段</strong>
       </div>
-      <div class="tiger-rqvae-flow">
-        <section class="tiger-rqvae-node tiger-rqvae-io">
+      <div class="tiger-rqvae-architecture">
+        <section class="tiger-rqvae-vector tiger-rqvae-source">
           <span>item 内容 embedding</span>
           <strong>x</strong>
           <em>Sentence-T5，768 维</em>
+          <i aria-hidden="true"></i>
         </section>
         <i class="tiger-rqvae-arrow" aria-hidden="true"></i>
-        <section class="tiger-rqvae-node tiger-rqvae-encoder">
+        <section class="tiger-rqvae-module tiger-rqvae-encoder">
           <span>DNN encoder</span>
-          <ol>
-
-            <li class="">
-              <span>x</span>
-              <strong>768</strong>
-            </li>
-            <li class="">
-              <span>h1</span>
-              <strong>512</strong>
-            </li>
-            <li class="">
-              <span>h2</span>
-              <strong>256</strong>
-            </li>
-            <li class="">
-              <span>h3</span>
-              <strong>128</strong>
-            </li>
-            <li class="is-latent">
-              <span>z</span>
-              <strong>32</strong>
+          <ol class="tiger-rqvae-funnel">
+<li class="" style="--layer-scale:1.00">
+              <b>x</b>
+              <span>768</span>
+            </li><li class="" style="--layer-scale:0.87">
+              <b>h1</b>
+              <span>512</span>
+            </li><li class="" style="--layer-scale:0.74">
+              <b>h2</b>
+              <span>256</span>
+            </li><li class="" style="--layer-scale:0.61">
+              <b>h3</b>
+              <span>128</span>
+            </li><li class="is-latent" style="--layer-scale:0.48">
+              <b>z</b>
+              <span>32</span>
             </li>
           </ol>
           <em>中间层使用 ReLU</em>
         </section>
         <i class="tiger-rqvae-arrow" aria-hidden="true"></i>
-        <section class="tiger-rqvae-node tiger-rqvae-quantizer">
+        <section class="tiger-rqvae-module tiger-rqvae-quantizer">
           <span>Residual quantizer</span>
-          <ol>
-
-            <li>
-              <span>C0</span>
-              <strong>256 x 32</strong>
-              <em>对 r0 = z 选最近 code</em>
-              <i aria-hidden="true"></i>
-            </li>
-            <li>
-              <span>C1</span>
-              <strong>256 x 32</strong>
-              <em>量化 r1 = r0 - ec0</em>
-              <i aria-hidden="true"></i>
-            </li>
-            <li>
-              <span>C2</span>
-              <strong>256 x 32</strong>
-              <em>量化 r2 = r1 - ec1</em>
-            </li>
+          <div class="tiger-rqvae-residual-rail" aria-hidden="true">
+            <b class="rail-z">z</b>
+            <b class="rail-r1">r1</b>
+            <b class="rail-r2">r2</b>
+            <b class="rail-r3">r3</b>
+          </div>
+          <ol class="tiger-rqvae-codebooks">
+<li class="tiger-rqvae-codebook tiger-rqvae-codebook-0">
+            <strong>C0</strong>
+            <span class="tiger-rqvae-slots"><i class="">0</i><i class="">1</i><i class="">2</i><i class="">3</i><i class="">4</i><i class="">5</i><i class="">6</i><i class="is-selected">7</i></span>
+            <em>对 r0 = z 选最近 code</em>
+          </li><li class="tiger-rqvae-codebook tiger-rqvae-codebook-1">
+            <strong>C1</strong>
+            <span class="tiger-rqvae-slots"><i class="">0</i><i class="is-selected">1</i><i class="">2</i><i class="">3</i><i class="">4</i><i class="">5</i><i class="">6</i><i class="">7</i></span>
+            <em>量化 r1 = r0 - ec0</em>
+          </li><li class="tiger-rqvae-codebook tiger-rqvae-codebook-2">
+            <strong>C2</strong>
+            <span class="tiger-rqvae-slots"><i class="">0</i><i class="">1</i><i class="">2</i><i class="">3</i><i class="is-selected">4</i><i class="">5</i><i class="">6</i><i class="">7</i></span>
+            <em>量化 r2 = r1 - ec1</em>
+          </li>
           </ol>
+          <div class="tiger-rqvae-semantic-id" aria-hidden="true">
+            <span>7</span><span>1</span><span>4</span>
+          </div>
           <em>3 层；每层码本 256 个 32 维 codeword</em>
         </section>
         <i class="tiger-rqvae-arrow" aria-hidden="true"></i>
-        <section class="tiger-rqvae-node tiger-rqvae-decoder">
+        <section class="tiger-rqvae-module tiger-rqvae-decoder">
           <span>DNN decoder</span>
-          <strong>z-hat -> x-hat</strong>
+          <ol class="tiger-rqvae-funnel tiger-rqvae-funnel-decoder">
+<li class="" style="--layer-scale:0.48">
+              <b>z-hat</b>
+              <span>32</span>
+            </li><li class="" style="--layer-scale:0.61">
+              <b>DNN</b>
+              <span></span>
+            </li><li class="" style="--layer-scale:0.74">
+              <b>DNN</b>
+              <span></span>
+            </li><li class="" style="--layer-scale:0.87">
+              <b>x-hat</b>
+              <span>768</span>
+            </li>
+          </ol>
           <em>把 z-hat 解码回 embedding 空间</em>
         </section>
         <i class="tiger-rqvae-arrow" aria-hidden="true"></i>
-        <section class="tiger-rqvae-node tiger-rqvae-io">
+        <section class="tiger-rqvae-vector tiger-rqvae-recon">
           <span>重构 embedding</span>
           <strong>x-hat</strong>
           <em>x-hat，目标空间 768 维</em>
+          <i aria-hidden="true"></i>
         </section>
       </div>
-      <div class="tiger-rqvae-loss">
-        <strong>训练信号</strong>
-        <ul>
+      <div class="tiger-rqvae-loss-loop">
+        <span>训练信号</span>
+        <ol>
 <li>Lrecon = ||x - x-hat||^2</li><li>Lrqvae 对齐 residual 与 codeword</li><li>联合更新 encoder、decoder 和码本</li>
-        </ul>
+        </ol>
       </div>
       <p class="tiger-flow-note">原文明确给出了 encoder 的中间层尺寸和 latent 维度，但没有给出 decoder 的隐藏层尺寸。</p>
     </div>
@@ -697,17 +712,131 @@ Decoder 训练目标：
           </div>
         </section>
         <section class="tiger-generator-core">
-          <div>
-            <span>Transformer Encoder</span>
-            <strong>历史上下文</strong>
-            <ul><li>4 层</li><li>每层 6 个 attention head</li><li>head dimension 64</li><li>input dimension 128</li><li>MLP dimension 1024</li><li>ReLU + dropout 0.1</li></ul>
-          </div>
+          <section class="tiger-transformer-tower tiger-transformer-encoder">
+            <header>
+              <span>Transformer Encoder</span>
+              <strong>历史上下文</strong>
+            </header>
+            <ol>
+<li class="tiger-transformer-layer">
+  <b>1</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li><li class="tiger-transformer-layer">
+  <b>2</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li><li class="tiger-transformer-layer">
+  <b>3</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li><li class="tiger-transformer-layer">
+  <b>4</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li>
+            </ol>
+            <div class="tiger-transformer-rulers">
+              <span>input 128</span>
+              <span>6 heads x 64</span>
+              <span>MLP 1024</span>
+            </div>
+          </section>
           <i aria-hidden="true"></i>
-          <div>
-            <span>Transformer Decoder</span>
-            <strong>下一个 Semantic ID</strong>
-            <ul><li>4 层</li><li>每层 6 个 attention head</li><li>head dimension 64</li><li>input dimension 128</li><li>MLP dimension 1024</li><li>ReLU + dropout 0.1</li></ul>
-          </div>
+          <section class="tiger-transformer-tower tiger-transformer-decoder">
+            <header>
+              <span>Transformer Decoder</span>
+              <strong>下一个 Semantic ID</strong>
+            </header>
+            <ol>
+<li class="tiger-transformer-layer">
+  <b>1</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>masked self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+<div class="tiger-transformer-op tiger-transformer-cross">
+        <span>cross-attn</span>
+        <b>历史上下文</b>
+      </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li><li class="tiger-transformer-layer">
+  <b>2</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>masked self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+<div class="tiger-transformer-op tiger-transformer-cross">
+        <span>cross-attn</span>
+        <b>历史上下文</b>
+      </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li><li class="tiger-transformer-layer">
+  <b>3</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>masked self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+<div class="tiger-transformer-op tiger-transformer-cross">
+        <span>cross-attn</span>
+        <b>历史上下文</b>
+      </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li><li class="tiger-transformer-layer">
+  <b>4</b>
+  <div class="tiger-transformer-op tiger-transformer-attn">
+    <span>masked self-attn</span>
+    <em><i></i><i></i><i></i><i></i><i></i><i></i></em>
+  </div>
+<div class="tiger-transformer-op tiger-transformer-cross">
+        <span>cross-attn</span>
+        <b>历史上下文</b>
+      </div>
+  <div class="tiger-transformer-op tiger-transformer-ffn">
+    <span>FFN</span>
+    <em><i></i><i></i><i></i></em>
+  </div>
+</li>
+            </ol>
+            <div class="tiger-transformer-rulers">
+              <span>input 128</span>
+              <span>6 heads x 64</span>
+              <span>MLP 1024</span>
+            </div>
+          </section>
         </section>
         <section class="tiger-generator-strip tiger-generator-strip-target">
           <span class="tiger-generator-label">Decoder 训练目标</span>
@@ -718,12 +847,19 @@ Decoder 训练目标：
             <li>P(d1 | context)</li><li>P(d2 | context, d1)</li><li>P(d3 | context, d1,d2)</li><li>P(d4 | context, d1,d2,d3)</li>
           </ol>
         </section>
-        <section class="tiger-generator-strip tiger-generator-strip-train">
-          <span class="tiger-generator-label">训练设置</span>
-          <ul class="tiger-generator-train">
-            <li>约 13M 参数</li><li>batch size 256</li><li>Beauty/Sports 训练 200k steps</li><li>Toys 训练 100k steps</li><li>前 10k steps 学习率 0.01，之后 inverse-square-root decay</li>
-          </ul>
-        </section>
+        <section class="tiger-generator-schedule">
+            <span>训练设置</span>
+            <div class="tiger-generator-timeline" aria-hidden="true">
+              <i class="is-warmup"></i>
+              <i class="is-main"></i>
+            </div>
+            <ol>
+              <li>10k LR 0.01</li>
+              <li>100k / 200k steps</li>
+              <li>batch 256</li>
+              <li>~13M params</li>
+            </ol>
+          </section>
       </div>
       <p class="tiger-flow-note">关键点：历史不是三个原始 Item ID，而是 user token 加展平后的历史 Semantic ID tokens；训练目标也不是自然语言，而是下一个物品的语义地址。</p>
     </div>

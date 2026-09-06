@@ -812,12 +812,31 @@ function tigerRqvaeArrowHtml() {
   return '<i class="tiger-rqvae-arrow" aria-hidden="true"></i>';
 }
 
+function tigerRqvaeFunnelHtml(layers, mode = 'encoder') {
+  return layers.map(([name, dim], index) => {
+    const scale = mode === 'encoder'
+      ? 1 - (index * 0.13)
+      : 0.48 + (index * 0.13);
+    return `<li class="${index === layers.length - 1 && mode === 'encoder' ? 'is-latent' : ''}" style="--layer-scale:${scale.toFixed(2)}"><b>${escapeHtml(name)}</b><span>${escapeHtml(dim)}</span></li>`;
+  }).join('');
+}
+
+function tigerRqvaeCodebookHtml(name, selected, detail, index) {
+  const slots = Array.from({ length: 8 }, (_, slot) => `<i class="${slot === selected ? 'is-selected' : ''}">${slot}</i>`).join('');
+  return `<li class="tiger-rqvae-codebook tiger-rqvae-codebook-${index}"><strong>${escapeHtml(name)}</strong><span class="tiger-rqvae-slots">${slots}</span><em>${escapeHtml(detail)}</em></li>`;
+}
+
 function tigerRqvaeTrainingFigureHtml(lang = 'en') {
   const copy = tigerRqvaeTrainingCopy[lang === 'zh' ? 'zh' : 'en'];
-  const encoderLayers = copy.encoderLayers.map(([name, dim], index) => `<li class="${index === copy.encoderLayers.length - 1 ? 'is-latent' : ''}"><span>${escapeHtml(name)}</span><strong>${escapeHtml(dim)}</strong></li>`).join('');
-  const levels = copy.levels.map(([name, detail], index) => `<li><span>${escapeHtml(name)}</span><strong>256 x 32</strong><em>${escapeHtml(detail)}</em>${index < copy.levels.length - 1 ? '<i aria-hidden="true"></i>' : ''}</li>`).join('');
+  const encoderLayers = tigerRqvaeFunnelHtml(copy.encoderLayers, 'encoder');
+  const decoderLayers = tigerRqvaeFunnelHtml([['z-hat', '32'], ['DNN', ''], ['DNN', ''], ['x-hat', '768']], 'decoder');
+  const codebooks = [
+    tigerRqvaeCodebookHtml('C0', 7, copy.levels[0][1], 0),
+    tigerRqvaeCodebookHtml('C1', 1, copy.levels[1][1], 1),
+    tigerRqvaeCodebookHtml('C2', 4, copy.levels[2][1], 2)
+  ].join('');
   const losses = copy.lossItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-  return `<figure id="fig-tiger-rqvae-training" class="tiger-pipeline-figure tiger-rqvae-figure"><div class="tiger-pipeline-surface tiger-rqvae-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-rqvae-flow"><section class="tiger-rqvae-node tiger-rqvae-io"><span>${escapeHtml(copy.input)}</span><strong>x</strong><em>${escapeHtml(copy.inputDetail)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-node tiger-rqvae-encoder"><span>${escapeHtml(copy.encoder)}</span><ol>${encoderLayers}</ol><em>${escapeHtml(copy.encoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-node tiger-rqvae-quantizer"><span>${escapeHtml(copy.quantizer)}</span><ol>${levels}</ol><em>${escapeHtml(copy.quantizerNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-node tiger-rqvae-decoder"><span>${escapeHtml(copy.decoder)}</span><strong>z-hat -> x-hat</strong><em>${escapeHtml(copy.decoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-node tiger-rqvae-io"><span>${escapeHtml(copy.output)}</span><strong>x-hat</strong><em>${escapeHtml(copy.outputDetail)}</em></section></div><div class="tiger-rqvae-loss"><strong>${escapeHtml(copy.loss)}</strong><ul>${losses}</ul></div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+  return `<figure id="fig-tiger-rqvae-training" class="tiger-pipeline-figure tiger-rqvae-figure"><div class="tiger-pipeline-surface tiger-rqvae-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-rqvae-architecture"><section class="tiger-rqvae-vector tiger-rqvae-source"><span>${escapeHtml(copy.input)}</span><strong>x</strong><em>${escapeHtml(copy.inputDetail)}</em><i aria-hidden="true"></i></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-encoder"><span>${escapeHtml(copy.encoder)}</span><ol class="tiger-rqvae-funnel">${encoderLayers}</ol><em>${escapeHtml(copy.encoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-quantizer"><span>${escapeHtml(copy.quantizer)}</span><div class="tiger-rqvae-residual-rail" aria-hidden="true"><b class="rail-z">z</b><b class="rail-r1">r1</b><b class="rail-r2">r2</b><b class="rail-r3">r3</b></div><ol class="tiger-rqvae-codebooks">${codebooks}</ol><div class="tiger-rqvae-semantic-id" aria-hidden="true"><span>7</span><span>1</span><span>4</span></div><em>${escapeHtml(copy.quantizerNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-decoder"><span>${escapeHtml(copy.decoder)}</span><ol class="tiger-rqvae-funnel tiger-rqvae-funnel-decoder">${decoderLayers}</ol><em>${escapeHtml(copy.decoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-vector tiger-rqvae-recon"><span>${escapeHtml(copy.output)}</span><strong>x-hat</strong><em>${escapeHtml(copy.outputDetail)}</em><i aria-hidden="true"></i></section></div><div class="tiger-rqvae-loss-loop"><span>${escapeHtml(copy.loss)}</span><ol>${losses}</ol></div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
 }
 
 function tigerQuantizerSvgHtml(id, body) {
@@ -882,6 +901,26 @@ function tigerGeneratorItemHtml(label, tokens) {
   return `<span class="tiger-generator-item"><b>${escapeHtml(label)}</b>${tokenHtml}</span>`;
 }
 
+function tigerHeadDotsHtml(count = 6) {
+  return Array.from({ length: count }, () => '<i></i>').join('');
+}
+
+function tigerTransformerLayerHtml(kind, index, copy) {
+  const isDecoder = kind === 'decoder';
+  const attentionLabel = isDecoder ? 'masked self-attn' : 'self-attn';
+  const cross = isDecoder ? `<div class="tiger-transformer-op tiger-transformer-cross"><span>cross-attn</span><b>${escapeHtml(copy.context)}</b></div>` : '';
+  return `<li class="tiger-transformer-layer"><b>${index + 1}</b><div class="tiger-transformer-op tiger-transformer-attn"><span>${attentionLabel}</span><em>${tigerHeadDotsHtml(6)}</em></div>${cross}<div class="tiger-transformer-op tiger-transformer-ffn"><span>FFN</span><em><i></i><i></i><i></i></em></div></li>`;
+}
+
+function tigerTransformerTowerHtml(kind, title, subtitle, copy) {
+  const layers = Array.from({ length: 4 }, (_, index) => tigerTransformerLayerHtml(kind, index, copy)).join('');
+  return `<section class="tiger-transformer-tower tiger-transformer-${kind}"><header><span>${escapeHtml(title)}</span><strong>${escapeHtml(subtitle)}</strong></header><ol>${layers}</ol><div class="tiger-transformer-rulers"><span>input 128</span><span>6 heads x 64</span><span>MLP 1024</span></div></section>`;
+}
+
+function tigerGeneratorScheduleHtml(copy) {
+  return `<section class="tiger-generator-schedule"><span>${escapeHtml(copy.trainLabel)}</span><div class="tiger-generator-timeline" aria-hidden="true"><i class="is-warmup"></i><i class="is-main"></i></div><ol><li>10k LR 0.01</li><li>100k / 200k steps</li><li>batch 256</li><li>~13M params</li></ol></section>`;
+}
+
 function tigerGeneratorInputFigureHtml(lang = 'en') {
   const copy = tigerGeneratorInputCopy[lang === 'zh' ? 'zh' : 'en'];
   const history = [
@@ -896,9 +935,7 @@ function tigerGeneratorInputFigureHtml(lang = 'en') {
     tigerGeneratorTokenHtml('<EOS>', 'control')
   ].join('');
   const probs = copy.probs.map((prob) => `<li>${escapeHtml(prob)}</li>`).join('');
-  const modelSpecs = copy.modelSpecs.map((spec) => `<li>${escapeHtml(spec)}</li>`).join('');
-  const trainSpecs = copy.trainSpecs.map((spec) => `<li>${escapeHtml(spec)}</li>`).join('');
-  return `<figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure"><div class="tiger-pipeline-surface tiger-generator-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-generator-board"><section class="tiger-generator-strip tiger-generator-strip-input"><span class="tiger-generator-label">${escapeHtml(copy.inputLabel)}</span><div class="tiger-generator-tokens">${history}</div></section><section class="tiger-generator-core"><div><span>${escapeHtml(copy.encoder)}</span><strong>${escapeHtml(copy.context)}</strong><ul>${modelSpecs}</ul></div><i aria-hidden="true"></i><div><span>${escapeHtml(copy.decoder)}</span><strong>${escapeHtml(copy.output)}</strong><ul>${modelSpecs}</ul></div></section><section class="tiger-generator-strip tiger-generator-strip-target"><span class="tiger-generator-label">${escapeHtml(copy.targetLabel)}</span><div class="tiger-generator-tokens tiger-generator-target-tokens">${target}</div><ol class="tiger-generator-probs">${probs}</ol></section><section class="tiger-generator-strip tiger-generator-strip-train"><span class="tiger-generator-label">${escapeHtml(copy.trainLabel)}</span><ul class="tiger-generator-train">${trainSpecs}</ul></section></div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+  return `<figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure"><div class="tiger-pipeline-surface tiger-generator-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-generator-board"><section class="tiger-generator-strip tiger-generator-strip-input"><span class="tiger-generator-label">${escapeHtml(copy.inputLabel)}</span><div class="tiger-generator-tokens">${history}</div></section><section class="tiger-generator-core">${tigerTransformerTowerHtml('encoder', copy.encoder, copy.context, copy)}<i aria-hidden="true"></i>${tigerTransformerTowerHtml('decoder', copy.decoder, copy.output, copy)}</section><section class="tiger-generator-strip tiger-generator-strip-target"><span class="tiger-generator-label">${escapeHtml(copy.targetLabel)}</span><div class="tiger-generator-tokens tiger-generator-target-tokens">${target}</div><ol class="tiger-generator-probs">${probs}</ol></section>${tigerGeneratorScheduleHtml(copy)}</div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
 }
 
 function tigerPipelineFigureHtml(lang = 'en') {
