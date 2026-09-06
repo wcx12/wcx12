@@ -464,7 +464,13 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：RQ-VAE 的对照实验到底证明了什么？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>为什么选择 RQ-VAE，而不是其他量化方式<\/h2>/);
-      assert.match(source, /Random ID:[\s\S]*?LSH \/ SimHash:[\s\S]*?RQ-VAE:/);
+      assert.match(source, /id="fig-tiger-quantizer-atlas"/);
+      for (const method of ['random', 'lsh', 'pq', 'tree', 'vq', 'rq']) {
+        assert.match(source, new RegExp(`class="tiger-quantizer-method tiger-quantizer-${method}"`));
+      }
+      assert.match(source, /Product Quantization[\s\S]*?Hierarchical k-means[\s\S]*?VQ-VAE[\s\S]*?RQ-VAE/);
+      assert.match(source, /id="fig-tiger-index-map"/);
+      assert.match(source, /传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>/);
       assert.doesNotMatch(source, /Hint：Transformer memory 为什么可以被叫作索引？/);
       assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">ANN<\/span>[\s\S]*?近似最近邻搜索/);

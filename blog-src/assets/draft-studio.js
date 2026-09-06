@@ -626,6 +626,72 @@ const tigerFlowFigureCopy = {
   }
 };
 
+const tigerQuantizerAtlasCopy = {
+  en: {
+    figure: 'Figure 2',
+    title: 'Different ID builders preserve different structure',
+    aria: 'A visual comparison of six ways to turn item embeddings into discrete identifiers.',
+    methods: [
+      ['random', 'Random ID', 'control baseline', 'item -> sampled tokens', 'The item receives random codewords, so the ID has capacity but carries no content similarity.', 'Good for proving that semantic structure matters.'],
+      ['lsh', 'LSH / SimHash', 'random projections', 'embedding -> hyperplane signs -> hash code', 'Random hyperplanes split the embedding space; nearby vectors are more likely to share bits, but the split is not learned for the data distribution.', 'Fast and content based, but not optimized for reconstruction.'],
+      ['pq', 'Product Quantization', 'subspace codes', 'vector slices -> separate codebooks', 'The vector dimensions are partitioned into subspaces, and each subspace is quantized independently.', 'Strong for compression and vector search, less natural for coarse-to-fine residual IDs.'],
+      ['tree', 'Hierarchical k-means', 'tree path', 'root cluster -> child cluster -> leaf', 'The ID is a path in a clustering tree; early branch decisions constrain every later decision.', 'Readable hierarchy, but early hard boundaries cannot be repaired downstream.'],
+      ['vq', 'VQ-VAE', 'single learned codebook', 'encoder latent -> nearest codeword -> decoder', 'A learned codebook turns the latent vector into one discrete choice while reconstruction trains the code space.', 'Learns data-aware codes, but does not naturally produce multi-token residual refinement.'],
+      ['rq', 'RQ-VAE', 'residual correction', 'latent -> code + residual -> next code', 'Each layer quantizes what the previous layer did not explain, so the final ID is a sequence of residual codewords.', 'This is the method TIGER uses for its Semantic ID.']
+    ],
+    legend: [
+      ['Content aware', 'uses item embedding rather than only random assignment'],
+      ['Learned', 'code boundaries are trained from data'],
+      ['Sequential ID', 'produces several tokens that can be generated autoregressively']
+    ],
+    caption: 'Figure 2. The TIGER comparison is mainly Random ID and LSH against RQ-VAE; other quantizers explain nearby design choices rather than fully controlled baselines in the paper.'
+  },
+  zh: {
+    figure: '图 2',
+    title: '不同 ID 构造方式保留的是不同结构',
+    aria: '六种方式将 item embedding 变成离散标识的可视化对比。',
+    methods: [
+      ['random', 'Random ID', '随机基线', 'item -> 随机抽 token', '不看内容，直接给 item 分配随机 codeword。ID 有组合容量，但相似物品不一定共享任何 token。', '适合证明“语义结构是否真的有用”。'],
+      ['lsh', 'LSH / SimHash', '随机投影', 'embedding -> 超平面正负号 -> hash code', '用随机超平面切分 embedding 空间；近邻向量更可能有相同 bit，但切分方式不是为当前数据分布学出来的。', '快、基于内容，但不优化重构。'],
+      ['pq', 'Product Quantization', '子空间码', '向量切片 -> 各子空间单独量化', '先把向量维度切成几段，每段进入自己的码本，最后把几个子空间编号拼成一个 ID。', '适合压缩和向量检索，不天然表达从粗到细的残差修正。'],
+      ['tree', 'Hierarchical k-means', '树路径', '根簇 -> 子簇 -> 叶子簇', 'ID 是聚类树上的一条路径。第一层选错父簇后，后面只能在这个子树里继续细分。', '层次直观，但早期硬边界很难被下层修正。'],
+      ['vq', 'VQ-VAE', '单层学习码本', 'encoder latent -> 最近 codeword -> decoder', '用一个学习到的码本把 latent vector 变成一个离散选择，再通过重构损失训练码本和编码器。', '能学习数据相关 code，但没有多 token 的残差细化。'],
+      ['rq', 'RQ-VAE', '残差修正', 'latent -> code + residual -> 下一层 code', '第一层先解释主要部分，第二层解释剩余残差，第三层继续修正，最终 ID 是多层 codeword 序列。', '这是 TIGER 用来生成 Semantic ID 的方法。']
+    ],
+    legend: [
+      ['是否看内容', '是否使用 item embedding，而不是只随机编号'],
+      ['是否学习边界', '码本或划分是否由数据训练得到'],
+      ['是否天然多 token', '是否容易作为自回归生成目标']
+    ],
+    caption: '图 2. TIGER 论文真正进入同一张实验表的是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID；其它方法更适合作为理解量化设计空间的参照。'
+  }
+};
+
+const tigerIndexMapCopy = {
+  en: {
+    figure: 'Figure 3',
+    title: 'Where does the index live?',
+    aria: 'A comparison of traditional vector retrieval and TIGER generative retrieval.',
+    rows: [
+      ['external', 'Traditional vector retrieval', 'user history', 'query embedding', 'external ANN / MIPS index', 'Top-K item IDs', 'candidate list', 'The external index stores candidate item embeddings and performs nearest-neighbor or inner-product search.'],
+      ['tiger', 'TIGER generative retrieval', 'history as Semantic IDs', 'decoder prefixes', 'Transformer parameters', 'Semantic ID -> Item ID', 'mapping table', 'The model generates the address of the next item; a mapping table still resolves that address back to real items.']
+    ],
+    bridge: 'The word index describes the retrieval interface: given a user context, return candidate item addresses.',
+    caption: 'Figure 3. TIGER moves candidate generation from an external vector index into the Transformer decoding process, but it still needs a Semantic-ID-to-item mapping.'
+  },
+  zh: {
+    figure: '图 3',
+    title: '“索引”到底放在哪里？',
+    aria: '传统向量检索和 TIGER 生成式检索的索引职责对比图。',
+    rows: [
+      ['external', '传统向量检索', '用户历史', 'query embedding', '外部 ANN / MIPS 索引', 'Top-K Item ID', 'candidate list', '外部索引显式保存候选 item embedding，并负责近邻搜索或最大内积搜索。'],
+      ['tiger', 'TIGER 生成式检索', 'Semantic ID 历史', 'decoder 前缀', 'Transformer 参数', 'Semantic ID -> Item ID', 'mapping table', '模型生成下一个 item 的“地址”；映射表仍然负责把这个地址解析回真实物品。']
+    ],
+    bridge: '这里的“索引”指候选生成接口：给定用户上下文，返回候选物品地址。',
+    caption: '图 3. TIGER 把候选生成从外部向量索引迁移到 Transformer 解码过程里，但 Semantic ID 到真实 item 的映射仍然存在。'
+  }
+};
+
 function tigerFlowGlyphHtml(name = 'item') {
   const safeName = escapeAttribute(name);
   if (name === 'semantic') {
@@ -644,6 +710,51 @@ function tigerFlowGlyphHtml(name = 'item') {
     return `<span class="tiger-flow-glyph tiger-flow-glyph-model" aria-hidden="true"><i></i><i></i><i></i></span>`;
   }
   return `<span class="tiger-flow-glyph tiger-flow-glyph-${safeName}" aria-hidden="true"><i></i><i></i><i></i></span>`;
+}
+
+function tigerQuantizerVisualHtml(id) {
+  if (id === 'random') return `<div class="tiger-quantizer-visual tiger-quantizer-visual-random" aria-hidden="true"><span class="tiger-q-item">item</span><span class="tiger-q-pool"><b>07</b><b>188</b><b>42</b><b>251</b></span><span class="tiger-q-tuple"><b>c1</b><b>c2</b><b>c3</b><b>c4</b></span></div>`;
+  if (id === 'lsh') return `<div class="tiger-quantizer-visual tiger-quantizer-visual-lsh" aria-hidden="true"><span class="tiger-q-space"><i></i><i></i><i></i><b></b></span><span class="tiger-q-bits"><b>1</b><b>0</b><b>1</b><b>1</b></span></div>`;
+  if (id === 'pq') return `<div class="tiger-quantizer-visual tiger-quantizer-visual-pq" aria-hidden="true"><span class="tiger-q-vector"><i></i><i></i><i></i></span><span class="tiger-q-codebooks"><b>A7</b><b>B3</b><b>C9</b></span></div>`;
+  if (id === 'tree') return `<div class="tiger-quantizer-visual tiger-quantizer-visual-tree" aria-hidden="true"><span class="tiger-q-root">root</span><span class="tiger-q-branch tiger-q-branch-active">A</span><span class="tiger-q-branch">B</span><span class="tiger-q-leaf tiger-q-branch-active">A2</span><span class="tiger-q-leaf">A5</span></div>`;
+  if (id === 'vq') return `<div class="tiger-quantizer-visual tiger-quantizer-visual-vq" aria-hidden="true"><span>x</span><i></i><span>E</span><i></i><span>z</span><i></i><span>code 18</span><i></i><span>D</span></div>`;
+  return `<div class="tiger-quantizer-visual tiger-quantizer-visual-rq" aria-hidden="true"><span class="tiger-q-residual tiger-q-residual-1"><b>z</b><i>c1</i></span><span class="tiger-q-residual tiger-q-residual-2"><b>r1</b><i>c2</i></span><span class="tiger-q-residual tiger-q-residual-3"><b>r2</b><i>c3</i></span><span class="tiger-q-tuple"><b>12</b><b>24</b><b>52</b></span></div>`;
+}
+
+function tigerQuantizerAtlasFigureHtml(lang = 'en') {
+  const copy = tigerQuantizerAtlasCopy[lang === 'zh' ? 'zh' : 'en'];
+  const methods = copy.methods.map(([id, name, label, route, point, takeaway]) => `
+        <section class="tiger-quantizer-method tiger-quantizer-${escapeAttribute(id)}">
+          ${tigerQuantizerVisualHtml(id)}
+          <div class="tiger-quantizer-copy">
+            <span>${escapeHtml(label)}</span>
+            <h3>${escapeHtml(name)}</h3>
+            <em>${escapeHtml(route)}</em>
+            <p>${escapeHtml(point)}</p>
+            <strong>${escapeHtml(takeaway)}</strong>
+          </div>
+        </section>`).join('');
+  const legend = copy.legend.map(([label, detail]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(detail)}</dd></div>`).join('');
+  return `<figure id="fig-tiger-quantizer-atlas" class="tiger-pipeline-figure tiger-quantizer-figure"><div class="tiger-pipeline-surface tiger-quantizer-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-quantizer-grid">${methods}</div><dl class="tiger-quantizer-legend">${legend}</dl></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+}
+
+function tigerIndexGlyphHtml(id) {
+  if (id === 'external') return `<span class="tiger-index-glyph tiger-index-glyph-external" aria-hidden="true"><i></i><i></i><i></i><b></b></span>`;
+  return `<span class="tiger-index-glyph tiger-index-glyph-tiger" aria-hidden="true"><i></i><i></i><i></i><b>12</b><b>24</b><b>52</b></span>`;
+}
+
+function tigerIndexMapFigureHtml(lang = 'en') {
+  const copy = tigerIndexMapCopy[lang === 'zh' ? 'zh' : 'en'];
+  const rows = copy.rows.map(([id, badge, input, representation, engine, output, target, note]) => `
+        <section class="tiger-index-lane tiger-index-${escapeAttribute(id)}">
+          <div class="tiger-index-lane-head"><span>${escapeHtml(badge)}</span><p>${escapeHtml(note)}</p></div>
+          <div class="tiger-index-route">
+            <div class="tiger-index-stage"><span>${escapeHtml(input)}</span><strong>${escapeHtml(representation)}</strong></div>
+            <div class="tiger-index-engine">${tigerIndexGlyphHtml(id)}<strong>${escapeHtml(engine)}</strong></div>
+            <div class="tiger-index-stage"><span>${escapeHtml(output)}</span><strong>${escapeHtml(target)}</strong></div>
+          </div>
+        </section>`).join('');
+  return `<figure id="fig-tiger-index-map" class="tiger-pipeline-figure tiger-index-figure"><div class="tiger-pipeline-surface tiger-index-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-index-map">${rows}</div><p class="tiger-flow-note">${escapeHtml(copy.bridge)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
 }
 
 function tigerPipelineFigureHtml(lang = 'en') {
@@ -765,6 +876,8 @@ function inlineMarkdown(value, draft) {
 function isMarkdownBlockStart(line) {
   return /^```/.test(line)
     || /^::tiger-pipeline\s*$/.test(line.trim())
+    || /^::tiger-quantizers\s*$/.test(line.trim())
+    || /^::tiger-index-map\s*$/.test(line.trim())
     || /^::disclosure\[[^\]]+]\s*$/.test(line.trim())
     || /^#{1,6}\s+/.test(line)
     || /^>\s?/.test(line)
@@ -787,6 +900,18 @@ function renderMarkdown(markdown, draft) {
 
     if (line.trim() === '::tiger-pipeline') {
       html.push(tigerPipelineFigureHtml(normalizeLang(draft?.lang || currentLang())));
+      index += 1;
+      continue;
+    }
+
+    if (line.trim() === '::tiger-quantizers') {
+      html.push(tigerQuantizerAtlasFigureHtml(normalizeLang(draft?.lang || currentLang())));
+      index += 1;
+      continue;
+    }
+
+    if (line.trim() === '::tiger-index-map') {
+      html.push(tigerIndexMapFigureHtml(normalizeLang(draft?.lang || currentLang())));
       index += 1;
       continue;
     }
