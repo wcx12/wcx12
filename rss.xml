@@ -262,66 +262,19 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 <li>数据中实际出现的语义前缀；</li>
 <li>追加碰撞编号后的有效物品 ID。</li>
 </ul>
-<p>三层、每层 256、usage 80% 都是论文采用的工程设置，不是被消融实验证明的最优选择。为什么不是两层 512、四层 128，论文没有给出系统解释。</p></div></details><h2 id="为什么选择-rq-vae-而不是其他量化方式">为什么选择 RQ-VAE，而不是其他量化方式</h2>
-<p>可以把论文提到的方案放在同一个坐标系里理解。</p>
-<table>
-<thead>
-<tr>
-<th>方法</th>
-<th>基本思路</th>
-<th>优点</th>
-<th>主要问题</th>
-<th>论文是否直接实验</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Random ID</td>
-<td>随机分配多个 code</td>
-<td>提供无语义对照</td>
-<td>不保留内容相似性</td>
-<td>是</td>
-</tr>
-<tr>
-<td>LSH / SimHash</td>
-<td>用随机超平面产生多组 hash code</td>
-<td>快、无需训练、容易扩展</td>
-<td>不适应具体数据分布，也不优化重构</td>
-<td>是</td>
-</tr>
-<tr>
-<td>Product Quantization</td>
-<td>拆分向量子空间，分别量化</td>
-<td>压缩和 ANN 检索成熟</td>
-<td>各位 code 对应不同子空间，不天然粗到细</td>
-<td>否</td>
-</tr>
-<tr>
-<td>Hierarchical k-means</td>
-<td>递归进行硬聚类，ID 表示树路径</td>
-<td>层级直观</td>
-<td>早期硬边界不可逆，跨分支相似性被截断</td>
-<td>否</td>
-</tr>
-<tr>
-<td>VQ-VAE</td>
-<td>用单层学习码本量化 latent vector</td>
-<td>能学习数据相关的离散表示</td>
-<td>没有逐层残差结构</td>
-<td>只在文字中声称试过</td>
-</tr>
-<tr>
-<td>RQ-VAE</td>
-<td>多层码本逐层量化残差</td>
-<td>学习数据分布并逐步降低残差</td>
-<td>训练复杂，有坍缩、碰撞与层次解释问题</td>
-<td>是</td>
-</tr>
-</tbody>
-</table>
-<p>Hierarchical k-means 的问题并不是聚类完全没有语义，而是语义相似性容易被树的硬边界截断。两个非常相近的物品如果在第一层被分到不同父簇，后续就永远在不同子树中细分，ID 的第一个 token 完全不同；而同一个父簇中距离较远的物品却仍然共享前缀。</p>
-<p>换句话说，树路径保留的是分区关系，而不是连续的全局距离；上层的错误也无法被下层修正。RQ 的残差量化至少允许后续 codeword 继续修正整体向量，而不是只在一个隔离子树内部继续切分。</p>
-<p>论文真正给出的量化对照只有 Random ID、LSH SID 和 RQ-VAE SID：</p>
+<p>三层、每层 256、usage 80% 都是论文采用的工程设置，不是被消融实验证明的最优选择。为什么不是两层 512、四层 128，论文没有给出系统解释。</p></div></details><details class="blog-disclosure" id="讨论-rq-vae-的对照实验到底证明了什么"><summary>讨论：RQ-VAE 的对照实验到底证明了什么？</summary><div class="blog-disclosure-body"><p>这部分更适合理解为“论文做过哪些 ID 生成对照”，而不是“RQ-VAE 已经被证明优于所有量化方法”。<a href="https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf" target="_blank" rel="noreferrer">原文第 4.2 节</a>真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。</p>
+<p>三种 ID 生成方式可以先按流程理解：</p>
+<div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">Random ID:
+item → 从码本里均匀随机采样 m 个 codeword → (c1, ..., cm)
+
+LSH / SimHash:
+item embedding x → h 个随机超平面判断正负 → 二进制 hash → 整数 code
+重复 m 次 → (c1, ..., cm)
+
+RQ-VAE:
+item embedding x → encoder 得到 z → 第 1 层 codeword 近似 z
+→ 第 2 层 codeword 近似 residual → 第 3 层继续修正 → (c1, c2, c3)
+</code></pre></div><p>原文在 LSH 对照里使用 <code>h = 8</code>、<code>m = 4</code>；Random ID 使用 <code>m = 4</code>、<code>K = 255</code>，目的是让组合空间与 RQ-VAE 的设置接近。为了不把表写得过重，下面只摘出 Recall；原表还同时报告了 NDCG。</p>
 <table>
 <thead>
 <tr>
@@ -352,9 +305,14 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 </tr>
 </tbody>
 </table>
-<p>RQ-VAE 相对 LSH 的 Recall 和 NDCG 在三个数据集上均有大约 20%–26% 的相对提升。这足以支持“在 TIGER 中，学习式 RQ-VAE ID 比随机超平面 LSH 更有效”，但不能推出 RQ-VAE 优于所有量化方法。</p>
-<p>Product Quantization、hierarchical k-means 和 VQ-VAE 都没有出现在同一张实验表里。RQ-VAE 的收益究竟来自残差结构、非线性编码器，还是更充分的训练，也没有被进一步拆开。</p>
-<h2 id="当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</h2>
+<p>这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。</p>
+<p>几个没有被完整公平对照的替代方案，需要分开看：</p>
+<ul>
+<li>Product Quantization：把向量维度切成几个子空间，每个子空间单独量化，最后拼成一串 code。它擅长压缩和向量检索，但每一位 code 对应的是维度子空间，不天然表示逐层 residual correction。</li>
+<li>Hierarchical k-means：先聚大簇，再在每个簇里递归细分，ID 是一条树路径。它的层次最直观，但早期如果分错父簇，下层无法跨分支修正相似关系。</li>
+<li>VQ-VAE：通过 encoder 得到 latent vector，再用单层 codebook 量化并由 decoder 重构。它说明学习式码本可行，但单层 VQ 不提供 RQ 的逐层 residual correction；原文也只是说试过 VQ-VAE，候选生成效果接近，但会失去分层 ID 的性质。</li>
+</ul>
+<p>所以更严谨的表述应该是：RQ-VAE 在论文选择的对照组里更适合 TIGER，但“为什么更好”还没有被完全拆开。收益可能来自残差结构，也可能来自非线性编码器、训练目标，或者这些因素共同作用。</p></div></details><h2 id="当交互历史变成-token-序列-推荐才真正成为生成">当交互历史变成 token 序列，推荐才真正成为生成</h2>
 <p>得到 Semantic ID 后，用户的交互历史会从物品序列变成 token 序列。这对应<a href="#fig-tiger-semantic-id-flow">图 1</a> 右侧的用户侧分支：生成模型的输入是用户历史，输出才是下一个可映射回物品库的语义 item。</p>
 <div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">Item A → Item B → Item C
 
@@ -366,13 +324,16 @@ L_{\text{rqvae}}=\sum_{d=0}^{m-1}L_d.
 </code></pre></div><p>这些 ID 被直接展平，输入编码器—解码器 Transformer。模型根据用户历史逐 token 预测下一个物品的完整 Semantic ID。</p>
 <p>传统检索与 TIGER 的差别可以压缩成：</p>
 <div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">传统推荐：
-User History → Query Embedding → External ANN Index → Item
+User History → Query Embedding → ANN / MIPS over Item Embeddings → Item
 
 TIGER：
-User History → Transformer → Generate Semantic ID → Item
-</code></pre></div><p>论文把这种设计称为 <strong>Transformer memory acts as an index</strong>。</p>
-<details class="blog-disclosure" id="hint-transformer-memory-为什么可以被叫作索引"><summary>Hint：Transformer memory 为什么可以被叫作索引？</summary><div class="blog-disclosure-body"><p>这里的 memory 指 Transformer 的模型参数，不是 KV Cache，也不是额外的存储模块。训练把“用户交互 token 序列更可能对应哪个后续 Semantic ID”的关系编码进参数。</p>
-<p>传统索引显式保存 item embedding，并使用 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-3" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-3" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span>/<span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-4" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-4" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span> 查询；TIGER 则通过模型前向计算，从参数化条件分布中生成候选 ID。因此它更接近 parameterized index，而不是传统意义上可以直接枚举和更新的索引表。</p></div></details><p>参数化索引并不意味着所有外部结构都消失了。系统仍然需要维护 Item ID 与 Semantic ID 的双向映射，而且模型参数不像 ANN 索引那样容易插入、删除或直接检查某个物品。更新成本只是从“重建向量索引”部分转移到了“更新量化映射或模型参数”。</p>
+User History of Semantic IDs → Transformer → Semantic ID candidates → Item lookup
+</code></pre></div><p>论文把这种设计称为 <strong>Transformer memory acts as an index</strong>。这里的重点不是“模型参数里有一张可以直接查询的表”，而是服务阶段的候选生成路径变了：传统 dual-encoder 路线会先用 candidate tower 为每个 item 生成 embedding，再把这些 embedding 放进外部 <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-ann-3" data-term-chip><span class="term-chip-label">ANN</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-ann-3" role="tooltip">近似最近邻搜索：在大规模向量库中用更低成本找到足够接近查询向量的候选，而不是逐个精确比较所有物品。</span></span> / <span class="term-chip-wrap"><button class="term-chip" type="button" aria-expanded="false" aria-describedby="term-tiger-generative-retrieval-reading-mips-4" data-term-chip><span class="term-chip-label">MIPS</span></button><span class="term-chip-card" id="term-tiger-generative-retrieval-reading-mips-4" role="tooltip">最大内积搜索：按照查询向量与物品向量的内积大小排序，用来从向量库中找最匹配的候选。</span></span> 索引；用户历史被编码成 query embedding 后，再到索引里找相似 item。TIGER 则先离线给 item 生成 Semantic ID，再用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer，让模型直接生成下一个 item 的 Semantic ID。这也是<a href="https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf" target="_blank" rel="noreferrer">原文第 3 节</a>的两阶段设计。</p>
+<details class="blog-disclosure" id="讨论-transformer-参数为什么被说成索引"><summary>讨论：Transformer 参数为什么被说成索引？</summary><div class="blog-disclosure-body"><p>可以把 Semantic ID 理解成 item 的“地址”。模型训练时学的不是“这个 query embedding 离哪个 item embedding 最近”，而是从用户历史到下一个地址的条件分布：</p>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><msub><mi>c</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>c</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>c</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>c</mi><mn>4</mn></msub><mo>∣</mo><mtext>history</mtext><mo stretchy="false">)</mo><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">P(c_1,c_2,c_3,c_4 \mid \text{history}).
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">history</span></span><span class="mclose">)</span><span class="mord">.</span></span></span></span></span></p>
+<p>推理时，decoder 逐 token 输出概率，beam search 保留概率最高的若干条 Semantic ID 前缀；生成完整 ID 后，再通过 Semantic ID → Item ID 映射表回到真实物品。</p>
+<p>所以它“像索引”的地方在于：给定用户历史，它返回候选 item 的地址；不像传统索引的地方在于：它不是一份可以单独遍历、插入、删除的向量表，而是被训练进 Transformer 参数里的概率路由。这里的 memory 指 Transformer 参数，不是 KV cache，也不是额外的存储模块。</p></div></details><p>因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成语义 ID、维护映射，并让生成模型有机会生成到这个 ID”。</p>
 <h3 id="模型会不会主要学习同一物品内部的-token-转移">模型会不会主要学习同一物品内部的 token 转移</h3>
 <p>将四位 ID 直接展平后，next-token objective 会同时学习两类关系：</p>
 <div class="code-frame"><div class="code-head"><span>text</span></div><pre tabindex="0"><code class="hljs language-plaintext">同一 item 内部：c₁ → c₂ → c₃ → c₄

@@ -270,24 +270,25 @@ $$
 三层、每层 256、usage 80% 都是论文采用的工程设置，不是被消融实验证明的最优选择。为什么不是两层 512、四层 128，论文没有给出系统解释。
 ::
 
-## 为什么选择 RQ-VAE，而不是其他量化方式
+::disclosure[讨论：RQ-VAE 的对照实验到底证明了什么？]
+这部分更适合理解为“论文做过哪些 ID 生成对照”，而不是“RQ-VAE 已经被证明优于所有量化方法”。[原文第 4.2 节](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。
 
-可以把论文提到的方案放在同一个坐标系里理解。
+三种 ID 生成方式可以先按流程理解：
 
-| 方法 | 基本思路 | 优点 | 主要问题 | 论文是否直接实验 |
-|---|---|---|---|---|
-| Random ID | 随机分配多个 code | 提供无语义对照 | 不保留内容相似性 | 是 |
-| LSH / SimHash | 用随机超平面产生多组 hash code | 快、无需训练、容易扩展 | 不适应具体数据分布，也不优化重构 | 是 |
-| Product Quantization | 拆分向量子空间，分别量化 | 压缩和 ANN 检索成熟 | 各位 code 对应不同子空间，不天然粗到细 | 否 |
-| Hierarchical k-means | 递归进行硬聚类，ID 表示树路径 | 层级直观 | 早期硬边界不可逆，跨分支相似性被截断 | 否 |
-| VQ-VAE | 用单层学习码本量化 latent vector | 能学习数据相关的离散表示 | 没有逐层残差结构 | 只在文字中声称试过 |
-| RQ-VAE | 多层码本逐层量化残差 | 学习数据分布并逐步降低残差 | 训练复杂，有坍缩、碰撞与层次解释问题 | 是 |
+```text
+Random ID:
+item → 从码本里均匀随机采样 m 个 codeword → (c1, ..., cm)
 
-Hierarchical k-means 的问题并不是聚类完全没有语义，而是语义相似性容易被树的硬边界截断。两个非常相近的物品如果在第一层被分到不同父簇，后续就永远在不同子树中细分，ID 的第一个 token 完全不同；而同一个父簇中距离较远的物品却仍然共享前缀。
+LSH / SimHash:
+item embedding x → h 个随机超平面判断正负 → 二进制 hash → 整数 code
+重复 m 次 → (c1, ..., cm)
 
-换句话说，树路径保留的是分区关系，而不是连续的全局距离；上层的错误也无法被下层修正。RQ 的残差量化至少允许后续 codeword 继续修正整体向量，而不是只在一个隔离子树内部继续切分。
+RQ-VAE:
+item embedding x → encoder 得到 z → 第 1 层 codeword 近似 z
+→ 第 2 层 codeword 近似 residual → 第 3 层继续修正 → (c1, c2, c3)
+```
 
-论文真正给出的量化对照只有 Random ID、LSH SID 和 RQ-VAE SID：
+原文在 LSH 对照里使用 `h = 8`、`m = 4`；Random ID 使用 `m = 4`、`K = 255`，目的是让组合空间与 RQ-VAE 的设置接近。为了不把表写得过重，下面只摘出 Recall；原表还同时报告了 NDCG。
 
 | 方法 | Sports R@5 / R@10 | Beauty R@5 / R@10 | Toys R@5 / R@10 |
 |---|---:|---:|---:|
@@ -295,9 +296,16 @@ Hierarchical k-means 的问题并不是聚类完全没有语义，而是语义�
 | LSH SID | 0.0215 / 0.0321 | 0.0379 / 0.0533 | 0.0412 / 0.0566 |
 | RQ-VAE SID | 0.0264 / 0.0400 | 0.0454 / 0.0648 | 0.0521 / 0.0712 |
 
-RQ-VAE 相对 LSH 的 Recall 和 NDCG 在三个数据集上均有大约 20%–26% 的相对提升。这足以支持“在 TIGER 中，学习式 RQ-VAE ID 比随机超平面 LSH 更有效”，但不能推出 RQ-VAE 优于所有量化方法。
+这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。
 
-Product Quantization、hierarchical k-means 和 VQ-VAE 都没有出现在同一张实验表里。RQ-VAE 的收益究竟来自残差结构、非线性编码器，还是更充分的训练，也没有被进一步拆开。
+几个没有被完整公平对照的替代方案，需要分开看：
+
+- Product Quantization：把向量维度切成几个子空间，每个子空间单独量化，最后拼成一串 code。它擅长压缩和向量检索，但每一位 code 对应的是维度子空间，不天然表示逐层 residual correction。
+- Hierarchical k-means：先聚大簇，再在每个簇里递归细分，ID 是一条树路径。它的层次最直观，但早期如果分错父簇，下层无法跨分支修正相似关系。
+- VQ-VAE：通过 encoder 得到 latent vector，再用单层 codebook 量化并由 decoder 重构。它说明学习式码本可行，但单层 VQ 不提供 RQ 的逐层 residual correction；原文也只是说试过 VQ-VAE，候选生成效果接近，但会失去分层 ID 的性质。
+
+所以更严谨的表述应该是：RQ-VAE 在论文选择的对照组里更适合 TIGER，但“为什么更好”还没有被完全拆开。收益可能来自残差结构，也可能来自非线性编码器、训练目标，或者这些因素共同作用。
+::
 
 ## 当交互历史变成 token 序列，推荐才真正成为生成
 
@@ -319,21 +327,27 @@ Item A → Item B → Item C
 
 ```text
 传统推荐：
-User History → Query Embedding → External ANN Index → Item
+User History → Query Embedding → ANN / MIPS over Item Embeddings → Item
 
 TIGER：
-User History → Transformer → Generate Semantic ID → Item
+User History of Semantic IDs → Transformer → Semantic ID candidates → Item lookup
 ```
 
-论文把这种设计称为 **Transformer memory acts as an index**。
+论文把这种设计称为 **Transformer memory acts as an index**。这里的重点不是“模型参数里有一张可以直接查询的表”，而是服务阶段的候选生成路径变了：传统 dual-encoder 路线会先用 candidate tower 为每个 item 生成 embedding，再把这些 embedding 放进外部 [ANN](term:ann) / [MIPS](term:mips) 索引；用户历史被编码成 query embedding 后，再到索引里找相似 item。TIGER 则先离线给 item 生成 Semantic ID，再用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer，让模型直接生成下一个 item 的 Semantic ID。这也是[原文第 3 节](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)的两阶段设计。
 
-::disclosure[Hint：Transformer memory 为什么可以被叫作索引？]
-这里的 memory 指 Transformer 的模型参数，不是 KV Cache，也不是额外的存储模块。训练把“用户交互 token 序列更可能对应哪个后续 Semantic ID”的关系编码进参数。
+::disclosure[讨论：Transformer 参数为什么被说成索引？]
+可以把 Semantic ID 理解成 item 的“地址”。模型训练时学的不是“这个 query embedding 离哪个 item embedding 最近”，而是从用户历史到下一个地址的条件分布：
 
-传统索引显式保存 item embedding，并使用 [ANN](term:ann)/[MIPS](term:mips) 查询；TIGER 则通过模型前向计算，从参数化条件分布中生成候选 ID。因此它更接近 parameterized index，而不是传统意义上可以直接枚举和更新的索引表。
+$$
+P(c_1,c_2,c_3,c_4 \mid \text{history}).
+$$
+
+推理时，decoder 逐 token 输出概率，beam search 保留概率最高的若干条 Semantic ID 前缀；生成完整 ID 后，再通过 Semantic ID → Item ID 映射表回到真实物品。
+
+所以它“像索引”的地方在于：给定用户历史，它返回候选 item 的地址；不像传统索引的地方在于：它不是一份可以单独遍历、插入、删除的向量表，而是被训练进 Transformer 参数里的概率路由。这里的 memory 指 Transformer 参数，不是 KV cache，也不是额外的存储模块。
 ::
 
-参数化索引并不意味着所有外部结构都消失了。系统仍然需要维护 Item ID 与 Semantic ID 的双向映射，而且模型参数不像 ANN 索引那样容易插入、删除或直接检查某个物品。更新成本只是从“重建向量索引”部分转移到了“更新量化映射或模型参数”。
+因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成语义 ID、维护映射，并让生成模型有机会生成到这个 ID”。
 
 ### 模型会不会主要学习同一物品内部的 token 转移
 

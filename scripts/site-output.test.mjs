@@ -462,7 +462,13 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
-      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>Hint：Transformer memory 为什么可以被叫作索引？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：RQ-VAE 的对照实验到底证明了什么？<\/summary>/);
+      assert.doesNotMatch(source, /<h2[^>]*>为什么选择 RQ-VAE，而不是其他量化方式<\/h2>/);
+      assert.match(source, /Random ID:[\s\S]*?LSH \/ SimHash:[\s\S]*?RQ-VAE:/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>/);
+      assert.doesNotMatch(source, /Hint：Transformer memory 为什么可以被叫作索引？/);
+      assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">ANN<\/span>[\s\S]*?近似最近邻搜索/);
+      assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">MIPS<\/span>[\s\S]*?最大内积搜索/);
       assert.doesNotMatch(source, /&lt;\/?(?:details|summary)&gt;/);
     }
   }
