@@ -462,8 +462,9 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
-      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：RQ-VAE 的对照实验到底证明了什么？<\/summary>/);
+      assert.match(source, /<h2[^>]*>表示实验：为什么不是随机 ID 或 LSH？<\/h2>/);
       assert.doesNotMatch(source, /<h2[^>]*>为什么选择 RQ-VAE，而不是其他量化方式<\/h2>/);
+      assert.doesNotMatch(source, /<h2[^>]*>模型如何从概率分布变成 Top-K 物品<\/h2>/);
       assert.match(source, /id="fig-tiger-rqvae-training"/);
       const rqvaeFigure = source.match(/<figure id="fig-tiger-rqvae-training"[\s\S]*?<\/figure>/)?.[0] ?? '';
       assert.match(rqvaeFigure, /class="tiger-rqvae-vector tiger-rqvae-source"/);
@@ -490,6 +491,15 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(generatorFigure, /class="tiger-generator-timeline"[\s\S]*?100k \/ 200k steps[\s\S]*?~13M/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：用户 token 为什么可能有效？<\/summary>/);
       assert.match(source, /2000 个 user-specific token[\s\S]*?Hashing Trick[\s\S]*?raw user ID[\s\S]*?2000 个 user ID token[\s\S]*?不同用户可能因为哈希碰撞共用同一个 user token/);
+      assert.match(source, /id="fig-tiger-inference-loop"/);
+      const inferenceFigure = source.match(/<figure id="fig-tiger-inference-loop"[\s\S]*?<\/figure>/)?.[0] ?? '';
+      for (const stage of ['prob', 'beam', 'sid', 'lookup', 'topk']) {
+        assert.match(inferenceFigure, new RegExp(`class="tiger-inference-stage tiger-inference-${stage}"`));
+      }
+      assert.match(inferenceFigure, /class="tiger-inference-bars"[\s\S]*?d1=12[\s\S]*?0\.42/);
+      assert.match(inferenceFigure, /class="tiger-inference-prefixes"[\s\S]*?12[\s\S]*?24[\s\S]*?52/);
+      assert.match(inferenceFigure, /class="tiger-inference-lookup-list"[\s\S]*?SID A[\s\S]*?item 831/);
+      assert.match(inferenceFigure, /class="tiger-inference-topk-list"[\s\S]*?#1 item 831/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>疑问：模型会不会主要学习同一物品内部的 token 转移？<\/summary>/);
       assert.doesNotMatch(source, /<h3[^>]*>用户 token 为什么可能有效<\/h3>/);
       assert.doesNotMatch(source, /<h3[^>]*>模型会不会主要学习同一物品内部的 token 转移<\/h3>/);
@@ -506,7 +516,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?内容[\s\S]*?学习码本[\s\S]*?残差 token/);
       assert.match(source, /Product Quantization[\s\S]*?Hierarchical k-means[\s\S]*?VQ-VAE[\s\S]*?RQ-VAE/);
       assert.match(source, /id="fig-tiger-index-map"/);
-      assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 5<\/span>/);
+      assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 6<\/span>/);
       assert.match(source, /索引：从查询到候选地址的路径[\s\S]*?传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>/);
       assert.doesNotMatch(source, /Hint：Transformer memory 为什么可以被叫作索引？/);
@@ -514,6 +524,18 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">ANN<\/span>[\s\S]*?近似最近邻搜索/);
       assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">MIPS<\/span>[\s\S]*?最大内积搜索/);
       assert.match(source, /<button class="term-chip"[^>]*>[\s\S]*?<span class="term-chip-label">beam search<\/span>[\s\S]*?束搜索：一种自回归解码策略/);
+      const architectureAt = source.indexOf('TIGER 的主要模型架构');
+      const mainResultsAt = source.indexOf('主实验：TIGER 到底有没有赢？');
+      const representationAt = source.indexOf('表示实验：为什么不是随机 ID 或 LSH？');
+      const capabilityAt = source.indexOf('补充能力实验：冷启动与多样性');
+      const diagnosticsAt = source.indexOf('生成与解码诊断');
+      const indexDiscussionAt = source.indexOf('<summary>讨论：Transformer 参数为什么被说成索引？</summary>');
+      const userTokenAt = source.indexOf('<summary>补充：用户 token 为什么可能有效？</summary>');
+      const inferenceAt = source.indexOf('id="fig-tiger-inference-loop"');
+      assert.ok(architectureAt > -1 && architectureAt < mainResultsAt, 'TIGER architecture should come before main results');
+      assert.ok(mainResultsAt < representationAt && representationAt < capabilityAt && capabilityAt < diagnosticsAt, 'TIGER experiment narrative order is wrong');
+      assert.ok(userTokenAt > source.indexOf('id="fig-tiger-generator-input"') && userTokenAt < inferenceAt, 'user token discussion should stay near the generator architecture');
+      assert.ok(indexDiscussionAt > diagnosticsAt, 'Transformer-as-index discussion should be in diagnostics, not the main architecture');
       assert.doesNotMatch(source, /&lt;\/?(?:details|summary)&gt;/);
     }
   }

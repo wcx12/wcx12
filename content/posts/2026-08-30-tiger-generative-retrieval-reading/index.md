@@ -2,7 +2,7 @@
 title: "TIGER：从语义 ID 到生成式推荐"
 slug: "tiger-generative-retrieval-reading"
 date: "2026-08-30"
-updated: "2026-09-04"
+updated: "2026-09-07"
 description: "从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。"
 category: "Research Notes"
 tags: ["generative-recommendation", "semantic-id", "rq-vae", "tiger"]
@@ -72,7 +72,11 @@ Semantic ID：(12, 24, 52)
 
 ::tiger-pipeline
 
-## RQ-VAE 如何生成 Semantic ID
+## TIGER 的主要模型架构
+
+这一部分只回答一个问题：TIGER 到底怎样把“推荐下一个物品”变成“生成下一个 Semantic ID”。它可以拆成两段：先在物品侧训练一个 Semantic ID tokenizer，再在用户侧训练一个 encoder-decoder Transformer 去生成这些 token。
+
+### RQ-VAE 如何生成 Semantic ID
 
 [图 1](https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/#fig-tiger-semantic-id-flow) 上方的物品侧分支对应这里的核心操作。TIGER 首先把物品的标题、价格、品牌、类别等内容特征组成文本，通过 Sentence-T5 得到 768 维内容 embedding。随后，RQ-VAE 的编码器将它压缩到 32 维潜在空间，再进行三层残差量化。
 
@@ -274,36 +278,7 @@ $$
 三层、每层 256、usage 80% 都是论文采用的工程设置，不是被消融实验证明的最优选择。为什么不是两层 512、四层 128，论文没有给出系统解释。
 ::
 
-::disclosure[讨论：RQ-VAE 的对照实验到底证明了什么？]
-这部分更适合理解为“论文做过哪些 ID 生成对照”，而不是“RQ-VAE 已经被证明优于所有量化方法”。[原文第 4.2 节](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。
-
-如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 3](#fig-tiger-quantizer-atlas)按这三个问题重新摆放这些方法。
-
-::tiger-quantizers
-
-原文在 LSH 对照里使用 `h = 8`、`m = 4`；Random ID 使用 `m = 4`、`K = 255`，目的是让组合空间与 RQ-VAE 的设置接近。为了不把表写得过重，下面只摘出 Recall；原表还同时报告了 NDCG。
-
-| 方法 | Sports R@5 / R@10 | Beauty R@5 / R@10 | Toys R@5 / R@10 |
-|---|---:|---:|---:|
-| Random ID | 0.0070 / 0.0116 | 0.0296 / 0.0434 | 0.0362 / 0.0448 |
-| LSH SID | 0.0215 / 0.0321 | 0.0379 / 0.0533 | 0.0412 / 0.0566 |
-| RQ-VAE SID | 0.0264 / 0.0400 | 0.0454 / 0.0648 | 0.0521 / 0.0712 |
-
-这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。
-
-这里可以按[图 3](#fig-tiger-quantizer-atlas)里的三条判断标签再拆开理解：
-
-- Random ID 是“容量对照”：它告诉我们，单纯给 item 一个多 token 编号并不够。如果编号不来自内容，相似物品之间没有共享结构，冷启动和低频泛化都很难指望它自然变好。
-- LSH / SimHash 是“内容但不学习”的对照：它确实从 item embedding 出发，但用的是随机超平面。它保留了一部分局部相似性，却不会为了重构或推荐数据主动调整边界。
-- Product Quantization 更像“分维度压缩”：每个 code 对应向量的一个子空间，不是前一层没解释完的残差。因此它适合做向量压缩和 [ANN](term:ann) 检索，但不直接对应 TIGER 想要的逐 token 语义生成。
-- Hierarchical k-means 更像“走树路径”：第一层决定父簇，第二层只在父簇内部继续分。这个层次最容易画出来，但早期硬边界也最难被后续修正。
-- VQ-VAE 是“单层学习码本”：它能用重构损失学习数据相关 code，但只给出一次离散选择。原文也提到试过 VQ-VAE，候选生成效果接近，但会失去 RQ-VAE 分层 ID 的性质。
-- RQ-VAE 是“逐层修 residual”：它既使用内容 embedding，又用学习式码本，还天然输出多 token ID。这些 token 才能被后面的 Transformer 当成一个可生成的 Semantic ID 序列。
-
-所以更严谨的表述应该是：RQ-VAE 在论文选择的对照组里更适合 TIGER，但“为什么更好”还没有被完全拆开。收益可能来自残差结构，也可能来自非线性编码器、训练目标，或者这些因素共同作用。
-::
-
-## 当交互历史变成 token 序列，推荐才真正成为生成
+### 当交互历史变成 token 序列，推荐才真正成为生成
 
 得到 Semantic ID 后，重点就从“物品怎么编号”转到“生成器到底看见什么”。TIGER 的生成器不是直接读 item 文本，也不是读原始 Item ID；在论文实现里，输入序列由一个 **user token** 开头，后面接用户历史中每个 item 的 Semantic ID tokens。这对应[图 1](#fig-tiger-semantic-id-flow)右侧的用户侧分支，也就是把“用户做过什么”翻译成生成模型可以处理的离散语言。
 
@@ -356,81 +331,67 @@ raw user ID --hashing trick--> user bucket token
 要判断这个设计是不是真的在学“用户个性”，至少还需要几组对照：不同 bucket 数量、不同哈希种子、唯一 user embedding、随机 user token、以及不加 user token 但增加等量参数的模型。否则，现有结果只能谨慎地说：这个 user bucket token 在实验里改善了部分指标，但它具体是在提供长期用户偏置、群体偏置、参数共享，还是只是带来额外容量，论文没有完全解释清楚。
 ::
 
-::disclosure[疑问：模型会不会主要学习同一物品内部的 token 转移？]
-将四位 ID 直接展平后，next-token objective 会同时学习两类关系：
+### 推理闭环：从 token 概率到候选物品
 
-```text
-同一 item 内部：c1 -> c2 -> c3 -> c4
-不同 item 之间：上一 item 的 c4 -> 下一 item 的 c1
-```
+到这里，主架构已经闭合：物品先被翻译成 Semantic ID，用户历史再被翻译成输入 token 序列，decoder 最后输出下一个 Semantic ID 的概率分布。服务阶段要做的，是把这些概率分布变成真正能展示给用户的 Top-K 物品。
 
-这带来一个论文没有回答的问题：模型是否花费了大量能力去补全同一个物品内部的 Semantic ID，而不是学习真正的物品行为转移？
+::tiger-inference-loop
 
-另一种可能是，item 内部的 token 组合学习恰好帮助模型掌握“什么样的 ID 是合法的”，从而解释为什么生成无效 ID 的概率很低。后续可以通过比较不同 token 位置的 loss、加入 item boundary、只在 item 级位置计算损失，或者并行预测四位 ID 来验证。这个判断目前更像我的疑问和实验建议，不应该被当成论文已经证明的结论。
-::
+先把这件事放在架构里看就够了：decoder 逐位给出 token 概率，搜索过程保留若干高分前缀，完整 Semantic ID 生成后再查 Semantic ID -> Item ID 映射表。至于 beam search、无效 ID、推理成本这些细节，我放到主实验之后再讨论；否则读者还没看到 TIGER 是否有效，就先陷进了解码工程问题。
 
-::disclosure[讨论：Transformer 参数为什么被说成索引？]
-理解了生成器的输入和输出之后，再看论文里的 **Transformer memory acts as an index** 会更自然。这里的 memory 指 Transformer 的模型参数；index 指“从用户上下文得到候选物品地址”的能力。它不是说模型参数里真的有一张可以像数据库一样直接增删改查的表。
+## 主实验：TIGER 到底有没有赢？
 
-先把[索引](term:index)这个词说白一点：在检索系统里，它不一定是一张数据库表，也不一定是一份文件；它更像“查询进入系统后，如何快速指到候选结果地址”的那套机制。书的目录把主题指到页码，倒排索引把词指到文档，向量索引把 query embedding 指到 item ID。推荐里的问题也是类似的：给定用户历史，系统要尽快找出下一批候选物品。
+理解模型架构之后，下一步应该先看主结果，而不是马上讨论 beam search 或无效 ID。论文第 4.1 节把 TIGER 和 GRU4Rec、Caser、HGN、SASRec、BERT4Rec、FDSA、S3-Rec、P5 等 sequential recommendation baseline 放在一起比较，指标是 Recall@5/10 和 NDCG@5/10。
 
-传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 [ANN](term:ann) / [MIPS](term:mips) 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。
+原文完整表格很大。为了先看清结论，下面只列每个数据集上 TIGER 与对应最强 baseline 的对比；“最强 baseline”按每个指标分别取原表中除 TIGER 外的最好结果。
 
-TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址。传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见[图 5](#fig-tiger-index-map)。
+| 数据集 | Recall@5 | NDCG@5 | Recall@10 | NDCG@10 |
+|---|---:|---:|---:|---:|
+| Sports 最强 baseline | 0.0251 | 0.0161 | 0.0385 | 0.0204 |
+| Sports TIGER | 0.0264 | 0.0181 | 0.0400 | 0.0225 |
+| Beauty 最强 baseline | 0.0387 | 0.0249 | 0.0647 | 0.0327 |
+| Beauty TIGER | 0.0454 | 0.0321 | 0.0648 | 0.0384 |
+| Toys 最强 baseline | 0.0463 | 0.0306 | 0.0700 | 0.0376 |
+| Toys TIGER | 0.0521 | 0.0371 | 0.0712 | 0.0432 |
 
-::tiger-index-map
+这张表先给出一个主线判断：TIGER 的确在三个 Amazon sequential recommendation 数据集上整体超过了当时比较的 baseline。提升最明显的是 NDCG 类指标，例如 Beauty 的 NDCG@5 从 0.0249 提高到 0.0321，原文报告相对 SASRec 提升 29.04%；Toys 的 NDCG@5/10 也分别有 21.24% 和 14.97% 的提升。
 
-推理时，decoder 每一步都在 Semantic ID 词表上给出 token 概率：
+但这个主结果本身还不能告诉我们“为什么赢”。可能是因为 Semantic ID 让相似 item 共享 token，也可能是因为内容 embedding 帮助低频 item，也可能只是某些解码和训练细节更合适。因此后面应该一步步拆开：先看 ID 表示本身，再看冷启动和多样性，最后讨论生成解码过程中的风险。
 
-$$
-P(c_1,c_2,c_3,c_4 \mid \text{history}).
-$$
+## 表示实验：为什么不是随机 ID 或 LSH？
 
-[beam search](term:beam-search) 保留概率较高的前缀。前缀越长，候选地址越具体；生成完整 ID 后，再通过 Semantic ID -> Item ID 映射表回到真实物品。
+这部分更适合理解为“论文做过哪些 ID 生成对照”，而不是“RQ-VAE 已经被证明优于所有量化方法”。[原文第 4.2 节](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。
 
-所以，把 Transformer 参数说成索引，是在“功能”上成立：它接收用户上下文，并给出候选 item 的地址。它在“工程结构”上又不像传统索引：你不能像更新向量库那样直接插入一行 item embedding，也不能直接遍历参数来检查某个 item 的邻居。
+如果只用表格列优缺点，很容易把这些方法都看成“把向量变成整数”。更重要的差别其实是三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 3](#fig-tiger-quantizer-atlas)按这三个问题重新摆放这些方法。
 
-因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成 Semantic ID、维护映射，并让生成模型有机会生成到这个 ID”。这也是为什么“Transformer 参数像索引”不能被理解成“推荐系统不再需要任何索引相关数据结构”。
-::
+::tiger-quantizers
 
-## 模型如何从概率分布变成 Top-K 物品
+原文在 LSH 对照里使用 `h = 8`、`m = 4`；Random ID 使用 `m = 4`、`K = 255`，目的是让组合空间与 RQ-VAE 的设置接近。为了不把表写得过重，下面只摘出 Recall；原表还同时报告了 NDCG。
 
-生成器使用 4 层 Transformer encoder 和 4 层 decoder，每层有 6 个 attention head，head dimension 为 64，模型约 13M 参数。
+| 方法 | Sports R@5 / R@10 | Beauty R@5 / R@10 | Toys R@5 / R@10 |
+|---|---:|---:|---:|
+| Random ID | 0.0070 / 0.0116 | 0.0296 / 0.0434 | 0.0362 / 0.0448 |
+| LSH SID | 0.0215 / 0.0321 | 0.0379 / 0.0533 | 0.0412 / 0.0566 |
+| RQ-VAE SID | 0.0264 / 0.0400 | 0.0454 / 0.0648 | 0.0521 / 0.0712 |
 
-论文对 3、4、5 层做了消融：
+这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。
 
-| 层数 | Recall@5 | NDCG@5 | Recall@10 | NDCG@10 |
-|---:|---:|---:|---:|---:|
-| 3 | 0.04499 | 0.03062 | 0.06699 | 0.03768 |
-| 4 | 0.04540 | 0.03210 | 0.06480 | 0.03840 |
-| 5 | 0.04633 | 0.03206 | 0.06596 | 0.03834 |
+这里可以按[图 3](#fig-tiger-quantizer-atlas)里的三条判断标签再拆开理解：
 
-这个结果不能简单概括成“层数越多越好”：5 层的 Recall@5 最高，3 层的 Recall@10 反而最高，4 层在 NDCG 上略好。更稳妥的判断是，模型在 3–5 层之间不太敏感，4 层是一种折中配置，而不是被实验明确证明的最优层数。
+- Random ID 是“容量对照”：它告诉我们，单纯给 item 一个多 token 编号并不够。如果编号不来自内容，相似物品之间没有共享结构，冷启动和低频泛化都很难指望它自然变好。
+- LSH / SimHash 是“内容但不学习”的对照：它确实从 item embedding 出发，但用的是随机超平面。它保留了一部分局部相似性，却不会为了重构或推荐数据主动调整边界。
+- Product Quantization 更像“分维度压缩”：每个 code 对应向量的一个子空间，不是前一层没解释完的残差。因此它适合做向量压缩和 [ANN](term:ann) 检索，但不直接对应 TIGER 想要的逐 token 语义生成。
+- Hierarchical k-means 更像“走树路径”：第一层决定父簇，第二层只在父簇内部继续分。这个层次最容易画出来，但早期硬边界也最难被后续修正。
+- VQ-VAE 是“单层学习码本”：它能用重构损失学习数据相关 code，但只给出一次离散选择。原文也提到试过 VQ-VAE，候选生成效果接近，但会失去 RQ-VAE 分层 ID 的性质。
+- RQ-VAE 是“逐层修 residual”：它既使用内容 embedding，又用学习式码本，还天然输出多 token ID。这些 token 才能被后面的 Transformer 当成一个可生成的 Semantic ID 序列。
 
-### Beam search 在这里做了什么
+所以更严谨的表述应该是：RQ-VAE 在论文选择的对照组里更适合 TIGER，但“为什么更好”还没有被完全拆开。收益可能来自残差结构，也可能来自非线性编码器、训练目标，或者这些因素共同作用。
 
-模型在第一个位置输出 token 概率，[beam search](term:beam-search) 保留累计 log-probability 最高的 $B$ 条前缀；下一步分别扩展这些前缀，再从全部扩展结果中保留最优的 $B$ 条。不断重复，直到生成完整 ID。
+## 补充能力实验：冷启动与多样性
 
-```text
-保留 B 个高概率前缀
-→ 扩展每条前缀
-→ 再保留累计得分最高的 B 条
-→ 得到多个完整 Semantic ID
-```
+主结果说明 TIGER 在普通 sequential recommendation 设置下有效；表示实验说明 Semantic ID 比随机 ID 和 LSH ID 更合适。接下来才适合看论文提出的两个额外能力：冷启动和多样性。
 
-[Beam search](term:beam-search) 的目标是近似寻找若干条高概率序列。它比 greedy decoding 覆盖更多候选，但默认仍然偏向模型概率最高的区域，本身不等于多样性采样。
-
-### 生成无效 ID 怎么办
-
-模型可以生成一个语法上完整、但数据库中不存在的 Semantic ID。论文没有通过约束解码从结构上消除这种情况，只是观察到 Top-10 的 invalid ID 比例约为 0.1%–1.6%；Top-20 时，不同数据集约为 0.3%–6%。
-
-这只是实验现象，并不是理论保证。
-
-论文建议扩大 [beam size](term:beam-search)，生成更多候选后过滤无效 ID，直到留下足够的有效结果；还提出未来可以用 prefix matching 将无效 ID 映射到共享有效前缀的物品。
-
-另一个更直接的方案是维护 Semantic ID trie，在每一步解码时屏蔽无法组成有效 ID 的 token。这样可以保证生成结果有效，但也会重新引入一个外部合法前缀结构。
-
-## 冷启动：TIGER 的能力，还是内容模型的能力
+### 冷启动：TIGER 的能力，还是内容模型的能力
 
 论文将推荐新物品视为 TIGER 的重要能力。在 Beauty 数据集上，它从测试 item 中选择 5%，删除这些 item 在训练 split 中的交互，把它们当作 unseen items。
 
@@ -452,7 +413,7 @@ $$
 
 所以，这项实验支持的是“TIGER 在这套 protocol 下优于 Semantic_KNN”，而不是“传统方法不能处理冷启动”。
 
-## 多样性：温度提高了熵，但这是谁的贡献
+### 多样性：温度提高了熵，但这是谁的贡献
 
 论文通过 temperature-based decoding 增加推荐多样性。若模型输出 logits $z_i$，温度 $T$ 后的分布为：
 
@@ -480,7 +441,75 @@ Beauty 数据集上的结果是：
 
 TIGER 更独特的主张是：在 Semantic ID 的第一位采样可以改变粗类别，在第二、三位采样可以改变类内物品。但这个能力依赖 Semantic ID 是否真的形成了稳定的粗到细语义层次。既然层次性证据本身仍有疑问，多样性的“可控层级”也不能仅凭温度实验得到证明。
 
-## 它真的更容易扩展吗
+## 生成与解码诊断
+
+现在再回到你觉得突兀的那个问题：模型输出的是概率分布，网页或系统最后需要的是 Top-K 真实物品。这部分确实不应该插在主实验之前；它更适合作为诊断章节，专门解释生成式检索在服务阶段会遇到什么工程问题。
+
+### Beam search 在这里做了什么
+
+模型在第一个位置输出 token 概率，[beam search](term:beam-search) 保留累计 log-probability 最高的 $B$ 条前缀；下一步分别扩展这些前缀，再从全部扩展结果中保留最优的 $B$ 条。不断重复，直到生成完整 ID。
+
+```text
+保留 B 个高概率前缀
+→ 扩展每条前缀
+→ 再保留累计得分最高的 B 条
+→ 得到多个完整 Semantic ID
+```
+
+[Beam search](term:beam-search) 的目标是近似寻找若干条高概率序列。它比 greedy decoding 覆盖更多候选，但默认仍然偏向模型概率最高的区域，本身不等于多样性采样。
+
+::disclosure[讨论：Transformer 参数为什么被说成索引？]
+理解了生成器的输入和输出之后，再看论文里的 **Transformer memory acts as an index** 会更自然。这里的 memory 指 Transformer 的模型参数；index 指“从用户上下文得到候选物品地址”的能力。它不是说模型参数里真的有一张可以像数据库一样直接增删改查的表。
+
+先把[索引](term:index)这个词说白一点：在检索系统里，它不一定是一张数据库表，也不一定是一份文件；它更像“查询进入系统后，如何快速指到候选结果地址”的那套机制。书的目录把主题指到页码，倒排索引把词指到文档，向量索引把 query embedding 指到 item ID。推荐里的问题也是类似的：给定用户历史，系统要尽快找出下一批候选物品。
+
+传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 [ANN](term:ann) / [MIPS](term:mips) 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。
+
+TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变成可生成的离散地址；随后用用户历史中的 Semantic ID 序列训练 encoder-decoder Transformer。推理时，模型不再输出 query embedding 去查外部索引，而是直接生成下一个地址。传统检索与 TIGER 的差别，最好不要只理解为“少了一个 ANN 检索步骤”，而要理解为“候选地址由谁产生”发生了变化。传统路线把候选物品放在外部向量索引里；TIGER 则让 Transformer 直接生成候选物品的 Semantic ID。这个差别见[图 6](#fig-tiger-index-map)。
+
+::tiger-index-map
+
+所以，把 Transformer 参数说成索引，是在“功能”上成立：它接收用户上下文，并给出候选 item 的地址。它在“工程结构”上又不像传统索引：你不能像更新向量库那样直接插入一行 item embedding，也不能直接遍历参数来检查某个 item 的邻居。
+
+因此，TIGER 省掉的是服务阶段的外部 ANN/MIPS 向量检索索引，不是省掉所有外部结构。系统仍然需要维护 Semantic ID 与真实 Item ID 的映射，也可能需要合法前缀结构来过滤无效生成结果。新增 item 时，成本从“更新 item embedding 索引”转移到“生成 Semantic ID、维护映射，并让生成模型有机会生成到这个 ID”。这也是为什么“Transformer 参数像索引”不能被理解成“推荐系统不再需要任何索引相关数据结构”。
+::
+
+### 生成无效 ID 怎么办
+
+模型可以生成一个语法上完整、但数据库中不存在的 Semantic ID。论文没有通过约束解码从结构上消除这种情况，只是观察到 Top-10 的 invalid ID 比例约为 0.1%–1.6%；Top-20 时，不同数据集约为 0.3%–6%。
+
+这只是实验现象，并不是理论保证。
+
+论文建议扩大 [beam size](term:beam-search)，生成更多候选后过滤无效 ID，直到留下足够的有效结果；还提出未来可以用 prefix matching 将无效 ID 映射到共享有效前缀的物品。
+
+另一个更直接的方案是维护 Semantic ID trie，在每一步解码时屏蔽无法组成有效 ID 的 token。这样可以保证生成结果有效，但也会重新引入一个外部合法前缀结构。
+
+### 生成模型层数是否敏感
+
+论文对 3、4、5 层 Transformer 做了消融：
+
+| 层数 | Recall@5 | NDCG@5 | Recall@10 | NDCG@10 |
+|---:|---:|---:|---:|---:|
+| 3 | 0.04499 | 0.03062 | 0.06699 | 0.03768 |
+| 4 | 0.04540 | 0.03210 | 0.06480 | 0.03840 |
+| 5 | 0.04633 | 0.03206 | 0.06596 | 0.03834 |
+
+这个结果不能简单概括成“层数越多越好”：5 层的 Recall@5 最高，3 层的 Recall@10 反而最高，4 层在 NDCG 上略好。更稳妥的判断是，模型在 3–5 层之间不太敏感，4 层是一种折中配置，而不是被实验明确证明的最优层数。
+
+::disclosure[疑问：模型会不会主要学习同一物品内部的 token 转移？]
+将四位 ID 直接展平后，next-token objective 会同时学习两类关系：
+
+```text
+同一 item 内部：c1 -> c2 -> c3 -> c4
+不同 item 之间：上一 item 的 c4 -> 下一 item 的 c1
+```
+
+这带来一个论文没有回答的问题：模型是否花费了大量能力去补全同一个物品内部的 Semantic ID，而不是学习真正的物品行为转移？
+
+另一种可能是，item 内部的 token 组合学习恰好帮助模型掌握“什么样的 ID 是合法的”，从而解释为什么生成无效 ID 的概率很低。后续可以通过比较不同 token 位置的 loss、加入 item boundary、只在 item 级位置计算损失，或者并行预测四位 ID 来验证。这个判断目前更像我的疑问和实验建议，不应该被当成论文已经证明的结论。
+::
+
+## 扩展性与代价：它真的更容易扩展吗
 
 TIGER 在表示存储上确实有吸引力。传统模型可能为每个物品维护独立 embedding；TIGER 的物品 token embedding 只需要覆盖各层 codeword。主设置中是 $4\times256=1024$ 个 token embedding，而数据集有 10K–20K 个物品。
 

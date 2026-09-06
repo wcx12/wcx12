@@ -722,7 +722,7 @@ const tigerQuantizerAtlasCopy = {
 
 const tigerIndexMapCopy = {
   en: {
-    figure: 'Figure 5',
+    figure: 'Figure 6',
     title: 'An index is a route from query to candidate address',
     aria: 'A comparison of how traditional vector retrieval and TIGER both map a user context to candidate item addresses.',
     rows: [
@@ -730,10 +730,10 @@ const tigerIndexMapCopy = {
       ['tiger', 'TIGER generative retrieval', 'history as Semantic IDs', 'decoder prefixes', 'Transformer parameters', 'Semantic ID -> Item ID', 'mapping table', 'The model learns the route from history to Semantic ID; the mapping table resolves that generated address.']
     ],
     bridge: 'Same job, different mechanism: search a stored vector structure, or decode a likely Semantic ID.',
-    caption: 'Figure 5. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
+    caption: 'Figure 6. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
   },
   zh: {
-    figure: '图 5',
+    figure: '图 6',
     title: '索引：从查询到候选地址的路径',
     aria: '传统向量检索和 TIGER 都把用户上下文映射到候选物品地址，但实现机制不同的双行对比图。',
     rows: [
@@ -741,7 +741,38 @@ const tigerIndexMapCopy = {
       ['tiger', 'TIGER 生成式检索', 'Semantic ID 历史', 'decoder 前缀', 'Transformer 参数', 'Semantic ID -> Item ID', 'mapping table', '模型学会从历史生成 Semantic ID；映射表仍然负责把这个生成地址解析回真实物品。']
     ],
     bridge: '两条路径做同一件事：把用户上下文变成候选地址；区别是查外部结构，还是解码一个语义 ID。',
-    caption: '图 5. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
+    caption: '图 6. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
+  }
+};
+
+const tigerInferenceLoopCopy = {
+  en: {
+    figure: 'Figure 5',
+    title: 'Inference loop: probabilities become real items',
+    aria: 'A five-step diagram showing decoder token probabilities becoming beam prefixes, complete Semantic IDs, table lookups, and Top-K item results.',
+    stages: [
+      ['prob', 'decoder', 'token distributions', 'Each step scores the next Semantic ID token.', [['d1=12', 0.42], ['d1=87', 0.25], ['d1=04', 0.18]]],
+      ['beam', 'search', 'keep prefixes', 'High-score prefixes survive and expand.', [['12'], ['12', '24'], ['12', '24', '52']]],
+      ['sid', 'address', 'complete Semantic IDs', 'A full token sequence becomes a candidate address.', [['12', '24', '52', '0'], ['12', '24', '61', '0']]],
+      ['lookup', 'mapping', 'resolve address', 'The mapping table returns real item IDs.', [['SID A', 'item 831'], ['SID B', 'item 1620']]],
+      ['topk', 'result', 'Top-K items', 'The page or service finally shows items, not tokens.', ['#1 item 831', '#2 item 1620', '#3 item 447']]
+    ],
+    note: 'The generator does not directly display token probabilities. It searches likely Semantic ID sequences first, then resolves those addresses back to item IDs.',
+    caption: 'Figure 5. At serving time, TIGER decodes Semantic ID candidates and uses the Semantic ID to Item ID mapping to produce Top-K recommendations.'
+  },
+  zh: {
+    figure: '图 5',
+    title: '推理闭环：概率最终要变回真实物品',
+    aria: '五步示意图，展示 decoder token 概率如何变成候选前缀、完整 Semantic ID、映射表查询和 Top-K 物品结果。',
+    stages: [
+      ['prob', 'decoder', 'token 概率分布', '每一步都在预测下一位 Semantic ID token。', [['d1=12', 0.42], ['d1=87', 0.25], ['d1=04', 0.18]]],
+      ['beam', 'search', '保留高分前缀', '高概率前缀被保留，并继续向后扩展。', [['12'], ['12', '24'], ['12', '24', '52']]],
+      ['sid', 'address', '完整 Semantic ID', '完整 token 序列先形成候选地址。', [['12', '24', '52', '0'], ['12', '24', '61', '0']]],
+      ['lookup', 'mapping', '映射回物品', '映射表把语义地址解析成真实 Item ID。', [['SID A', 'item 831'], ['SID B', 'item 1620']]],
+      ['topk', 'result', 'Top-K 物品', '最后展示给用户的是物品，而不是 token。', ['#1 item 831', '#2 item 1620', '#3 item 447']]
+    ],
+    note: '生成器不会把 token 概率直接展示给用户；它先搜索可能的 Semantic ID 序列，再把这些语义地址还原成真实物品。',
+    caption: '图 5. 服务阶段中，TIGER 先解码 Semantic ID 候选，再通过 Semantic ID 到 Item ID 的映射表得到 Top-K 推荐结果。'
   }
 };
 
@@ -871,6 +902,31 @@ function tigerQuantizerAtlasFigureHtml(lang = 'en') {
   }).join('');
   const axes = copy.legend.map(([label, detail]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(detail)}</dd></div>`).join('');
   return `<figure id="fig-tiger-quantizer-atlas" class="tiger-pipeline-figure tiger-quantizer-figure"><div class="tiger-pipeline-surface tiger-quantizer-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><dl class="tiger-quantizer-axis">${axes}</dl><div class="tiger-quantizer-grid">${methods}</div></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+}
+
+function tigerInferenceTokenSequenceHtml(tokens) {
+  return `<span class="tiger-inference-token-sequence">${tokens.map((token) => `<i>${escapeHtml(token)}</i>`).join('')}</span>`;
+}
+
+function tigerInferenceBarsHtml(bars = []) {
+  return `<ol class="tiger-inference-bars">${bars.map(([label, value]) => {
+    const percent = Math.max(0, Math.min(100, Number(value) * 100));
+    return `<li><span>${escapeHtml(label)}</span><b>${escapeHtml(value.toFixed(2))}</b><i style="--bar:${percent.toFixed(0)}%"></i></li>`;
+  }).join('')}</ol>`;
+}
+
+function tigerInferenceStageVisualHtml(kind, payload) {
+  if (kind === 'prob') return tigerInferenceBarsHtml(payload);
+  if (kind === 'beam') return `<ol class="tiger-inference-prefixes">${payload.map((tokens, index) => `<li><b>${index + 1}</b>${tigerInferenceTokenSequenceHtml(tokens)}</li>`).join('')}</ol>`;
+  if (kind === 'sid') return `<ol class="tiger-inference-ids">${payload.map((tokens) => `<li>${tigerInferenceTokenSequenceHtml(tokens)}</li>`).join('')}</ol>`;
+  if (kind === 'lookup') return `<ol class="tiger-inference-lookup-list">${payload.map(([sid, item]) => `<li><span>${escapeHtml(sid)}</span><b>${escapeHtml(item)}</b></li>`).join('')}</ol>`;
+  return `<ol class="tiger-inference-topk-list">${payload.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>`;
+}
+
+function tigerInferenceLoopFigureHtml(lang = 'en') {
+  const copy = tigerInferenceLoopCopy[lang === 'zh' ? 'zh' : 'en'];
+  const stages = copy.stages.map(([kind, label, title, detail, payload]) => `<section class="tiger-inference-stage tiger-inference-${escapeAttribute(kind)}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(title)}</strong>${tigerInferenceStageVisualHtml(kind, payload)}<em>${escapeHtml(detail)}</em></section>`).join('');
+  return `<figure id="fig-tiger-inference-loop" class="tiger-pipeline-figure tiger-inference-figure"><div class="tiger-pipeline-surface tiger-inference-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-inference-board">${stages}</div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
 }
 
 function tigerIndexGlyphHtml(id) {
@@ -1060,6 +1116,7 @@ function isMarkdownBlockStart(line) {
     || /^::tiger-rqvae-training\s*$/.test(line.trim())
     || /^::tiger-quantizers\s*$/.test(line.trim())
     || /^::tiger-generator-input\s*$/.test(line.trim())
+    || /^::tiger-inference-loop\s*$/.test(line.trim())
     || /^::tiger-index-map\s*$/.test(line.trim())
     || /^::disclosure\[[^\]]+]\s*$/.test(line.trim())
     || /^#{1,6}\s+/.test(line)
@@ -1101,6 +1158,12 @@ function renderMarkdown(markdown, draft) {
 
     if (line.trim() === '::tiger-generator-input') {
       html.push(tigerGeneratorInputFigureHtml(normalizeLang(draft?.lang || currentLang())));
+      index += 1;
+      continue;
+    }
+
+    if (line.trim() === '::tiger-inference-loop') {
+      html.push(tigerInferenceLoopFigureHtml(normalizeLang(draft?.lang || currentLang())));
       index += 1;
       continue;
     }

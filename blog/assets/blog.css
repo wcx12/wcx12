@@ -3131,6 +3131,253 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   font: 750 0.68rem/1.32 var(--blog-font-ui);
 }
 
+.tiger-inference-surface {
+  --inference-accent: color-mix(in srgb, var(--cyan) 72%, var(--pink));
+}
+
+.tiger-inference-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.tiger-inference-stage {
+  --stage-accent: var(--inference-accent);
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 10px;
+  min-width: 0;
+  min-height: 216px;
+  border: 1px solid color-mix(in srgb, var(--stage-accent) 26%, transparent);
+  border-radius: 8px;
+  padding: 13px;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--stage-accent) 8%, transparent), transparent 58%),
+    color-mix(in srgb, var(--stage-accent) 4%, var(--field-bg));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 7%, transparent);
+}
+
+.tiger-inference-beam,
+.tiger-inference-sid {
+  --stage-accent: var(--cyan);
+}
+
+.tiger-inference-lookup {
+  --stage-accent: var(--violet);
+}
+
+.tiger-inference-topk {
+  --stage-accent: var(--pink);
+}
+
+.tiger-inference-stage:not(:last-child)::after,
+.tiger-inference-stage:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  z-index: 1;
+  background: var(--inference-accent);
+}
+
+.tiger-inference-stage:not(:last-child)::after {
+  width: 13px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.tiger-inference-stage:not(:last-child)::before {
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid var(--inference-accent);
+  border-right: 2px solid var(--inference-accent);
+  background: transparent;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.tiger-inference-stage > span {
+  color: var(--stage-accent);
+  font: 850 0.66rem/1.25 var(--blog-font-mono);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.tiger-inference-stage > strong {
+  min-width: 0;
+  color: var(--text);
+  font: 880 0.88rem/1.18 var(--blog-font-ui);
+}
+
+.tiger-inference-stage > em {
+  min-width: 0;
+  color: var(--muted);
+  font: 690 0.68rem/1.35 var(--blog-font-ui);
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+.tiger-inference-bars,
+.tiger-inference-prefixes,
+.tiger-inference-ids,
+.tiger-inference-lookup-list,
+.tiger-inference-topk-list {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tiger-inference-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.tiger-inference-bars span,
+.tiger-inference-bars b {
+  color: var(--muted);
+  font: 780 0.64rem/1 var(--blog-font-mono);
+}
+
+.tiger-inference-bars b {
+  color: var(--text);
+}
+
+.tiger-inference-bars i {
+  grid-column: 1 / -1;
+  display: block;
+  width: var(--bar);
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--stage-accent), color-mix(in srgb, var(--stage-accent) 40%, transparent));
+}
+
+.tiger-inference-token-sequence {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tiger-inference-token-sequence i,
+.tiger-inference-prefixes b,
+.tiger-inference-topk-list li {
+  display: inline-grid;
+  min-width: 24px;
+  min-height: 24px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--stage-accent) 30%, transparent);
+  border-radius: 6px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--stage-accent) 8%, var(--bg));
+  font: 850 0.64rem/1 var(--blog-font-mono);
+  font-style: normal;
+}
+
+.tiger-inference-prefixes li,
+.tiger-inference-ids li,
+.tiger-inference-lookup-list li {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tiger-inference-prefixes b {
+  min-width: 22px;
+  min-height: 22px;
+  color: var(--bg);
+  background: var(--stage-accent);
+}
+
+.tiger-inference-lookup-list li {
+  display: grid;
+  gap: 5px;
+  align-items: stretch;
+  border: 1px solid color-mix(in srgb, var(--stage-accent) 22%, transparent);
+  border-radius: 7px;
+  padding: 7px;
+  background: color-mix(in srgb, var(--stage-accent) 5%, var(--bg));
+}
+
+.tiger-inference-lookup-list span,
+.tiger-inference-lookup-list b {
+  min-width: 0;
+  color: var(--muted);
+  font: 760 0.6rem/1.22 var(--blog-font-mono);
+  overflow-wrap: anywhere;
+}
+
+.tiger-inference-lookup-list b {
+  color: var(--text);
+  text-align: left;
+}
+
+.tiger-inference-topk-list li {
+  justify-content: start;
+  min-width: 0;
+  padding: 6px 8px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+:root[data-theme="mono"] .tiger-inference-surface {
+  --inference-accent: var(--text);
+}
+
+:root[data-theme="mono"] .tiger-inference-stage,
+:root[data-theme="mono"] .tiger-inference-token-sequence i,
+:root[data-theme="mono"] .tiger-inference-prefixes b,
+:root[data-theme="mono"] .tiger-inference-lookup-list li,
+:root[data-theme="mono"] .tiger-inference-topk-list li {
+  background: color-mix(in srgb, var(--text) 5%, var(--bg));
+}
+
+@media (max-width: 900px) {
+  .tiger-inference-board {
+    grid-template-columns: 1fr;
+  }
+
+  .tiger-inference-stage {
+    min-height: 0;
+  }
+
+  .tiger-inference-stage:not(:last-child)::after,
+  .tiger-inference-stage:not(:last-child)::before {
+    top: auto;
+    right: auto;
+    left: 50%;
+  }
+
+  .tiger-inference-stage:not(:last-child)::after {
+    bottom: -14px;
+    width: 2px;
+    height: 14px;
+    transform: translateX(-50%);
+  }
+
+  .tiger-inference-stage:not(:last-child)::before {
+    bottom: -15px;
+    width: 8px;
+    height: 8px;
+    transform: translateX(-50%) rotate(135deg);
+  }
+
+  .tiger-inference-prefixes,
+  .tiger-inference-ids,
+  .tiger-inference-lookup-list,
+  .tiger-inference-topk-list {
+    max-width: 360px;
+  }
+}
+
 :root[data-theme="mono"] .tiger-generator-strip,
 :root[data-theme="mono"] .tiger-generator-core > div,
 :root[data-theme="mono"] .tiger-transformer-tower,
