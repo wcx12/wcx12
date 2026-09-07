@@ -518,6 +518,10 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
+      const capacityDiscussion = source.match(/<details class="blog-disclosure" id="讨论-理论容量为什么不等于有效容量">([\s\S]*?)<\/details>/)?.[1] ?? '';
+      assert.match(capacityDiscussion, /原文附录 E，第 16 页[\s\S]*?6 个 codeword[\s\S]*?大小为 64/);
+      assert.match(capacityDiscussion, /理论容量，不是论文测得的有效容量或推荐收益/);
+      assert.doesNotMatch(source, /补充：六层码本配置能说明什么/);
       assert.match(source, /<h3[^>]*>表示实验：为什么不是随机 ID 或 LSH？<\/h3>/);
       assert.doesNotMatch(source, /<h2[^>]*>为什么选择 RQ-VAE，而不是其他量化方式<\/h2>/);
       assert.doesNotMatch(source, /<h2[^>]*>模型如何从概率分布变成 Top-K 物品<\/h2>/);
@@ -599,6 +603,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.ok(architectureAt > -1 && architectureAt < mainResultsAt, 'TIGER architecture should come before main results');
       assert.ok(mainResultsAt < representationAt && representationAt < capabilityAt && capabilityAt < diagnosticsAt, 'TIGER experiment narrative order is wrong');
       const experiments = source.match(/<h2[^>]*>实验：从整体效果到能力边界<\/h2>([\s\S]*?)(?=<h2)/)?.[1] ?? '';
+      assert.doesNotMatch(experiments, /六层码本|6 个 codeword|64\^6/);
       assert.equal((experiments.match(/<h3 id=/g) ?? []).length, 6, 'all six reported experiment groups belong under one chapter');
       assert.match(experiments, /生成模型层数是否敏感[\s\S]*?冷启动：[\s\S]*?多样性：[\s\S]*?数据集融合实验验证了什么/);
       assert.doesNotMatch(source, /你觉得突兀|所以图里不补|没有给出 decoder 的隐藏层尺寸/);
