@@ -90,7 +90,7 @@ TIGER 主实验采用 3 层残差码本，每层码本包含 256 个 codeword；
 
 ::tiger-rqvae-training
 
-这里先把符号说清楚。TIGER 的 RQ-VAE 不是直接量化原始文本，而是先把 item 内容 embedding 记为 $x$，再用编码器 $E(\cdot)$ 得到潜在向量 $z=E(x)$。第 $d$ 层码本记为 $C_d$，里面有若干 codeword 向量；$c_d$ 是第 $d$ 层选中的 codeword 编号，$e_{c_d}$ 是对应的 codeword 向量。$r_d$ 表示进入第 $d$ 层量化器的残差，$m$ 表示残差量化层数。在主实验设定下，$m=3$，每层 $C_d$ 包含 256 个 codeword；如果多个 item 得到相同的三元 ID，论文会在后面的[碰撞处理](#碰撞发生后怎么办)阶段追加一个额外 token。这个 token 用来恢复 item 唯一性，不属于残差量化层本身，也不会参与 RQ-VAE 的重构或量化损失。
+记物品内容 embedding 为 $x$，编码器 $E(\cdot)$ 将它映射为潜在向量 $z=E(x)$。RQ-VAE 量化的是这个潜在向量。第 $d$ 层码本记为 $C_d$，里面有若干 codeword 向量；$c_d$ 是第 $d$ 层选中的 codeword 编号，$e_{c_d}$ 是对应的 codeword 向量。$r_d$ 表示进入第 $d$ 层量化器的残差，$m$ 表示残差量化层数。在主实验设定下，$m=3$，每层 $C_d$ 包含 256 个 codeword；如果多个 item 得到相同的三元 ID，论文会在后面的[碰撞处理](#碰撞发生后怎么办)阶段追加一个额外 token。这个 token 用来恢复 item 唯一性，不属于残差量化层本身，也不会参与 RQ-VAE 的重构或量化损失。
 
 在第 $d$ 层，量化器做的最近邻选择可以写成：
 
@@ -98,7 +98,7 @@ $$
 c_d=\arg\min_k \lVert r_d-e_k^{(d)}\rVert_2^2.
 $$
 
-为避免后面符号太重，下面把第 $d$ 层选中的 $e_{c_d}^{(d)}$ 简写为 $e_{c_d}$。
+下文将第 $d$ 层选中的码向量 $e_{c_d}^{(d)}$ 简记为 $e_{c_d}$。
 
 设初始潜在向量为 $z$：
 
@@ -150,7 +150,7 @@ $$
 
 但这不能直接支持一个更强的结论：主实验中每层都是 256 个 codeword 时，Semantic ID 仍然会自然形成同样清晰的“第一位大类、第二位子类、第三位细粒度属性”。原因很简单：4、16、256 这个设置会强迫大量 item 共享前两位前缀，视觉上更容易出现层次划分；而 256、256、256 的空间宽得多，前缀共享是否仍然稳定，需要额外统计，比如前缀纯度、类内距离、跨类别混淆和不同随机种子下的稳定性。
 
-所以，更准确的判断是：RQ-VAE 确实提供了重构意义上的逐层残差修正，也可能带来有用的前缀相似性；但把它进一步解释成稳定、可控、类似人工标签树的语义层次，现有实验还不够充分。
+RQ-VAE 提供了重构意义上的逐层残差修正，也可能带来有用的前缀相似性；但把它进一步解释成稳定、可控、类似人工标签树的语义层次，现有实验还不够充分。
 ::
 
 ### RQ-VAE 的损失函数
@@ -161,7 +161,7 @@ $$
 L_{\text{recon}}=\lVert x-\hat x\rVert^2.
 $$
 
-这个重构项就是这里 “VAE / AutoEncoder” 含义最直观的部分：Semantic ID 不是只要离散就可以，它必须保留足够多的 item 内容信息，才能让 decoder 把输入 embedding 还原回来。TIGER 论文里的 RQ-VAE 总损失可以理解为：
+重构损失要求离散表示保留足够多的物品内容，让 decoder 能还原输入 embedding，这是自编码器的基本训练目标。RQ-VAE 沿用 VQ-VAE 的离散潜变量建模思路；[VQ-VAE 原论文第 3.2 节](https://arxiv.org/html/1711.00937v2#S3.SS2)给出了它的变分解释：在确定性的量化后验和均匀先验下，KL 项为常量，不参与参数优化。TIGER 实际优化的是重构项与量化项之和：
 
 $$
 L(x)=L_{\text{recon}}+L_{\text{rqvae}},\qquad
@@ -180,16 +180,16 @@ $$
 
 其中，$L_d$ 是第 $d$ 层的量化损失，$r_d$ 是该层 residual，$e_{c_d}$ 是该层被选中的 codeword，$\beta$ 是 commitment 项权重；$\operatorname{sg}$ 表示 stop-gradient：前向计算时保留原值，反向传播时梯度为零。
 
-这个公式的关键不是“又多写了两个平方误差”，而是 stop-gradient 把同一层量化里的两类更新方向拆开了：一边更新码本，让选中的 codeword 靠近当前 residual；另一边更新编码器，让它输出的 residual 愿意稳定地落到这个 codeword 附近。
+两项都度量 residual 与所选 codeword 的距离，但梯度方向不同：第一项把 residual 当作目标来更新码字，第二项把码字当作目标来约束 residual。stop-gradient 决定每一项中哪一侧接收梯度，$\beta$ 则控制第二项的强度。
 
 ::disclosure[补充：为什么这个损失函数要拆成两项？]
-先看第一项：
+先固定当前的选码结果，把本层 residual $r_d$ 与所选码向量 $e_{c_d}$ 视为两个输入，观察每一项对它们的偏导。第一项是：
 
 $$
 L_{code}=\lVert \operatorname{sg}[r_d]-e_{c_d}\rVert^2,
 $$
 
-这里的 $\operatorname{sg}[r_d]$ 表示把当前 residual 当作常量。反向传播时，梯度不会回到 $r_d$，只会更新被选中的 codeword $e_{c_d}$：
+$\operatorname{sg}[r_d]$ 将当前 residual 视为常量。这一项的梯度只流向本层所选码向量 $e_{c_d}$：
 
 $$
 \frac{\partial L_{code}}{\partial e_{c_d}}
@@ -206,7 +206,7 @@ $$
 L_{commit}=\beta\lVert r_d-\operatorname{sg}[e_{c_d}]\rVert^2,
 $$
 
-这里的 $\operatorname{sg}[e_{c_d}]$ 表示把 codeword 当作常量。反向传播时，梯度不会更新这个 codeword，而是回到产生 $r_d$ 的编码器：
+$\operatorname{sg}[e_{c_d}]$ 将本层所选码向量视为常量。这一项不沿该码向量分支传播梯度，而是把梯度传给 $r_d$：
 
 $$
 \frac{\partial L_{commit}}{\partial r_d}
@@ -215,9 +215,11 @@ $$
 \frac{\partial L_{commit}}{\partial e_{c_d}}=0.
 $$
 
-所以这一项的作用是训练编码器：既然它已经选择了这个 codeword，就要让自己的输出靠近这个 codeword，也就是 commitment。参数 $\beta$ 控制这种约束的强度。
+这就是 commitment：要求送入量化器的表示靠近所选码字，减少编码表示与离散表示之间的偏差。梯度沿 $r_d$ 的计算路径回传，从而约束产生该表示的编码器；$\beta$ 控制这种约束的强度。
 
-把两项放在一起看，$L_{code}$ 主要回答“码本应该往哪里移动”，$L_{commit}$ 主要回答“编码器应该如何适应离散码本”。这样拆开后，码本和编码器各自有清楚的梯度方向，而不是在同一个普通误差项里互相追逐。
+多层残差量化还需要区分本层偏导与整个计算图的梯度。由于 $r_d=z-\sum_{j<d}e_{c_j}$，如果前面各层的码向量没有被截断梯度，commitment 还可能沿残差路径影响它们；若这些码向量被 detach，梯度则沿剩余路径回到编码器。直通估计（straight-through estimator）也会改变量化节点的反向路径。例如，[图像 RQ-VAE 的公开实现](https://github.com/kakaobrain/rq-vae-transformer/blob/main/rqvae/models/rqvae/quantizations.py#L248-L268)在 commitment 中对量化表示使用 detach，并单独构造直通路径。TIGER 原文给出了损失形式，但没有展开这些反向传播的实现细节。
+
+因此，拆分损失的作用是分别控制“码字靠近 residual”和“residual 靠近码字”两种更新。上面的偏导描述本层两个输入的梯度方向；最终哪些参数收到梯度，还要沿完整的计算图判断。
 ::
 
 因此，完整 RQ-VAE 训练可以理解成三件事同时发生：重构损失要求 $\hat x$ 保留 item 内容信息；$L_{code}$ 让码本学习 residual 的分布；$L_{commit}$ 让 encoder 输出适应离散码本。三者一起训练 encoder、decoder 和 codebook，最后得到可重构、可生成的 Semantic ID。
@@ -247,7 +249,7 @@ $$
 
 ::disclosure[讨论：理论容量为什么不等于有效容量？]
 
-论文每层使用 256 个 codeword，RQ-VAE 共三层，并要求训练后的 codebook usage 达到 80% 以上。这里很容易把几个不同概念混在一起。
+论文每层使用 256 个 codeword，RQ-VAE 共三层，并要求训练后的 codebook usage 达到 80% 以上。码本利用率描述单层 code 的活跃程度，不等于多层 ID 组合的覆盖率。
 
 单层码本的设计容量是 256；usage 80% 表示一层中至少约 205 个 code 被物品实际选中过。它并不表示所有 code 组合中有 80% 是有效的。
 
@@ -300,7 +302,7 @@ Decoder 输入（训练时提供正确答案的前缀）：
  d1    d2  d3  d4  <EOS>
 ```
 
-其中 `a* / b* / c*` 分别属于三个历史物品，`d1…d4` 属于真实的下一个物品 D。每组的前三位来自 RQ-VAE，第四位是碰撞处理时追加的编号。分组只是为了方便人阅读，encoder 实际接收的是加上 user token 后的一整串 token。这里用 `<BOS>` 和 `<EOS>` 表示序列的开始与结束，重点是输入和标签之间相差一个位置，而不是某个框架对特殊 token 的具体命名。
+其中 `a* / b* / c*` 分别属于三个历史物品，`d1…d4` 属于真实的下一个物品 D。每组的前三位来自 RQ-VAE，第四位是碰撞处理时追加的编号。分组只是为了方便人阅读，encoder 实际接收的是加上 user token 后的一整串 token。`<BOS>` 和 `<EOS>` 用于示意序列的开始与结束；训练时，decoder 输入相对预测标签右移一位。
 
 [图 3](#fig-tiger-generator-input)从一个训练样本展开这条路径。历史 token 先通过 embedding 层，再经过 4 层 encoder，得到历史各位置的上下文表示 $H$。decoder 同时需要两类信息：一类是目标物品已经给出的 token 前缀；另一类是通过 cross-attention 读取的历史 $H$。它的 masked self-attention 只能读取当前位置及之前的输入，不能提前看到待预测的 token。图中展示一层的内部运算，并用“×4”表示堆叠；每个位置都经过完整的 4 层，层数与一个物品的 token 数不是一回事。
 
@@ -323,7 +325,7 @@ $$
 ::disclosure[补充：生成器的具体配置]
 [论文第 4 节](https://proceedings.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)报告 encoder 和 decoder 各 4 层，每层 self-attention 有 6 个 head、每个 head 的维度为 64；输入表示维度为 128，MLP 维度为 1024，使用 ReLU 和 0.1 的 dropout。输入维度与各 head 投影后的维度是不同配置，不能把“6 × 64”直接当作输入 embedding 的维度。
 
-模型约有 1300 万参数，batch size 为 256。Beauty 和 Sports and Outdoors 训练 200k 步，Toys and Games 训练 100k 步。前 10k 步的学习率为 0.01，之后按步数的平方根倒数衰减。这些是论文的实验设置，不代表模型架构中的额外阶段。
+模型约有 1300 万参数，batch size 为 256。Beauty 和 Sports and Outdoors 训练 200k 步，Toys and Games 训练 100k 步。前 10k 步的学习率为 0.01，之后按步数的平方根倒数衰减。
 ::
 
 ::disclosure[补充：用户 token 为什么可能有效？]
@@ -456,9 +458,9 @@ TIGER 则直接在 ID 序列空间中搜索候选，不需要先对全库物品�
 
 ### 表示实验：为什么不是随机 ID 或 LSH？
 
-ID 对照检验的是：在同一个生成式推荐框架里，物品编号的构造方式是否影响结果。[原文第 4.2 节](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)真正放进同一张实验表的，是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。
+在同一个生成式推荐框架中，物品 ID 的构造方式会怎样影响推荐结果？[原文第 4.2 节、Table 2](https://papers.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf#page=8)比较了 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID。
 
-不同 ID 构造方式的差别主要在于三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 5](#fig-tiger-quantizer-atlas)对比了这些方法保留的结构；其中 PQ、Hierarchical k-means 和 VQ-VAE 用作方法背景，不应当被误读为下方实验表中的对照组。
+不同 ID 构造方式的差别主要在于三件事：这个 ID 有没有使用内容、划分边界怎么来、以及它最终更像“检索压缩码”还是“可生成的多 token 地址”。[图 5](#fig-tiger-quantizer-atlas)展示了六种 ID 构造思路，从随机赋码到学习式量化，对比它们如何组织物品表示。
 
 ::tiger-quantizers
 
@@ -472,16 +474,16 @@ ID 对照检验的是：在同一个生成式推荐框架里，物品编号的�
 
 这组结果能支持的结论是：在 TIGER 的这套生成式推荐框架里，基于内容 embedding、并由 DNN/RQ-VAE 学出来的 Semantic ID，比随机 ID 和随机投影式 LSH ID 更有效。它不能直接推出“RQ-VAE 优于所有量化器”。
 
-这里可以按[图 5](#fig-tiger-quantizer-atlas)里的三条判断标签再拆开理解：
+这些方法处理物品表示的方式各不相同：
 
 - Random ID 是“容量对照”：它告诉我们，单纯给 item 一个多 token 编号并不够。如果编号不来自内容，相似物品之间没有共享结构，冷启动和低频泛化都很难指望它自然变好。
 - LSH / SimHash 是“内容但不学习”的对照：它确实从 item embedding 出发，但用的是随机超平面。它保留了一部分局部相似性，却不会为了重构或推荐数据主动调整边界。
 - Product Quantization 更像“分维度压缩”：每个 code 对应向量的一个子空间，不是前一层没解释完的残差。因此它适合做向量压缩和 [ANN](term:ann) 检索，但不直接对应 TIGER 想要的逐 token 语义生成。
 - Hierarchical k-means 更像“走树路径”：第一层决定父簇，第二层只在父簇内部继续分。这个层次最容易画出来，但早期硬边界也最难被后续修正。
-- VQ-VAE 是“单层学习码本”：它能用重构损失学习数据相关 code，但只给出一次离散选择。原文也提到试过 VQ-VAE，候选生成效果接近，但会失去 RQ-VAE 分层 ID 的性质。
-- RQ-VAE 是“逐层修 residual”：它既使用内容 embedding，又用学习式码本，还天然输出多 token ID。这些 token 才能被后面的 Transformer 当成一个可生成的 Semantic ID 序列。
+- VQ-VAE 对每个潜在位置的向量进行最近邻量化，并用重构目标学习编码器与码本。[VQ-VAE 原论文](https://arxiv.org/html/1711.00937v2#S3.SS2)使用多个离散潜在位置，因此同样可以输出多个 token；图中画的是一个位置的量化过程。它与 RQ-VAE 的区别在于，后者对同一个向量逐层量化剩余残差。TIGER 原文提到 VQ-VAE 的候选生成效果接近 RQ-VAE，但未提供这组比较的具体数值。
+- RQ-VAE 是“逐层修 residual”：它既使用内容 embedding，又用学习式码本，将各层选出的码字编号组成多 token ID。后面的 Transformer 把这个 ID 作为序列生成目标。
 
-所以更严谨的表述应该是：RQ-VAE 在论文选择的对照组里更适合 TIGER，但“为什么更好”还没有被完全拆开。收益可能来自残差结构，也可能来自非线性编码器、训练目标，或者这些因素共同作用。
+这组对照表明，RQ-VAE 的推荐指标高于 Random ID 和 LSH；但实验尚未分离残差结构、非线性编码器与训练目标各自的贡献。
 
 ### 生成模型层数是否敏感
 
@@ -522,9 +524,7 @@ $$
 
 问题在于，这种能力并不是生成式推荐天然独有。只要一种推荐方法能够使用文本、图像或其他模态为新物品计算表示，它原则上也拥有内容冷启动通路。
 
-因此，更精确的评价应该是：
-
-> TIGER 证明了 Semantic ID 与生成式检索可以接入 unseen item，但没有证明只有生成式推荐能够解决冷启动。它真正特殊的是，新物品不需要在序列模型的原子 Item ID 词表中出现；只要能被内容编码器映射到已有的语义 token 空间，就有机会进入候选。
+这项实验展示了 TIGER 如何接入 unseen item：新物品不必拥有训练过的原子 Item ID embedding，只要其内容能映射到已有语义 token 组成的前缀，就有机会通过前缀匹配进入候选。这里得到支持的是一条具体的冷启动路径，而不是生成式推荐独有的能力。
 
 实验还有一些没有交代清楚的地方：多个 unseen item 共享前三位前缀时如何排序，$\epsilon K$ 的 unseen 配额如何与 seen 候选合并，以及新物品的第四位碰撞 token 如何处理。论文主要与 Semantic_KNN 比较，也没有覆盖所有内容增强的 sequential recommender。
 
@@ -591,9 +591,9 @@ TIGER 更独特的主张是：在 Semantic ID 的第一位采样可以改变粗�
 [Beam search](term:beam-search) 的目标是近似寻找若干条高概率序列。它比 greedy decoding 覆盖更多候选，但默认仍然偏向模型概率最高的区域，本身不等于多样性采样。
 
 ::disclosure[讨论：Transformer 参数为什么被说成索引？]
-理解了生成器的输入和输出之后，再看论文里的 **Transformer memory acts as an index** 会更自然。这里的 memory 指 Transformer 的模型参数；index 指“从用户上下文得到候选物品地址”的能力。它不是说模型参数里真的有一张可以像数据库一样直接增删改查的表。
+检索需要把查询对应到候选结果。[索引](term:index)为这一步提供组织信息的结构：书的目录把主题指到页码，倒排索引把词指到文档，向量索引则组织物品向量，帮助查询找到相近的物品。
 
-先把[索引](term:index)这个词说白一点：在检索系统里，它不一定是一张数据库表，也不一定是一份文件；它更像“查询进入系统后，如何快速指到候选结果地址”的那套机制。书的目录把主题指到页码，倒排索引把词指到文档，向量索引把 query embedding 指到 item ID。推荐里的问题也是类似的：给定用户历史，系统要尽快找出下一批候选物品。
+TIGER 让 Transformer 根据用户上下文直接生成候选 Semantic ID。论文用 **Transformer memory acts as an index** 描述这种功能替代：这里的 memory 指模型参数，参数中学到的检索关系帮助模型生成候选地址。它与传统索引承担相近的检索功能，但不是一张可以直接增删改查的数据库表。
 
 传统 dual-encoder 路线里，这个答案很具体：candidate tower 预先生成所有 item embedding，外部 [ANN](term:ann) / [MIPS](term:mips) 索引保存或组织这些 embedding；user tower 把用户历史编码成 query embedding，然后去外部索引里搜索 Top-K。这里的索引是一个看得见、能单独更新和检查的数据结构。
 
@@ -617,11 +617,11 @@ TIGER 的答案变了。它先离线给 item 生成 Semantic ID，把 item 变�
 另一个更直接的方案是维护 Semantic ID trie，在每一步解码时屏蔽无法组成有效 ID 的 token。这样可以保证生成结果有效，但也会重新引入一个外部合法前缀结构。
 
 ::disclosure[疑问：模型会不会主要学习同一物品内部的 token 转移？]
-在前面的 encoder-decoder 设定中，历史物品的 tokens 是 encoder 的输入条件，decoder 的训练标签是下一个物品的 Semantic ID。因此，不能把它描述成对整段历史逐 token 做自回归监督，也不能直接将“上一物品的最后一位 → 下一物品的第一位”当成独立的边界预测任务。
+历史序列提供条件，训练目标是下一个物品的完整 Semantic ID。我的疑问是：预测目标物品的后几位 token 时，模型用了多少用户历史信息，又有多少信息已经包含在目标前缀里？
 
-真正的疑问是：预测目标物品的后几位 token 时，模型在多大程度上依赖用户历史，又在多大程度上依赖已经给出的目标物品前缀？如果前缀已经强烈约束了后续 token，那么较低的 token loss 可能部分来自 ID 内部组合规律，不一定意味着模型更充分地利用了用户行为。
+如果前缀已经强烈约束了后续 token，较低的 token loss 就可能部分来自 ID 内部的组合规律，而不完全来自对用户行为的理解。
 
-可以按目标 token 的位置分别统计 loss，并在保持目标前缀不变时，遮蔽或打乱 encoder 的历史输入，观察预测如何变化。这样才是在直接检验历史条件的作用。这是我的疑问和后续实验建议，不能作为论文已经证明的结论。
+我想按目标 token 的位置分别统计 loss，并在保持目标前缀不变时，遮蔽或打乱 encoder 的历史输入。如果后几位的预测几乎不变，这会提示模型可能更依赖目标前缀；如果明显退化，则说明历史条件仍在提供有用信息。这组对照可以帮助区分两种信息来源。
 ::
 
 ### 扩展性与代价：它真的更容易扩展吗
@@ -630,7 +630,7 @@ TIGER 在表示存储上确实有吸引力。传统模型可能为每个物品�
 
 但生成式检索没有消灭检索成本，只是重新分配了成本。ANN 能够并行搜索候选，而 TIGER 需要逐 token 自回归解码，并通过 [beam search](term:beam-search) 获取 Top-K。[beam](term:beam-search) 越大，找到足够多有效候选的机会越高，推理成本也越大。
 
-更准确的权衡是：
+这两种成本形成了一个权衡：
 
 > TIGER 用紧凑、可共享的结构化物品表示，交换了更复杂的自回归候选生成过程。
 
@@ -658,7 +658,7 @@ TIGER 在表示存储上确实有吸引力。传统模型可能为每个物品�
 - 统一码本实验只能提供有限的扩展性证据；
 - 自回归 [beam search](term:beam-search) 带来的推理成本不能被忽略。
 
-所以，如果后续真正实现 TIGER，我最想验证的不是能否复现某一张主结果表，而是下面这条因果链：
+主实验之外，我更关心下面这条因果链是否成立：
 
 ```text
 内容相似

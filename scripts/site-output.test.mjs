@@ -467,6 +467,30 @@ test('TIGER main results preserve all Table 1 values and explain item-level eval
   assert.doesNotMatch(section, /katex-error|最强 baseline/);
 });
 
+test('TIGER prose stays reader-facing and qualifies quantization claims', async () => {
+  const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
+  for (const phrase of [
+    '不应当被误读', '真正放进同一张实验表', '真正进入同一张实验表',
+    '不代表模型架构中的额外阶段', '不能把它描述成', '三条判断标签',
+    '更严谨的表述应该是', '更精确的评价应该是', '如果后续真正实现',
+    '这里先把符号说清楚', '为避免后面符号太重', '某个框架对特殊 token',
+    '这里很容易把几个不同概念混在一起', '先把索引这个词说白一点',
+    'VAE / AutoEncoder', '单 token'
+  ]) assert.ok(!source.includes(phrase), `Retired wording: ${phrase}`);
+  assert.match(source, /确定性的量化后验和均匀先验下，KL 项为常量/);
+  assert.match(source, /本层偏导与整个计算图的梯度/);
+  assert.match(source, /TIGER 原文给出了损失形式，但没有展开这些反向传播的实现细节/);
+  assert.match(source, /我的疑问是：[\s\S]*?保持目标前缀不变/);
+  assert.match(source, /主实验之外，我更关心下面这条因果链是否成立/);
+  for (const relative of ['scripts/build-blog.mjs', 'blog-src/assets/draft-studio.js']) {
+    const renderer = await fs.readFile(path.join(rootDir, relative), 'utf8');
+    assert.match(renderer, /多个位置可分别量化，输出多个 token/);
+    assert.match(renderer, /Multiple positions can yield multiple tokens/);
+    assert.match(renderer, /图 5\. 六种离散 ID 构造方式/);
+    assert.doesNotMatch(renderer, /single token|单 token|真正进入同一张实验表/);
+  }
+});
+
 test('generated code blocks and article contents remain keyboard reachable', async () => {
   const clientSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
   const articleFiles = await walk(path.join(rootDir, 'blog', 'posts'), (file) => file.endsWith('index.html'));

@@ -683,11 +683,11 @@ const tigerQuantizerAtlasCopy = {
     title: 'Different ID builders preserve different structure',
     aria: 'A visual comparison of six ways to turn item embeddings into discrete identifiers.',
     methods: [
-      ['random', 'Random ID', 'control baseline', 'item -> sampled tokens', 'The item receives random codewords, so the ID has capacity but carries no content similarity.', 'Good for proving that semantic structure matters.', ['no content', 'random', 'baseline']],
+      ['random', 'Random ID', 'control baseline', 'item -> sampled tokens', 'The item receives random codewords, so the ID has capacity but carries no content similarity.', 'Tests whether content-aware identifiers help.', ['no content', 'random', 'baseline']],
       ['lsh', 'LSH / SimHash', 'random projections', 'embedding -> hyperplane signs -> hash code', 'Random hyperplanes split the embedding space; nearby vectors are more likely to share bits, but the split is not learned for the data distribution.', 'Fast and content based, but not optimized for reconstruction.', ['content', 'fixed split', 'hash tokens']],
       ['pq', 'Product Quantization', 'subspace codes', 'vector slices -> separate codebooks', 'The vector dimensions are partitioned into subspaces, and each subspace is quantized independently.', 'Strong for compression and vector search, less natural for coarse-to-fine residual IDs.', ['content', 'sub-codebooks', 'compression']],
       ['tree', 'Hierarchical k-means', 'tree path', 'root cluster -> child cluster -> leaf', 'The ID is a path in a clustering tree; early branch decisions constrain every later decision.', 'Readable hierarchy, but early hard boundaries cannot be repaired downstream.', ['content', 'clusters', 'path ID']],
-      ['vq', 'VQ-VAE', 'single learned codebook', 'encoder latent -> nearest codeword -> decoder', 'A learned codebook turns the latent vector into one discrete choice while reconstruction trains the code space.', 'Learns data-aware codes, but does not naturally produce multi-token residual refinement.', ['content', 'learned', 'single token']],
+      ['vq', 'VQ-VAE', 'per-position quantization', 'encoder latent -> nearest codeword -> decoder', 'One latent position selects a learned codeword for reconstruction. Multiple positions can yield multiple tokens.', 'Quantizes each position once, rather than refining its residual across levels.', ['content', 'learned', 'per position']],
       ['rq', 'RQ-VAE', 'residual correction', 'latent -> code + residual -> next code', 'Each layer quantizes what the previous layer did not explain, so the final ID is a sequence of residual codewords.', 'This is the method TIGER uses for its Semantic ID.', ['content', 'learned', 'residual tokens']]
     ],
     legend: [
@@ -695,18 +695,18 @@ const tigerQuantizerAtlasCopy = {
       ['Learned', 'code boundaries are trained from data'],
       ['Sequential ID', 'produces several tokens that can be generated autoregressively']
     ],
-    caption: 'Figure 5. The TIGER comparison is mainly Random ID and LSH against RQ-VAE; other quantizers explain nearby design choices rather than fully controlled baselines in the paper.'
+    caption: 'Figure 5. Six ways to construct discrete IDs: random assignment, random projection, subspace quantization, clustering-tree paths, vector quantization, and residual quantization. They differ in their use of content, partitioning, and code structure.'
   },
   zh: {
     figure: '图 5',
     title: '不同 ID 构造方式保留的是不同结构',
     aria: '六种方式将 item embedding 变成离散标识的可视化对比。',
     methods: [
-      ['random', 'Random ID', '随机基线', 'item -> 随机抽 token', '不看内容，直接给 item 分配随机 codeword。ID 有组合容量，但相似物品不一定共享任何 token。', '适合证明“语义结构是否真的有用”。', ['无内容', '随机', '基线']],
+      ['random', 'Random ID', '随机基线', 'item -> 随机抽 token', '不看内容，直接给 item 分配随机 codeword。ID 有组合容量，但相似物品不一定共享任何 token。', '用于检验内容相关编号是否有帮助。', ['无内容', '随机', '基线']],
       ['lsh', 'LSH / SimHash', '随机投影', 'embedding -> 超平面正负号 -> hash code', '用随机超平面切分 embedding 空间；近邻向量更可能有相同 bit，但切分方式不是为当前数据分布学出来的。', '快、基于内容，但不优化重构。', ['内容', '固定切分', 'hash token']],
       ['pq', 'Product Quantization', '子空间码', '向量切片 -> 各子空间单独量化', '先把向量维度切成几段，每段进入自己的码本，最后把几个子空间编号拼成一个 ID。', '适合压缩和向量检索，不天然表达从粗到细的残差修正。', ['内容', '子码本', '偏压缩']],
       ['tree', 'Hierarchical k-means', '树路径', '根簇 -> 子簇 -> 叶子簇', 'ID 是聚类树上的一条路径。第一层选错父簇后，后面只能在这个子树里继续细分。', '层次直观，但早期硬边界很难被下层修正。', ['内容', '聚类', '路径 ID']],
-      ['vq', 'VQ-VAE', '单层学习码本', 'encoder latent -> 最近 codeword -> decoder', '用一个学习到的码本把 latent vector 变成一个离散选择，再通过重构损失训练码本和编码器。', '能学习数据相关 code，但没有多 token 的残差细化。', ['内容', '学习码本', '单 token']],
+      ['vq', 'VQ-VAE', '逐位置量化', 'encoder latent -> 最近 codeword -> decoder', '图中示意一个潜在位置：向量选最近码字，再参与重构。多个位置可分别量化，输出多个 token。', '每个位置量化一次，不沿残差逐层细化。', ['内容', '学习码本', '逐位置']],
       ['rq', 'RQ-VAE', '残差修正', 'latent -> code + residual -> 下一层 code', '第一层先解释主要部分，第二层解释剩余残差，第三层继续修正，最终 ID 是多层 codeword 序列。', '这是 TIGER 用来生成 Semantic ID 的方法。', ['内容', '学习码本', '残差 token']]
     ],
     legend: [
@@ -714,7 +714,7 @@ const tigerQuantizerAtlasCopy = {
       ['是否学习边界', '码本或划分是否由数据训练得到'],
       ['是否天然多 token', '是否容易作为自回归生成目标']
     ],
-    caption: '图 5. TIGER 论文真正进入同一张实验表的是 Random ID、LSH Semantic ID 和 RQ-VAE Semantic ID；其它方法更适合作为理解量化设计空间的参照。'
+    caption: '图 5. 六种离散 ID 构造方式：随机赋码、随机投影、子空间量化、聚类树路径、向量量化与残差量化。它们在内容利用、划分方式和编码结构上各有差异。'
   }
 };
 
