@@ -1395,6 +1395,58 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   visibility: visible;
 }
 
+.blog-paper-figure {
+  margin: 1.5em 0;
+  min-width: 0;
+  scroll-margin-top: 96px;
+}
+
+.blog-paper-figure-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  border-block: 1px solid var(--line);
+  padding-block: 16px;
+}
+
+.blog-paper-panel {
+  min-width: 0;
+}
+
+.blog-paper-panel:first-child {
+  grid-column: 1 / -1;
+}
+
+.blog-paper-panel > p:first-child {
+  margin-top: 0;
+}
+
+.blog-paper-figure img {
+  display: block;
+  width: 100%;
+  max-width: 740px;
+  height: auto;
+  margin-inline: auto;
+  background: #fff;
+}
+
+.blog-paper-figure img[src*="figure4a-original"] {
+  max-width: 520px;
+}
+
+.blog-paper-figure figcaption {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 600px) {
+  .blog-paper-figure-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .blog-disclosure {
   margin: 1.05em 0 1.2em;
   scroll-margin-top: 96px;

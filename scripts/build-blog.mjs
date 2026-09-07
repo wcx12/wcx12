@@ -810,7 +810,7 @@ const tigerQuantizerAtlasCopy = {
 
 const tigerIndexMapCopy = {
   en: {
-    figure: 'Figure 6',
+    figure: 'Figure 7',
     title: 'An index is a route from query to candidate address',
     aria: 'A two-row comparison showing how traditional vector retrieval and TIGER both map a user context to candidate item addresses.',
     rows: [
@@ -834,10 +834,10 @@ const tigerIndexMapCopy = {
       }
     ],
     bridge: 'Same job, different mechanism: search a stored vector structure, or decode a likely Semantic ID.',
-    caption: 'Figure 6. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
+    caption: 'Figure 7. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
   },
   zh: {
-    figure: '图 6',
+    figure: '图 7',
     title: '索引：从查询到候选地址的路径',
     aria: '传统向量检索和 TIGER 都把用户上下文映射到候选物品地址，但实现机制不同的双行对比图。',
     rows: [
@@ -861,7 +861,7 @@ const tigerIndexMapCopy = {
       }
     ],
     bridge: '两条路径做同一件事：把用户上下文变成候选地址；区别是查外部结构，还是解码一个语义 ID。',
-    caption: '图 6. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
+    caption: '图 7. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
   }
 };
 
@@ -1990,6 +1990,27 @@ function createMarkdownRenderer() {
     return true;
   });
   md.renderer.rules.tiger_pipeline_legacy = (tokens, idx, options, env) => renderTigerPipelineFigureLegacy(env.post?.lang || 'en');
+  md.block.ruler.before('paragraph', 'blog_figure', (state, startLine, endLine, silent) => {
+    const lineAt = line => state.src.slice(state.bMarks[line] + state.tShift[line], state.eMarks[line]);
+    const match = /^::figure\[(fig-[a-z0-9-]+)]\[([^\]]+)]\s*$/.exec(lineAt(startLine).trim());
+    if (!match) return false;
+    let nextLine = startLine + 1;
+    while (nextLine < endLine && lineAt(nextLine).trim() !== '::') nextLine += 1;
+    if (nextLine === endLine) return false;
+    if (silent) return true;
+    const token = state.push('blog_figure', '', 0);
+    token.block = true;
+    token.meta = { id: match[1], caption: match[2] };
+    token.content = state.src.slice(state.bMarks[startLine + 1], state.bMarks[nextLine]).trim();
+    token.map = [startLine, nextLine + 1];
+    state.line = nextLine + 1;
+    return true;
+  });
+  md.renderer.rules.blog_figure = (tokens, idx, options, env) => {
+    const { id, caption } = tokens[idx].meta;
+    const panels = tokens[idx].content.split(/\r?\n---\r?\n/).map(body => `<div class="blog-paper-panel">${md.render(body, env)}</div>`).join('');
+    return `<figure id="${escapeHtml(id)}" class="blog-paper-figure"><div class="blog-paper-figure-body">${panels}</div><figcaption>${escapeHtml(caption)}</figcaption></figure>`;
+  };
   md.block.ruler.before('paragraph', 'blog_disclosure', (state, startLine, endLine, silent) => {
     const pos = state.bMarks[startLine] + state.tShift[startLine];
     const max = state.eMarks[startLine];

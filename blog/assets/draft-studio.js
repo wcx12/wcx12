@@ -908,7 +908,7 @@ const tigerQuantizerAtlasCopy = {
 
 const tigerIndexMapCopy = {
   en: {
-    figure: 'Figure 6',
+    figure: 'Figure 7',
     title: 'An index is a route from query to candidate address',
     aria: 'A comparison of how traditional vector retrieval and TIGER both map a user context to candidate item addresses.',
     rows: [
@@ -916,10 +916,10 @@ const tigerIndexMapCopy = {
       ['tiger', 'TIGER generative retrieval', 'history as Semantic IDs', 'decoder prefixes', 'Transformer parameters', 'Semantic ID -> Item ID', 'mapping table', 'The model learns the route from history to Semantic ID; the mapping table resolves that generated address.']
     ],
     bridge: 'Same job, different mechanism: search a stored vector structure, or decode a likely Semantic ID.',
-    caption: 'Figure 6. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
+    caption: 'Figure 7. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
   },
   zh: {
-    figure: '图 6',
+    figure: '图 7',
     title: '索引：从查询到候选地址的路径',
     aria: '传统向量检索和 TIGER 都把用户上下文映射到候选物品地址，但实现机制不同的双行对比图。',
     rows: [
@@ -927,7 +927,7 @@ const tigerIndexMapCopy = {
       ['tiger', 'TIGER 生成式检索', 'Semantic ID 历史', 'decoder 前缀', 'Transformer 参数', 'Semantic ID -> Item ID', 'mapping table', '模型学会从历史生成 Semantic ID；映射表仍然负责把这个生成地址解析回真实物品。']
     ],
     bridge: '两条路径做同一件事：把用户上下文变成候选地址；区别是查外部结构，还是解码一个语义 ID。',
-    caption: '图 6. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
+    caption: '图 7. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
   }
 };
 
@@ -1524,6 +1524,7 @@ function isMarkdownBlockStart(line) {
     || /^::tiger-inference-loop\s*$/.test(line.trim())
     || /^::tiger-index-map\s*$/.test(line.trim())
     || /^::disclosure\[[^\]]+]\s*$/.test(line.trim())
+    || /^::figure\[fig-[a-z0-9-]+]\[[^\]]+]\s*$/.test(line.trim())
     || /^#{1,6}\s+/.test(line)
     || /^>\s?/.test(line)
     || /^\s*[-*]\s+/.test(line)
@@ -1577,6 +1578,18 @@ function renderMarkdown(markdown, draft) {
       html.push(tigerIndexMapFigureHtml(normalizeLang(draft?.lang || currentLang())));
       index += 1;
       continue;
+    }
+
+    const figure = /^::figure\[(fig-[a-z0-9-]+)]\[([^\]]+)]\s*$/.exec(line.trim());
+    if (figure) {
+      const end = lines.findIndex((value, at) => at > index && value.trim() === '::');
+      if (end !== -1) {
+        const body = lines.slice(index + 1, end).join('\n');
+        const panels = body.split(/\n---\n/).map(panel => `<div class="blog-paper-panel">${renderMarkdown(panel, draft)}</div>`).join('');
+        html.push(`<figure id="${escapeAttribute(figure[1])}" class="blog-paper-figure"><div class="blog-paper-figure-body">${panels}</div><figcaption>${escapeHtml(figure[2])}</figcaption></figure>`);
+        index = end + 1;
+        continue;
+      }
     }
 
     const disclosure = /^::disclosure\[([^\]]+)]\s*$/.exec(line.trim());

@@ -536,7 +536,7 @@ test('TIGER review fixes preserve evidence, sequence, and notation', async () =>
   const figureNumbers = new Map([
     ['fig-tiger-semantic-id-flow', 1], ['fig-tiger-rqvae-training', 2],
     ['fig-tiger-quantizer-atlas', 3], ['fig-tiger-generator-input', 4],
-    ['fig-tiger-inference-loop', 5], ['fig-tiger-index-map', 6]
+    ['fig-tiger-inference-loop', 5], ['fig-tiger-semantic-hierarchy', 6], ['fig-tiger-index-map', 7]
   ]);
   assert.deepEqual(figures.map((figure) => figure[1]), [...figureNumbers.keys()]);
   for (const figure of figures) assert.match(figure[2], new RegExp('^图 ' + figureNumbers.get(figure[1]) + '\\.'));
@@ -575,6 +575,57 @@ test('TIGER review fixes preserve evidence, sequence, and notation', async () =>
   assert.doesNotMatch(markdown, /\(c_1,c_2,c_3,c_4\)/);
 });
 
+test('TIGER hierarchy evidence is visible before the reader discussion', async () => {
+  const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
+  const section = source.match(/<h3[^>]*>语义层次：前面的编号真的对应粗类别吗？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] || '';
+  const figure = section.match(/<figure id="fig-tiger-semantic-hierarchy"[\s\S]*?<\/figure>/)?.[0] || '';
+  assert.ok(section.length > 1000);
+  assert.doesNotMatch(section, /<details|::figure|::disclosure/);
+  assert.match(figure, /<figcaption>图 6\.[\s\S]*?TIGER 原文 Figure 4/);
+  assert.match(figure, /tiger-figure4a-original\.png\?v=[a-f0-9]+/);
+  for (const code of [3, 0, 1, 2]) assert.match(figure, new RegExp('tiger-figure4b-c' + code + '\\.png\\?v=[a-f0-9]+'));
+  assert.match(section, /tiger-figure4b-original\.png\?v=[a-f0-9]+/);
+  assert.equal((figure.match(/<img /g) || []).length, 5);
+  assert.equal((figure.match(/class="blog-paper-panel"/g) || []).length, 5);
+  for (const [, img] of figure.matchAll(/(<img\b[^>]+>)/g)) {
+    assert.match(img, /width="\d+"/);
+    assert.match(img, /height="\d+"/);
+    assert.match(img, /alt="TIGER 原文 Figure 4[ab]/);
+  }
+  assert.ok(source.indexOf('>表示实验：') < source.indexOf('>语义层次：'));
+  assert.ok(source.indexOf('>语义层次：') < source.indexOf('>生成模型层数是否敏感'));
+  assert.ok(section.indexOf('</figure>') < section.indexOf('读者讨论：'));
+  assert.match(section, /4、16、256/);
+  assert.match(section, /第三位没有单独的分布面板/);
+  assert.match(section, /并非 decoder 输出下一个 token 的概率/);
+  assert.match(section, /category[\s\S]*?去掉类别字段做对照/);
+  assert.doesNotMatch(source, /href="#讨论-从粗到细-究竟是什么意思"/);
+  const editor = await fs.readFile(path.join(rootDir, 'blog-src/assets/draft-studio.js'), 'utf8');
+  assert.match(editor, /class="blog-paper-figure"/);
+  assert.match(editor, /<figcaption>\$\{escapeHtml\(figure\[2\]\)\}/);
+  const functionStarts = [...editor.matchAll(/^(?:async )?function (\w+)\(/gm)];
+  const names = ['normalizeLf', 'escapeHtml', 'escapeAttribute', 'inlineMarkdown', 'isMarkdownBlockStart', 'renderMarkdown'];
+  const previewCode = names.map(name => {
+    const index = functionStarts.findIndex(match => match[1] === name);
+    assert.ok(index >= 0, `${name} exists in the editor`);
+    return editor.slice(functionStarts[index].index, functionStarts[index + 1]?.index ?? editor.length);
+  }).join('\n');
+  const markdown = await fs.readFile(path.join(rootDir, 'content/posts/2026-08-30-tiger-generative-retrieval-reading/index.md'), 'utf8');
+  const block = markdown.match(/^::figure\[fig-tiger-semantic-hierarchy][\s\S]*?\n::$/m)?.[0];
+  assert.ok(block);
+  const renderPreview = value => runInNewContext(previewCode + '\nrenderMarkdown(input, { lang: "zh" })', {
+    input: value, resolvePreviewUrl: url => url, termFromUrl: () => null
+  }, { timeout: 1000 });
+  const preview = renderPreview(block);
+  assert.equal((preview.match(/class="blog-paper-panel"/g) || []).length, 5);
+  assert.equal((preview.match(/<img /g) || []).length, 5);
+  assert.match(preview, /<figcaption>图 6\./);
+  assert.doesNotMatch(preview, /::figure|<hr/);
+  const escaped = renderPreview('::figure[fig-test][<script>bad</script>]\n<script>bad</script>\n::');
+  assert.doesNotMatch(escaped, /<script>/);
+  assert.match(escaped, /&lt;script&gt;/);
+});
+
 test('generated code blocks and article contents remain keyboard reachable', async () => {
   const clientSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
   const articleFiles = await walk(path.join(rootDir, 'blog', 'posts'), (file) => file.endsWith('index.html'));
@@ -593,11 +644,11 @@ test('generated code blocks and article contents remain keyboard reachable', asy
     }
     if (file.includes('tiger-generative-retrieval-reading')) {
       assert.match(source, /残差量化可以理解为一个逐层修正、<a href="#[^"]+">从粗到细<\/a>的过程。/);
-      assert.match(source, /<details class="blog-disclosure" id="讨论-从粗到细-究竟是什么意思">[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
-      assert.match(source, /第一种是<strong>重构意义上的粗到细<\/strong>[\s\S]*?第二种是<strong>人工标签意义上的层次<\/strong>/);
+      assert.match(source, /<h3[^>]*>语义层次：前面的编号真的对应粗类别吗？<\/h3>/);
+      assert.match(source, /重构意义上的逐层修正[\s\S]*?人工标签树/);
       assert.doesNotMatch(source, /第三种是<strong>人工标签意义上的层次<\/strong>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么这个损失函数要拆成两项？<\/summary>/);
-      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
+      assert.doesNotMatch(source, /<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>“从粗到细”究竟是什么意思<\/h2>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
@@ -674,7 +725,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       const quantizerFigure = source.match(/<figure id="fig-tiger-quantizer-atlas"[\s\S]*?<\/figure>/)?.[0] ?? '';
       assert.match(quantizerFigure, /<span>图 3<\/span>/);
       assert.match(source, /id="fig-tiger-index-map"/);
-      assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 6<\/span>/);
+      assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 7<\/span>/);
       assert.match(source, /索引：从查询到候选地址的路径[\s\S]*?传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>/);
       assert.doesNotMatch(source, /Hint：Transformer memory 为什么可以被叫作索引？/);
@@ -711,7 +762,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.equal((diversity.match(/<details /g) ?? []).length, 2);
       assert.match(diversity, /<details class="blog-disclosure"[^>]*><summary>补充：温度如何改变采样概率？<\/summary>[\s\S]*?katex-display[\s\S]*?贪心解码/);
       assert.match(diversity, /<details class="blog-disclosure"[^>]*><summary>讨论：类别更多，就代表推荐更好吗？<\/summary>[\s\S]*?我的疑问[\s\S]*?温度采样也可以用于其他推荐模型/);
-      assert.match(decodeURI(diversity), /href="#讨论-从粗到细-究竟是什么意思"/);
+      assert.match(decodeURI(diversity), /href="#语义层次-前面的编号真的对应粗类别吗"/);
       assert.doesNotMatch(source, /温度提高了熵，但这是谁的贡献|不是 TIGER 特有贡献/);
       const diagnosticsAt = source.indexOf('生成与解码诊断');
       const indexDiscussionAt = source.indexOf('<summary>讨论：Transformer 参数为什么被说成索引？</summary>');
@@ -721,7 +772,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.ok(mainResultsAt < representationAt && representationAt < capabilityAt && capabilityAt < diagnosticsAt, 'TIGER experiment narrative order is wrong');
       const experiments = source.match(/<h2[^>]*>实验：从整体效果到能力边界<\/h2>([\s\S]*?)(?=<h2)/)?.[1] ?? '';
       assert.doesNotMatch(experiments, /六层码本|6 个 codeword|64\^6/);
-      assert.equal((experiments.match(/<h3 id=/g) ?? []).length, 6, 'all six reported experiment groups belong under one chapter');
+      assert.equal((experiments.match(/<h3 id=/g) ?? []).length, 7, 'all seven reported experiment groups belong under one chapter');
       assert.match(experiments, /生成模型层数是否敏感[\s\S]*?冷启动：[\s\S]*?多样性：[\s\S]*?数据集融合实验验证了什么/);
       assert.doesNotMatch(source, /你觉得突兀|所以图里不补|没有给出 decoder 的隐藏层尺寸/);
       assert.ok(userTokenAt > source.indexOf('id="fig-tiger-generator-input"') && userTokenAt < inferenceAt, 'user token discussion should stay near the generator architecture');
