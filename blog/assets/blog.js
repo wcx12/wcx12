@@ -438,6 +438,21 @@ document.querySelectorAll('.code-frame').forEach((frame) => {
   });
 });
 
+function positionTermCard(chip) {
+  const card = chip.nextElementSibling;
+  if (!card?.matches('.term-chip-card')) return;
+  card.style.setProperty('--term-card-offset', '0px');
+  const rect = card.getBoundingClientRect();
+  if (!rect.width) return;
+  const margin = 18;
+  const offset = Math.max(margin - rect.left, Math.min(0, document.documentElement.clientWidth - margin - rect.right));
+  card.style.setProperty('--term-card-offset', `${offset}px`);
+}
+
+window.addEventListener('resize', () => {
+  document.querySelectorAll('[data-term-chip][aria-expanded="true"]').forEach(positionTermCard);
+});
+
 function closeTermChips(except = null) {
   document.querySelectorAll('[data-term-chip][aria-expanded="true"]').forEach((chip) => {
     if (chip !== except) chip.setAttribute('aria-expanded', 'false');
@@ -454,6 +469,7 @@ document.addEventListener('click', (event) => {
   const expanded = chip.getAttribute('aria-expanded') === 'true';
   closeTermChips(chip);
   chip.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+  if (!expanded) positionTermCard(chip);
 });
 
 document.addEventListener('keydown', (event) => {

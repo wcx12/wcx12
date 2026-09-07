@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 import { localRepos, staticPublications } from '../site-data.js';
 import { homepageSeo } from '../homepage-i18n.js';
 import { SITE, loadPosts, slugify } from './blog-content.mjs';
@@ -486,9 +487,92 @@ test('TIGER prose stays reader-facing and qualifies quantization claims', async 
     const renderer = await fs.readFile(path.join(rootDir, relative), 'utf8');
     assert.match(renderer, /多个位置可分别量化，输出多个 token/);
     assert.match(renderer, /Multiple positions can yield multiple tokens/);
-    assert.match(renderer, /图 5\. 六种离散 ID 构造方式/);
+    assert.match(renderer, /图 3\. 六种离散 ID 构造方式/);
     assert.doesNotMatch(renderer, /single token|单 token|真正进入同一张实验表/);
   }
+});
+
+test('TIGER beam example preserves cumulative scores and preview parity', async () => {
+  const examples = [];
+  for (const file of ['scripts/build-blog.mjs', 'blog-src/assets/draft-studio.js']) {
+    const source = await fs.readFile(path.join(rootDir, file), 'utf8');
+    const literal = source.match(/const tigerInferenceBeamSteps = (\[[\s\S]*?\n\]);/);
+    assert.ok(literal, `${file}: beam example exists`);
+    examples.push(JSON.parse(JSON.stringify(runInNewContext(literal[1], Object.create(null), { timeout: 1000 }))));
+  }
+  assert.deepEqual(examples[0], examples[1], 'Published and editor diagrams use the same candidates');
+  let parents = new Map([['', 1]]);
+  const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} should equal ${b}`);
+  for (const [step, rows] of examples[0].entries()) {
+    const retained = rows.filter(row => row[3]);
+    assert.equal(retained.length, 2, 'Beam width is two in every round');
+    const threshold = Math.min(...retained.map(row => row[1] * row[2]));
+    const conditionalSums = new Map();
+    for (const [prefix, parent, probability, kept] of rows) {
+      assert.equal(prefix.length, step + 1);
+      const parentKey = prefix.slice(0, -1).join(',');
+      assert.ok(parents.has(parentKey), 'Only previously retained prefixes may expand');
+      close(parent, parents.get(parentKey));
+      assert.ok(probability >= 0 && probability <= 1);
+      conditionalSums.set(parentKey, (conditionalSums.get(parentKey) || 0) + probability);
+      if (!kept) assert.ok(parent * probability < threshold, 'Pruned paths rank below both survivors');
+    }
+    for (const [key, parent] of parents) {
+      const sum = conditionalSums.get(key) || 0;
+      assert.ok(sum <= 1 + 1e-9, 'Conditional probabilities do not exceed one');
+      assert.ok(parent * (1 - sum) < threshold, 'Even all omitted probability mass cannot beat the beam');
+    }
+    parents = new Map(retained.map(([prefix, parent, probability]) => [prefix.join(','), parent * probability]));
+  }
+  close(parents.get('12,24,52,0'), 0.126);
+  close(parents.get('87,08,06,0'), 0.096);
+});
+
+test('TIGER review fixes preserve evidence, sequence, and notation', async () => {
+  const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
+  const markdown = await fs.readFile(path.join(rootDir, 'content/posts/2026-08-30-tiger-generative-retrieval-reading/index.md'), 'utf8');
+  const plain = source.replace(/<[^>]+>/g, '');
+  const figures = [...source.matchAll(/<figure id="(fig-tiger-[^"]+)"[\s\S]*?<figcaption>([\s\S]*?)<\/figcaption>\s*<\/figure>/g)];
+  const figureNumbers = new Map([
+    ['fig-tiger-semantic-id-flow', 1], ['fig-tiger-rqvae-training', 2],
+    ['fig-tiger-quantizer-atlas', 3], ['fig-tiger-generator-input', 4],
+    ['fig-tiger-inference-loop', 5], ['fig-tiger-index-map', 6]
+  ]);
+  assert.deepEqual(figures.map((figure) => figure[1]), [...figureNumbers.keys()]);
+  for (const figure of figures) assert.match(figure[2], new RegExp('^图 ' + figureNumbers.get(figure[1]) + '\\.'));
+  for (const [, number, anchor] of markdown.matchAll(/\[图 (\d+)\]\(#(fig-tiger-[^)]+)\)/g)) {
+    assert.equal(Number(number), figureNumbers.get(anchor), 'figure reference must match its caption: ' + anchor);
+  }
+  assert.deepEqual([...markdown.matchAll(/^\*\*表 (\d+)\./gm)].map((match) => Number(match[1])), [1, 2, 3, 4, 5, 6]);
+  assert.match(markdown, /\*\*表 2a[\s\S]*?\*\*表 2b[\s\S]*?\*\*表 2c/);
+  const fusion = source.match(/<h3[^>]*>数据集融合实验验证了什么<\/h3>([\s\S]*?)(?=<h2)/)?.[1] ?? '';
+  assert.match(fusion, /原文 Table 10，第 17 页/);
+  assert.match(fusion, /<td[^>]*>0\.3047\*<\/td>/);
+  assert.match(fusion, /排除这一项的降幅计算/);
+  assert.match(fusion, /4\.07%、2\.56%、4\.27%/);
+  assert.doesNotMatch(fusion, /0\.03047|2\.6%|5\.1%|三个相近/);
+  assert.match(plain, /不是词表里的一个条目/);
+  assert.match(plain, /32 维码向量[\s\S]*?128 维输入表示/);
+  assert.match(plain, /直通估计[\s\S]*?stop-gradient 不同/);
+  assert.match(plain, /不是对每个样本都严格单调下降的结构保证/);
+  assert.match(plain, /小码本限制了可用前缀数量[\s\S]*?不能仅凭容量判断实际共享率或类别纯度/);
+  assert.match(plain, /category[\s\S]*?不等于训练测试泄漏/);
+  assert.match(plain, /两种编号序列都可以交给生成模型/);
+  assert.match(plain, /哈希桶不依据兴趣聚类/);
+  assert.match(plain, /原文的做法与结果[\s\S]*?原文 Table 8[\s\S]*?我的解释与疑问/);
+  assert.match(plain, /Semantic ID 不是生成式推荐成立的必要条件/);
+  assert.doesNotMatch(plain, /Semantic ID 词表|只有这条链条成立|不直接对应 TIGER 想要的逐 token 语义生成/);
+  const methodFold = source.indexOf('<summary>补充：不同的离散 ID 是怎样构造的？</summary>');
+  const collisionAt = source.indexOf('>碰撞发生后怎么办</h3>');
+  const generatorAt = source.indexOf('id="fig-tiger-generator-input"');
+  const inferenceAt = source.indexOf('id="fig-tiger-inference-loop"');
+  const transitionAt = source.indexOf('<summary>疑问：模型会不会主要学习同一物品内部的 token 转移？</summary>');
+  assert.ok(methodFold > -1 && methodFold < source.indexOf('id="fig-tiger-quantizer-atlas"') && source.indexOf('id="fig-tiger-quantizer-atlas"') < collisionAt);
+  assert.ok(transitionAt > generatorAt && transitionAt < inferenceAt);
+  assert.equal((source.match(/<summary>疑问：模型会不会主要学习同一物品内部的 token 转移？<\/summary>/g) ?? []).length, 1);
+  assert.match(markdown, /量化层统一从 0 开始编号/);
+  assert.match(markdown, /\(c_0,c_1,c_2,u_\{\\mathrm\{col\}\}\)/);
+  assert.doesNotMatch(markdown, /\(c_1,c_2,c_3,c_4\)/);
 });
 
 test('generated code blocks and article contents remain keyboard reachable', async () => {
@@ -530,8 +614,12 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(rqvaeFigure, /class="tiger-rqvae-vector tiger-rqvae-source"/);
       assert.match(rqvaeFigure, /class="tiger-rqvae-module tiger-rqvae-encoder"/);
       assert.match(rqvaeFigure, /class="tiger-rqvae-module tiger-rqvae-quantizer"/);
-      assert.match(rqvaeFigure, /class="tiger-rqvae-module tiger-rqvae-decoder"/);
-      assert.match(rqvaeFigure, /class="tiger-rqvae-vector tiger-rqvae-recon"/);
+      assert.match(rqvaeFigure, /class="tiger-rqvae-decode-route"/);
+      assert.match(rqvaeFigure, /class="tiger-rqvae-decoder"/);
+      assert.match(rqvaeFigure, /class="tiger-rqvae-id-route"[\s\S]*?整数编号不送进 DNN decoder/);
+      assert.match(rqvaeFigure, /class="tiger-rqvae-sum"[\s\S]*?码本 0 · 编号 7[\s\S]*?码本 1 · 编号 1[\s\S]*?码本 2 · 编号 4/);
+      assert.match(rqvaeFigure, /class="tiger-rqvae-backward"[\s\S]*?直通估计示意[\s\S]*?不是对 argmin 求导/);
+      assert.equal((rqvaeFigure.match(/class="tiger-rqvae-decoder"/g) ?? []).length, 1);
       assert.match(rqvaeFigure, /x[\s\S]*?768[\s\S]*?h_1[\s\S]*?512[\s\S]*?h_2[\s\S]*?256[\s\S]*?h_3[\s\S]*?128[\s\S]*?z[\s\S]*?32/);
       assert.equal((rqvaeFigure.match(/class="tiger-rqvae-codebook tiger-rqvae-codebook-/g) ?? []).length, 3);
       assert.equal((rqvaeFigure.match(/class="is-selected"/g) ?? []).length, 3);
@@ -543,7 +631,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.doesNotMatch(rqvaeFigure, /x-hat|z-hat|Lrecon|ec0|katex-error/);
       assert.match(source, /id="fig-tiger-generator-input"/);
       const generatorFigure = source.match(/<figure id="fig-tiger-generator-input"[\s\S]*?<\/figure>/)?.[0] ?? '';
-      assert.match(generatorFigure, /<span>图 3<\/span>/);
+      assert.match(generatorFigure, /<span>图 4<\/span>/);
       assert.match(generatorFigure, /user_5[\s\S]*?a1[\s\S]*?b1[\s\S]*?c1/);
       const decoderInput = generatorFigure.match(/class="tg3-five tg3-decoder-input">([\s\S]*?)<\/div>/)?.[1] ?? '';
       const decoderTarget = generatorFigure.match(/class="tg3-five tg3-target">([\s\S]*?)<\/div>/)?.[1] ?? '';
@@ -558,14 +646,16 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /2000 个 user-specific token[\s\S]*?Hashing Trick[\s\S]*?raw user ID[\s\S]*?2000 个 user ID token[\s\S]*?不同用户可能因为哈希碰撞共用同一个 user token/);
       assert.match(source, /id="fig-tiger-inference-loop"/);
       const inferenceFigure = source.match(/<figure id="fig-tiger-inference-loop"[\s\S]*?<\/figure>/)?.[0] ?? '';
-      assert.match(inferenceFigure, /<span>图 4<\/span>/);
-      for (const stage of ['prob', 'beam', 'sid', 'lookup', 'topk']) {
-        assert.match(inferenceFigure, new RegExp(`class="tiger-inference-stage tiger-inference-${stage}"`));
-      }
-      assert.match(inferenceFigure, /class="tiger-inference-bars"[\s\S]*?d1=12[\s\S]*?0\.42/);
-      assert.match(inferenceFigure, /class="tiger-inference-prefixes"[\s\S]*?12[\s\S]*?24[\s\S]*?52/);
-      assert.match(inferenceFigure, /class="tiger-inference-lookup-list"[\s\S]*?SID A[\s\S]*?item 831/);
-      assert.match(inferenceFigure, /class="tiger-inference-topk-list"[\s\S]*?#1 item 831/);
+      assert.match(inferenceFigure, /<span>图 5<\/span>/);
+      assert.equal((inferenceFigure.match(/class="tiger-beam-round"/g) ?? []).length, 4);
+      assert.equal((inferenceFigure.match(/class="tiger-beam-feedback"/g) ?? []).length, 3);
+      assert.equal((inferenceFigure.match(/class="tiger-beam-candidate is-kept"/g) ?? []).length, 8);
+      assert.equal((inferenceFigure.match(/class="tiger-beam-candidate is-pruned"/g) ?? []).length, 7);
+      assert.match(inferenceFigure, /教学示例，非原文实验结果[\s\S]*?B = 2[\s\S]*?K = 2/);
+      const beamResults = inferenceFigure.match(/class="tiger-beam-results">([\s\S]*?)<\/section>/)?.[1] ?? '';
+      assert.equal((beamResults.match(/<li>/g) ?? []).length, 2);
+      assert.match(beamResults, /P = 0\.126[\s\S]*?Item 831[\s\S]*?P = 0\.096[\s\S]*?Item 1620/);
+      assert.doesNotMatch(inferenceFigure, /item 447|SID A|0\.42/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>疑问：模型会不会主要学习同一物品内部的 token 转移？<\/summary>/);
       assert.doesNotMatch(source, /<h3[^>]*>用户 token 为什么可能有效<\/h3>/);
       assert.doesNotMatch(source, /<h3[^>]*>模型会不会主要学习同一物品内部的 token 转移<\/h3>/);
@@ -577,12 +667,12 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       }
       assert.match(source, /split embedding dimensions/);
       assert.match(source, /quantize the remaining residual/);
-      assert.match(source, /code 18[\s\S]*?<text class="tiger-q-label" x="269" y="125">D<\/text>/);
+      assert.match(source, /e18[\s\S]*?<text class="tiger-q-label"[^>]*>D<\/text>/);
       assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?无内容[\s\S]*?随机[\s\S]*?基线/);
-      assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?内容[\s\S]*?学习码本[\s\S]*?残差 token/);
+      assert.match(source, /class="tiger-quantizer-traits"[\s\S]*?内容[\s\S]*?学习码本[\s\S]*?残差层/);
       assert.match(source, /Product Quantization[\s\S]*?Hierarchical k-means[\s\S]*?VQ-VAE[\s\S]*?RQ-VAE/);
       const quantizerFigure = source.match(/<figure id="fig-tiger-quantizer-atlas"[\s\S]*?<\/figure>/)?.[0] ?? '';
-      assert.match(quantizerFigure, /<span>图 5<\/span>/);
+      assert.match(quantizerFigure, /<span>图 3<\/span>/);
       assert.match(source, /id="fig-tiger-index-map"/);
       assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 6<\/span>/);
       assert.match(source, /索引：从查询到候选地址的路径[\s\S]*?传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);

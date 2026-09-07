@@ -504,22 +504,22 @@ const tigerWorkflowCopy = {
         subtitle: 'online recommendation',
         steps: [
           ['source', 'History', 'User interactions', 'item A -> item B -> item C', 'The user sequence provides the behavioral context for generation.'],
-          ['semantic', 'Tokenization', 'Semantic ID sequence', '(12,24,52) -> ...', 'Historical items are rewritten into the same Semantic ID vocabulary built on the item side.'],
+          ['semantic', 'Tokenization', 'Semantic ID sequence', '(12,24,52) -> ...', 'Historical items are rewritten as coding-token sequences using the item-to-Semantic-ID mapping.'],
           ['generate', 'Generator', 'Generative model', 'Transformer', 'The model predicts the next item as a sequence of semantic tokens.'],
           ['generate', 'Prediction', 'Generated semantic item', 'next Semantic ID', 'The output is not raw text; it is a generated Semantic ID tuple.'],
           ['semantic', 'Lookup', 'Resolve to item', 'Semantic ID -> candidate', 'The predicted Semantic ID is mapped back to a real item or candidate set.']
         ]
       }
     ],
-    bridge: ['The shared contract', 'The item side defines the finite Semantic ID vocabulary and the ID-to-item mapping. The user side generates inside that vocabulary, then resolves the generated ID back to actual items.'],
-    tokens: ['item text', 'embedding', 'RQ-VAE', 'Semantic ID vocabulary', 'history', 'Transformer', 'semantic item'],
+    bridge: ['The shared contract', 'The item side supplies code indices and an ID-to-item mapping. The generator predicts individual coding tokens and resolves each completed sequence to an item.'],
+    tokens: ['item text', 'embedding', 'RQ-VAE', 'Coding tokens + item mapping', 'history', 'Transformer', 'semantic item'],
     legend: [
       ['Item indexing', 'content -> embedding -> RQ-VAE -> Semantic ID'],
       ['Shared vocabulary', 'the generator can only produce valid semantic item tokens'],
       ['User generation', 'interaction history -> Transformer -> next Semantic ID'],
       ['Item lookup', 'generated Semantic ID resolves back to recommendable items']
     ],
-    caption: 'Figure 1. The overall generative recommendation workflow has two connected paths: the item side turns item text into a Semantic ID vocabulary, and the user side feeds interaction sequences to a generator that predicts the next semantic item.'
+    caption: 'Figure 1. Item text is converted into code-index sequences; user history conditions the generator, which predicts a complete Semantic ID token by token and resolves it to an item.'
   },
   zh: {
     figure: '图 1',
@@ -546,41 +546,59 @@ const tigerWorkflowCopy = {
         subtitle: '在线推荐',
         steps: [
           ['source', '历史', '用户交互序列', 'item A -> item B -> item C', '用户历史提供生成推荐所需的行为上下文。'],
-          ['semantic', '转写', 'Semantic ID 序列', '(12,24,52) -> ...', '历史中的物品会被转写成物品侧建立好的同一套 Semantic ID 词表。'],
+          ['semantic', '转写', 'Semantic ID 序列', '(12,24,52) -> ...', '历史物品通过 Item ID 与 Semantic ID 的映射，转写成编码 token 序列。'],
           ['generate', '生成器', '生成模型', 'Transformer', '模型根据用户历史，按 token 顺序预测下一个语义物品。'],
           ['generate', '预测', '生成的语义 item', 'next Semantic ID', '模型输出的不是普通文本，而是一个可以映射回物品库的 Semantic ID。'],
           ['semantic', '映射', '回到真实物品', 'Semantic ID -> 候选物品', '最后再把生成出的 Semantic ID 解析为真实 item 或候选 item 集合。']
         ]
       }
     ],
-    bridge: ['两条链路的连接点', '物品侧提供有限的 Semantic ID 词表和 ID 到 item 的映射；用户侧只是在这套词表里生成，再把生成出的 ID 解析回真实物品。'],
-    tokens: ['item 文本', 'embedding', 'RQ-VAE', 'Semantic ID 词表', '用户历史', 'Transformer', '语义 item'],
+    bridge: ['两条链路的连接点', '物品侧提供码字编号和 ID 到物品的映射；生成器逐个预测编码 token，再把完整编号序列解析回真实物品。'],
+    tokens: ['item 文本', 'embedding', 'RQ-VAE', '编码 token 与物品映射', '用户历史', 'Transformer', '语义 item'],
     legend: [
       ['物品侧索引', '内容 -> embedding -> RQ-VAE -> Semantic ID'],
       ['共享词表', '生成器只能生成可解析的语义物品 token'],
       ['用户侧生成', '交互历史 -> Transformer -> 下一个 Semantic ID'],
       ['映射回物品', '生成出的 Semantic ID 需要解析成真实候选物品']
     ],
-    caption: '图 1. 生成式推荐的整体流程包含两条相互连接的链路：物品侧先把 item 文本编码并量化为 Semantic ID 词表，用户侧再把交互序列输入生成器，预测下一个语义 item。'
+    caption: '图 1. 物品侧将文本编码为码字编号序列；生成器读取已编码的用户历史，逐个预测下一物品的 token，再通过完整 Semantic ID 映射回物品。'
   }
 };
 
 const tigerFlowFigureCopy = {
   en: {
     figure: 'Figure 1',
-    title: 'TIGER turns recommendation into next-token prediction over Semantic IDs',
-    aria: 'A conceptual TIGER workflow with two lanes: item content is compressed into a Semantic ID vocabulary, and user history is used to generate the next semantic item.',
+    title: 'TIGER: encode items, then generate their identifiers',
+    aria: 'Two connected routes: item content becomes a sequence of code indices; the generator predicts those tokens from user history and resolves the full identifier to an item.',
     lanes: [
       {
         tone: 'item',
         badge: '01 Item language',
-        title: 'Item content becomes a Semantic ID vocabulary',
+        title: 'Item content becomes a sequence of code indices',
         subtitle: 'Text metadata is encoded, then RQ-VAE discretizes the embedding into tokens the generator can produce.',
-        direction: 'content -> vocabulary',
+        direction: 'content -> codes',
         steps: [
-          ['source', 'item', 'Item content', 'title / category / brand', 'The item first appears as ordinary text metadata, not as an isolated atomic ID.'],
-          ['model', 'model', 'Encoder + RQ-VAE', 'embedding -> quantization', 'A text encoder produces the item embedding; RQ-VAE then compresses it into discrete residual codewords.'],
-          ['semantic featured', 'semantic', 'Semantic ID vocabulary', '(12, 24, 52) -> item', 'This vocabulary is the key interface: items become token sequences that can be generated and resolved back to real products.']
+          {
+            tone: 'source',
+            visual: 'item',
+            title: 'Item content',
+            sample: 'title / category / brand',
+            detail: 'The item first appears as ordinary text metadata, not as an isolated atomic ID.'
+          },
+          {
+            tone: 'model',
+            visual: 'model',
+            title: 'Encoder + RQ-VAE',
+            sample: 'embedding -> quantization',
+            detail: 'A text encoder produces the item embedding; RQ-VAE then compresses it into discrete residual codewords.'
+          },
+          {
+            tone: 'semantic featured',
+            visual: 'semantic',
+            title: 'Code indices + item mapping',
+            sample: '(12, 24, 52, 0) <-> item',
+            detail: 'Each position is a separate coding token. Three quantization indices plus a collision suffix form a complete Semantic ID; the mapping resolves that sequence, not an individual token, to an item.'
+          }
         ]
       },
       {
@@ -590,30 +608,66 @@ const tigerFlowFigureCopy = {
         subtitle: 'The interaction sequence is rewritten as Semantic IDs, then a Transformer predicts the next ID.',
         direction: 'history -> item',
         steps: [
-          ['history', 'history', 'User history', 'item A -> item B -> item C', 'The recommendation context starts from the user interaction sequence.'],
-          ['generate', 'generator', 'Generative model', 'Transformer over ID tokens', 'The model treats recommendation as sequence generation over the Semantic ID vocabulary.'],
-          ['output featured', 'output', 'Recommended item', 'next Semantic ID -> candidate', 'The generated Semantic ID is mapped back to a concrete item or candidate set.']
+          {
+            tone: 'history',
+            visual: 'history',
+            title: 'User history',
+            sample: 'item A -> item B -> item C',
+            detail: 'The recommendation context starts from the user interaction sequence.'
+          },
+          {
+            tone: 'generate',
+            visual: 'generator',
+            title: 'Generative model',
+            sample: 'Transformer over ID tokens',
+            detail: 'The generator predicts one coding token at a time from its token vocabulary. A complete sequence identifies an item; a whole Semantic ID is not one token.'
+          },
+          {
+            tone: 'output featured',
+            visual: 'output',
+            title: 'Recommended item',
+            sample: 'next Semantic ID -> candidate',
+            detail: 'The generated Semantic ID is mapped back to a concrete item or candidate set.'
+          }
         ]
       }
     ],
-    note: 'Recommendation = next-token prediction over a vocabulary whose tokens are Semantic IDs, not ordinary words.',
-    caption: 'Figure 1. TIGER first builds a Semantic ID vocabulary from item content, then uses user interaction history to generate the next semantic item.'
+    note: 'Coding token ≠ complete Semantic ID. RQ-VAE code vectors are 32d; the generator learns separate 128d token embeddings, with distinct tokens for different codebook levels.',
+    caption: 'Figure 1. Item content supplies discrete code indices and the Semantic ID–item mapping. The generator reads encoded history, predicts the next item’s coding tokens, and resolves the completed ID to an item.'
   },
   zh: {
     figure: '图 1',
-    title: 'TIGER：把推荐变成 Semantic ID 的下一词预测',
-    aria: 'TIGER 的概念流程图，包含两条链路：物品内容被压缩成 Semantic ID 词表，用户历史再驱动模型生成下一个语义物品。',
+    title: 'TIGER：先为物品编码，再生成物品编号',
+    aria: '两条相连的链路：物品内容变成码字编号序列；生成器根据用户历史逐个预测编码 token，完整编号再映射回物品。',
     lanes: [
       {
         tone: 'item',
         badge: '01 物品语言',
-        title: 'Item 内容变成 Semantic ID 词表',
+        title: '物品内容变成码字编号序列',
         subtitle: '文本信息先被编码成 embedding，再由 RQ-VAE 离散化为生成器可以输出的 token。',
-        direction: 'content -> vocabulary',
+        direction: 'content -> codes',
         steps: [
-          ['source', 'item', 'Item 文本信息', '标题 / 类别 / 品牌', '物品先以普通文本元信息出现，而不是一个彼此孤立的原子 ID。'],
-          ['model', 'model', 'Encoder + RQ-VAE', 'embedding -> 量化', '文本编码器先得到 item embedding；RQ-VAE 再把它压缩成多层离散 codeword。'],
-          ['semantic featured', 'semantic', 'Semantic ID 词表', '(12, 24, 52) -> item', '这是 TIGER 的关键接口：物品变成可生成的 token 序列，同时仍能映射回真实 item。']
+          {
+            tone: 'source',
+            visual: 'item',
+            title: 'Item 文本信息',
+            sample: '标题 / 类别 / 品牌',
+            detail: '物品先以普通文本元信息出现，而不是一个彼此孤立的原子 ID。'
+          },
+          {
+            tone: 'model',
+            visual: 'model',
+            title: 'Encoder + RQ-VAE',
+            sample: 'embedding -> 量化',
+            detail: '文本编码器先得到 item embedding；RQ-VAE 再把它压缩成多层离散 codeword。'
+          },
+          {
+            tone: 'semantic featured',
+            visual: 'semantic',
+            title: '码字编号 + 物品映射',
+            sample: '(12, 24, 52, 0) <-> item',
+            detail: '每一位对应一个编码 token。三个量化编号加碰撞后缀组成完整 Semantic ID；映射表把这段序列而不是单个 token 对应到物品。'
+          }
         ]
       },
       {
@@ -623,14 +677,32 @@ const tigerFlowFigureCopy = {
         subtitle: '交互序列被转写成 Semantic ID 序列，Transformer 再预测下一个 ID。',
         direction: 'history -> item',
         steps: [
-          ['history', 'history', '用户交互历史', 'item A -> item B -> item C', '推荐上下文来自用户已经点击、购买或浏览过的物品序列。'],
-          ['generate', 'generator', '生成模型', 'Transformer over ID tokens', '模型把推荐任务视为在 Semantic ID 词表上的序列生成。'],
-          ['output featured', 'output', '推荐结果', 'next Semantic ID -> 候选物品', '生成出的 Semantic ID 最后会被解析成真实 item 或候选 item 集合。']
+          {
+            tone: 'history',
+            visual: 'history',
+            title: '用户交互历史',
+            sample: 'item A -> item B -> item C',
+            detail: '推荐上下文来自用户已经点击、购买或浏览过的物品序列。'
+          },
+          {
+            tone: 'generate',
+            visual: 'generator',
+            title: '生成模型',
+            sample: 'Transformer over ID tokens',
+            detail: '模型从编码 token 词表中逐个预测下一位，拼成一个物品的完整 Semantic ID；不是一次生成一个代表整个物品的 token。'
+          },
+          {
+            tone: 'output featured',
+            visual: 'output',
+            title: '推荐结果',
+            sample: 'next Semantic ID -> 候选物品',
+            detail: '生成出的 Semantic ID 最后会被解析成真实 item 或候选 item 集合。'
+          }
         ]
       }
     ],
-    note: 'Recommendation = 在 Semantic ID 词表上的下一词预测，而不是在自然语言词表里造句。',
-    caption: '图 1. TIGER 先从 item 内容建立 Semantic ID 词表，再用用户交互历史生成下一个语义 item。'
+    note: '编码 token ≠ 完整 Semantic ID。RQ-VAE 的码向量是 32 维；生成器另行学习 128 维 token embedding，不同码本层的同号 token 彼此区分。',
+    caption: '图 1. 物品侧建立码字编号及 Semantic ID 与物品的映射；生成器读取已编码的交互历史，逐个预测下一物品的编码 token，再将完整 ID 解析回物品。'
   }
 };
 
@@ -643,17 +715,27 @@ const tigerRqvaeTrainingCopy = {
     inputDetail: 'Sentence-T5, 768d',
     encoder: 'DNN encoder',
     encoderNote: 'ReLU on hidden layers',
-    encoderLayers: [['$x$', '768'], ['$h_1$', '512'], ['$h_2$', '256'], ['$h_3$', '128'], ['$z$', '32']],
+    encoderLayers: [
+      ['$x$', '768'],
+      ['$h_1$', '512'],
+      ['$h_2$', '256'],
+      ['$h_3$', '128'],
+      ['$z$', '32']
+    ],
     quantizer: 'Residual quantizer',
-    quantizerNote: '3 levels, each codebook has 256 vectors of 32d',
-    levels: [['C0', 'choose nearest code for $r_0 = z$'], ['C1', 'quantize $r_1 = r_0 - e_{c_0}$'], ['C2', 'quantize $r_2 = r_1 - e_{c_1}$']],
+    quantizerNote: '3 codebooks × 256 vectors × 32 dimensions. Each row shows only slots 0–7 out of 256.',
+    levels: [
+      ['C0', 'choose nearest code for $r_0 = z$'],
+      ['C1', 'quantize $r_1 = r_0 - e_{c_0}$'],
+      ['C2', 'quantize $r_2 = r_1 - e_{c_1}$']
+    ],
     decoder: 'DNN decoder',
     decoderNote: 'decodes $\\hat{z}$ back to the embedding space',
     output: 'reconstructed embedding',
     outputDetail: '$\\hat{x}$, 768d target space',
     loss: 'Training signal',
     lossItems: ['$L_{\\mathrm{recon}} = \\lVert x - \\hat{x}\\rVert_2^2$', '$L_{\\mathrm{rqvae}}$ aligns residuals and codewords', 'updates encoder, decoder and codebooks'],
-    caption: 'Figure 2. RQ-VAE is trained as an autoencoder around residual quantization: encode the item embedding, quantize the latent vector, decode it back, and optimize reconstruction plus quantization losses.'
+    caption: 'Figure 2. The encoder maps a 768d item embedding to a 32d latent vector. Quantization produces two distinct outputs: code indices form the Semantic ID, while selected 32d vectors are summed and decoded for reconstruction. The backward strip illustrates straight-through estimation, not a derivative through discrete index selection.'
   },
   zh: {
     figure: '图 2',
@@ -663,58 +745,164 @@ const tigerRqvaeTrainingCopy = {
     inputDetail: 'Sentence-T5，768 维',
     encoder: 'DNN encoder',
     encoderNote: '中间层使用 ReLU',
-    encoderLayers: [['$x$', '768'], ['$h_1$', '512'], ['$h_2$', '256'], ['$h_3$', '128'], ['$z$', '32']],
+    encoderLayers: [
+      ['$x$', '768'],
+      ['$h_1$', '512'],
+      ['$h_2$', '256'],
+      ['$h_3$', '128'],
+      ['$z$', '32']
+    ],
     quantizer: 'Residual quantizer',
-    quantizerNote: '3 层；每层码本 256 个 32 维 codeword',
-    levels: [['C0', '对 $r_0 = z$ 选最近 code'], ['C1', '量化 $r_1 = r_0 - e_{c_0}$'], ['C2', '量化 $r_2 = r_1 - e_{c_1}$']],
+    quantizerNote: '3 层码本，每层 256 个 32 维码向量。每行 8 格仅示意编号 0–7，其余 248 格省略。',
+    levels: [
+      ['C0', '对 $r_0 = z$ 选最近 code'],
+      ['C1', '量化 $r_1 = r_0 - e_{c_0}$'],
+      ['C2', '量化 $r_2 = r_1 - e_{c_1}$']
+    ],
     decoder: 'DNN decoder',
     decoderNote: '把 $\\hat{z}$ 解码回 embedding 空间',
     output: '重构 embedding',
     outputDetail: '$\\hat{x}$，目标空间 768 维',
     loss: '训练信号',
     lossItems: ['$L_{\\mathrm{recon}} = \\lVert x - \\hat{x}\\rVert_2^2$', '$L_{\\mathrm{rqvae}}$ 对齐 residual 与 codeword', '联合更新 encoder、decoder 和码本'],
-    caption: '图 2. RQ-VAE 的训练不是只做最近邻查找，而是围绕残差量化建立 autoencoder：编码 item embedding，量化潜在向量，再解码重构，并同时优化重构损失与量化损失。'
+    caption: '图 2. 编码器将 768 维物品表示映射到 32 维潜在向量。量化后分为两路：码字编号组成 Semantic ID，选中的 32 维码向量相加后送入解码器重构。底部展示直通估计的反向示意，不对离散的选码编号求导。'
   }
 };
 
 const tigerQuantizerAtlasCopy = {
   en: {
-    figure: 'Figure 5',
+    figure: 'Figure 3',
     title: 'Different ID builders preserve different structure',
-    aria: 'A visual comparison of six ways to turn item embeddings into discrete identifiers.',
+    aria: 'A visual comparison of Random ID, LSH, Product Quantization, Hierarchical k-means, VQ-VAE, and RQ-VAE for turning item embeddings into discrete identifiers.',
     methods: [
-      ['random', 'Random ID', 'control baseline', 'item -> sampled tokens', 'The item receives random codewords, so the ID has capacity but carries no content similarity.', 'Tests whether content-aware identifiers help.', ['no content', 'random', 'baseline']],
-      ['lsh', 'LSH / SimHash', 'random projections', 'embedding -> hyperplane signs -> hash code', 'Random hyperplanes split the embedding space; nearby vectors are more likely to share bits, but the split is not learned for the data distribution.', 'Fast and content based, but not optimized for reconstruction.', ['content', 'fixed split', 'hash tokens']],
-      ['pq', 'Product Quantization', 'subspace codes', 'vector slices -> separate codebooks', 'The vector dimensions are partitioned into subspaces, and each subspace is quantized independently.', 'Strong for compression and vector search, less natural for coarse-to-fine residual IDs.', ['content', 'sub-codebooks', 'compression']],
-      ['tree', 'Hierarchical k-means', 'tree path', 'root cluster -> child cluster -> leaf', 'The ID is a path in a clustering tree; early branch decisions constrain every later decision.', 'Readable hierarchy, but early hard boundaries cannot be repaired downstream.', ['content', 'clusters', 'path ID']],
-      ['vq', 'VQ-VAE', 'per-position quantization', 'encoder latent -> nearest codeword -> decoder', 'One latent position selects a learned codeword for reconstruction. Multiple positions can yield multiple tokens.', 'Quantizes each position once, rather than refining its residual across levels.', ['content', 'learned', 'per position']],
-      ['rq', 'RQ-VAE', 'residual correction', 'latent -> code + residual -> next code', 'Each layer quantizes what the previous layer did not explain, so the final ID is a sequence of residual codewords.', 'This is the method TIGER uses for its Semantic ID.', ['content', 'learned', 'residual tokens']]
+      {
+        id: 'random',
+        name: 'Random ID',
+        label: 'control baseline',
+        route: 'item -> sampled tokens',
+        point: 'The item receives random codewords, so the ID has capacity but carries no content similarity.',
+        takeaway: 'Tests whether content-aware identifiers help.',
+        traits: ['no content', 'not learned', 'random tuple']
+      },
+      {
+        id: 'lsh',
+        name: 'LSH / SimHash',
+        label: 'random projections',
+        route: 'embedding -> hyperplane signs -> hash code',
+        point: 'Random hyperplanes split the embedding space; nearby vectors are more likely to share bits, but the split is not learned for the data distribution.',
+        takeaway: 'Fast and content based, but not optimized for reconstruction.',
+        traits: ['content', 'fixed split', 'hash bits']
+      },
+      {
+        id: 'pq',
+        name: 'Product Quantization',
+        label: 'subspace codes',
+        route: 'vector slices -> separate codebooks',
+        point: 'The vector dimensions are partitioned into subspaces, and each subspace is quantized independently.',
+        takeaway: 'The subspace indices can also be generated as tokens; their structure is parallel, not residual.',
+        traits: ['content', 'learned', 'subspace tuple']
+      },
+      {
+        id: 'tree',
+        name: 'Hierarchical k-means',
+        label: 'tree path',
+        route: 'root cluster -> child cluster -> leaf',
+        point: 'The ID is a path in a clustering tree; early branch decisions constrain every later decision.',
+        takeaway: 'Readable hierarchy, but early hard boundaries cannot be repaired downstream.',
+        traits: ['content', 'clusters', 'path ID']
+      },
+      {
+        id: 'vq',
+        name: 'VQ-VAE',
+        label: 'per-position quantization',
+        route: 'encoder latent -> nearest codeword -> decoder',
+        point: 'One latent position selects a learned codeword for reconstruction (e18 is a vector, not the integer 18). Multiple positions can yield multiple tokens.',
+        takeaway: 'Quantizes each position once, rather than refining its residual across levels.',
+        traits: ['content', 'learned', 'per position']
+      },
+      {
+        id: 'rq',
+        name: 'RQ-VAE',
+        label: 'residual correction',
+        route: 'latent -> code + residual -> next code',
+        point: 'Each layer quantizes what the previous layer did not explain, so the final ID is a sequence of residual codewords.',
+        takeaway: 'This is the method TIGER uses for its Semantic ID.',
+        traits: ['content', 'learned', 'residual levels']
+      }
     ],
     legend: [
       ['Content aware', 'uses item embedding rather than only random assignment'],
       ['Learned', 'code boundaries are trained from data'],
-      ['Sequential ID', 'produces several tokens that can be generated autoregressively']
+      ['Code structure', 'random tuple, hash bits, subspace tuple, tree path, positions, or residual levels']
     ],
-    caption: 'Figure 5. Six ways to construct discrete IDs: random assignment, random projection, subspace quantization, clustering-tree paths, vector quantization, and residual quantization. They differ in their use of content, partitioning, and code structure.'
+    caption: 'Figure 3. Six ways to construct discrete IDs: random assignment, random projection, subspace quantization, clustering-tree paths, vector quantization, and residual quantization. They differ in their use of content, partitioning, and code structure.'
   },
   zh: {
-    figure: '图 5',
+    figure: '图 3',
     title: '不同 ID 构造方式保留的是不同结构',
-    aria: '六种方式将 item embedding 变成离散标识的可视化对比。',
+    aria: 'Random ID、LSH、Product Quantization、Hierarchical k-means、VQ-VAE 和 RQ-VAE 将 item embedding 变成离散标识的可视化对比。',
     methods: [
-      ['random', 'Random ID', '随机基线', 'item -> 随机抽 token', '不看内容，直接给 item 分配随机 codeword。ID 有组合容量，但相似物品不一定共享任何 token。', '用于检验内容相关编号是否有帮助。', ['无内容', '随机', '基线']],
-      ['lsh', 'LSH / SimHash', '随机投影', 'embedding -> 超平面正负号 -> hash code', '用随机超平面切分 embedding 空间；近邻向量更可能有相同 bit，但切分方式不是为当前数据分布学出来的。', '快、基于内容，但不优化重构。', ['内容', '固定切分', 'hash token']],
-      ['pq', 'Product Quantization', '子空间码', '向量切片 -> 各子空间单独量化', '先把向量维度切成几段，每段进入自己的码本，最后把几个子空间编号拼成一个 ID。', '适合压缩和向量检索，不天然表达从粗到细的残差修正。', ['内容', '子码本', '偏压缩']],
-      ['tree', 'Hierarchical k-means', '树路径', '根簇 -> 子簇 -> 叶子簇', 'ID 是聚类树上的一条路径。第一层选错父簇后，后面只能在这个子树里继续细分。', '层次直观，但早期硬边界很难被下层修正。', ['内容', '聚类', '路径 ID']],
-      ['vq', 'VQ-VAE', '逐位置量化', 'encoder latent -> 最近 codeword -> decoder', '图中示意一个潜在位置：向量选最近码字，再参与重构。多个位置可分别量化，输出多个 token。', '每个位置量化一次，不沿残差逐层细化。', ['内容', '学习码本', '逐位置']],
-      ['rq', 'RQ-VAE', '残差修正', 'latent -> code + residual -> 下一层 code', '第一层先解释主要部分，第二层解释剩余残差，第三层继续修正，最终 ID 是多层 codeword 序列。', '这是 TIGER 用来生成 Semantic ID 的方法。', ['内容', '学习码本', '残差 token']]
+      {
+        id: 'random',
+        name: 'Random ID',
+        label: '随机基线',
+        route: 'item -> 随机抽 token',
+        point: '不看内容，直接给 item 分配随机 codeword。ID 有组合容量，但相似物品不一定共享任何 token。',
+        takeaway: '用于检验内容相关编号是否有帮助。',
+        traits: ['无内容', '不训练', '随机组合']
+      },
+      {
+        id: 'lsh',
+        name: 'LSH / SimHash',
+        label: '随机投影',
+        route: 'embedding -> 超平面正负号 -> hash code',
+        point: '用随机超平面切分 embedding 空间；近邻向量更可能有相同 bit，但切分方式不是为当前数据分布学出来的。',
+        takeaway: '快、基于内容，但不优化重构。',
+        traits: ['内容', '固定切分', '哈希位']
+      },
+      {
+        id: 'pq',
+        name: 'Product Quantization',
+        label: '子空间码',
+        route: '向量切片 -> 各子空间单独量化',
+        point: '先把向量维度切成几段，每段进入自己的码本，最后把几个子空间编号拼成一个 ID。',
+        takeaway: '子空间编号同样可以作为生成 token；它们是并列分量，而不是逐层残差修正。',
+        traits: ['内容', '学习码本', '子空间组合']
+      },
+      {
+        id: 'tree',
+        name: 'Hierarchical k-means',
+        label: '树路径',
+        route: '根簇 -> 子簇 -> 叶子簇',
+        point: 'ID 是聚类树上的一条路径。第一层选错父簇后，后面只能在这个子树里继续细分。',
+        takeaway: '层次直观，但早期硬边界很难被下层修正。',
+        traits: ['内容', '聚类', '路径 ID']
+      },
+      {
+        id: 'vq',
+        name: 'VQ-VAE',
+        label: '逐位置量化',
+        route: 'encoder latent -> 最近 codeword -> decoder',
+        point: '一个潜在位置选最近码向量参与重构；e18 是向量，不是整数编号 18。多个位置可分别量化，输出多个 token。',
+        takeaway: '每个位置量化一次，不沿残差逐层细化。',
+        traits: ['内容', '学习码本', '逐位置']
+      },
+      {
+        id: 'rq',
+        name: 'RQ-VAE',
+        label: '残差修正',
+        route: 'latent -> code + residual -> 下一层 code',
+        point: '第一层先解释主要部分，第二层解释剩余残差，第三层继续修正，最终 ID 是多层 codeword 序列。',
+        takeaway: '这是 TIGER 用来生成 Semantic ID 的方法。',
+        traits: ['内容', '学习码本', '残差层']
+      }
     ],
     legend: [
       ['是否看内容', '是否使用 item embedding，而不是只随机编号'],
       ['是否学习边界', '码本或划分是否由数据训练得到'],
-      ['是否天然多 token', '是否容易作为自回归生成目标']
+      ['编码结构', '随机组合、哈希位、子空间组合、树路径、潜在位置或残差层']
     ],
-    caption: '图 5. 六种离散 ID 构造方式：随机赋码、随机投影、子空间量化、聚类树路径、向量量化与残差量化。它们在内容利用、划分方式和编码结构上各有差异。'
+    caption: '图 3. 六种离散 ID 构造方式：随机赋码、随机投影、子空间量化、聚类树路径、向量量化与残差量化。它们在内容利用、划分方式和编码结构上各有差异。'
   }
 };
 
@@ -743,36 +931,31 @@ const tigerIndexMapCopy = {
   }
 };
 
-const tigerInferenceLoopCopy = {
-  en: {
-    figure: 'Figure 4',
-    title: 'Inference loop: probabilities become real items',
-    aria: 'A five-step diagram showing decoder token probabilities becoming beam prefixes, complete Semantic IDs, table lookups, and Top-K item results.',
-    stages: [
-      ['prob', 'decoder', 'token distributions', 'Each step scores the next Semantic ID token.', [['d1=12', 0.42], ['d1=87', 0.25], ['d1=04', 0.18]]],
-      ['beam', 'search', 'keep prefixes', 'High-score prefixes survive and expand.', [['12'], ['12', '24'], ['12', '24', '52']]],
-      ['sid', 'address', 'complete Semantic IDs', 'A full token sequence becomes a candidate address.', [['12', '24', '52', '0'], ['12', '24', '61', '0']]],
-      ['lookup', 'mapping', 'resolve address', 'The mapping table returns real item IDs.', [['SID A', 'item 831'], ['SID B', 'item 1620']]],
-      ['topk', 'result', 'Top-K items', 'The page or service finally shows items, not tokens.', ['#1 item 831', '#2 item 1620', '#3 item 447']]
-    ],
-    note: 'The generator does not directly display token probabilities. It searches likely Semantic ID sequences first, then resolves those addresses back to item IDs.',
-    caption: 'Figure 4. At serving time, TIGER decodes Semantic ID candidates and uses the Semantic ID to Item ID mapping to produce Top-K recommendations.'
-  },
-  zh: {
-    figure: '图 4',
-    title: '推理闭环：概率最终要变回真实物品',
-    aria: '五步示意图，展示 decoder token 概率如何变成候选前缀、完整 Semantic ID、映射表查询和 Top-K 物品结果。',
-    stages: [
-      ['prob', 'decoder', 'token 概率分布', '每一步都在预测下一位 Semantic ID token。', [['d1=12', 0.42], ['d1=87', 0.25], ['d1=04', 0.18]]],
-      ['beam', 'search', '保留高分前缀', '高概率前缀被保留，并继续向后扩展。', [['12'], ['12', '24'], ['12', '24', '52']]],
-      ['sid', 'address', '完整 Semantic ID', '完整 token 序列先形成候选地址。', [['12', '24', '52', '0'], ['12', '24', '61', '0']]],
-      ['lookup', 'mapping', '映射回物品', '映射表把语义地址解析成真实 Item ID。', [['SID A', 'item 831'], ['SID B', 'item 1620']]],
-      ['topk', 'result', 'Top-K 物品', '最后展示给用户的是物品，而不是 token。', ['#1 item 831', '#2 item 1620', '#3 item 447']]
-    ],
-    note: '生成器不会把 token 概率直接展示给用户；它先搜索可能的 Semantic ID 序列，再把这些语义地址还原成真实物品。',
-    caption: '图 4. 服务阶段中，TIGER 先解码 Semantic ID 候选，再通过 Semantic ID 到 Item ID 的映射表得到 Top-K 推荐结果。'
-  }
-};
+const tigerInferenceBeamSteps = [
+  [
+    [['12'], 1, 0.60, true],
+    [['87'], 1, 0.30, true],
+    [['04'], 1, 0.10, false]
+  ],
+  [
+    [['12', '24'], 0.60, 0.50, true],
+    [['87', '08'], 0.30, 0.80, true],
+    [['12', '09'], 0.60, 0.30, false],
+    [['87', '03'], 0.30, 0.10, false]
+  ],
+  [
+    [['12', '24', '52'], 0.30, 0.60, true],
+    [['87', '08', '06'], 0.24, 0.50, true],
+    [['87', '08', '19'], 0.24, 0.30, false],
+    [['12', '24', '61'], 0.30, 0.20, false]
+  ],
+  [
+    [['12', '24', '52', '0'], 0.18, 0.70, true],
+    [['87', '08', '06', '0'], 0.12, 0.80, true],
+    [['12', '24', '52', '1'], 0.18, 0.20, false],
+    [['87', '08', '06', '1'], 0.12, 0.10, false]
+  ]
+];
 
 
 function tigerFlowGlyphHtml(name = 'item') {
@@ -822,15 +1005,82 @@ function tigerRqvaeCodebookHtml(name, selected, detail, index) {
 
 function tigerRqvaeTrainingFigureHtml(lang = 'en') {
   const copy = tigerRqvaeTrainingCopy[lang === 'zh' ? 'zh' : 'en'];
+  const t = (cn, en) => escapeHtml(lang === 'zh' ? cn : en);
   const encoderLayers = tigerRqvaeFunnelHtml(copy.encoderLayers, 'encoder');
-  const decoderLayers = tigerRqvaeFunnelHtml([['$\\hat{z}$', '32'], ['DNN', ''], ['DNN', ''], ['$\\hat{x}$', '768']], 'decoder');
   const codebooks = [
     tigerRqvaeCodebookHtml('$C_0$', 7, copy.levels[0][1], 0),
     tigerRqvaeCodebookHtml('$C_1$', 1, copy.levels[1][1], 1),
     tigerRqvaeCodebookHtml('$C_2$', 4, copy.levels[2][1], 2)
   ].join('');
   const losses = copy.lossItems.map((item) => `<li>${tigerRqvaeTextHtml(item)}</li>`).join('');
-  return `<figure id="fig-tiger-rqvae-training" class="tiger-pipeline-figure tiger-rqvae-figure"><div class="tiger-pipeline-surface tiger-rqvae-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-rqvae-architecture"><section class="tiger-rqvae-vector tiger-rqvae-source"><span>${escapeHtml(copy.input)}</span><strong>${tigerRqvaeTextHtml('$x$')}</strong><em>${tigerRqvaeTextHtml(copy.inputDetail)}</em><i aria-hidden="true"></i></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-encoder"><span>${escapeHtml(copy.encoder)}</span><ol class="tiger-rqvae-funnel">${encoderLayers}</ol><em>${tigerRqvaeTextHtml(copy.encoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-quantizer"><span>${escapeHtml(copy.quantizer)}</span><div class="tiger-rqvae-residual-rail" aria-hidden="true"><b class="rail-z">${tigerRqvaeTextHtml('$z$')}</b><b class="rail-r1">${tigerRqvaeTextHtml('$r_1$')}</b><b class="rail-r2">${tigerRqvaeTextHtml('$r_2$')}</b><b class="rail-r3">${tigerRqvaeTextHtml('$r_3$')}</b></div><ol class="tiger-rqvae-codebooks">${codebooks}</ol><div class="tiger-rqvae-semantic-id" aria-hidden="true"><span>7</span><span>1</span><span>4</span></div><em>${tigerRqvaeTextHtml(copy.quantizerNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-decoder"><span>${escapeHtml(copy.decoder)}</span><ol class="tiger-rqvae-funnel tiger-rqvae-funnel-decoder">${decoderLayers}</ol><em>${tigerRqvaeTextHtml(copy.decoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-vector tiger-rqvae-recon"><span>${escapeHtml(copy.output)}</span><strong>${tigerRqvaeTextHtml('$\\hat{x}$')}</strong><em>${tigerRqvaeTextHtml(copy.outputDetail)}</em><i aria-hidden="true"></i></section></div><div class="tiger-rqvae-loss-loop"><span>${escapeHtml(copy.loss)}</span><ol>${losses}</ol></div></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+  return `<figure id="fig-tiger-rqvae-training" class="tiger-pipeline-figure tiger-rqvae-figure">
+    <div class="tiger-pipeline-surface tiger-rqvae-surface" role="group" aria-label="${escapeHtml(copy.aria)}">
+      <div class="tiger-pipeline-heading">
+        <span>${escapeHtml(copy.figure)}</span>
+        <strong>${escapeHtml(copy.title)}</strong>
+      </div>
+      <div class="tiger-rqvae-architecture tiger-rqvae-two-route">
+        <div class="tiger-rqvae-encode-route">
+        <section class="tiger-rqvae-vector tiger-rqvae-source">
+          <span>${escapeHtml(copy.input)}</span>
+          <strong>${tigerRqvaeTextHtml('$x$')}</strong>
+          <em>${tigerRqvaeTextHtml(copy.inputDetail)}</em>
+          <i aria-hidden="true"></i>
+        </section>
+        ${tigerRqvaeArrowHtml()}
+        <section class="tiger-rqvae-module tiger-rqvae-encoder">
+          <span>${escapeHtml(copy.encoder)}</span>
+          <ol class="tiger-rqvae-funnel">
+${encoderLayers}
+          </ol>
+          <em>${tigerRqvaeTextHtml(copy.encoderNote)}</em>
+        </section>
+        </div>
+        ${tigerRqvaeArrowHtml()}
+        <section class="tiger-rqvae-module tiger-rqvae-quantizer">
+          <span>${escapeHtml(copy.quantizer)}</span>
+          <ol class="tiger-rqvae-codebooks">
+${codebooks}
+          </ol>
+          <em>${tigerRqvaeTextHtml(copy.quantizerNote)}</em>
+        </section>
+        <section class="tiger-rqvae-outputs" aria-label="${t('量化的两种输出', 'Two outputs from quantization')}">
+          <div class="tiger-rqvae-id-route">
+            <h4>${t('出口 A · 取编号，构成物品编码', 'Route A · indices form an identifier')}</h4>
+            <div class="tiger-rqvae-semantic-id"><span>7</span><span>1</span><span>4</span></div>
+            <p>${t('三个编号依次组成 Semantic ID 的前三位。碰撞后缀在后续补齐；整数编号不送进 DNN decoder。', 'The three indices form the quantized part of a Semantic ID. A collision suffix is added later; these integers are not the DNN decoder input.')}</p>
+          </div>
+          <div class="tiger-rqvae-vector-route">
+            <h4>${t('出口 B · 取向量，相加后重构', 'Route B · sum selected vectors to reconstruct')}</h4>
+            <div class="tiger-rqvae-sum">
+              ${[0, 1, 2].map((level, i) => `<span class="tiger-rqvae-summand"><b>${tigerRqvaeTextHtml('$e_{c_' + level + '}$')}</b><small>${t('码本 ' + level + ' · 编号 ' + [7, 1, 4][i], 'Codebook ' + level + ' · slot ' + [7, 1, 4][i])}</small><i aria-hidden="true"></i><em>32d</em></span>`).join('<b class="tiger-rqvae-plus" aria-hidden="true">+</b>')}
+              <b class="tiger-rqvae-plus" aria-hidden="true">=</b>
+              <span class="tiger-rqvae-summand is-sum"><b>${tigerRqvaeTextHtml('$\\hat{z}$')}</b><small>${t('量化向量', 'Quantized vector')}</small><i aria-hidden="true"></i><em>32d</em></span>
+            </div>
+            <div class="tiger-rqvae-decode-route">
+              <span>${tigerRqvaeTextHtml('$\\hat{z}$')} · 32d</span>
+              <b aria-hidden="true">→</b>
+              <div class="tiger-rqvae-decoder"><strong>${escapeHtml(copy.decoder)}</strong><small>${t('连续向量变换', 'Continuous vector transform')}</small></div>
+              <b aria-hidden="true">→</b>
+              <span>${tigerRqvaeTextHtml('$\\hat{x}$')} · 768d</span>
+            </div>
+          </div>
+        </section>
+      </div>
+      <div class="tiger-rqvae-loss-loop">
+        <span>${escapeHtml(copy.loss)}</span>
+        <ol>
+${losses}
+        </ol>
+      </div>
+      <div class="tiger-rqvae-backward">
+        <strong>${t('重构梯度 · 直通估计示意', 'Reconstruction gradient · straight-through illustration')}</strong>
+        <div class="tiger-rqvae-gradient-route">${['$L_{\\mathrm{recon}}$', 'decoder', '$\\hat{z}$', 'STE', '$z$', 'encoder'].map(label => `<span>${tigerRqvaeTextHtml(label)}</span>`).join('<b aria-hidden="true">→</b>')}</div>
+        <p>${t('前向仍使用选中码向量的和；反向把量化输出对 z 的局部导数近似为恒等映射，让重构梯度传回编码器，而不是对 argmin 求导。码本另有量化损失的训练信号。', 'The forward value is still the sum of selected code vectors. Backward, approximate the local derivative to z by the identity so reconstruction gradients reach the encoder; this does not differentiate argmin. Quantization losses provide additional codebook training signals.')}</p>
+      </div>
+    </div>
+    <figcaption>${escapeHtml(copy.caption)}</figcaption>
+  </figure>`;
 }
 
 function tigerQuantizerSvgHtml(id, body) {
@@ -838,58 +1088,239 @@ function tigerQuantizerSvgHtml(id, body) {
 }
 
 function tigerQuantizerVisualHtml(id) {
-  if (id === 'random') return tigerQuantizerSvgHtml(id, `<rect class="tiger-q-box" x="16" y="28" width="60" height="44" rx="10"></rect><text class="tiger-q-label" x="46" y="55">item</text><path class="tiger-q-arrow" d="M 82 50 H 110" marker-end="url(#tiger-q-arrow-random)"></path><rect class="tiger-q-box tiger-q-active-fill" x="116" y="18" width="58" height="64" rx="12"></rect><circle class="tiger-q-dot" cx="133" cy="37" r="3"></circle><circle class="tiger-q-dot" cx="156" cy="37" r="3"></circle><circle class="tiger-q-dot" cx="145" cy="51" r="3"></circle><circle class="tiger-q-dot" cx="133" cy="65" r="3"></circle><circle class="tiger-q-dot" cx="156" cy="65" r="3"></circle><text class="tiger-q-caption" x="145" y="101">ignore content</text><path class="tiger-q-arrow" d="M 180 50 H 206" marker-end="url(#tiger-q-arrow-random)"></path><g class="tiger-q-token-row"><rect x="210" y="25" width="28" height="26" rx="7"></rect><rect x="242" y="25" width="28" height="26" rx="7"></rect><rect x="210" y="57" width="28" height="26" rx="7"></rect><rect x="242" y="57" width="28" height="26" rx="7"></rect><text x="224" y="42">07</text><text x="256" y="42">188</text><text x="224" y="74">42</text><text x="256" y="74">251</text></g><text class="tiger-q-caption" x="240" y="123">sampled ID</text>`);
-  if (id === 'lsh') return tigerQuantizerSvgHtml(id, `<rect class="tiger-q-plot" x="18" y="18" width="122" height="96" rx="12"></rect><path class="tiger-q-line" d="M 34 92 L 126 30"></path><path class="tiger-q-line" d="M 32 38 L 128 96"></path><path class="tiger-q-line tiger-q-muted-stroke" d="M 74 22 L 96 110"></path><circle class="tiger-q-point" cx="84" cy="68" r="6"></circle><text class="tiger-q-caption" x="79" y="132">hyperplane signs</text><path class="tiger-q-arrow" d="M 148 66 H 176" marker-end="url(#tiger-q-arrow-lsh)"></path><g class="tiger-q-token-row tiger-q-bit-row"><rect x="182" y="34" width="26" height="28" rx="7"></rect><rect x="214" y="34" width="26" height="28" rx="7"></rect><rect x="246" y="34" width="26" height="28" rx="7"></rect><rect x="198" y="72" width="26" height="28" rx="7"></rect><text x="195" y="52">1</text><text x="227" y="52">0</text><text x="259" y="52">1</text><text x="211" y="90">1</text></g><text class="tiger-q-caption" x="226" y="123">hash code</text>`);
-  if (id === 'pq') return tigerQuantizerSvgHtml(id, `<text class="tiger-q-caption" x="140" y="16">split embedding dimensions</text><g class="tiger-q-vector-bar"><rect x="24" y="28" width="232" height="28" rx="8"></rect><path d="M 101 28 V 56"></path><path d="M 179 28 V 56"></path><text x="63" y="47">z1</text><text x="140" y="47">z2</text><text x="218" y="47">z3</text></g><path class="tiger-q-arrow" d="M 63 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path><path class="tiger-q-arrow" d="M 140 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path><path class="tiger-q-arrow" d="M 218 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path><g class="tiger-q-codebooks"><rect x="37" y="84" width="52" height="34" rx="8"></rect><rect x="114" y="84" width="52" height="34" rx="8"></rect><rect x="192" y="84" width="52" height="34" rx="8"></rect><text x="63" y="105">C1</text><text x="140" y="105">C2</text><text x="218" y="105">C3</text></g><g class="tiger-q-token-row tiger-q-output-row"><rect x="45" y="128" width="36" height="22" rx="6"></rect><rect x="122" y="128" width="36" height="22" rx="6"></rect><rect x="200" y="128" width="36" height="22" rx="6"></rect><text x="63" y="143">A7</text><text x="140" y="143">B3</text><text x="218" y="143">C9</text></g>`);
-  if (id === 'tree') return tigerQuantizerSvgHtml(id, `<rect class="tiger-q-box tiger-q-active-fill" x="106" y="12" width="68" height="30" rx="8"></rect><text class="tiger-q-label" x="140" y="32">root</text><path class="tiger-q-arrow tiger-q-active-stroke" d="M 128 44 L 76 66" marker-end="url(#tiger-q-arrow-tree)"></path><path class="tiger-q-line" d="M 152 44 L 204 66"></path><rect class="tiger-q-box tiger-q-active-fill" x="48" y="70" width="56" height="30" rx="8"></rect><rect class="tiger-q-box" x="176" y="70" width="56" height="30" rx="8"></rect><text class="tiger-q-label" x="76" y="90">A</text><text class="tiger-q-label" x="204" y="90">B</text><path class="tiger-q-arrow tiger-q-active-stroke" d="M 68 102 L 47 122" marker-end="url(#tiger-q-arrow-tree)"></path><path class="tiger-q-line" d="M 86 102 L 109 122"></path><rect class="tiger-q-box tiger-q-active-fill" x="22" y="124" width="48" height="26" rx="7"></rect><rect class="tiger-q-box" x="88" y="124" width="48" height="26" rx="7"></rect><rect class="tiger-q-box" x="176" y="124" width="48" height="26" rx="7"></rect><text class="tiger-q-label" x="46" y="141">A2</text><text class="tiger-q-label" x="112" y="141">A5</text><text class="tiger-q-label" x="200" y="141">B4</text>`);
-  if (id === 'vq') return tigerQuantizerSvgHtml(id, `<rect class="tiger-q-box" x="16" y="26" width="38" height="32" rx="8"></rect><text class="tiger-q-label" x="35" y="47">x</text><path class="tiger-q-arrow" d="M 60 42 H 78" marker-end="url(#tiger-q-arrow-vq)"></path><rect class="tiger-q-box" x="84" y="26" width="38" height="32" rx="8"></rect><text class="tiger-q-label" x="103" y="47">E</text><path class="tiger-q-arrow" d="M 128 42 H 146" marker-end="url(#tiger-q-arrow-vq)"></path><rect class="tiger-q-box tiger-q-active-fill" x="152" y="26" width="38" height="32" rx="8"></rect><text class="tiger-q-label" x="171" y="47">z</text><path class="tiger-q-arrow" d="M 196 42 H 210" marker-end="url(#tiger-q-arrow-vq)"></path><rect class="tiger-q-plot" x="216" y="16" width="50" height="54" rx="12"></rect><circle class="tiger-q-code-dot" cx="229" cy="35" r="4.5"></circle><circle class="tiger-q-code-dot tiger-q-active-dot" cx="242" cy="51" r="5.5"></circle><circle class="tiger-q-code-dot" cx="253" cy="31" r="4.5"></circle><text class="tiger-q-caption" x="241" y="83">nearest</text><path class="tiger-q-arrow" d="M 242 74 V 98" marker-end="url(#tiger-q-arrow-vq)"></path><g class="tiger-q-token-row"><rect x="178" y="106" width="58" height="28" rx="7"></rect><text x="207" y="124">code 18</text></g><path class="tiger-q-arrow" d="M 240 120 H 252" marker-end="url(#tiger-q-arrow-vq)"></path><rect class="tiger-q-box" x="258" y="104" width="22" height="32" rx="8"></rect><text class="tiger-q-label" x="269" y="125">D</text>`);
-  return tigerQuantizerSvgHtml(id, `<text class="tiger-q-caption" x="142" y="18">quantize the remaining residual</text><rect class="tiger-q-residual-bar tiger-q-residual-bar-1" x="32" y="32" width="150" height="18" rx="9"></rect><text class="tiger-q-label" x="20" y="47">z</text><rect class="tiger-q-code-chip" x="202" y="26" width="42" height="28" rx="8"></rect><text class="tiger-q-label" x="223" y="45">c1</text><path class="tiger-q-arrow" d="M 184 41 H 196" marker-end="url(#tiger-q-arrow-rq)"></path><path class="tiger-q-arrow tiger-q-muted-stroke" d="M 108 55 V 70" marker-end="url(#tiger-q-arrow-rq)"></path><rect class="tiger-q-residual-bar tiger-q-residual-bar-2" x="54" y="76" width="112" height="18" rx="9"></rect><text class="tiger-q-label" x="36" y="91">r1</text><rect class="tiger-q-code-chip" x="186" y="70" width="42" height="28" rx="8"></rect><text class="tiger-q-label" x="207" y="89">c2</text><path class="tiger-q-arrow" d="M 168 85 H 180" marker-end="url(#tiger-q-arrow-rq)"></path><path class="tiger-q-arrow tiger-q-muted-stroke" d="M 110 99 V 114" marker-end="url(#tiger-q-arrow-rq)"></path><rect class="tiger-q-residual-bar tiger-q-residual-bar-3" x="74" y="120" width="76" height="18" rx="9"></rect><text class="tiger-q-label" x="56" y="135">r2</text><rect class="tiger-q-code-chip" x="166" y="114" width="42" height="28" rx="8"></rect><text class="tiger-q-label" x="187" y="133">c3</text><g class="tiger-q-token-row tiger-q-rq-output"><rect x="218" y="116" width="18" height="22" rx="5"></rect><rect x="240" y="116" width="18" height="22" rx="5"></rect><rect x="262" y="116" width="18" height="22" rx="5"></rect><text x="227" y="131">12</text><text x="249" y="131">24</text><text x="271" y="131">52</text></g>`);
+  if (id === 'random') {
+    return tigerQuantizerSvgHtml(id, `
+        <rect class="tiger-q-box" x="16" y="28" width="60" height="44" rx="10"></rect>
+        <text class="tiger-q-label" x="46" y="55">item</text>
+        <path class="tiger-q-arrow" d="M 82 50 H 110" marker-end="url(#tiger-q-arrow-random)"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="116" y="18" width="58" height="64" rx="12"></rect>
+        <circle class="tiger-q-dot" cx="133" cy="37" r="3"></circle>
+        <circle class="tiger-q-dot" cx="156" cy="37" r="3"></circle>
+        <circle class="tiger-q-dot" cx="145" cy="51" r="3"></circle>
+        <circle class="tiger-q-dot" cx="133" cy="65" r="3"></circle>
+        <circle class="tiger-q-dot" cx="156" cy="65" r="3"></circle>
+        <text class="tiger-q-caption" x="145" y="101">ignore content</text>
+        <path class="tiger-q-arrow" d="M 180 50 H 206" marker-end="url(#tiger-q-arrow-random)"></path>
+        <g class="tiger-q-token-row">
+          <rect x="210" y="25" width="28" height="26" rx="7"></rect>
+          <rect x="242" y="25" width="28" height="26" rx="7"></rect>
+          <rect x="210" y="57" width="28" height="26" rx="7"></rect>
+          <rect x="242" y="57" width="28" height="26" rx="7"></rect>
+          <text x="224" y="42">07</text>
+          <text x="256" y="42">188</text>
+          <text x="224" y="74">42</text>
+          <text x="256" y="74">251</text>
+        </g>
+        <text class="tiger-q-caption" x="240" y="123">sampled ID</text>`);
+  }
+  if (id === 'lsh') {
+    return tigerQuantizerSvgHtml(id, `
+        <rect class="tiger-q-plot" x="18" y="18" width="122" height="96" rx="12"></rect>
+        <path class="tiger-q-line" d="M 34 92 L 126 30"></path>
+        <path class="tiger-q-line" d="M 32 38 L 128 96"></path>
+        <path class="tiger-q-line tiger-q-muted-stroke" d="M 74 22 L 96 110"></path>
+        <circle class="tiger-q-point" cx="84" cy="68" r="6"></circle>
+        <text class="tiger-q-caption" x="79" y="132">hyperplane signs</text>
+        <path class="tiger-q-arrow" d="M 148 66 H 176" marker-end="url(#tiger-q-arrow-lsh)"></path>
+        <g class="tiger-q-token-row tiger-q-bit-row">
+          <rect x="182" y="34" width="26" height="28" rx="7"></rect>
+          <rect x="214" y="34" width="26" height="28" rx="7"></rect>
+          <rect x="246" y="34" width="26" height="28" rx="7"></rect>
+          <rect x="198" y="72" width="26" height="28" rx="7"></rect>
+          <text x="195" y="52">1</text>
+          <text x="227" y="52">0</text>
+          <text x="259" y="52">1</text>
+          <text x="211" y="90">1</text>
+        </g>
+        <text class="tiger-q-caption" x="226" y="123">hash code</text>`);
+  }
+  if (id === 'pq') {
+    return tigerQuantizerSvgHtml(id, `
+        <text class="tiger-q-caption" x="140" y="16">split embedding dimensions</text>
+        <g class="tiger-q-vector-bar">
+          <rect x="24" y="28" width="232" height="28" rx="8"></rect>
+          <path d="M 101 28 V 56"></path>
+          <path d="M 179 28 V 56"></path>
+          <text x="63" y="47">z1</text>
+          <text x="140" y="47">z2</text>
+          <text x="218" y="47">z3</text>
+        </g>
+        <path class="tiger-q-arrow" d="M 63 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path>
+        <path class="tiger-q-arrow" d="M 140 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path>
+        <path class="tiger-q-arrow" d="M 218 62 V 78" marker-end="url(#tiger-q-arrow-pq)"></path>
+        <g class="tiger-q-codebooks">
+          <rect x="37" y="84" width="52" height="34" rx="8"></rect>
+          <rect x="114" y="84" width="52" height="34" rx="8"></rect>
+          <rect x="192" y="84" width="52" height="34" rx="8"></rect>
+          <text x="63" y="105">C1</text>
+          <text x="140" y="105">C2</text>
+          <text x="218" y="105">C3</text>
+        </g>
+        <g class="tiger-q-token-row tiger-q-output-row">
+          <rect x="45" y="128" width="36" height="22" rx="6"></rect>
+          <rect x="122" y="128" width="36" height="22" rx="6"></rect>
+          <rect x="200" y="128" width="36" height="22" rx="6"></rect>
+          <text x="63" y="143">A7</text>
+          <text x="140" y="143">B3</text>
+          <text x="218" y="143">C9</text>
+        </g>`);
+  }
+  if (id === 'tree') {
+    return tigerQuantizerSvgHtml(id, `
+        <rect class="tiger-q-box tiger-q-active-fill" x="106" y="12" width="68" height="30" rx="8"></rect>
+        <text class="tiger-q-label" x="140" y="32">root</text>
+        <path class="tiger-q-arrow tiger-q-active-stroke" d="M 128 44 L 76 66" marker-end="url(#tiger-q-arrow-tree)"></path>
+        <path class="tiger-q-line" d="M 152 44 L 204 66"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="48" y="70" width="56" height="30" rx="8"></rect>
+        <rect class="tiger-q-box" x="176" y="70" width="56" height="30" rx="8"></rect>
+        <text class="tiger-q-label" x="76" y="90">A</text>
+        <text class="tiger-q-label" x="204" y="90">B</text>
+        <path class="tiger-q-arrow tiger-q-active-stroke" d="M 68 102 L 47 122" marker-end="url(#tiger-q-arrow-tree)"></path>
+        <path class="tiger-q-line" d="M 86 102 L 109 122"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="22" y="124" width="48" height="26" rx="7"></rect>
+        <rect class="tiger-q-box" x="88" y="124" width="48" height="26" rx="7"></rect>
+        <rect class="tiger-q-box" x="176" y="124" width="48" height="26" rx="7"></rect>
+        <text class="tiger-q-label" x="46" y="141">A2</text>
+        <text class="tiger-q-label" x="112" y="141">A5</text>
+        <text class="tiger-q-label" x="200" y="141">B4</text>`);
+  }
+  if (id === 'vq') {
+    return tigerQuantizerSvgHtml(id, `
+        <rect class="tiger-q-box" x="16" y="26" width="38" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="35" y="47">x</text>
+        <path class="tiger-q-arrow" d="M 60 42 H 78" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-box" x="84" y="26" width="38" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="103" y="47">E</text>
+        <path class="tiger-q-arrow" d="M 128 42 H 146" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-box tiger-q-active-fill" x="152" y="26" width="38" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="171" y="47">z</text>
+        <path class="tiger-q-arrow" d="M 196 42 H 210" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-plot" x="216" y="16" width="50" height="54" rx="12"></rect>
+        <circle class="tiger-q-code-dot" cx="229" cy="35" r="4.5"></circle>
+        <circle class="tiger-q-code-dot tiger-q-active-dot" cx="242" cy="51" r="5.5"></circle>
+        <circle class="tiger-q-code-dot" cx="253" cy="31" r="4.5"></circle>
+        <text class="tiger-q-caption" x="241" y="83">nearest</text>
+        <path class="tiger-q-arrow" d="M 242 74 V 98" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <g class="tiger-q-token-row">
+          <rect x="178" y="106" width="58" height="28" rx="7"></rect>
+          <text x="207" y="124">e18</text>
+        </g>
+        <path class="tiger-q-arrow" d="M 240 120 H 252" marker-end="url(#tiger-q-arrow-vq)"></path>
+        <rect class="tiger-q-box" x="258" y="104" width="22" height="32" rx="8"></rect>
+        <text class="tiger-q-label" x="269" y="125">D</text>`);
+  }
+  return tigerQuantizerSvgHtml(id, `
+        <text class="tiger-q-caption" x="142" y="18">quantize the remaining residual</text>
+        <rect class="tiger-q-residual-bar tiger-q-residual-bar-1" x="32" y="32" width="150" height="18" rx="9"></rect>
+        <text class="tiger-q-label" x="20" y="47">z</text>
+        <rect class="tiger-q-code-chip" x="202" y="26" width="42" height="28" rx="8"></rect>
+        <text class="tiger-q-label" x="223" y="45">c0</text>
+        <path class="tiger-q-arrow" d="M 184 41 H 196" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <path class="tiger-q-arrow tiger-q-muted-stroke" d="M 108 55 V 70" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <rect class="tiger-q-residual-bar tiger-q-residual-bar-2" x="54" y="76" width="112" height="18" rx="9"></rect>
+        <text class="tiger-q-label" x="36" y="91">r1</text>
+        <rect class="tiger-q-code-chip" x="186" y="70" width="42" height="28" rx="8"></rect>
+        <text class="tiger-q-label" x="207" y="89">c1</text>
+        <path class="tiger-q-arrow" d="M 168 85 H 180" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <path class="tiger-q-arrow tiger-q-muted-stroke" d="M 110 99 V 114" marker-end="url(#tiger-q-arrow-rq)"></path>
+        <rect class="tiger-q-residual-bar tiger-q-residual-bar-3" x="74" y="120" width="76" height="18" rx="9"></rect>
+        <text class="tiger-q-label" x="56" y="135">r2</text>
+        <rect class="tiger-q-code-chip" x="166" y="114" width="42" height="28" rx="8"></rect>
+        <text class="tiger-q-label" x="187" y="133">c2</text>
+        <g class="tiger-q-token-row tiger-q-rq-output">
+          <rect x="218" y="116" width="18" height="22" rx="5"></rect>
+          <rect x="240" y="116" width="18" height="22" rx="5"></rect>
+          <rect x="262" y="116" width="18" height="22" rx="5"></rect>
+          <text x="227" y="131">12</text>
+          <text x="249" y="131">24</text>
+          <text x="271" y="131">52</text>
+        </g>`);
 }
 
 function tigerQuantizerAtlasFigureHtml(lang = 'en') {
   const copy = tigerQuantizerAtlasCopy[lang === 'zh' ? 'zh' : 'en'];
-  const methods = copy.methods.map(([id, name, label, route, point, takeaway, traits]) => {
-    const traitItems = traits.map((trait) => `<li>${escapeHtml(trait)}</li>`).join('');
+  const methods = copy.methods.map((method) => {
+    const traits = method.traits.map((trait) => `<li>${escapeHtml(trait)}</li>`).join('');
     return `
-        <section class="tiger-quantizer-method tiger-quantizer-${escapeAttribute(id)}">
-          ${tigerQuantizerVisualHtml(id)}
+        <section class="tiger-quantizer-method tiger-quantizer-${escapeHtml(method.id)}">
+          ${tigerQuantizerVisualHtml(method.id)}
           <div class="tiger-quantizer-copy">
-            <span>${escapeHtml(label)}</span>
-            <h3>${escapeHtml(name)}</h3>
-            <em>${escapeHtml(route)}</em>
-            <p>${escapeHtml(point)}</p>
-            <ul class="tiger-quantizer-traits">${traitItems}</ul>
-            <strong>${escapeHtml(takeaway)}</strong>
+            <h3>${escapeHtml(method.name)}</h3>
+            <p>${escapeHtml(method.point)}</p>
+            <ul class="tiger-quantizer-traits">${traits}</ul>
+            <strong>${escapeHtml(method.takeaway)}</strong>
           </div>
         </section>`;
   }).join('');
-  const axes = copy.legend.map(([label, detail]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(detail)}</dd></div>`).join('');
-  return `<figure id="fig-tiger-quantizer-atlas" class="tiger-pipeline-figure tiger-quantizer-figure"><div class="tiger-pipeline-surface tiger-quantizer-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><dl class="tiger-quantizer-axis">${axes}</dl><div class="tiger-quantizer-grid">${methods}</div></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+  const axes = copy.legend.map(([label, detail]) => `
+        <div>
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(detail)}</dd>
+        </div>`).join('');
+  return `<figure id="fig-tiger-quantizer-atlas" class="tiger-pipeline-figure tiger-quantizer-figure">
+    <div class="tiger-pipeline-surface tiger-quantizer-surface" role="group" aria-label="${escapeHtml(copy.aria)}">
+      <div class="tiger-pipeline-heading">
+        <span>${escapeHtml(copy.figure)}</span>
+        <strong>${escapeHtml(copy.title)}</strong>
+      </div>
+      <dl class="tiger-quantizer-axis">
+${axes}
+      </dl>
+      <div class="tiger-quantizer-grid">
+${methods}
+      </div>
+    </div>
+    <figcaption>${escapeHtml(copy.caption)}</figcaption>
+  </figure>`;
 }
 
 function tigerInferenceTokenSequenceHtml(tokens) {
   return `<span class="tiger-inference-token-sequence">${tokens.map((token) => `<i>${escapeHtml(token)}</i>`).join('')}</span>`;
 }
 
-function tigerInferenceBarsHtml(bars = []) {
-  return `<ol class="tiger-inference-bars">${bars.map(([label, value]) => {
-    const percent = Math.max(0, Math.min(100, Number(value) * 100));
-    return `<li><span>${escapeHtml(label)}</span><b>${escapeHtml(value.toFixed(2))}</b><i style="--bar:${percent.toFixed(0)}%"></i></li>`;
-  }).join('')}</ol>`;
-}
 
-function tigerInferenceStageVisualHtml(kind, payload) {
-  if (kind === 'prob') return tigerInferenceBarsHtml(payload);
-  if (kind === 'beam') return `<ol class="tiger-inference-prefixes">${payload.map((tokens, index) => `<li><b>${index + 1}</b>${tigerInferenceTokenSequenceHtml(tokens)}</li>`).join('')}</ol>`;
-  if (kind === 'sid') return `<ol class="tiger-inference-ids">${payload.map((tokens) => `<li>${tigerInferenceTokenSequenceHtml(tokens)}</li>`).join('')}</ol>`;
-  if (kind === 'lookup') return `<ol class="tiger-inference-lookup-list">${payload.map(([sid, item]) => `<li><span>${escapeHtml(sid)}</span><b>${escapeHtml(item)}</b></li>`).join('')}</ol>`;
-  return `<ol class="tiger-inference-topk-list">${payload.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>`;
-}
+
+
 
 function tigerInferenceLoopFigureHtml(lang = 'en') {
-  const copy = tigerInferenceLoopCopy[lang === 'zh' ? 'zh' : 'en'];
-  const stages = copy.stages.map(([kind, label, title, detail, payload]) => `<section class="tiger-inference-stage tiger-inference-${escapeAttribute(kind)}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(title)}</strong>${tigerInferenceStageVisualHtml(kind, payload)}<em>${escapeHtml(detail)}</em></section>`).join('');
-  return `<figure id="fig-tiger-inference-loop" class="tiger-pipeline-figure tiger-inference-figure"><div class="tiger-pipeline-surface tiger-inference-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-inference-board">${stages}</div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+  const zh = lang === 'zh';
+  const t = (cn, en) => escapeHtml(zh ? cn : en);
+  const score = value => value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+  const rounds = tigerInferenceBeamSteps.map((rows, step) => {
+    const candidates = rows.map(([prefix, parent, probability, retained]) =>
+      '<li class="tiger-beam-candidate ' + (retained ? 'is-kept' : 'is-pruned') + '">' +
+        tigerInferenceTokenSequenceHtml(prefix) +
+        '<span class="tiger-beam-equation">' + score(parent) + ' × ' + score(probability) + ' = <b>' + score(parent * probability) + '</b></span>' +
+        '<span class="tiger-beam-status">' + t(retained ? '保留' : '淘汰', retained ? 'Keep' : 'Prune') + '</span>' +
+      '</li>'
+    ).join('');
+    const survivorNames = rows.filter(row => row[3]).map(row => '(' + row[0].join(', ') + ')').join(' / ');
+    return '<section class="tiger-beam-round"><header><b>' + t('第 ' + (step + 1) + ' 轮', 'Step ' + (step + 1)) +
+      '</b><span>' + t(step === 3 ? '生成碰撞后缀' : '生成第 ' + (step + 1) + ' 位量化 token', step === 3 ? 'Generate collision suffix' : 'Generate quantization token ' + (step + 1)) +
+      '</span></header><ol>' + candidates + '</ol>' +
+      (step < 3 ? '<p class="tiger-beam-feedback"><span aria-hidden="true">↳</span><b>Decoder</b><span>' +
+        t('保留的两个前缀分别反馈，重新预测下一位：', 'Feed back both retained prefixes separately and predict the next token: ') +
+        '<code>' + escapeHtml(survivorNames) + '</code></span></p>' : '') + '</section>';
+  }).join('');
+  const items = tigerInferenceBeamSteps[3].filter(row => row[3]).map(([prefix, parent, probability], rank) =>
+    '<li><b>#' + (rank + 1) + '</b>' + tigerInferenceTokenSequenceHtml(prefix) +
+      '<span class="tiger-beam-item-score">P = ' + score(parent * probability) + '</span><span aria-hidden="true">→</span>' +
+      '<strong>Item ' + [831, 1620][rank] + '</strong></li>'
+  ).join('');
+  return '<figure id="fig-tiger-inference-loop" class="tiger-pipeline-figure tiger-inference-figure">' +
+    '<div class="tiger-pipeline-surface tiger-beam-surface" role="group" aria-label="' +
+      t('Beam search 宽度为 2 的四轮教学示例，包含累计概率、候选淘汰、前缀反馈与物品映射', 'Four-step beam search with width 2: cumulative probabilities, pruning, prefix feedback and item lookup') + '">' +
+      '<div class="tiger-pipeline-heading"><span>' + t('图 5', 'Figure 5') + '</span><strong>' +
+        t('Beam search：两条候选如何走到两个物品', 'Beam search: two competing paths become two items') + '</strong></div>' +
+      '<p class="tiger-beam-scope">' + t('教学示例，非原文实验结果。B = 2，最终取 K = 2；仅展示部分候选，省略起止符。未显示的单条扩展均低于当轮保留阈值。', 'Teaching example, not paper results. B = 2 and K = 2. Only some candidates are shown; start/end symbols are omitted. Each omitted expansion scores below that round’s retention threshold.') + '</p>' +
+      '<div class="tiger-beam-start"><span>' + t('用户 token + 历史 Semantic ID', 'User token + history Semantic IDs') +
+        '</span><b aria-hidden="true">→</b><strong>Encoder · H</strong><b aria-hidden="true">→</b><strong>Decoder</strong></div>' +
+      '<p class="tiger-beam-rule">' + t('每轮：前缀累计概率 × 下一 token 的条件概率 → 合并所有扩展 → 只保留最高的 2 条。每次 decoder 都读取同一个历史上下文 H。', 'Each round: prefix probability × next-token conditional probability → pool all extensions → keep the best 2. Every decoder call reads the same history context H.') + '</p>' +
+      '<div class="tiger-beam-rounds">' + rounds + '</div>' +
+      '<section class="tiger-beam-results"><h4>' + t('查映射表：完整的四位 ID → 真实物品', 'Lookup: complete four-token ID → real item') +
+        '</h4><ol>' + items + '</ol></section>' +
+      '<p class="tiger-flow-note">' + t('评分比较的是整条路径，不是最后一个 token：第二轮 0.6 × 0.5 = 0.3，仍高于 0.3 × 0.8 = 0.24。本例等长候选直接比较概率乘积；实际计算通常累加对数概率。', 'Compare whole paths, not the last token: in step 2, 0.6 × 0.5 = 0.3 still exceeds 0.3 × 0.8 = 0.24. Equal-length candidates use probability products here; implementations usually sum log probabilities.') + '</p>' +
+    '</div><figcaption>' + t('图 5. 固定历史上下文后，两条候选前缀并行扩展、竞争和反馈；四轮后留下两个完整 Semantic ID，分别映射到 Item 831 和 Item 1620。编号与概率均为教学示例，末位为碰撞后缀。', 'Figure 5. With history fixed, two prefixes expand, compete and feed back into the decoder. After four rounds, two complete Semantic IDs resolve to Item 831 and Item 1620. IDs and probabilities are illustrative; the final token is the collision suffix.') + '</figcaption></figure>';
 }
 
 function tigerIndexGlyphHtml(id) {
@@ -925,7 +1356,7 @@ function tigerGeneratorInputFigureHtml(lang = 'en') {
   const predictions = labels.map((value) => '<span class="tg3-prob">p(' + escapeHtml(value) + ')</span>').join('');
   return '<figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure">' +
     '<div class="tiger-pipeline-surface tg3-surface" role="group" aria-label="' + t('TIGER 生成器训练：历史输入、右移目标和逐位置监督', 'TIGER generator training: history, shifted targets and position-wise supervision') + '">' +
-      '<div class="tiger-pipeline-heading"><span>' + t('图 3', 'Figure 3') + '</span><strong>' + t('用一段交互历史，学习下一个物品', 'Learn the next item from interaction history') + '</strong></div>' +
+      '<div class="tiger-pipeline-heading"><span>' + t('图 4', 'Figure 4') + '</span><strong>' + t('用一段交互历史，学习下一个物品', 'Learn the next item from interaction history') + '</strong></div>' +
       '<section class="tg3-stage"><h4><span>01</span>' + t('把历史物品展开为输入序列', 'Turn history items into an input sequence') + '</h4>' +
         '<div class="tg3-history">' + history + '</div>' +
         '<p class="tg3-legend">' + t('按交互时间排列。实线：前三位量化 token；虚线：第四位碰撞 token。', 'Items are in chronological order. Solid: three quantization tokens. Dashed: the fourth collision token.') + '</p>' +
@@ -965,27 +1396,27 @@ function tigerGeneratorInputFigureHtml(lang = 'en') {
         '<div class="tg3-loss"><b>' + t('交叉熵损失', 'Cross-entropy loss') + '</b><span>' + t('提高真实 token 的概率，反向更新生成器参数', 'Increase the probability of true tokens; backpropagate into the generator') + '</span></div>' +
       '</section>' +
       '<p class="tg3-footnote">' + t('每个位置都经过完整的 4 层 decoder；4 层不对应 4 个 token。矩阵亮格表示可见位置，行为查询、列为被读取的位置。图中省略残差连接、归一化与位置机制；dropout 为 0.1。', 'Every position passes through all 4 decoder layers; layers are not token steps. Lit matrix cells mark visible positions: rows are queries, columns are attended positions. Residual connections, normalization and position mechanisms are omitted; dropout is 0.1.') + '</p>' +
-    '</div><figcaption>' + t('图 3. TIGER 生成器的训练数据流。先编码用户 token 与历史 Semantic ID，再用右移的正确答案监督下一个物品的 token 预测。p(dᵢ) 表示模型分配给该位置真实 token 的概率，完整分布覆盖词表；起止符号为序列对齐示意。RQ-VAE 已在上一阶段训练完成，推理时的自回归反馈见图 4。', 'Figure 3. TIGER generator training. Encode the user token and history Semantic IDs, then supervise next-item prediction using shifted ground-truth tokens. p(dᵢ) denotes the probability assigned to the true token within the vocabulary distribution. Start/end symbols illustrate alignment. RQ-VAE is already trained; Figure 4 shows autoregressive inference.') + '</figcaption></figure>';
+    '</div><figcaption>' + t('图 4. TIGER 生成器的训练数据流。先编码用户 token 与历史 Semantic ID，再用右移的正确答案监督下一个物品的 token 预测。p(dᵢ) 表示模型分配给该位置真实 token 的概率，完整分布覆盖词表；起止符号为序列对齐示意。RQ-VAE 已在上一阶段训练完成，推理时的自回归反馈见图 5。', 'Figure 4. TIGER generator training. Encode the user token and history Semantic IDs, then supervise next-item prediction using shifted ground-truth tokens. p(dᵢ) denotes the probability assigned to the true token within the vocabulary distribution. Start/end symbols illustrate alignment. RQ-VAE is already trained; Figure 5 shows autoregressive inference.') + '</figcaption></figure>';
 }
 
 function tigerPipelineFigureHtml(lang = 'en') {
   const copy = tigerFlowFigureCopy[lang === 'zh' ? 'zh' : 'en'];
   const lanes = copy.lanes.map((lane) => {
-    const steps = lane.steps.map(([tone, visual, title, sample, detail]) => `
-          <li class="tiger-flow-step tiger-flow-${escapeAttribute(tone)}">
+    const steps = lane.steps.map((step) => `
+          <li class="tiger-flow-step tiger-flow-${escapeHtml(step.tone)}">
             <details class="tiger-flow-card">
               <summary>
-                ${tigerFlowGlyphHtml(visual)}
+                ${tigerFlowGlyphHtml(step.visual)}
                 <span class="tiger-flow-copy">
-                  <strong>${escapeHtml(title)}</strong>
-                  <em>${escapeHtml(sample)}</em>
+                  <strong>${escapeHtml(step.title)}</strong>
+                  <em>${escapeHtml(step.sample)}</em>
                 </span>
               </summary>
-              <p>${escapeHtml(detail)}</p>
+              <p>${escapeHtml(step.detail)}</p>
             </details>
           </li>`).join('');
     return `
-        <section class="tiger-flow-lane tiger-flow-lane-${escapeAttribute(lane.tone)}" aria-label="${escapeAttribute(lane.title)}">
+        <section class="tiger-flow-lane tiger-flow-lane-${escapeHtml(lane.tone)}" aria-label="${escapeHtml(lane.title)}">
           <div class="tiger-flow-lane-head">
             <div>
               <span>${escapeHtml(lane.badge)}</span>
@@ -1000,7 +1431,7 @@ ${steps}
         </section>`;
   }).join('');
   return `<figure id="fig-tiger-semantic-id-flow" class="tiger-pipeline-figure">
-    <div class="tiger-pipeline-surface" role="group" aria-label="${escapeAttribute(copy.aria)}">
+    <div class="tiger-pipeline-surface" role="group" aria-label="${escapeHtml(copy.aria)}">
       <div class="tiger-pipeline-heading">
         <span>${escapeHtml(copy.figure)}</span>
         <strong>${escapeHtml(copy.title)}</strong>
