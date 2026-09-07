@@ -603,6 +603,26 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.doesNotMatch(coldStartMain, /我的疑问|我更希望/);
       assert.match(coldStart, /<details class="blog-disclosure"[^>]*><summary>讨论：冷启动收益来自哪里？<\/summary>[\s\S]*?我的疑问[\s\S]*?Semantic_KNN 本身也使用语义表示[\s\S]*?候选列表具体怎样形成/);
       assert.doesNotMatch(source, /冷启动：TIGER 的能力，还是内容模型的能力|冷启动能力很大程度上来自内容表示/);
+      const diversity = source.match(/<h3[^>]*>多样性：怎样让推荐列表不只集中在一类商品？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] ?? '';
+      const diversityMain = diversity.split('<details')[0];
+      assert.match(diversityMain, /论文怎么做[\s\S]*?怎么判断类别是否更丰富[\s\S]*?原文结果/);
+      assert.match(diversityMain, /真实类别标签[\s\S]*?不是模型输出 token 概率的熵/);
+      assert.match(diversityMain, /原文 Table 3（第 9 页）[\s\S]*?原文 Table 4（第 9 页）[\s\S]*?表中没有给出每类商品的具体数量/);
+      assert.doesNotMatch(diversityMain, /我的疑问|我更希望|katex-display/);
+      const diversityTable = diversityMain.match(/<table>([\s\S]*?)<\/table>/)?.[1] ?? '';
+      const diversityRows = [...diversityTable.matchAll(/<tr>([\s\S]*?)<\/tr>/g)]
+        .map((row) => [...row[1].matchAll(/<td[^>]*>([^<]+)<\/td>/g)].map((cell) => cell[1]))
+        .filter((row) => row.length);
+      assert.deepEqual(diversityRows, [
+        ['1.0', '0.76', '1.14', '1.70'],
+        ['1.5', '1.14', '1.52', '2.06'],
+        ['2.0', '1.38', '1.76', '2.28']
+      ], 'diversity results must preserve original Table 3');
+      assert.equal((diversity.match(/<details /g) ?? []).length, 2);
+      assert.match(diversity, /<details class="blog-disclosure"[^>]*><summary>补充：温度如何改变采样概率？<\/summary>[\s\S]*?katex-display[\s\S]*?贪心解码/);
+      assert.match(diversity, /<details class="blog-disclosure"[^>]*><summary>讨论：类别更多，就代表推荐更好吗？<\/summary>[\s\S]*?我的疑问[\s\S]*?温度采样也可以用于其他推荐模型/);
+      assert.match(decodeURI(diversity), /href="#讨论-从粗到细-究竟是什么意思"/);
+      assert.doesNotMatch(source, /温度提高了熵，但这是谁的贡献|不是 TIGER 特有贡献/);
       const diagnosticsAt = source.indexOf('生成与解码诊断');
       const indexDiscussionAt = source.indexOf('<summary>讨论：Transformer 参数为什么被说成索引？</summary>');
       const userTokenAt = source.indexOf('<summary>补充：用户 token 为什么可能有效？</summary>');
