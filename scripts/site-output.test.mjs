@@ -595,7 +595,14 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       const architectureAt = source.indexOf('TIGER 的主要模型架构');
       const mainResultsAt = source.indexOf('主实验：TIGER 到底有没有赢？');
       const representationAt = source.indexOf('表示实验：为什么不是随机 ID 或 LSH？');
-      const capabilityAt = source.indexOf('冷启动：TIGER 的能力，还是内容模型的能力');
+      const capabilityAt = source.indexOf('冷启动：如何推荐没有交互的新物品？');
+      const coldStart = source.match(/<h3[^>]*>冷启动：如何推荐没有交互的新物品？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] ?? '';
+      const coldStartMain = coldStart.split('<details')[0];
+      assert.match(coldStartMain, /实验设置[\s\S]*?推荐方法[\s\S]*?原文结果/);
+      assert.match(coldStartMain, /Figure 5a[\s\S]*?Figure 5b/);
+      assert.doesNotMatch(coldStartMain, /我的疑问|我更希望/);
+      assert.match(coldStart, /<details class="blog-disclosure"[^>]*><summary>讨论：冷启动收益来自哪里？<\/summary>[\s\S]*?我的疑问[\s\S]*?Semantic_KNN 本身也使用语义表示[\s\S]*?候选列表具体怎样形成/);
+      assert.doesNotMatch(source, /冷启动：TIGER 的能力，还是内容模型的能力|冷启动能力很大程度上来自内容表示/);
       const diagnosticsAt = source.indexOf('生成与解码诊断');
       const indexDiscussionAt = source.indexOf('<summary>讨论：Transformer 参数为什么被说成索引？</summary>');
       const userTokenAt = source.indexOf('<summary>补充：用户 token 为什么可能有效？</summary>');
