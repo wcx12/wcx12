@@ -643,16 +643,16 @@ const tigerRqvaeTrainingCopy = {
     inputDetail: 'Sentence-T5, 768d',
     encoder: 'DNN encoder',
     encoderNote: 'ReLU on hidden layers',
-    encoderLayers: [['x', '768'], ['h1', '512'], ['h2', '256'], ['h3', '128'], ['z', '32']],
+    encoderLayers: [['$x$', '768'], ['$h_1$', '512'], ['$h_2$', '256'], ['$h_3$', '128'], ['$z$', '32']],
     quantizer: 'Residual quantizer',
     quantizerNote: '3 levels, each codebook has 256 vectors of 32d',
-    levels: [['C0', 'choose nearest code for r0 = z'], ['C1', 'quantize r1 = r0 - ec0'], ['C2', 'quantize r2 = r1 - ec1']],
+    levels: [['C0', 'choose nearest code for $r_0 = z$'], ['C1', 'quantize $r_1 = r_0 - e_{c_0}$'], ['C2', 'quantize $r_2 = r_1 - e_{c_1}$']],
     decoder: 'DNN decoder',
-    decoderNote: 'decodes z-hat back to the embedding space',
+    decoderNote: 'decodes $\\hat{z}$ back to the embedding space',
     output: 'reconstructed embedding',
-    outputDetail: 'x-hat, 768d target space',
+    outputDetail: '$\\hat{x}$, 768d target space',
     loss: 'Training signal',
-    lossItems: ['Lrecon = ||x - x-hat||^2', 'Lrqvae aligns residuals and codewords', 'updates encoder, decoder and codebooks'],
+    lossItems: ['$L_{\\mathrm{recon}} = \\lVert x - \\hat{x}\\rVert_2^2$', '$L_{\\mathrm{rqvae}}$ aligns residuals and codewords', 'updates encoder, decoder and codebooks'],
     note: 'The paper specifies the encoder hidden sizes and latent dimension, but does not give hidden-layer sizes for the decoder.',
     caption: 'Figure 2. RQ-VAE is trained as an autoencoder around residual quantization: encode the item embedding, quantize the latent vector, decode it back, and optimize reconstruction plus quantization losses.'
   },
@@ -664,16 +664,16 @@ const tigerRqvaeTrainingCopy = {
     inputDetail: 'Sentence-T5，768 维',
     encoder: 'DNN encoder',
     encoderNote: '中间层使用 ReLU',
-    encoderLayers: [['x', '768'], ['h1', '512'], ['h2', '256'], ['h3', '128'], ['z', '32']],
+    encoderLayers: [['$x$', '768'], ['$h_1$', '512'], ['$h_2$', '256'], ['$h_3$', '128'], ['$z$', '32']],
     quantizer: 'Residual quantizer',
     quantizerNote: '3 层；每层码本 256 个 32 维 codeword',
-    levels: [['C0', '对 r0 = z 选最近 code'], ['C1', '量化 r1 = r0 - ec0'], ['C2', '量化 r2 = r1 - ec1']],
+    levels: [['C0', '对 $r_0 = z$ 选最近 code'], ['C1', '量化 $r_1 = r_0 - e_{c_0}$'], ['C2', '量化 $r_2 = r_1 - e_{c_1}$']],
     decoder: 'DNN decoder',
-    decoderNote: '把 z-hat 解码回 embedding 空间',
+    decoderNote: '把 $\\hat{z}$ 解码回 embedding 空间',
     output: '重构 embedding',
-    outputDetail: 'x-hat，目标空间 768 维',
+    outputDetail: '$\\hat{x}$，目标空间 768 维',
     loss: '训练信号',
-    lossItems: ['Lrecon = ||x - x-hat||^2', 'Lrqvae 对齐 residual 与 codeword', '联合更新 encoder、decoder 和码本'],
+    lossItems: ['$L_{\\mathrm{recon}} = \\lVert x - \\hat{x}\\rVert_2^2$', '$L_{\\mathrm{rqvae}}$ 对齐 residual 与 codeword', '联合更新 encoder、decoder 和码本'],
     note: '原文明确给出了 encoder 的中间层尺寸和 latent 维度，但没有给出 decoder 的隐藏层尺寸。',
     caption: '图 2. RQ-VAE 的训练不是只做最近邻查找，而是围绕残差量化建立 autoencoder：编码 item embedding，量化潜在向量，再解码重构，并同时优化重构损失与量化损失。'
   }
@@ -797,6 +797,13 @@ function tigerFlowGlyphHtml(name = 'item') {
   return `<span class="tiger-flow-glyph tiger-flow-glyph-${safeName}" aria-hidden="true"><i></i><i></i><i></i></span>`;
 }
 
+function tigerRqvaeTextHtml(text) {
+  return text.split(/(\$[^$]+\$)/g).map((part) => {
+    if (!part.startsWith('$')) return escapeHtml(part);
+    return window.katex ? window.katex.renderToString(part.slice(1, -1), { throwOnError: false, trust: false }) : escapeHtml(part);
+  }).join('');
+}
+
 function tigerRqvaeArrowHtml() {
   return '<i class="tiger-rqvae-arrow" aria-hidden="true"></i>';
 }
@@ -806,26 +813,26 @@ function tigerRqvaeFunnelHtml(layers, mode = 'encoder') {
     const scale = mode === 'encoder'
       ? 1 - (index * 0.13)
       : 0.48 + (index * 0.13);
-    return `<li class="${index === layers.length - 1 && mode === 'encoder' ? 'is-latent' : ''}" style="--layer-scale:${scale.toFixed(2)}"><b>${escapeHtml(name)}</b><span>${escapeHtml(dim)}</span></li>`;
+    return `<li class="${index === layers.length - 1 && mode === 'encoder' ? 'is-latent' : ''}" style="--layer-scale:${scale.toFixed(2)}"><b>${tigerRqvaeTextHtml(name)}</b><span>${escapeHtml(dim)}</span></li>`;
   }).join('');
 }
 
 function tigerRqvaeCodebookHtml(name, selected, detail, index) {
   const slots = Array.from({ length: 8 }, (_, slot) => `<i class="${slot === selected ? 'is-selected' : ''}">${slot}</i>`).join('');
-  return `<li class="tiger-rqvae-codebook tiger-rqvae-codebook-${index}"><strong>${escapeHtml(name)}</strong><span class="tiger-rqvae-slots">${slots}</span><em>${escapeHtml(detail)}</em></li>`;
+  return `<li class="tiger-rqvae-codebook tiger-rqvae-codebook-${index}"><strong>${tigerRqvaeTextHtml(name)}</strong><span class="tiger-rqvae-slots">${slots}</span><em>${tigerRqvaeTextHtml(detail)}</em></li>`;
 }
 
 function tigerRqvaeTrainingFigureHtml(lang = 'en') {
   const copy = tigerRqvaeTrainingCopy[lang === 'zh' ? 'zh' : 'en'];
   const encoderLayers = tigerRqvaeFunnelHtml(copy.encoderLayers, 'encoder');
-  const decoderLayers = tigerRqvaeFunnelHtml([['z-hat', '32'], ['DNN', ''], ['DNN', ''], ['x-hat', '768']], 'decoder');
+  const decoderLayers = tigerRqvaeFunnelHtml([['$\\hat{z}$', '32'], ['DNN', ''], ['DNN', ''], ['$\\hat{x}$', '768']], 'decoder');
   const codebooks = [
-    tigerRqvaeCodebookHtml('C0', 7, copy.levels[0][1], 0),
-    tigerRqvaeCodebookHtml('C1', 1, copy.levels[1][1], 1),
-    tigerRqvaeCodebookHtml('C2', 4, copy.levels[2][1], 2)
+    tigerRqvaeCodebookHtml('$C_0$', 7, copy.levels[0][1], 0),
+    tigerRqvaeCodebookHtml('$C_1$', 1, copy.levels[1][1], 1),
+    tigerRqvaeCodebookHtml('$C_2$', 4, copy.levels[2][1], 2)
   ].join('');
-  const losses = copy.lossItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-  return `<figure id="fig-tiger-rqvae-training" class="tiger-pipeline-figure tiger-rqvae-figure"><div class="tiger-pipeline-surface tiger-rqvae-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-rqvae-architecture"><section class="tiger-rqvae-vector tiger-rqvae-source"><span>${escapeHtml(copy.input)}</span><strong>x</strong><em>${escapeHtml(copy.inputDetail)}</em><i aria-hidden="true"></i></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-encoder"><span>${escapeHtml(copy.encoder)}</span><ol class="tiger-rqvae-funnel">${encoderLayers}</ol><em>${escapeHtml(copy.encoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-quantizer"><span>${escapeHtml(copy.quantizer)}</span><div class="tiger-rqvae-residual-rail" aria-hidden="true"><b class="rail-z">z</b><b class="rail-r1">r1</b><b class="rail-r2">r2</b><b class="rail-r3">r3</b></div><ol class="tiger-rqvae-codebooks">${codebooks}</ol><div class="tiger-rqvae-semantic-id" aria-hidden="true"><span>7</span><span>1</span><span>4</span></div><em>${escapeHtml(copy.quantizerNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-decoder"><span>${escapeHtml(copy.decoder)}</span><ol class="tiger-rqvae-funnel tiger-rqvae-funnel-decoder">${decoderLayers}</ol><em>${escapeHtml(copy.decoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-vector tiger-rqvae-recon"><span>${escapeHtml(copy.output)}</span><strong>x-hat</strong><em>${escapeHtml(copy.outputDetail)}</em><i aria-hidden="true"></i></section></div><div class="tiger-rqvae-loss-loop"><span>${escapeHtml(copy.loss)}</span><ol>${losses}</ol></div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+  const losses = copy.lossItems.map((item) => `<li>${tigerRqvaeTextHtml(item)}</li>`).join('');
+  return `<figure id="fig-tiger-rqvae-training" class="tiger-pipeline-figure tiger-rqvae-figure"><div class="tiger-pipeline-surface tiger-rqvae-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-rqvae-architecture"><section class="tiger-rqvae-vector tiger-rqvae-source"><span>${escapeHtml(copy.input)}</span><strong>${tigerRqvaeTextHtml('$x$')}</strong><em>${tigerRqvaeTextHtml(copy.inputDetail)}</em><i aria-hidden="true"></i></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-encoder"><span>${escapeHtml(copy.encoder)}</span><ol class="tiger-rqvae-funnel">${encoderLayers}</ol><em>${tigerRqvaeTextHtml(copy.encoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-quantizer"><span>${escapeHtml(copy.quantizer)}</span><div class="tiger-rqvae-residual-rail" aria-hidden="true"><b class="rail-z">${tigerRqvaeTextHtml('$z$')}</b><b class="rail-r1">${tigerRqvaeTextHtml('$r_1$')}</b><b class="rail-r2">${tigerRqvaeTextHtml('$r_2$')}</b><b class="rail-r3">${tigerRqvaeTextHtml('$r_3$')}</b></div><ol class="tiger-rqvae-codebooks">${codebooks}</ol><div class="tiger-rqvae-semantic-id" aria-hidden="true"><span>7</span><span>1</span><span>4</span></div><em>${tigerRqvaeTextHtml(copy.quantizerNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-module tiger-rqvae-decoder"><span>${escapeHtml(copy.decoder)}</span><ol class="tiger-rqvae-funnel tiger-rqvae-funnel-decoder">${decoderLayers}</ol><em>${tigerRqvaeTextHtml(copy.decoderNote)}</em></section>${tigerRqvaeArrowHtml()}<section class="tiger-rqvae-vector tiger-rqvae-recon"><span>${escapeHtml(copy.output)}</span><strong>${tigerRqvaeTextHtml('$\\hat{x}$')}</strong><em>${tigerRqvaeTextHtml(copy.outputDetail)}</em><i aria-hidden="true"></i></section></div><div class="tiger-rqvae-loss-loop"><span>${escapeHtml(copy.loss)}</span><ol>${losses}</ol></div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
 }
 
 function tigerQuantizerSvgHtml(id, body) {

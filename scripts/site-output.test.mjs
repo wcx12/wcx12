@@ -458,7 +458,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /<details class="blog-disclosure" id="讨论-从粗到细-究竟是什么意思">[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
       assert.match(source, /第一种是<strong>重构意义上的粗到细<\/strong>[\s\S]*?第二种是<strong>人工标签意义上的层次<\/strong>/);
       assert.doesNotMatch(source, /第三种是<strong>人工标签意义上的层次<\/strong>/);
-      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>为什么这个损失函数要拆成两项？<\/summary>/);
+      assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么这个损失函数要拆成两项？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：“从粗到细”究竟是什么意思？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>“从粗到细”究竟是什么意思<\/h2>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
@@ -474,11 +474,15 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(rqvaeFigure, /class="tiger-rqvae-module tiger-rqvae-quantizer"/);
       assert.match(rqvaeFigure, /class="tiger-rqvae-module tiger-rqvae-decoder"/);
       assert.match(rqvaeFigure, /class="tiger-rqvae-vector tiger-rqvae-recon"/);
-      assert.match(rqvaeFigure, /x[\s\S]*?768[\s\S]*?h1[\s\S]*?512[\s\S]*?h2[\s\S]*?256[\s\S]*?h3[\s\S]*?128[\s\S]*?z[\s\S]*?32/);
+      assert.match(rqvaeFigure, /x[\s\S]*?768[\s\S]*?h_1[\s\S]*?512[\s\S]*?h_2[\s\S]*?256[\s\S]*?h_3[\s\S]*?128[\s\S]*?z[\s\S]*?32/);
       assert.equal((rqvaeFigure.match(/class="tiger-rqvae-codebook tiger-rqvae-codebook-/g) ?? []).length, 3);
       assert.equal((rqvaeFigure.match(/class="is-selected"/g) ?? []).length, 3);
       assert.match(rqvaeFigure, /class="tiger-rqvae-semantic-id"[\s\S]*?<span>7<\/span><span>1<\/span><span>4<\/span>/);
-      assert.match(rqvaeFigure, /Lrecon = \|\|x - x-hat\|\|\^2/);
+      assert.match(rqvaeFigure, /class="katex"/);
+      for (const formula of ['\\hat{x}', '\\hat{z}', 'C_0', 'r_1 = r_0 - e_{c_0}', 'L_{\\mathrm{recon}} = \\lVert x - \\hat{x}\\rVert_2^2']) {
+        assert.ok(rqvaeFigure.includes('<annotation encoding="application/x-tex">' + formula + '</annotation>'), 'Figure 2 must render ' + formula + ' as math');
+      }
+      assert.doesNotMatch(rqvaeFigure, /x-hat|z-hat|Lrecon|ec0|katex-error/);
       assert.match(source, /id="fig-tiger-generator-input"/);
       const generatorFigure = source.match(/<figure id="fig-tiger-generator-input"[\s\S]*?<\/figure>/)?.[0] ?? '';
       assert.match(generatorFigure, /<span>图 3<\/span>/);
