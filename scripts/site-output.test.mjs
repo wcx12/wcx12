@@ -441,7 +441,8 @@ test('portfolio routes use the researcher identity while blog routes retain thei
 test('TIGER main results preserve all Table 1 values and explain item-level evaluation', async () => {
   const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
   const section = source.match(/<h3[^>]*>主实验：TIGER 到底有没有赢？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] ?? '';
-  const tables = [...section.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/g)];
+  const mainResults = section.slice(section.indexOf('表 3a'), section.indexOf('相对提升按'));
+  const tables = [...mainResults.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/g)];
   assert.equal(tables.length, 3, 'Table 1 must include all three datasets');
   const expected = [
     ["P5",["0.0061","0.0041","0.0095","0.0052","0.0163","0.0107","0.0254","0.0136","0.0070","0.0050","0.0121","0.0066"]],
@@ -536,15 +537,15 @@ test('TIGER review fixes preserve evidence, sequence, and notation', async () =>
   const figureNumbers = new Map([
     ['fig-tiger-semantic-id-flow', 1], ['fig-tiger-rqvae-training', 2],
     ['fig-tiger-quantizer-atlas', 3], ['fig-tiger-generator-input', 4],
-    ['fig-tiger-inference-loop', 5], ['fig-tiger-semantic-hierarchy', 6], ['fig-tiger-index-map', 7]
+    ['fig-tiger-inference-loop', 5], ['fig-tiger-semantic-hierarchy', 6], ['fig-tiger-cold-start', 7], ['fig-tiger-index-map', 8]
   ]);
   assert.deepEqual(figures.map((figure) => figure[1]), [...figureNumbers.keys()]);
   for (const figure of figures) assert.match(figure[2], new RegExp('^图 ' + figureNumbers.get(figure[1]) + '\\.'));
   for (const [, number, anchor] of markdown.matchAll(/\[图 (\d+)\]\(#(fig-tiger-[^)]+)\)/g)) {
     assert.equal(Number(number), figureNumbers.get(anchor), 'figure reference must match its caption: ' + anchor);
   }
-  assert.deepEqual([...markdown.matchAll(/^\*\*表 (\d+)\./gm)].map((match) => Number(match[1])), [1, 2, 3, 4, 5, 6]);
-  assert.match(markdown, /\*\*表 2a[\s\S]*?\*\*表 2b[\s\S]*?\*\*表 2c/);
+  assert.deepEqual([...markdown.matchAll(/^\*\*表 (\d+)\./gm)].map((match) => Number(match[1])), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.match(markdown, /\*\*表 3a[\s\S]*?\*\*表 3b[\s\S]*?\*\*表 3c/);
   const fusion = source.match(/<h3[^>]*>数据集融合实验验证了什么<\/h3>([\s\S]*?)(?=<h2)/)?.[1] ?? '';
   assert.match(fusion, /原文 Table 10，第 17 页/);
   assert.match(fusion, /<td[^>]*>0\.3047\*<\/td>/);
@@ -624,6 +625,39 @@ test('TIGER hierarchy evidence is visible before the reader discussion', async (
   const escaped = renderPreview('::figure[fig-test][<script>bad</script>]\n<script>bad</script>\n::');
   assert.doesNotMatch(escaped, /<script>/);
   assert.match(escaped, /&lt;script&gt;/);
+});
+
+test('TIGER source additions distinguish reported evidence from teaching examples', async () => {
+  const markdown = await fs.readFile(path.join(rootDir, 'content/posts/2026-08-30-tiger-generative-retrieval-reading/index.md'), 'utf8');
+  const html = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
+  assert.match(markdown, /无显式用户 ID token/);
+  assert.match(markdown, /两组都输入用户的交互历史/);
+  assert.match(markdown, /假设数值，不是论文实测结果/);
+  assert.match(markdown, /序列损失还包括预测结束标记的那一项/);
+  for (const row of [
+    '| Beauty | 22,363 | 12,101 | 8.87 | 6 |',
+    '| Sports and Outdoors | 35,598 | 18,357 | 8.32 | 6 |',
+    '| Toys and Games | 19,412 | 11,924 | 8.63 | 6 |',
+    '| Sports and Outdoors | P5-ours | 0.0107 | 0.0076 | 0.01458 | 0.0088 |',
+    '| Beauty | P5-ours | 0.035 | 0.025 | 0.048 | 0.0298 |',
+    '| Toys and Games | P5-ours | 0.018 | 0.013 | 0.0235 | 0.015 |'
+  ]) assert.ok(markdown.includes(row), row);
+  const cold = html.match(/<h3[^>]*>冷启动：如何推荐没有交互的新物品？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] || '';
+  const figure = cold.match(/<figure id="fig-tiger-cold-start"[\s\S]*?<\/figure>/)?.[0] || '';
+  assert.match(figure, /<figcaption>图 7\.[\s\S]*?TIGER 原文 Figure 5/);
+  assert.equal((figure.match(/class="blog-paper-panel"/g) || []).length, 2);
+  for (const letter of ['a', 'b']) {
+    assert.match(figure, new RegExp('tiger-figure5' + letter + '-original\\.png\\?v=[a-f0-9]+'));
+  }
+  assert.equal((figure.match(/<img [^>]*width="\d+"[^>]*height="\d+"/g) || []).length, 2);
+  assert.match(cold, /Overall[\s\S]*?Unseen/);
+  assert.match(cold, /新物品召回上升并逐渐趋于平台，但整体召回下降/);
+  assert.match(cold, /没有说明如何把用户历史变成查询表示/);
+  assert.ok(cold.indexOf('</figure>') < cold.indexOf('<summary>讨论：冷启动收益来自哪里？'));
+  assert.match(markdown, /没有给出 Probability 的归一化公式/);
+  assert.match(markdown, /没有说明跨用户是先分别计算再平均/);
+  assert.match(markdown, /任意有限的 beam 宽度都必然能补足/);
+  assert.doesNotMatch(markdown, /普通 Item ID 把每个物品视为互不相关的原子/);
 });
 
 test('generated code blocks and article contents remain keyboard reachable', async () => {
@@ -725,7 +759,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       const quantizerFigure = source.match(/<figure id="fig-tiger-quantizer-atlas"[\s\S]*?<\/figure>/)?.[0] ?? '';
       assert.match(quantizerFigure, /<span>图 3<\/span>/);
       assert.match(source, /id="fig-tiger-index-map"/);
-      assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 7<\/span>/);
+      assert.match(source, /<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>[\s\S]*?id="fig-tiger-index-map"[\s\S]*?<span>图 8<\/span>/);
       assert.match(source, /索引：从查询到候选地址的路径[\s\S]*?传统向量检索[\s\S]*?外部 ANN \/ MIPS 索引[\s\S]*?TIGER 生成式检索[\s\S]*?Transformer 参数/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：Transformer 参数为什么被说成索引？<\/summary>/);
       assert.doesNotMatch(source, /Hint：Transformer memory 为什么可以被叫作索引？/);

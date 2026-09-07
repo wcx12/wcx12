@@ -1417,6 +1417,10 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   grid-column: 1 / -1;
 }
 
+#fig-tiger-cold-start .blog-paper-panel:first-child {
+  grid-column: auto;
+}
+
 .blog-paper-panel > p:first-child {
   margin-top: 0;
 }

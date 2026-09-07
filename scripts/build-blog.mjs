@@ -561,7 +561,7 @@ const tigerFlowFigureCopy = {
             visual: 'model',
             title: 'Encoder + RQ-VAE',
             sample: 'embedding -> 量化',
-            detail: '文本编码器先得到 item embedding；RQ-VAE 再把它压缩成多层离散 codeword。'
+            detail: '文本编码器得到内容向量；RQ-VAE 逐层选择码向量，其编号组成 Semantic ID。'
           },
           {
             tone: 'semantic featured',
@@ -749,7 +749,7 @@ const tigerQuantizerAtlasCopy = {
         name: 'Random ID',
         label: '随机基线',
         route: 'item -> 随机抽 token',
-        point: '不看内容，直接给 item 分配随机 codeword。ID 有组合容量，但相似物品不一定共享任何 token。',
+        point: '不看内容，直接给 item 分配随机编号。ID 有组合容量，但相似物品不一定共享任何 token。',
         takeaway: '用于检验内容相关编号是否有帮助。',
         traits: ['无内容', '不训练', '随机组合']
       },
@@ -794,7 +794,7 @@ const tigerQuantizerAtlasCopy = {
         name: 'RQ-VAE',
         label: '残差修正',
         route: 'latent -> code + residual -> 下一层 code',
-        point: '第一层先解释主要部分，第二层解释剩余残差，第三层继续修正，最终 ID 是多层 codeword 序列。',
+        point: '第一层近似潜在向量，后续层继续量化残差；各层选中码向量的编号组成 ID。',
         takeaway: '这是 TIGER 用来生成 Semantic ID 的方法。',
         traits: ['内容', '学习码本', '残差层']
       }
@@ -810,7 +810,7 @@ const tigerQuantizerAtlasCopy = {
 
 const tigerIndexMapCopy = {
   en: {
-    figure: 'Figure 7',
+    figure: 'Figure 8',
     title: 'An index is a route from query to candidate address',
     aria: 'A two-row comparison showing how traditional vector retrieval and TIGER both map a user context to candidate item addresses.',
     rows: [
@@ -834,10 +834,10 @@ const tigerIndexMapCopy = {
       }
     ],
     bridge: 'Same job, different mechanism: search a stored vector structure, or decode a likely Semantic ID.',
-    caption: 'Figure 7. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
+    caption: 'Figure 8. TIGER calls Transformer parameters an index because they generate candidate addresses, not because they replace every lookup table.'
   },
   zh: {
-    figure: '图 7',
+    figure: '图 8',
     title: '索引：从查询到候选地址的路径',
     aria: '传统向量检索和 TIGER 都把用户上下文映射到候选物品地址，但实现机制不同的双行对比图。',
     rows: [
@@ -861,7 +861,7 @@ const tigerIndexMapCopy = {
       }
     ],
     bridge: '两条路径做同一件事：把用户上下文变成候选地址；区别是查外部结构，还是解码一个语义 ID。',
-    caption: '图 7. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
+    caption: '图 8. TIGER 把 Transformer 参数称为索引，是因为它生成候选地址；这不代表所有映射表都消失了。'
   }
 };
 
