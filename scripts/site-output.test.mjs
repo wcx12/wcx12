@@ -464,7 +464,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>补充：为什么使用 K-means 初始化码本？<\/summary>/);
       assert.match(source, /<details class="blog-disclosure"[^>]*>[\s\S]*?<summary>讨论：理论容量为什么不等于有效容量？<\/summary>/);
       assert.doesNotMatch(source, /<h2[^>]*>理论容量并不等于实际有效容量<\/h2>/);
-      assert.match(source, /<h2[^>]*>表示实验：为什么不是随机 ID 或 LSH？<\/h2>/);
+      assert.match(source, /<h3[^>]*>表示实验：为什么不是随机 ID 或 LSH？<\/h3>/);
       assert.doesNotMatch(source, /<h2[^>]*>为什么选择 RQ-VAE，而不是其他量化方式<\/h2>/);
       assert.doesNotMatch(source, /<h2[^>]*>模型如何从概率分布变成 Top-K 物品<\/h2>/);
       assert.match(source, /id="fig-tiger-rqvae-training"/);
@@ -537,13 +537,17 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       const architectureAt = source.indexOf('TIGER 的主要模型架构');
       const mainResultsAt = source.indexOf('主实验：TIGER 到底有没有赢？');
       const representationAt = source.indexOf('表示实验：为什么不是随机 ID 或 LSH？');
-      const capabilityAt = source.indexOf('补充能力实验：冷启动与多样性');
+      const capabilityAt = source.indexOf('冷启动：TIGER 的能力，还是内容模型的能力');
       const diagnosticsAt = source.indexOf('生成与解码诊断');
       const indexDiscussionAt = source.indexOf('<summary>讨论：Transformer 参数为什么被说成索引？</summary>');
       const userTokenAt = source.indexOf('<summary>补充：用户 token 为什么可能有效？</summary>');
       const inferenceAt = source.indexOf('id="fig-tiger-inference-loop"');
       assert.ok(architectureAt > -1 && architectureAt < mainResultsAt, 'TIGER architecture should come before main results');
       assert.ok(mainResultsAt < representationAt && representationAt < capabilityAt && capabilityAt < diagnosticsAt, 'TIGER experiment narrative order is wrong');
+      const experiments = source.match(/<h2[^>]*>实验：从整体效果到能力边界<\/h2>([\s\S]*?)(?=<h2)/)?.[1] ?? '';
+      assert.equal((experiments.match(/<h3 id=/g) ?? []).length, 6, 'all six reported experiment groups belong under one chapter');
+      assert.match(experiments, /生成模型层数是否敏感[\s\S]*?冷启动：[\s\S]*?多样性：[\s\S]*?数据集融合实验验证了什么/);
+      assert.doesNotMatch(source, /你觉得突兀|所以图里不补|没有给出 decoder 的隐藏层尺寸/);
       assert.ok(userTokenAt > source.indexOf('id="fig-tiger-generator-input"') && userTokenAt < inferenceAt, 'user token discussion should stay near the generator architecture');
       assert.ok(indexDiscussionAt > diagnosticsAt, 'Transformer-as-index discussion should be in diagnostics, not the main architecture');
       assert.doesNotMatch(source, /&lt;\/?(?:details|summary)&gt;/);

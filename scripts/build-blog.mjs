@@ -637,7 +637,6 @@ const tigerRqvaeTrainingCopy = {
     outputDetail: '$\\hat{x}$, 768d target space',
     loss: 'Training signal',
     lossItems: ['$L_{\\mathrm{recon}} = \\lVert x - \\hat{x}\\rVert_2^2$', '$L_{\\mathrm{rqvae}}$ aligns residuals and codewords', 'updates encoder, decoder and codebooks'],
-    note: 'The paper specifies the encoder hidden sizes and latent dimension, but does not give hidden-layer sizes for the decoder.',
     caption: 'Figure 2. RQ-VAE is trained as an autoencoder around residual quantization: encode the item embedding, quantize the latent vector, decode it back, and optimize reconstruction plus quantization losses.'
   },
   zh: {
@@ -668,7 +667,6 @@ const tigerRqvaeTrainingCopy = {
     outputDetail: '$\\hat{x}$，目标空间 768 维',
     loss: '训练信号',
     lossItems: ['$L_{\\mathrm{recon}} = \\lVert x - \\hat{x}\\rVert_2^2$', '$L_{\\mathrm{rqvae}}$ 对齐 residual 与 codeword', '联合更新 encoder、decoder 和码本'],
-    note: '原文明确给出了 encoder 的中间层尺寸和 latent 维度，但没有给出 decoder 的隐藏层尺寸。',
     caption: '图 2. RQ-VAE 的训练不是只做最近邻查找，而是围绕残差量化建立 autoencoder：编码 item embedding，量化潜在向量，再解码重构，并同时优化重构损失与量化损失。'
   }
 };
@@ -1081,7 +1079,6 @@ ${decoderLayers}
 ${losses}
         </ol>
       </div>
-      <p class="tiger-flow-note">${escapeHtml(copy.note)}</p>
     </div>
     <figcaption>${escapeHtml(copy.caption)}</figcaption>
   </figure>`;
