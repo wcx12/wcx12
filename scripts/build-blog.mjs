@@ -2223,7 +2223,24 @@ function createMarkdownRenderer() {
 
 function tocHtml(toc) {
   if (!toc.length) return '<p class="muted" data-blog-i18n="toc_empty">No sections.</p>';
-  return `<ol>${toc.map((item) => `<li><a href="#${escapeHtml(item.id)}">${escapeHtml(item.title)}</a></li>`).join('')}</ol>`;
+  const sections = [];
+  let parent = null;
+  for (const item of toc) {
+    const entry = { ...item, children: [] };
+    if (item.level === 3 && parent) {
+      parent.children.push(entry);
+    } else {
+      sections.push(entry);
+      // An introductory h3 without an h2 remains a standalone entry.
+      parent = item.level === 2 ? entry : null;
+    }
+  }
+  const renderEntries = (entries, prefix = '') => `<ol role="list">${entries.map((item, index) => {
+    const number = prefix ? `${prefix}.${index + 1}` : String(index + 1);
+    const children = item.children.length ? renderEntries(item.children, number) : '';
+    return `<li><a href="#${escapeHtml(item.id)}"><span class="blog-toc-number">${number}</span><span class="blog-toc-title">${escapeHtml(item.title)}</span></a>${children}</li>`;
+  }).join('')}</ol>`;
+  return renderEntries(sections);
 }
 
 function postJsonLd(post) {
