@@ -437,6 +437,36 @@ test('portfolio routes use the researcher identity while blog routes retain thei
   assert.equal(profile.mainEntity.identifier.value, '0009-0005-6139-4327');
 });
 
+test('TIGER main results preserve all Table 1 values and explain item-level evaluation', async () => {
+  const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
+  const section = source.match(/<h3[^>]*>主实验：TIGER 到底有没有赢？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] ?? '';
+  const tables = [...section.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/g)];
+  assert.equal(tables.length, 3, 'Table 1 must include all three datasets');
+  const expected = [
+    ["P5",["0.0061","0.0041","0.0095","0.0052","0.0163","0.0107","0.0254","0.0136","0.0070","0.0050","0.0121","0.0066"]],
+    ["Caser",["0.0116","0.0072","0.0194","0.0097","0.0205","0.0131","0.0347","0.0176","0.0166","0.0107","0.0270","0.0141"]],
+    ["HGN",["0.0189","0.0120","0.0313","0.0159","0.0325","0.0206","0.0512","0.0266","0.0321","0.0221","0.0497","0.0277"]],
+    ["GRU4Rec",["0.0129","0.0086","0.0204","0.0110","0.0164","0.0099","0.0283","0.0137","0.0097","0.0059","0.0176","0.0084"]],
+    ["BERT4Rec",["0.0115","0.0075","0.0191","0.0099","0.0203","0.0124","0.0347","0.0170","0.0116","0.0071","0.0203","0.0099"]],
+    ["FDSA",["0.0182","0.0122","0.0288","0.0156","0.0267","0.0163","0.0407","0.0208","0.0228","0.0140","0.0381","0.0189"]],
+    ["SASRec",["0.0233","0.0154","0.0350","0.0192","0.0387","0.0249","0.0605","0.0318","0.0463","0.0306","0.0675","0.0374"]],
+    ["S3-Rec",["0.0251","0.0161","0.0385","0.0204","0.0387","0.0244","0.0647","0.0327","0.0443","0.0294","0.0700","0.0376"]],
+    ["TIGER",["0.0264","0.0181","0.0400","0.0225","0.0454","0.0321","0.0648","0.0384","0.0521","0.0371","0.0712","0.0432"]],
+    ["相对提升",["+5.22%","+12.55%","+3.90%","+10.29%","+17.31%","+29.04%","+0.15%","+17.43%","+12.53%","+21.24%","+1.71%","+14.97%"]]
+  ];
+  tables.forEach(([, table], dataset) => {
+    const actual = [...table.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].slice(1).map(([, row]) =>
+      [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(([, cell]) => cell.replace(/<[^>]*>/g, '').trim()));
+    assert.deepEqual(actual, expected.map(([name, values]) => [name, ...values.slice(dataset * 4, dataset * 4 + 4)]));
+  });
+  assert.match(section, /TIGER 原文 Table 1，第 4.1 节/);
+  assert.match(section, /P5 同样属于生成式方法/);
+  assert.match(section, /不是调用近似 ANN 索引/);
+  assert.match(section, /beam 宽度、无效候选是否补足/);
+  assert.match(section, /katex/);
+  assert.doesNotMatch(section, /katex-error|最强 baseline/);
+});
+
 test('generated code blocks and article contents remain keyboard reachable', async () => {
   const clientSource = await fs.readFile(path.join(rootDir, 'blog-src', 'assets', 'blog.js'), 'utf8');
   const articleFiles = await walk(path.join(rootDir, 'blog', 'posts'), (file) => file.endsWith('index.html'));
