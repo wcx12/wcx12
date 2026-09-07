@@ -776,48 +776,6 @@ const tigerInferenceLoopCopy = {
   }
 };
 
-const tigerGeneratorInputCopy = {
-  en: {
-    figure: 'Figure 3',
-    title: 'Generator input and Transformer architecture',
-    aria: 'A diagram showing TIGER generator input tokens, encoder decoder architecture, and training settings.',
-    inputLabel: 'Encoder input',
-    targetLabel: 'Decoder training target',
-    trainLabel: 'Training setup',
-    user: 'user_5',
-    items: ['Item A', 'Item B', 'Item C'],
-    target: 'Next item',
-    encoder: 'Transformer encoder',
-    context: 'history context',
-    decoder: 'Transformer decoder',
-    output: 'next Semantic ID',
-    modelSpecs: ['4 layers', '6 heads per layer', 'head dim 64', 'input dim 128', 'MLP dim 1024', 'ReLU + dropout 0.1'],
-    trainSpecs: ['about 13M parameters', 'batch size 256', '200k steps for Beauty/Sports', '100k steps for Toys', 'LR 0.01 for 10k steps, then inverse-square-root decay'],
-    probs: ['P(d1 | context)', 'P(d2 | context, d1)', 'P(d3 | context, d1,d2)', 'P(d4 | context, d1,d2,d3)'],
-    note: 'The history is not three raw item IDs. It is a user token followed by flattened Semantic ID tokens, and the target is the next item address.',
-    caption: 'Figure 3. TIGER constructs the input sequence as a user ID token followed by the Semantic ID tokens for the user interaction history, then trains a 4-layer encoder and 4-layer decoder to predict the next item Semantic ID token by token.'
-  },
-  zh: {
-    figure: '图 3',
-    title: '生成器输入与 Transformer 架构',
-    aria: '一张示意图，展示 TIGER 生成器输入 token、encoder-decoder 架构和训练设置。',
-    inputLabel: 'Encoder 输入',
-    targetLabel: 'Decoder 训练目标',
-    trainLabel: '训练设置',
-    user: 'user_5',
-    items: ['Item A', 'Item B', 'Item C'],
-    target: '下一个 item',
-    encoder: 'Transformer Encoder',
-    context: '历史上下文',
-    decoder: 'Transformer Decoder',
-    output: '下一个 Semantic ID',
-    modelSpecs: ['4 层', '每层 6 个 attention head', 'head dimension 64', 'input dimension 128', 'MLP dimension 1024', 'ReLU + dropout 0.1'],
-    trainSpecs: ['约 13M 参数', 'batch size 256', 'Beauty/Sports 训练 200k steps', 'Toys 训练 100k steps', '前 10k steps 学习率 0.01，之后 inverse-square-root decay'],
-    probs: ['P(d1 | context)', 'P(d2 | context, d1)', 'P(d3 | context, d1,d2)', 'P(d4 | context, d1,d2,d3)'],
-    note: '关键点：历史不是三个原始 Item ID，而是 user token 加展平后的历史 Semantic ID tokens；训练目标也不是自然语言，而是下一个物品的语义地址。',
-    caption: '图 3. TIGER 把 user ID token 接在用户历史 Semantic ID tokens 前面作为 encoder 输入，再训练 4 层 encoder 与 4 层 decoder 逐 token 预测下一个物品的 Semantic ID。'
-  }
-};
 
 function tigerFlowGlyphHtml(name = 'item') {
   const safeName = escapeAttribute(name);
@@ -948,50 +906,61 @@ function tigerIndexMapFigureHtml(lang = 'en') {
   return `<figure id="fig-tiger-index-map" class="tiger-pipeline-figure tiger-index-figure"><div class="tiger-pipeline-surface tiger-index-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-index-map">${rows}</div><p class="tiger-flow-note">${escapeHtml(copy.bridge)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
 }
 
-function tigerGeneratorTokenHtml(value, kind = '') {
-  return `<i class="tiger-generator-token${kind ? ` tiger-generator-token-${escapeAttribute(kind)}` : ''}">${escapeHtml(value)}</i>`;
-}
-
-function tigerGeneratorItemHtml(label, tokens) {
-  const tokenHtml = tokens.map((token) => tigerGeneratorTokenHtml(token)).join('');
-  return `<span class="tiger-generator-item"><b>${escapeHtml(label)}</b>${tokenHtml}</span>`;
-}
-
-function tigerHeadDotsHtml(count = 6) {
-  return Array.from({ length: count }, () => '<i></i>').join('');
-}
-
-function tigerTransformerLayerHtml(kind, index, copy) {
-  const isDecoder = kind === 'decoder';
-  const attentionLabel = isDecoder ? 'masked self-attn' : 'self-attn';
-  const cross = isDecoder ? `<div class="tiger-transformer-op tiger-transformer-cross"><span>cross-attn</span><b>${escapeHtml(copy.context)}</b></div>` : '';
-  return `<li class="tiger-transformer-layer"><b>${index + 1}</b><div class="tiger-transformer-op tiger-transformer-attn"><span>${attentionLabel}</span><em>${tigerHeadDotsHtml(6)}</em></div>${cross}<div class="tiger-transformer-op tiger-transformer-ffn"><span>FFN</span><em><i></i><i></i><i></i></em></div></li>`;
-}
-
-function tigerTransformerTowerHtml(kind, title, subtitle, copy) {
-  const layers = Array.from({ length: 4 }, (_, index) => tigerTransformerLayerHtml(kind, index, copy)).join('');
-  return `<section class="tiger-transformer-tower tiger-transformer-${kind}"><header><span>${escapeHtml(title)}</span><strong>${escapeHtml(subtitle)}</strong></header><ol>${layers}</ol><div class="tiger-transformer-rulers"><span>input 128</span><span>6 heads x 64</span><span>MLP 1024</span></div></section>`;
-}
-
-function tigerGeneratorScheduleHtml(copy) {
-  return `<section class="tiger-generator-schedule"><span>${escapeHtml(copy.trainLabel)}</span><div class="tiger-generator-timeline" aria-hidden="true"><i class="is-warmup"></i><i class="is-main"></i></div><ol><li>10k LR 0.01</li><li>100k / 200k steps</li><li>batch 256</li><li>~13M params</li></ol></section>`;
-}
-
 function tigerGeneratorInputFigureHtml(lang = 'en') {
-  const copy = tigerGeneratorInputCopy[lang === 'zh' ? 'zh' : 'en'];
-  const history = [
-    tigerGeneratorTokenHtml(copy.user, 'user'),
-    tigerGeneratorItemHtml(copy.items[0], ['a1', 'a2', 'a3', 'a4']),
-    tigerGeneratorItemHtml(copy.items[1], ['b1', 'b2', 'b3', 'b4']),
-    tigerGeneratorItemHtml(copy.items[2], ['c1', 'c2', 'c3', 'c4'])
-  ].join('');
-  const target = [
-    tigerGeneratorTokenHtml('<BOS>', 'control'),
-    tigerGeneratorItemHtml(copy.target, ['d1', 'd2', 'd3', 'd4']),
-    tigerGeneratorTokenHtml('<EOS>', 'control')
-  ].join('');
-  const probs = copy.probs.map((prob) => `<li>${escapeHtml(prob)}</li>`).join('');
-  return `<figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure"><div class="tiger-pipeline-surface tiger-generator-surface" role="group" aria-label="${escapeAttribute(copy.aria)}"><div class="tiger-pipeline-heading"><span>${escapeHtml(copy.figure)}</span><strong>${escapeHtml(copy.title)}</strong></div><div class="tiger-generator-board"><section class="tiger-generator-strip tiger-generator-strip-input"><span class="tiger-generator-label">${escapeHtml(copy.inputLabel)}</span><div class="tiger-generator-tokens">${history}</div></section><section class="tiger-generator-core">${tigerTransformerTowerHtml('encoder', copy.encoder, copy.context, copy)}<i aria-hidden="true"></i>${tigerTransformerTowerHtml('decoder', copy.decoder, copy.output, copy)}</section><section class="tiger-generator-strip tiger-generator-strip-target"><span class="tiger-generator-label">${escapeHtml(copy.targetLabel)}</span><div class="tiger-generator-tokens tiger-generator-target-tokens">${target}</div><ol class="tiger-generator-probs">${probs}</ol></section>${tigerGeneratorScheduleHtml(copy)}</div><p class="tiger-flow-note">${escapeHtml(copy.note)}</p></div><figcaption>${escapeHtml(copy.caption)}</figcaption></figure>`;
+  const zh = lang === 'zh';
+  const t = (cn, en) => escapeHtml(zh ? cn : en);
+  const token = (value, kind = '') => '<span class="tg3-token' + (kind ? ' tg3-' + kind : '') + '">' + escapeHtml(value) + '</span>';
+  const seq = (values) => values.map(value => token(value, /4$/.test(value) ? 'collision' : value.startsWith('<') ? 'control' : '')).join('');
+  const down = (label = '') => '<div class="tg3-down"><span aria-hidden="true">↓</span>' + label + '</div>';
+  const matrix = (masked) => '<span class="tg3-mask" aria-hidden="true">' + Array.from({ length: 16 }, (_, i) => '<i class="' + (!masked || i % 4 <= Math.floor(i / 4) ? 'is-visible' : '') + '"></i>').join('') + '</span>';
+  const op = (name, description, detail, visual = '') => '<div class="tg3-op">' + visual + '<strong>' + name + '</strong><span>' + description + '</span><small>' + detail + '</small></div>';
+  const history = ['A', 'B', 'C'].map((item, i) => '<div class="tg3-item"><b>Item ' + item + '</b><span class="tg3-lookup">↓ ' + t('查 Semantic ID', 'Look up Semantic ID') + '</span><div class="tg3-item-tokens">' + seq([1, 2, 3, 4].map(n => item.toLowerCase() + n)) + '</div></div>').join('<span class="tg3-time" aria-label="' + t('之后', 'then') + '">→</span>');
+  const labels = ['d1', 'd2', 'd3', 'd4', '<EOS>'];
+  const positions = labels.map((_, i) => '<span>' + t('位置 ', 'Position ') + (i + 1) + '</span>').join('');
+  const predictions = labels.map((value) => '<span class="tg3-prob">p(' + escapeHtml(value) + ')</span>').join('');
+  return '<figure id="fig-tiger-generator-input" class="tiger-pipeline-figure tiger-generator-figure">' +
+    '<div class="tiger-pipeline-surface tg3-surface" role="group" aria-label="' + t('TIGER 生成器训练：历史输入、右移目标和逐位置监督', 'TIGER generator training: history, shifted targets and position-wise supervision') + '">' +
+      '<div class="tiger-pipeline-heading"><span>' + t('图 3', 'Figure 3') + '</span><strong>' + t('用一段交互历史，学习下一个物品', 'Learn the next item from interaction history') + '</strong></div>' +
+      '<section class="tg3-stage"><h4><span>01</span>' + t('把历史物品展开为输入序列', 'Turn history items into an input sequence') + '</h4>' +
+        '<div class="tg3-history">' + history + '</div>' +
+        '<p class="tg3-legend">' + t('按交互时间排列。实线：前三位量化 token；虚线：第四位碰撞 token。', 'Items are in chronological order. Solid: three quantization tokens. Dashed: the fourth collision token.') + '</p>' +
+        '<div class="tg3-flatten"><span class="tg3-user">' + token('user_5', 'control') + '<small>' + t('用户 ID 哈希桶', 'User ID hash bucket') + '</small></span><b aria-hidden="true">+</b><span class="tg3-flat-history">' + seq(['a1','a2','a3','a4','b1','b2','b3','b4','c1','c2','c3','c4']) + '</span></div>' +
+        down('Token embedding · 128 ' + t('维', 'dimensions')) +
+        '<div class="tg3-stack"><header><b>Transformer Encoder</b><span>× 4 ' + t('层', 'layers') + '</span></header><div class="tg3-ops tg3-encoder">' +
+          op('Self-attention', t('每个位置读取整段历史', 'Each position reads the full history'), '6 heads × 64', matrix(false)) +
+          '<span class="tg3-op-arrow" aria-hidden="true">→</span>' +
+          op('FFN', t('逐位置变换表示', 'Transform each position'), 'MLP 1024 · ReLU') +
+        '</div></div>' +
+        down() +
+        '<div class="tg3-context"><b>H</b><span>' + t('历史各位置的上下文表示', 'Context representations at all history positions') + '</span><small>' + t('供 decoder 每层的 cross-attention 读取', 'Read by cross-attention in every decoder layer') + '</small></div>' +
+      '</section>' +
+      '<section class="tg3-stage"><h4><span>02</span>' + t('提供正确前缀，预测后一个 token', 'Provide the correct prefix; predict the next token') + '</h4>' +
+        '<div class="tg3-answer"><span>' + t('真实的下一个物品', 'Actual next item') + '</span><b>Item D</b><span aria-hidden="true">→</span>' + seq(['d1','d2','d3','d4']) + '</div>' +
+        '<p class="tg3-legend">' + t('训练时右移答案作为 decoder 输入（teacher forcing）。同一列的输入用于预测下方标签。', 'During training, shift the answer right for decoder input (teacher forcing). Each column predicts its label below.') + '</p>' +
+        '<div class="tg3-aligned" role="group" aria-label="' + t('对齐的 decoder 输入、预测分布和目标标签', 'Aligned decoder inputs, predictions and target labels') + '">' +
+          '<div class="tg3-five tg3-positions">' + positions + '</div>' +
+          '<b class="tg3-row-label">Decoder ' + t('输入 · 正确答案的前缀', 'input · ground-truth prefixes') + '</b>' +
+          '<div class="tg3-five tg3-decoder-input">' + seq(['<BOS>','d1','d2','d3','d4']) + '</div>' +
+          down('Token embedding · 128 ' + t('维', 'dimensions')) +
+          '<div class="tg3-stack"><header><b>Transformer Decoder</b><span>× 4 ' + t('层', 'layers') + '</span></header><div class="tg3-ops tg3-decoder">' +
+            op('Masked self-attention', t('只能读取当前位置及之前的输入', 'Read only the current and earlier inputs'), '6 heads × 64', matrix(true)) +
+            '<span class="tg3-op-arrow" aria-hidden="true">→</span>' +
+            op('Cross-attention', t('用当前表示查询历史 H', 'Query history H with the current representation'), 'Q: decoder · K / V: H', '<span class="tg3-context-port">H ↓</span>') +
+            '<span class="tg3-op-arrow" aria-hidden="true">→</span>' +
+            op('FFN', t('融合后逐位置变换', 'Transform each fused position'), 'MLP 1024 · ReLU') +
+          '</div></div>' +
+          down(t('词表投影 + Softmax', 'Vocabulary projection + Softmax')) +
+          '<b class="tg3-row-label">' + t('真实 token 在各位置词表分布中的概率', 'Probability of the true token in each vocabulary distribution') + '</b>' +
+          '<div class="tg3-five tg3-predictions">' + predictions + '</div>' +
+          '<div class="tg3-five tg3-compare" aria-hidden="true">' + '<span>↕</span>'.repeat(5) + '</div>' +
+          '<div class="tg3-five tg3-target">' + seq(labels) + '</div>' +
+          '<b class="tg3-row-label">' + t('真实标签 · 比 decoder 输入左移一位', 'Target labels · one position ahead of the input') + '</b>' +
+        '</div>' +
+        down(t('逐位置比较预测与标签', 'Compare predictions with target labels')) +
+        '<div class="tg3-loss"><b>' + t('交叉熵损失', 'Cross-entropy loss') + '</b><span>' + t('提高真实 token 的概率，反向更新生成器参数', 'Increase the probability of true tokens; backpropagate into the generator') + '</span></div>' +
+      '</section>' +
+      '<p class="tg3-footnote">' + t('每个位置都经过完整的 4 层 decoder；4 层不对应 4 个 token。矩阵亮格表示可见位置，行为查询、列为被读取的位置。图中省略残差连接、归一化与位置机制；dropout 为 0.1。', 'Every position passes through all 4 decoder layers; layers are not token steps. Lit matrix cells mark visible positions: rows are queries, columns are attended positions. Residual connections, normalization and position mechanisms are omitted; dropout is 0.1.') + '</p>' +
+    '</div><figcaption>' + t('图 3. TIGER 生成器的训练数据流。先编码用户 token 与历史 Semantic ID，再用右移的正确答案监督下一个物品的 token 预测。p(dᵢ) 表示模型分配给该位置真实 token 的概率，完整分布覆盖词表；起止符号为序列对齐示意。RQ-VAE 已在上一阶段训练完成，推理时的自回归反馈见图 4。', 'Figure 3. TIGER generator training. Encode the user token and history Semantic IDs, then supervise next-item prediction using shifted ground-truth tokens. p(dᵢ) denotes the probability assigned to the true token within the vocabulary distribution. Start/end symbols illustrate alignment. RQ-VAE is already trained; Figure 4 shows autoregressive inference.') + '</figcaption></figure>';
 }
 
 function tigerPipelineFigureHtml(lang = 'en') {

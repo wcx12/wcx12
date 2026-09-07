@@ -291,22 +291,40 @@ Encoder 输入：
 
 [user_5]  a1 a2 a3 a4  b1 b2 b3 b4  c1 c2 c3 c4
 
-Decoder 训练目标：
+Decoder 输入（训练时提供正确答案的前缀）：
 
-<BOS>  d1 d2 d3 d4  <EOS>
+<BOS>  d1  d2  d3  d4
+
+对应位置的预测标签：
+
+ d1    d2  d3  d4  <EOS>
 ```
 
-其中 `a* / b* / c*` 是历史物品的 Semantic ID token，`d*` 是下一个物品的 Semantic ID token。encoder 负责把整段历史编码成上下文；decoder 则在这个上下文条件下逐 token 生成下一个物品的 Semantic ID。[图 3](#fig-tiger-generator-input)把这条输入输出路径和论文里的 Transformer 配置放在一起。
+其中 `a* / b* / c*` 分别属于三个历史物品，`d1…d4` 属于真实的下一个物品 D。每组的前三位来自 RQ-VAE，第四位是碰撞处理时追加的编号。分组只是为了方便人阅读，encoder 实际接收的是加上 user token 后的一整串 token。这里用 `<BOS>` 和 `<EOS>` 表示序列的开始与结束，重点是输入和标签之间相差一个位置，而不是某个框架对特殊 token 的具体命名。
+
+[图 3](#fig-tiger-generator-input)从一个训练样本展开这条路径。历史 token 先通过 embedding 层，再经过 4 层 encoder，得到历史各位置的上下文表示 $H$。decoder 同时需要两类信息：一类是目标物品已经给出的 token 前缀；另一类是通过 cross-attention 读取的历史 $H$。它的 masked self-attention 只能读取当前位置及之前的输入，不能提前看到待预测的 token。图中展示一层的内部运算，并用“×4”表示堆叠；每个位置都经过完整的 4 层，层数与一个物品的 token 数不是一回事。
 
 ::tiger-generator-input
 
-这也是“生成式推荐”的核心：模型不是先把用户历史编码成 query embedding，再去候选库里做 [ANN](term:ann) / [MIPS](term:mips) 检索；而是在 Semantic ID 词表上直接学习
+训练时，这种提供正确前缀的方式叫作 **teacher forcing**。例如，第一个位置读入 `<BOS>` 来预测 `d1`；第二个位置读入正确的 `d1` 来预测 `d2`。由于正确前缀已经给定，配合因果遮罩，可以在一次前向计算中并行计算各位置的预测，而不必等待模型先生成 `d1` 再训练 `d2`。
+
+decoder 的输出经过词表投影和 softmax，得到每个位置的 token 概率分布。训练用真实 token 作为标签计算交叉熵，要求正确 token 的概率提高；这个损失反向更新生成器的 token embedding、encoder、decoder 和输出投影等参数。前一阶段的 RQ-VAE 已经训练完成，生成器训练使用它产生的离散 ID，不通过这些 ID 将梯度传回 RQ-VAE。
+
+因此，这一阶段学习的是以用户信息和历史为条件的下一个物品 ID 概率：
 
 $$
 P(d_1,d_2,d_3,d_4 \mid \text{user token}, \text{history Semantic ID tokens}).
 $$
 
 推理时，decoder 第一步预测 `d1`，第二步在 `d1` 的基础上预测 `d2`，一直到生成完整 Semantic ID。生成结束后，系统再用 Semantic ID -> Item ID 的映射表，把这个语义地址还原成真实物品。换句话说，TIGER 的“生成”不是生成自然语言句子，而是生成一个可以映射回物品库的离散地址。
+
+这里与训练的关键区别是：推理时没有真实答案前缀，必须把模型已经生成的 token 接回 decoder，逐步继续预测。[图 4](#fig-tiger-inference-loop)接着展示从生成概率到候选物品的推理过程。
+
+::disclosure[补充：生成器的具体配置]
+[论文第 4 节](https://proceedings.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)报告 encoder 和 decoder 各 4 层，每层 self-attention 有 6 个 head、每个 head 的维度为 64；输入表示维度为 128，MLP 维度为 1024，使用 ReLU 和 0.1 的 dropout。输入维度与各 head 投影后的维度是不同配置，不能把“6 × 64”直接当作输入 embedding 的维度。
+
+模型约有 1300 万参数，batch size 为 256。Beauty 和 Sports and Outdoors 训练 200k 步，Toys and Games 训练 100k 步。前 10k 步的学习率为 0.01，之后按步数的平方根倒数衰减。这些是论文的实验设置，不代表模型架构中的额外阶段。
+::
 
 ::disclosure[补充：用户 token 为什么可能有效？]
 原文的做法是：除了 1024 个 semantic codeword token（$256\times4$）之外，再额外向 seq2seq 词表加入 2000 个 user-specific token。为了限制词表规模，论文没有给每个原始用户都建一个唯一 token，而是用 Hashing Trick 把 raw user ID 映射到这 2000 个 user ID token 中的一个。也就是说，映射是确定性的；同一个 raw user ID 会落到同一个 bucket，但不同用户可能因为哈希碰撞共用同一个 user token。
