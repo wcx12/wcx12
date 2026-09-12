@@ -1,6 +1,6 @@
 // Shared by the browser and repository update workflow.
 export const RESEARCH_CONFIG_VERSION = 2;
-export const SUPPORTED_ANIMATIONS = new Set(['point-cloud', 'vpr', 'medical-image', 'agent', 'education']);
+export const SUPPORTED_ANIMATIONS = new Set(['point-cloud', 'vpr', 'medical-image', 'agent', 'education', 'none']);
 export const CONFIG_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const WORKFLOW_DISPATCH_INPUT_MAX_LENGTH = 65_535;
 

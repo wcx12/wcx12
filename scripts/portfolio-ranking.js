@@ -89,6 +89,9 @@ export function repositoryStageLabel(repo = {}, language = 'en') {
 
 export function publicationStatusLabel(publication = {}, language = 'en') {
   const normalizedLanguage = language === 'zh' ? 'zh' : 'en';
+  if (publicationStatusKey(publication) === 'in_press' && publication.issue_date) {
+    return normalizedLanguage === 'zh' ? '卷期已安排' : 'Issue scheduled';
+  }
   return PUBLICATION_STATUS_LABELS[publicationStatusKey(publication)]?.[normalizedLanguage]
     || PUBLICATION_STATUS_LABELS.unknown[normalizedLanguage];
 }
@@ -192,6 +195,7 @@ export function summarizeTopicEvidence(evidence = [], language = 'en') {
   const counts = {
     published: 0,
     inPress: 0,
+    issueScheduled: 0,
     researchRepository: 0,
     workingPrototype: 0,
     interactiveDemo: 0,
@@ -202,6 +206,7 @@ export function summarizeTopicEvidence(evidence = [], language = 'en') {
     if (item.type === 'ScholarlyArticle') {
       const status = publicationStatusKey(item.value);
       if (status === 'published') counts.published += 1;
+      else if (status === 'in_press' && item.value.issue_date) counts.issueScheduled += 1;
       else if (status === 'in_press') counts.inPress += 1;
       continue;
     }
@@ -220,6 +225,7 @@ export function summarizeTopicEvidence(evidence = [], language = 'en') {
     ? [
         counts.published && countLabel(counts.published, language, '篇已发表论文'),
         counts.inPress && countLabel(counts.inPress, language, '篇录用待刊论文'),
+        counts.issueScheduled && countLabel(counts.issueScheduled, language, '篇卷期已安排论文'),
         counts.researchRepository && countLabel(counts.researchRepository, language, '个研究仓库'),
         counts.workingPrototype && countLabel(counts.workingPrototype, language, '个可运行原型'),
         counts.interactiveDemo && countLabel(counts.interactiveDemo, language, '个交互演示'),
@@ -229,6 +235,7 @@ export function summarizeTopicEvidence(evidence = [], language = 'en') {
     : [
         counts.published && countLabel(counts.published, language, 'published paper'),
         counts.inPress && countLabel(counts.inPress, language, 'in-press paper'),
+        counts.issueScheduled && countLabel(counts.issueScheduled, language, 'issue-scheduled paper'),
         counts.researchRepository && countLabel(counts.researchRepository, language, 'research repository', 'research repositories'),
         counts.workingPrototype && countLabel(counts.workingPrototype, language, 'working prototype'),
         counts.interactiveDemo && countLabel(counts.interactiveDemo, language, 'interactive demo'),

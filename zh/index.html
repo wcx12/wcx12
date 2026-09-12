@@ -41,8 +41,8 @@
   <meta name="twitter:description" content="Chenxu Wang（wcx12）的研究主页，涵盖点云配准、视觉地点识别、医学影像分析、大模型智能体与 AI4 教育。" />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home-zh.png" />
   <meta name="twitter:image:alt" content="wcx12 机器学习研究主页" />
-  <script src="../theme-init.js?v=108af3205d8c"></script>
-  <link rel="stylesheet" href="../styles.css?v=108af3205d8c" />
+  <script src="../theme-init.js?v=ddfddaffa23f"></script>
+  <link rel="stylesheet" href="../styles.css?v=ddfddaffa23f" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -69,17 +69,26 @@
       "https://github.com/wcx12",
       "https://orcid.org/0009-0005-6139-4327"
     ],
-    "affiliation": {
-      "@type": "CollegeOrUniversity",
-      "name": "Beijing Institute of Technology"
-    },
     "knowsAbout": [
       "点云配准",
       "视觉地点识别",
       "医学影像分析",
       "大语言模型智能体",
       "AI4 教育"
-    ]
+    ],
+    "email": "mailto:c2675668@gmail.com",
+    "alumniOf": {
+      "@type": "CollegeOrUniversity",
+      "name": "Beijing Institute of Technology"
+    },
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Shenzhen Houlang Pengpai Technology Co., Ltd."
+    },
+    "homeLocation": {
+      "@type": "Place",
+      "name": "Shenzhen, China"
+    }
   },
   "inLanguage": "zh-CN",
   "primaryImageOfPage": {
@@ -149,7 +158,7 @@
       <div class="hero-copy">
         <p class="kicker" data-i18n="hero_kicker">机器学习研究者</p>
         <h1>Chenxu Wang <span class="hero-alias">(wcx12)</span></h1>
-        <p class="hero-affiliation" data-i18n="hero_affiliation">北京理工大学</p>
+        <p class="hero-affiliation" data-i18n="hero_affiliation">北京理工大学 · 深圳后浪澎湃</p>
         <p class="type-line"><span data-i18n="hero_status">状态</span><span data-i18n="hero_status_separator">：</span> <span id="typeTarget" data-i18n="hero_status_value">深圳创业实践中</span></p>
         <p class="subtitle" data-i18n="hero_subtitle_html">研究不完整观测与有限标注条件下的可靠视觉智能。<br /> 方向涵盖三维几何、视觉定位、医学影像与证据驱动的 AI 系统。</p>
 
@@ -160,7 +169,7 @@
         </div>
 
         <div class="quick-stats">
-          <article><span data-i18n="stat_focus">研究领域 / 主题</span><strong id="focusAreaCount">4 / 5</strong></article>
+          <article><span data-i18n="stat_focus">研究领域 / 主题</span><strong id="focusAreaCount">4 / 6</strong></article>
           <article><span data-i18n="stat_grad">毕业时间</span><strong>2026</strong></article>
           <article><span data-i18n="stat_pubs">论文</span><strong id="heroPublicationCount">2</strong></article>
         </div>
@@ -214,42 +223,51 @@
       </section>
     </noscript>
 
-    <section class="console" aria-label="交互式个人主页工具" data-i18n-aria="aria_interactive_portfolio">
-      <div class="console-head">
-        <span class="dot pink"></span>
-        <span class="dot cyan"></span>
-        <span class="dot violet"></span>
-        <p>wcx12-lab</p>
+    <section class="selected-work" aria-labelledby="selected-work-title">
+      <h2 id="selected-work-title" data-i18n="selected_work">代表工作</h2>
+      <div class="selected-work-list">
+        <article>
+          <span data-i18n="selected_project">项目</span>
+          <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
+          <p data-i18n="selected_project_desc">面向院校专业信息的检索，保留来源与证据缺口。</p>
+        </article>
+        <article>
+          <span data-i18n="selected_paper">论文</span>
+          <h3><a href="./publications/tf-vpr/">TF-VPR</a></h3>
+          <p data-i18n="selected_paper_desc">利用冻结的基础模型进行视觉地点识别。</p>
+        </article>
+        <article>
+          <span data-i18n="selected_note">阅读笔记</span>
+          <h3><a href="./research/generative-retrieval/" data-i18n="selected_note_title">TIGER 与语义 ID</a></h3>
+          <p data-i18n="selected_note_desc">从残差量化到生成式推荐。</p>
+        </article>
       </div>
+    </section>
 
-      <p class="hint-row">
-        <span class="desktop-hint" data-i18n="hints">快捷键：Ctrl/⌘K 打开命令面板</span>
-        <span class="touch-hint" data-i18n="hints_touch">在设置中打开“命令”即可搜索和跳转。</span>
-      </p>
-
+    <section class="console" aria-label="交互式个人主页工具" data-i18n-aria="aria_interactive_portfolio">
       <nav class="command-row" aria-label="交互工具" data-i18n-aria="aria_interactive_tools">
         <button class="cmd active" data-view="about" data-i18n="tab_about">概览</button>
-        <button class="cmd" data-view="research" data-i18n="tab_research">概念实验室</button>
-        <button class="cmd" data-view="projects" data-i18n="tab_projects">仓库浏览</button>
-        <button class="cmd" data-view="publications" data-i18n="tab_publications">论文浏览</button>
-        <button class="cmd" data-view="writing" data-i18n="tab_writing">文章检索</button>
-        <button class="cmd" data-view="profile" data-i18n="tab_profile">履历摘要</button>
+        <button class="cmd" data-view="research" data-i18n="tab_research">研究</button>
+        <button class="cmd" data-view="projects" data-i18n="tab_projects">项目</button>
+        <button class="cmd" data-view="publications" data-i18n="tab_publications">论文</button>
+        <button class="cmd" data-view="writing" data-i18n="tab_writing">博客</button>
+        <button class="cmd" data-view="profile" data-i18n="tab_profile">履历</button>
       </nav>
 
       <div class="view active" id="about">
         <h2 data-i18n="about_title">关于我</h2>
-        <p data-i18n="about_line1">我是 Chenxu Wang（wcx12），2022.09-2026.06 就读于北京理工大学，2026.3 至今作为创业者参与深圳市后浪澎湃科技有限责任公司的早期教育科技实践。</p>
+        <p data-i18n="about_line1">我是 Chenxu Wang（wcx12），2022.09–2026.06 就读于北京理工大学，自 2026.03 起参与深圳后浪澎湃的教育科技创业实践。</p>
         <p data-i18n="about_line2">我喜欢把几何理解和可靠工程实现结合起来。</p>
       </div>
 
       <div class="view" id="research">
         <div class="view-heading">
           <div>
-            <h2 data-i18n="research_title">概念实验室</h2>
-            <p class="muted" data-i18n="research_intro">选择一个子兴趣，查看概念演示、关联项目和论文。</p>
+            <h2 data-i18n="research_title">研究</h2>
+            <p class="muted" data-i18n="research_intro">几何理解、视觉智能与 AI 系统。</p>
           </div>
           <div class="view-heading-actions">
-            <a class="btn btn-outline" href="./research/" data-i18n="research_static">研究证据索引</a>
+            <a class="btn btn-outline" href="./research/" data-i18n="research_static">研究总览</a>
             <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research" hidden>管理映射</button>
           </div>
         </div>
@@ -304,7 +322,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="project_title">仓库列表</h2>
-            <p class="muted" data-i18n="project_desc">这里列出全部公开仓库，可直接跳转到对应项目。</p>
+            <p class="muted" data-i18n="project_desc">研究软件、工程原型与教学工具。</p>
           </div>
           <a class="btn btn-outline" href="./projects/" data-i18n="project_static">项目索引</a>
         </div>
@@ -356,7 +374,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="pub_title">论文发表</h2>
-            <p class="muted" data-i18n="pub_desc">论文条目直接展示在页面中，包含状态和跳转链接。</p>
+            <p class="muted" data-i18n="pub_desc">视觉识别与医学影像领域的同行评议研究。</p>
           </div>
           <a class="btn btn-outline" href="./publications/" data-i18n="publication_static">论文索引</a>
         </div>
@@ -384,7 +402,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="writing_title">博客</h2>
-            <p class="muted" data-i18n="writing_desc">从 Markdown 自动生成的技术笔记、研究日志和工程记录。</p>
+            <p class="muted" data-i18n="writing_desc">研究笔记与工程实践。</p>
           </div>
           <a class="btn btn-outline" href="../blog/" data-i18n="writing_open">打开博客</a>
         </div>
@@ -406,7 +424,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="profile_view_title">学术履历</h2>
-            <p class="muted" data-i18n="profile_view_desc">集中查看研究轨迹、常用技术栈、正式履历与联系方式。</p>
+            <p class="muted" data-i18n="profile_view_desc">研究、教育科技与开源实践。</p>
           </div>
           <a class="btn btn-outline" href="./resume/" data-i18n="cv_download">查看研究履历</a>
         </div>
@@ -425,7 +443,7 @@
               </article>
               <article>
                 <time>2026</time>
-                <p data-i18n="timeline_2026">毕业年份，同时积极申请硕士/博士机会。</p>
+                <p data-i18n="timeline_2026">2026.03 至今：在深圳后浪澎湃参与教育科技创业实践，持续开展研究与开源开发。</p>
               </article>
             </div>
           </section>
@@ -565,6 +583,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="../homepage-bootstrap.js?v=108af3205d8c"></script>
+  <script type="module" src="../homepage-bootstrap.js?v=ddfddaffa23f"></script>
 </body>
 </html>

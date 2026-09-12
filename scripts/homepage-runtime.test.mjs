@@ -132,7 +132,8 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.match(indexSource, /hreflang="zh-CN" href="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
   assert.match(indexSource, /<h1>Chenxu Wang <span class="hero-alias">\(wcx12\)<\/span><\/h1>/);
   assert.match(indexSource, /<a class="brand" href="\.\/" aria-label="Home"[^>]*>wcx12<\/a>/);
-  assert.match(indexSource, /data-i18n="stat_focus">Research domains \/ topics<\/span><strong id="focusAreaCount">4 \/ 5<\/strong>/);
+  const expectedTopics = researchConfig.interests.reduce((count, domain) => count + domain.children.length, 0);
+  assert.ok(indexSource.includes(`<strong id="focusAreaCount">${researchConfig.interests.length} / ${expectedTopics}</strong>`));
   assert.match(indexSource, /"propertyID": "ORCID"/);
   assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
   assert.match(indexSource, /Shenzhen Houlang Pengpai/);
@@ -191,23 +192,24 @@ test('project browsing defaults to research relevance without hiding alternative
 
 test('homepage navigation uses the same content order and Writing label as fixed pages', () => {
   const navigation = indexSource.match(/<nav class="top-actions-nav"[\s\S]*?<\/nav>/)?.[0] || '';
-  const labels = ['Research', 'Projects', 'Publications', 'Writing', 'Profile'];
+  const labels = ['Research', 'Projects', 'Publications', 'Blog', 'Resume'];
   let previous = -1;
   for (const label of labels) {
     const index = navigation.indexOf(`>${label}</a>`);
     assert.ok(index > previous, `${label} is missing or out of order in homepage navigation`);
     previous = index;
   }
-  assert.equal(homepageI18n.en.btn_blog, 'Writing');
+  assert.equal(homepageI18n.en.btn_blog, 'Blog');
 });
 
-test('homepage lab is an interaction layer instead of a second copy of global navigation', () => {
+test('interactive views use familiar module names and leave representative work above the tools', () => {
   const commandRow = indexSource.match(/<nav class="command-row"[\s\S]*?<\/nav>/)?.[0] || '';
   assert.equal((commandRow.match(/class="cmd/g) || []).length, 6);
-  for (const label of ['overview', 'concept lab', 'repo explorer', 'paper explorer', 'writing search', 'profile summary']) {
+  for (const label of ['overview', 'Research', 'Projects', 'Publications', 'Blog', 'Resume']) {
     assert.match(commandRow, new RegExp(`>${label}<\\/button>`));
   }
-  assert.match(indexSource, />wcx12-lab<\/p>/);
+  assert.doesNotMatch(indexSource, />wcx12-lab<\/p>/);
+  assert.ok(indexSource.indexOf('class="selected-work"') < indexSource.indexOf('class="console"'));
   assert.match(indexSource, /aria-label="Interactive tools" data-i18n-aria="aria_interactive_tools"/);
   assert.doesNotMatch(indexSource, /featuredResearch|researchShowcase|Featured Research/);
   assert.match(indexSource, /<div class="view" id="profile">[\s\S]*?profile-console-grid/);
@@ -228,8 +230,8 @@ test('mobile utility controls stay above content and touch instructions avoid de
   assert.match(styleSource, /\.topbar\s*\{[^}]*z-index:\s*50\s*;/s, 'mobile settings need their own top-level stacking context');
   assert.match(styleSource, /\.utility-menu-panel\s*\{[^}]*right:\s*auto\s*;[^}]*left:\s*0\s*;/s, 'mobile settings panel must open into the viewport');
   assert.match(styleSource, /@media\s*\(hover:\s*none\),\s*\(pointer:\s*coarse\)[\s\S]*?\.touch-hint\s*\{[^}]*display:\s*inline/s);
-  assert.match(indexSource, /class="desktop-hint" data-i18n="hints"/);
-  assert.match(indexSource, /class="touch-hint" data-i18n="hints_touch"/);
+  assert.doesNotMatch(indexSource, /class="hint-row"/);
+  assert.match(indexSource, /aria-controls="utilityMenuPanel"/);
   assert.match(indexSource, /data-i18n="repo_map_hint_touch"/);
   assert.match(styleSource, /@media\s*\(max-width:\s*480px\)[\s\S]*?\.hero-preview-panel\s*\{[^}]*display:\s*none/s);
   assert.match(styleSource, /@media\s*\(max-width:\s*480px\)[\s\S]*?\.top-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
@@ -328,8 +330,8 @@ test('canvas motion respects mobile budgets and page visibility', () => {
   assert.match(repoMapSource, /if \(hoveredRepo === nextHoveredRepo && hoveredMapField === nextHoveredMapField\) return;/);
   assert.match(scriptSource, /if \(resizeFrame !== null\) return;[\s\S]*?resizeFrame = requestAnimationFrame\(\(\) => \{/);
   assert.match(scriptSource, /if \(!\('ResizeObserver' in window\)\) \{[\s\S]*?repoMapFeature\?\.resize\(\);[\s\S]*?researchCanvasFeature\?\.resize\(\);/);
-  assert.match(researchCanvasSource, /educationInteraction\.selectedSignal === 'hint'[\s\S]*?educationInteraction\.selectedSignal = 'incorrect'[\s\S]*?educationInteraction\.selectedSignal = 'correct'/);
-  assert.match(researchCanvasSource, /educationInteraction\.selectedSignal === 'incorrect'[\s\S]*?'Try Again'/);
+  assert.match(researchCanvasSource, /evaluateAnswer\(/);
+  assert.doesNotMatch(researchCanvasSource, /selectedSignal = 'incorrect'[\s\S]*?selectedSignal = 'correct'/);
 });
 
 test('owner mapping hands a token-free payload to GitHub Actions', () => {
@@ -468,7 +470,7 @@ test('canonical repository and publication data stays unique and classifiable', 
   for (const publication of staticPublications) {
     assert.match(publication.slug || '', /^[a-z0-9]+(?:-[a-z0-9]+)*$/, `${publication.doi} has an invalid publication route slug`);
     assert.ok(publication.summaryZh, `${publication.doi} is missing a Chinese summary`);
-    assert.ok(publication.published_date && publication.volume && publication.article_number, `${publication.doi} is missing canonical bibliographic data`);
+    assert.ok((publication.published_date || publication.issue_date) && publication.volume && publication.article_number, `${publication.doi} is missing canonical bibliographic data`);
     assert.ok(publication.citation_key && publication.citation_month && publication.citation_date, `${publication.doi} is missing citation export data`);
     assert.equal(publication.open_access, true, `${publication.doi} open-access status drifted`);
     assert.match(publication.license || '', /^https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/$/);
@@ -495,9 +497,13 @@ test('canonical repository and publication data stays unique and classifiable', 
   );
   assert.match(scriptSource, /Object\.hasOwn\(child, 'indexable'\)[\s\S]*?indexable: child\.indexable/);
   assert.deepEqual(researchConfig.repoAssignments.wcx12, []);
-  for (const name of ['hlpp-crossword', 'codex-pet-battle', 'shuxuepeiyou', 'tetrahedron-visualizer', 'BIT-The-mathematical-foundation-of-big-Data']) {
+  for (const name of ['codex-pet-battle', 'BIT-The-mathematical-foundation-of-big-Data']) {
     assert.deepEqual(researchConfig.repoAssignments[name], [], `${name} must remain a project without being counted as research evidence`);
     assert.deepEqual(localRepos.find((repo) => repo.name === name)?.interests, []);
+  }
+  for (const name of ['hlpp-crossword', 'shuxuepeiyou', 'tetrahedron-visualizer']) {
+    assert.deepEqual(researchConfig.repoAssignments[name], ['ai4edu'], 'teaching practice belongs under Learning Tools');
+    assert.notEqual(localRepos.find((repo) => repo.name === name)?.stage_key, 'research_repository');
   }
   assert.match(
     researchConfig.interests.find((domain) => domain.id === 'ai4edu')?.children[0]?.description?.en || '',

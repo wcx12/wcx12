@@ -21,6 +21,7 @@ import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
 import { homepageI18n, homepageSeo } from '../homepage-i18n.js';
 import { localRepos, ORCID_ID, staticPublications } from '../site-data.js';
+import { profileData } from '../profile-data.js';
 import {
   SITE,
   excerptText,
@@ -30,7 +31,6 @@ import {
   summarizeDiagnostics
 } from './blog-content.mjs';
 import {
-  blogTopicCounts as topicCounts,
   deriveBlogDiscovery,
   postTranslationKey,
   selectLanguagePosts
@@ -42,6 +42,7 @@ import {
   compareResearchTopics,
   publicationStatusKey,
   publicationStatusLabel,
+  repositoryEvidenceRefs,
   repositoryStageKey,
   repositoryStageLabel,
   summarizeTopicEvidence
@@ -1555,7 +1556,7 @@ function personReference() {
   };
 }
 
-function personEntity() {
+export function personEntity() {
   return {
     ...personReference(),
     alternateName: 'wcx12',
@@ -1566,14 +1567,15 @@ function personEntity() {
       value: ORCID_ID,
       url: `https://orcid.org/${ORCID_ID}`
     },
-    affiliation: {
+    alumniOf: {
       '@type': 'CollegeOrUniversity',
-      name: 'Beijing Institute of Technology'
+      name: profileData.education.institution.en
     },
     worksFor: {
       '@type': 'Organization',
-      name: 'Shenzhen Houlang Pengpai Technology Co., Ltd.'
+      name: profileData.experience.organization.en
     },
+    homeLocation: { '@type': 'Place', name: profileData.location.en },
     sameAs: [
       'https://github.com/wcx12',
       `https://orcid.org/${ORCID_ID}`
@@ -1609,37 +1611,22 @@ function postHref(ctx, post) {
   return ctx.link(`${postUrl(post)}index.html`);
 }
 
-const blogText = {
-  hint_summary: 'About this area',
-  hint_hero: 'This introduction explains the purpose and authorship of the writing space.',
-  hint_search: 'Use this search to find posts by title, summary, category, tag, or article text.',
-  hint_featured: 'Featured posts are the recommended starting points or currently important writing pieces.',
-  hint_topics: 'Tags group writing by recurring themes so visitors can browse without knowing exact article titles.',
-  hint_recent: 'Recent writing lists the newest published posts in one place.',
-  hint_archive: 'The archive keeps all published writing in chronological order.',
-  hint_archive_year: 'This year group lists posts published in the selected year.',
-  hint_tag: 'This page collects all posts that share the selected tag.',
-  hint_tag_results: 'These cards are the posts currently associated with this tag.',
-  hint_post: 'This article page contains the full post, metadata, tags, and any code or math examples.',
-  hint_toc: 'The contents panel links to major headings in the current article.',
-  hint_related: 'Related writing appears here when another post shares tags or research areas.',
-  hint_prev_next: 'Use these links to move between newer and older posts.'
-};
-
 const shellText = {
   en: {
     skip_main: 'Skip to main content',
     nav_home: 'Home',
     nav_home_title: 'Back to the interactive homepage',
-    nav_profile: 'Profile',
+    nav_profile: 'Resume',
     nav_profile_title: 'Open the research profile',
     nav_research: 'Research',
     nav_research_title: 'Browse research topics and evidence',
     nav_projects: 'Projects',
-    nav_projects_title: 'Browse public repositories with maturity and evidence notes',
+    nav_projects_title: 'Projects and source code',
     nav_publications: 'Publications',
     nav_publications_title: 'Browse publisher-linked publications',
-    nav_blog: 'Writing',
+    nav_blog: 'Blog',
+    nav_demos: 'Demos',
+    nav_demos_title: 'Interactive concept demos',
     nav_blog_title: 'Open Research Fieldnotes',
     nav_archive: 'Archive',
     nav_archive_title: 'Browse all posts by date',
@@ -1666,10 +1653,12 @@ const shellText = {
     nav_research: '研究',
     nav_research_title: '浏览研究主题与成果',
     nav_projects: '项目',
-    nav_projects_title: '浏览含阶段与公开证据说明的项目',
+    nav_projects_title: '项目与源码',
     nav_publications: '论文',
     nav_publications_title: '浏览含出版方链接的论文',
     nav_blog: '博客',
+    nav_demos: '演示',
+    nav_demos_title: '交互式概念演示',
     nav_blog_title: '打开博客',
     nav_archive: '归档',
     nav_archive_title: '按日期浏览所有文章',
@@ -1689,19 +1678,38 @@ const shellText = {
   }
 };
 
+const blogText = {
+  hint_summary: 'About this area',
+  hint_hero: 'This introduction explains the purpose and authorship of the writing space.',
+  hint_search: 'Use this search to find posts by title, summary, category, tag, or article text.',
+  hint_featured: 'Featured posts are the recommended starting points or currently important writing pieces.',
+  hint_topics: 'Tags group writing by recurring themes so visitors can browse without knowing exact article titles.',
+  hint_recent: 'Recent writing lists the newest published posts in one place.',
+  hint_archive: 'The archive keeps all published writing in chronological order.',
+  hint_archive_year: 'This year group lists posts published in the selected year.',
+  hint_tag: 'This page collects all posts that share the selected tag.',
+  hint_tag_results: 'These cards are the posts currently associated with this tag.',
+  hint_post: 'This article page contains the full post, metadata, tags, and any code or math examples.',
+  hint_toc: 'The contents panel links to major headings in the current article.',
+  hint_related: 'Related writing appears here when another post shares tags or research areas.',
+  hint_prev_next: 'Use these links to move between newer and older posts.'
+};
+
 function hintHtml(key) {
   return `<details class="blog-hint"><summary aria-label="${escapeHtml(blogText.hint_summary)}" title="${escapeHtml(blogText.hint_summary)}" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">${escapeHtml(blogText.hint_summary)}</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="${key}">${escapeHtml(blogText[key])}</p></details>`;
 }
 
-function cardHtml(ctx, post) {
+export function cardHtml(ctx, post, { visible = true, original = false, featured = false } = {}) {
   const tags = post.tags.slice(0, 4).map((tag) => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join('');
   const lang = String(post.lang || SITE.lang).slice(0, 2);
   return `
-    <a class="blog-card" href="${postHref(ctx, post)}" lang="${escapeHtml(post.lang || SITE.lang)}" data-post-card data-post-group="${escapeHtml(postTranslationKey(post))}" data-post-lang="${escapeHtml(lang)}"${lang !== 'en' ? ' hidden' : ''}>
+    <a class="blog-card" href="${postHref(ctx, post)}" lang="${escapeHtml(post.lang || SITE.lang)}" data-post-card data-post-group="${escapeHtml(postTranslationKey(post))}" data-post-lang="${escapeHtml(lang)}"${visible ? '' : ' hidden'}>
       <div class="blog-card-meta">
         <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
         <span>${escapeHtml(post.category)}</span>
         <span data-blog-minutes="${post.readingMinutes}">${post.readingMinutes} min</span>
+        ${featured ? '<span class="blog-featured-label" data-blog-i18n="section_featured_label">Featured</span>' : ''}
+        ${original ? originalLanguageHtml(lang) : ''}
       </div>
       <h3>${escapeHtml(post.title)}</h3>
       <p>${escapeHtml(post.description)}</p>
@@ -1715,8 +1723,19 @@ function variantsForPost(posts, post) {
   return posts.filter((candidate) => postTranslationKey(candidate) === key);
 }
 
-function variantCardsHtml(ctx, posts, post) {
-  return variantsForPost(posts, post).map((variant) => cardHtml(ctx, variant)).join('');
+export function originalLanguageHtml(lang, language = 'en') {
+  const isZh = String(lang).toLowerCase().startsWith('zh');
+  return `<span class="blog-original-label" lang="${language}" data-blog-i18n="${isZh ? 'original_zh' : 'original_en'}">${language === 'zh' ? (isZh ? '中文原文' : '英文原文') : (isZh ? 'Chinese original' : 'English original')}</span>`;
+}
+
+export function variantCardsHtml(ctx, posts, post) {
+  const variants = variantsForPost(posts, post);
+  const selected = selectLanguagePosts(variants, 'en')[0];
+  return variants.map((variant) => cardHtml(ctx, variant, {
+    visible: variant === selected,
+    original: variants.length === 1,
+    featured: variants.some((candidate) => candidate.featured)
+  })).join('');
 }
 
 function renderTags(ctx, tags, activeTags = new Set()) {
@@ -1920,6 +1939,7 @@ ${extraHead.trim()}
         <a href="${ctx.link('blog/index.html')}"${dynamicLanguageRoutes('blog/index.html', 'blog/index.html')}${current('writing')} title="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}>${escapeHtml(text.nav_blog)}</a>
         <a id="blogDraftStudioLink" href="${ctx.link('blog/drafts/index.html')}" title="${escapeHtml(text.draft_studio_title)}"${i18n('draft_studio')}${i18n('draft_studio_title', 'title')} hidden>${escapeHtml(text.draft_studio)}</a>
         <a href="${ctx.link(resumePath)}"${dynamicLanguageRoutes('resume/index.html', 'zh/resume/index.html')}${current('profile')} title="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}>${escapeHtml(text.nav_profile)}</a>
+        <a href="${ctx.link(homePath)}#research"${dynamicLanguageRoutes('index.html#research', 'zh/index.html#research')} title="${escapeHtml(text.nav_demos_title)}"${i18n('nav_demos')}${i18n('nav_demos_title', 'title')}>${escapeHtml(text.nav_demos)}</a>
         ${languageControl}
         <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
           <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
@@ -1947,7 +1967,7 @@ ${extraScripts.trim()}
 `;
 }
 
-function createMarkdownRenderer() {
+export function createMarkdownRenderer() {
   const md = new MarkdownIt({
     html: false,
     linkify: true,
@@ -2295,6 +2315,8 @@ async function computeAssetVersion(posts) {
     'script.js',
     'homepage-i18n.js',
     'site-data.js',
+    'profile-data.js',
+    'research-demo-content.js',
     'research-canvas.js',
     'repo-map.js',
     'blog-src/assets/blog.css',
@@ -2348,6 +2370,11 @@ async function stampHomepageAssets() {
   }
   stamped = replaceRequired(stamped, /<noscript>[\s\S]*?<\/noscript>/, renderHomepageNoscript('en'), 'English no-script navigation');
   stamped = translateHomepageMarkup(stamped, 'en');
+  const domainCount = researchConfig.interests.filter((domain) => domain.children.length).length;
+  stamped = stamped.replace(/(<strong id="focusAreaCount">)[^<]*(<\/strong>)/,
+    `$1${domainCount} / ${researchChildren.length}$2`);
+  stamped = stamped.replace(/(<strong id="heroPublicationCount">)[^<]*(<\/strong>)/,
+    `$1${staticPublications.length}$2`);
   stamped = localizeHomepageMetadata(stamped, 'en');
   stamped = localizeHomepageStructuredData(stamped, 'en');
   stamped = stamped.replace(/\r\n?/g, '\n');
@@ -2447,6 +2474,9 @@ function localizeHomepageStructuredData(source, language) {
         caption: seo.imageAlt
       };
       metadata.mainEntity.knowsAbout = seo.knowsAbout;
+      Object.assign(metadata.mainEntity, personEntity());
+      delete metadata.mainEntity.jobTitle;
+      delete metadata.mainEntity.affiliation;
     } else if (metadata['@type'] === 'WebSite') {
       metadata.alternateName = seo.websiteName;
       metadata.inLanguage = ['en', 'zh-CN'];
@@ -2492,17 +2522,15 @@ async function renderChineseHomepage() {
   await writePage('zh/index.html', localized);
 }
 
-async function renderIndex(posts) {
-  const filePath = path.join(outputDir, 'index.html');
-  const ctx = createPageContext(filePath);
-  const displayPosts = selectLanguagePosts(posts, 'en');
+export function blogIndexBody(posts, ctx) {
+  const displayPosts = selectLanguagePosts(posts, 'en').sort((a, b) => b.date.localeCompare(a.date));
   const discovery = deriveBlogDiscovery(displayPosts);
-  const { featured, recent, showSearch, showStats } = discovery;
-  const showFeatured = featured.length > 0;
+  const { showSearch, showStats } = discovery;
+  // Featured is an editorial badge; latest always remains chronological and unique.
+  const recent = displayPosts.slice(0, 6);
   const showArchive = discovery.archive.discoverable;
   const latestHref = displayPosts[0] ? postHref(ctx, displayPosts[0]) : '';
   const tagLinks = discovery.activeTagEntries
-    .slice(0, 14)
     .map(([tag, count]) => `<a class="blog-tag" href="${tagHref(ctx, tag)}">${escapeHtml(tag)} (${count})</a>`)
     .join('');
 
@@ -2527,35 +2555,21 @@ async function renderIndex(posts) {
     </section>`;
 
   const body = `
-    <section class="blog-hero${showStats ? '' : ' blog-hero-compact'}">
+    <section class="blog-hero blog-index-hero">
       <p class="blog-kicker" data-blog-i18n="hero_kicker">Research · Engineering · Reflection</p>
       <h1 data-blog-i18n="hero_title">Research Fieldnotes</h1>
-      <p data-blog-i18n="hero_desc">Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site.</p>
-      <p class="blog-hero-author"><span data-blog-i18n="hero_byline">By</span> <a href="${ctx.link('resume/index.html')}" rel="author" data-blog-nav-en="${ctx.link('resume/index.html')}" data-blog-nav-zh="${ctx.link('zh/resume/index.html')}">Chenxu Wang</a><span aria-hidden="true">/</span><span data-blog-i18n="hero_role">Machine Learning Researcher</span></p>
+      <p data-blog-i18n="hero_desc">Research notes, experiments, and engineering practice.</p>
+      <p class="blog-hero-author"><span data-blog-i18n="hero_byline">By</span> <a href="${ctx.link('resume/index.html')}" rel="author" data-blog-nav-en="${ctx.link('resume/index.html')}" data-blog-nav-zh="${ctx.link('zh/resume/index.html')}">Chenxu Wang</a></p>
       ${hintHtml('hint_hero')}
 ${displayPosts.length > 1 ? `      <div class="blog-hero-actions">
-        <a class="btn btn-primary" href="${latestHref}" data-blog-i18n="hero_read_latest">Read latest</a>${showArchive ? `
+        <a class="btn btn-primary" href="${latestHref}" data-blog-nav-en="${latestHref}" data-blog-nav-zh="${postHref(ctx, selectLanguagePosts(variantsForPost(posts, displayPosts[0]), 'zh')[0])}" data-blog-i18n="hero_read_latest">Read latest</a>${showArchive ? `
         <a class="btn btn-outline" href="${ctx.link('blog/archive/index.html')}" data-blog-i18n="hero_browse_archive">Browse archive</a>` : ''}
       </div>` : ''}${showStats ? `
-      <div class="blog-stat-grid">
-        <article class="blog-stat"><span data-blog-i18n="stat_published">Published</span><strong>${displayPosts.length}</strong></article>
-        <article class="blog-stat"><span data-blog-i18n="stat_topics">Topics</span><strong>${topicCounts(displayPosts, 'tags').length}</strong></article>
-        ${showSearch
-          ? '<article class="blog-stat"><span data-blog-i18n="stat_search">Search</span><strong data-blog-i18n="stat_ready">Ready</strong></article>'
-          : '<article class="blog-stat"><span data-blog-i18n="stat_language">Languages</span><strong data-blog-i18n="stat_bilingual">EN / 中文</strong></article>'}
+      <div class="blog-index-stats">
+        <span><strong>${displayPosts.length}</strong> <span data-blog-i18n="stat_published">Published</span></span>
+        <span><strong>${discovery.activeTagEntries.length}</strong> <span data-blog-i18n="stat_topics">Browseable tags</span></span>
       </div>` : ''}
     </section>
-
-${showFeatured ? `<section class="blog-section">
-      <div class="blog-section-head">
-        <div>
-          <p class="blog-section-label" data-blog-i18n="section_featured_label">Featured</p>
-          <h2 data-blog-i18n="section_featured_title">Start here</h2>
-        </div>
-        ${hintHtml('hint_featured')}
-      </div>
-      <div class="blog-grid">${featured.map((post) => variantCardsHtml(ctx, posts, post)).join('')}</div>
-    </section>` : ''}
 
 ${recentSection}
 
@@ -2582,7 +2596,12 @@ ${tagLinks ? `    <section class="blog-section">
       <div class="blog-topic-grid">${tagLinks}</div>
     </section>` : ''}
   `;
+  return body;
+}
 
+async function renderIndex(posts) {
+  const filePath = path.join(outputDir, 'index.html');
+  const body = blogIndexBody(posts, createPageContext(filePath));
   await writePage('blog/index.html', renderShell({
     filePath,
     title: SITE.title,
@@ -2723,6 +2742,8 @@ async function renderDraftPreviews(posts, renderer) {
     'script.js',
     'homepage-i18n.js',
     'site-data.js',
+    'profile-data.js',
+    'research-demo-content.js',
     'research-canvas.js',
     'repo-map.js',
     'research-config.json',
@@ -2950,9 +2971,7 @@ async function renderDraftStudio(unpublishedPosts, today) {
   }));
 }
 
-async function renderArchive(posts) {
-  const filePath = path.join(outputDir, 'archive', 'index.html');
-  const ctx = createPageContext(filePath);
+export function blogArchiveBody(posts, ctx) {
   const displayPosts = selectLanguagePosts(posts, 'en');
   const years = new Map();
   displayPosts.forEach((post) => {
@@ -2980,13 +2999,20 @@ async function renderArchive(posts) {
         <ul class="blog-archive-list">
           ${items.map((post) => variantsForPost(posts, post).map((variant) => {
             const lang = String(variant.lang || SITE.lang).slice(0, 2);
-            return `<li lang="${escapeHtml(variant.lang || SITE.lang)}" data-post-row data-post-group="${escapeHtml(postTranslationKey(variant))}" data-post-lang="${escapeHtml(lang)}"${lang !== 'en' ? ' hidden' : ''}><a href="${postHref(ctx, variant)}">${escapeHtml(variant.title)}</a> <span class="muted">- <span data-blog-date="${escapeHtml(variant.date)}">${escapeHtml(formatDate(variant.date))}</span> - ${escapeHtml(variant.category)}</span></li>`;
+            return `<li lang="${escapeHtml(variant.lang || SITE.lang)}" data-post-row data-post-group="${escapeHtml(postTranslationKey(variant))}" data-post-lang="${escapeHtml(lang)}"${variant === post ? '' : ' hidden'}><a href="${postHref(ctx, variant)}">${escapeHtml(variant.title)}</a> <span class="muted">- <span data-blog-date="${escapeHtml(variant.date)}">${escapeHtml(formatDate(variant.date))}</span> - ${escapeHtml(variant.category)}</span>${variantsForPost(posts, post).length === 1 ? originalLanguageHtml(lang) : ''}</li>`;
           }).join('')).join('')}
         </ul>
       </section>
     `).join('')}
   `;
 
+  return body;
+}
+
+async function renderArchive(posts) {
+  const filePath = path.join(outputDir, 'archive', 'index.html');
+  const displayPosts = selectLanguagePosts(posts, 'en');
+  const body = blogArchiveBody(posts, createPageContext(filePath));
   await writePage('blog/archive/index.html', renderShell({
     filePath,
     title: 'Writing Archive',
@@ -3047,11 +3073,7 @@ async function renderResume(renderer, language) {
   const source = await fs.readFile(path.join(rootDir, sourceFile), 'utf8');
   const text = isZh ? {
     kicker: '学术履历',
-    role: '机器学习研究者',
-    location: '中国北京',
-    summary: '研究不完整观测与有限标注下的可靠视觉智能，并落实为可复现的研究软件。',
     statusLabel: '当前状态',
-    status: '创业实践中 · 深圳后浪澎湃',
     commandLabel: '联系与导出',
     print: '打印 / 保存 PDF',
     contact: '邮件联系',
@@ -3070,11 +3092,7 @@ async function renderResume(renderer, language) {
     doiLabel: (title) => `在新标签页打开论文 ${title} 的 DOI`
   } : {
     kicker: 'Academic profile',
-    role: 'Machine Learning Researcher',
-    location: 'Beijing, China',
-    summary: 'Reliable visual intelligence under incomplete observations and limited labels, built as reproducible research software.',
     statusLabel: 'Current status',
-    status: 'Entrepreneurial work at Shenzhen Houlang Pengpai',
     commandLabel: 'Contact and export',
     print: 'Print / Save PDF',
     contact: 'Email me',
@@ -3092,12 +3110,7 @@ async function renderResume(renderer, language) {
     orcidLabel: `Open ORCID record ${ORCID_ID} in a new tab`,
     doiLabel: (title) => `Open the DOI for ${title} in a new tab`
   };
-  const publishedCount = staticPublications.filter((publication) => publicationStatusKey(publication) === 'published').length;
-  const inPressCount = staticPublications.filter((publication) => publicationStatusKey(publication) === 'in_press').length;
-  const publicationFact = [
-    publishedCount ? `${publishedCount} ${text.publishedUnit}` : '',
-    inPressCount ? `${inPressCount} ${text.inPressUnit}` : ''
-  ].filter(Boolean).join(' · ') || `${staticPublications.length} ${text.publicationUnit}`;
+  const publicationFact = publicationCountSummary(staticPublications, language);
   const publicationMarker = 'RESUME_PUBLICATIONS_PLACEHOLDER';
   const publicationList = `<ol class="resume-publications">${staticPublications.map((publication) => {
     const status = publicationStatusLabel(publication, language);
@@ -3123,15 +3136,12 @@ async function renderResume(renderer, language) {
     </li>`;
   }).join('')}</ol>`;
   if (!source.includes('{{PUBLICATIONS}}')) throw new Error(`${sourceFile} must contain {{PUBLICATIONS}}`);
-  const hydratedSource = source.replace('{{PUBLICATIONS}}', publicationMarker);
+  const hydratedSource = hydrateResumeSource(source, language).replace('{{PUBLICATIONS}}', publicationMarker);
   const withoutDocumentTitle = hydratedSource.replace(/^#\s+[^\r\n]+\r?\n+/, '');
   const markerMarkup = `<p>${publicationMarker}</p>`;
   let publicationMarkers = 0;
   const sections = renderer.renderSections(withoutDocumentTitle);
   const profileSectionKinds = ['education', 'experience', 'publications', 'interests', 'projects', 'skills'];
-  const profileSectionNotes = isZh
-    ? ['教育经历与学术节点', '创业与实习经历', '经同行评议的研究成果', '当前持续推进的研究方向', '代表性开源与研究工程', '研究方法与工程工具']
-    : ['Education and academic milestones', 'Entrepreneurial and internship experience', 'Peer-reviewed research output', 'Current research directions', 'Selected open-source and research work', 'Research methods and engineering tools'];
   const profileSectionNavLabels = isZh
     ? ['教育背景', '经历', '论文', '研究兴趣', '代表项目', '技术能力']
     : ['Education', 'Experience', 'Papers', 'Research', 'Projects', 'Skills'];
@@ -3147,7 +3157,6 @@ async function renderResume(renderer, language) {
       <header class="profile-section-head">
         <div>
           <h2 id="${escapeHtml(section.id)}-title">${escapeHtml(section.title)}</h2>
-          <p>${escapeHtml(profileSectionNotes[index] || '')}</p>
         </div>
       </header>
       <div class="profile-section-body">${content}</div>
@@ -3165,12 +3174,12 @@ async function renderResume(renderer, language) {
           <div class="profile-eyebrow">
             <p class="blog-kicker">${text.kicker}</p>
           </div>
-          <h1>Chenxu Wang</h1>
-          <p class="profile-identity"><span class="profile-handle">@wcx12</span><strong>${text.role}</strong><span>${text.location}</span></p>
-          <p class="profile-summary">${text.summary}</p>
+          <h1>${escapeHtml(profileData.name)}</h1>
+          <p class="profile-identity"><span class="profile-handle">@${escapeHtml(profileData.username)}</span><strong>${escapeHtml(localized(profileData.experience.role, language))}</strong><span>${escapeHtml(localized(profileData.location, language))}</span></p>
+          <p class="profile-summary">${escapeHtml(localized(profileData.about, language))}</p>
         </div>
         <div class="profile-command">
-          <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${text.status}</strong></p>
+          <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${escapeHtml(localized(profileData.status, language))}</strong></p>
           <p class="profile-command-label">${text.commandLabel}</p>
           <div class="profile-actions">
             <a class="btn btn-primary" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">${text.contact}</a>
@@ -3182,8 +3191,8 @@ async function renderResume(renderer, language) {
           </nav>
         </div>
         <dl class="profile-facts">
-      <div><dt>${text.affiliation}</dt><dd>${isZh ? '深圳后浪澎湃' : 'Shenzhen Houlang Pengpai'}</dd></div>
-      <div><dt>${text.graduation}</dt><dd>${isZh ? '2022.09-2026.06' : 'Sep 2022-Jun 2026'}</dd></div>
+      <div><dt>${text.affiliation}</dt><dd>${escapeHtml(localized(profileData.experience.shortName, language))}<br><span>${escapeHtml(localized(profileData.experience.period, language))}</span></dd></div>
+      <div><dt>${text.graduation}</dt><dd>${escapeHtml(localized(profileData.education.period, language))}</dd></div>
           <div><dt>${text.publications}</dt><dd>${publicationFact}</dd></div>
         </dl>
       </header>
@@ -3226,7 +3235,34 @@ ${sectionHtml}
 }
 
 function localized(value, language) {
-  return value?.[language] || value?.en || '';
+  const text = value?.[language] || value?.en;
+  return typeof text === 'string' ? text : '';
+}
+
+export function hydrateResumeSource(source, language) {
+  const fields = {
+    EDUCATION_INSTITUTION: profileData.education.institution,
+    EDUCATION_MAJOR: profileData.education.major,
+    EDUCATION_PERIOD: profileData.education.period,
+    EXPERIENCE_ORGANIZATION: profileData.experience.organization,
+    EXPERIENCE_ROLE: profileData.experience.role,
+    EXPERIENCE_PERIOD: profileData.experience.period,
+    CURRENT_WORK: profileData.currentWork
+  };
+  return source.replace(/\{\{([A-Z_]+)\}\}/g, (placeholder, key) => {
+    if (!Object.hasOwn(fields, key)) return placeholder;
+    return localized(fields[key], language).replace(/[\\`*_{}\[\]<>#]/g, '\\$&');
+  });
+}
+
+export function publicationCountSummary(publications, language) {
+  const counts = new Map();
+  for (const publication of publications) {
+    const label = publicationStatusLabel(publication, language);
+    counts.set(label, (counts.get(label) || 0) + 1);
+  }
+  return [...counts].map(([label, count]) => `${count} ${language === 'zh' ? '篇' : ''}${label}`).join(' · ')
+    || (language === 'zh' ? '0 篇' : '0 papers');
 }
 
 function authorsFor(publication) {
@@ -3287,7 +3323,7 @@ function bibtexFor(publication) {
     ['issn', publication.issn],
     ['doi', publication.doi],
     ['url', publication.link],
-    ['note', statusKey === 'in_press' ? 'In press' : '']
+    ['note', statusKey === 'in_press' ? publicationStatusLabel(publication, 'en') : '']
   ].filter(([, value]) => value);
   const body = fields.map(([name, value, bare]) => `  ${name} = ${bare ? value : `{${value}}`}`).join(',\n');
   return `@article{${publication.citation_key},\n${body}\n}\n`;
@@ -3308,7 +3344,7 @@ function risFor(publication) {
     publication.article_number ? `SP  - ${publication.article_number}` : '',
     publication.volume ? `VL  - ${publication.volume}` : '',
     publication.issn ? `SN  - ${publication.issn}` : '',
-    statusKey === 'in_press' ? 'N1  - In press' : '',
+    statusKey === 'in_press' ? `N1  - ${publicationStatusLabel(publication, 'en')}` : '',
     'ER  - '
   ].filter(Boolean);
   return `${lines.join('\n')}\n`;
@@ -3374,7 +3410,7 @@ async function restoreGeneratedSite(backup) {
   await fs.rm(backup.backupRoot, { recursive: true, force: true });
 }
 
-function publicationSchema(publication, language = 'en', pageUrl = '') {
+export function publicationSchema(publication, language = 'en', pageUrl = '') {
   const topic = publicationTopic(publication);
   const articleUrl = pageUrl || publication.link;
   const publisher = publication.publisher
@@ -3406,6 +3442,7 @@ function publicationSchema(publication, language = 'en', pageUrl = '') {
     isPartOf: publication.volume ? {
       '@type': 'PublicationVolume',
       volumeNumber: publication.volume,
+      ...(publication.issue_date ? { datePublished: publication.issue_date } : {}),
       isPartOf: periodical
     } : periodical,
     ...(publisher ? { publisher } : {}),
@@ -3444,7 +3481,7 @@ function repositorySchemaType(repo) {
   return 'SoftwareSourceCode';
 }
 
-function evidenceForTopic(topicId, posts) {
+export function evidenceForTopic(topicId, posts, language = 'en') {
   const repos = localRepos.filter((repo) => new Set([
     ...(repo.interests || []),
     ...(researchConfig.repoAssignments[repo.name] || [])
@@ -3453,7 +3490,7 @@ function evidenceForTopic(topicId, posts) {
     ...(publication.interests || []),
     ...(researchConfig.paperAssignments[publication.title] || [])
   ]).has(topicId));
-  const writing = posts.filter((post) => post.research.includes(topicId));
+  const writing = selectLanguagePosts(posts.filter((post) => post.research.includes(topicId)), language);
   return [
     ...repos.map((repo) => ({ type: 'SoftwareSourceCode', key: `repo:${repo.name}`, value: repo })),
     ...publications.map((publication) => ({ type: 'ScholarlyArticle', key: `paper:${publication.doi}`, value: publication })),
@@ -3509,48 +3546,84 @@ function evidenceSchema(evidence, language = 'en') {
   };
 }
 
-function evidenceHtml(ctx, evidence, language) {
+export function publicationResearchNotesHtml(publication, language, { compact = false } = {}) {
+  const labels = language === 'zh'
+    ? { method: '方法', result: '核心结果', scope: '适用范围与局限' }
+    : { method: 'Method', result: 'Key result', scope: 'Scope and limitations' };
+  const entries = Object.entries(labels).filter(([key]) => !compact || key !== 'method')
+    .map(([key, label]) => {
+      const value = localized(publication.research_notes?.[key], language);
+      return value ? `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>` : '';
+    }).join('');
+  return entries ? `<dl class="publication-research-notes${compact ? ' is-compact' : ''}">${entries}</dl>` : '';
+}
+
+export function publicationDatesHtml(publication, language) {
+  const isZh = language === 'zh';
+  const dates = [
+    [publication.online_date, isZh ? '在线发表' : 'Online publication', localized(publication.onlineLabel, language)],
+    [publication.issue_date, isZh ? '卷期日期' : 'Issue date', localized(publication.issueLabel, language)]
+  ];
+  return dates.filter(([date]) => /^\d{4}-\d{2}(?:-\d{2})?$/.test(String(date || '')))
+    .map(([date, label, value]) => `<div><dt>${label}</dt><dd><time datetime="${escapeHtml(date)}">${escapeHtml(value || date)}</time></dd></div>`).join('');
+}
+
+function implementationNote(publication, language) {
+  if (!publication.code_url) return '';
+  try {
+    const url = new URL(publication.code_url);
+    const owner = url.hostname === 'github.com' ? url.pathname.split('/').filter(Boolean)[0] : url.hostname;
+    return language === 'zh' ? `官方实现由 ${owner} 托管。` : `Official implementation hosted by ${owner}.`;
+  } catch {
+    return localized(publication.code_note, language);
+  }
+}
+
+export function evidenceHtml(ctx, evidence, language) {
   const isZh = language === 'zh';
   if (evidence.type === 'SoftwareSourceCode') {
     const repo = evidence.value;
     const stage = repositoryStageLabel(repo, language);
     const publicEvidence = localized(repo.evidence, language);
     const license = repo.license_spdx || (isZh ? '未声明仓库许可证' : 'No repository license declared');
-    return `<article class="research-evidence" data-evidence-type="SoftwareSourceCode" data-evidence-key="${escapeHtml(evidence.key)}">
+    return `<article id="project-${escapeHtml(repo.name)}" class="research-evidence" data-evidence-type="SoftwareSourceCode" data-evidence-key="${escapeHtml(evidence.key)}">
       <h3 class="research-evidence-title"><a href="${escapeHtml(repo.html_url)}" rel="noreferrer">${escapeHtml(repo.name)}</a></h3>
       <p${language === 'zh' && repo.descriptionZh ? '' : ' lang="en"'}>${escapeHtml(language === 'zh' ? (repo.descriptionZh || repo.description) : repo.description)}</p>
+      ${publicEvidence ? `<p class="project-artifact"><strong>${isZh ? '产物' : 'Artifacts'}</strong> ${escapeHtml(publicEvidence)}</p>` : ''}
+      <nav class="project-entry-links" aria-label="${isZh ? '项目入口' : 'Project links'}">
+        ${repo.demo_url ? `<a href="${escapeHtml(repo.demo_url)}" rel="noreferrer">${isZh ? '打开演示' : 'Open demo'}</a>` : ''}
+        <a href="${escapeHtml(repo.html_url)}#readme" rel="noreferrer">${isZh ? 'README / 运行说明' : 'README / setup'}</a>
+        ${repositoryEvidenceRefs(repo).map((ref) => `<a href="${escapeHtml(ref.url)}" rel="noreferrer">${ref.kind === 'research_artifact' ? (isZh ? '研究产物' : 'Research artifact') : (isZh ? '实验记录' : 'Experiment record')}</a>`).join('')}
+      </nav>
+      <details class="project-provenance"><summary>${isZh ? '来源与许可' : 'Source and license'}${stage ? ` · ${escapeHtml(stage)}` : ''}</summary>
       <dl class="research-meta">
 ${repo.language ? `        <div><dt>${isZh ? '语言' : 'Language'}</dt><dd>${escapeHtml(repo.language)}</dd></div>` : ''}
-${stage ? `        <div><dt>${isZh ? '阶段' : 'Stage'}</dt><dd>${escapeHtml(stage)}</dd></div>` : ''}
-${publicEvidence ? `        <div><dt>${isZh ? '公开证据' : 'Public evidence'}</dt><dd>${escapeHtml(publicEvidence)}</dd></div>` : ''}
         <div><dt>${isZh ? '许可证' : 'License'}</dt><dd>${escapeHtml(license)}</dd></div>
 ${repo.fork && repo.source?.html_url ? `        <div><dt>${isZh ? '上游仓库' : 'Upstream'}</dt><dd><a href="${escapeHtml(repo.source.html_url)}" rel="noreferrer">${escapeHtml(repo.source.full_name || repo.source.html_url)}</a></dd></div>` : ''}
         <div><dt>${isZh ? '代码' : 'Code'}</dt><dd><a href="${escapeHtml(repo.html_url)}" rel="noreferrer">GitHub</a></dd></div>
-${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href="${escapeHtml(repo.demo_url)}" rel="noreferrer">${isZh ? '打开在线演示' : 'Open live demo'}</a></dd></div>` : ''}
       </dl>
+      </details>
     </article>`;
   }
   if (evidence.type === 'ScholarlyArticle') {
     const publication = evidence.value;
     const topic = publicationTopic(publication);
-    const codeNote = localized(publication.code_note, language);
-    const publishedLabel = localized(publication.publishedLabel, language);
+    const codeNote = implementationNote(publication, language);
     const status = publicationStatusLabel(publication, language);
-    const statusLine = publicationStatusKey(publication) === 'published' && publishedLabel
-      ? publishedLabel
-      : [status, publishedLabel].filter(Boolean).join(' · ');
     const bibtexPath = ctx.link(citationFilePath(publication, 'bib'));
     const risPath = ctx.link(citationFilePath(publication, 'ris'));
     return `<article class="research-evidence" data-evidence-type="ScholarlyArticle" data-evidence-key="${escapeHtml(evidence.key)}">
       <h3 class="research-evidence-title" lang="en"><a href="${ctx.link(`${publicationRoute(language, publication)}index.html`)}">${escapeHtml(publication.title)}</a></h3>
       <p class="research-authors">${escapeHtml(authorsFor(publication).join(', '))}</p>
+      <p class="publication-summary">${escapeHtml(isZh ? (publication.summaryZh || publication.summary) : publication.summary)}</p>
+      ${publicationResearchNotesHtml(publication, language, { compact: true })}
       <dl class="research-meta">
         <div><dt>${isZh ? '书目信息' : 'Citation'}</dt><dd>${escapeHtml(publicationCitationLine(publication))}</dd></div>
-        <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(statusLine)}${publication.open_access ? ` &middot; ${isZh ? '开放获取' : 'Open access'}` : ''}</dd></div>
+        <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(status)}${publication.open_access ? ` &middot; ${isZh ? '开放获取' : 'Open access'}` : ''}</dd></div>
+        ${publicationDatesHtml(publication, language)}
         <div><dt>DOI</dt><dd><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.doi)}</a></dd></div>
         <div><dt>${isZh ? '引用导出' : 'Export citation'}</dt><dd><a href="${escapeHtml(bibtexPath)}" download>BibTeX</a> <span aria-hidden="true">&middot;</span> <a href="${escapeHtml(risPath)}" download>RIS</a></dd></div>
-        ${publication.code_url ? `<div><dt>${isZh ? '官方实现' : 'Official implementation'}</dt><dd><a href="${escapeHtml(publication.code_url)}" rel="noreferrer">GitHub</a></dd></div>` : ''}
-        ${codeNote ? `<div><dt>${isZh ? '托管说明' : 'Hosting note'}</dt><dd>${escapeHtml(codeNote)}</dd></div>` : ''}
+        ${publication.code_url ? `<div><dt>${isZh ? '官方实现' : 'Official implementation'}</dt><dd><a href="${escapeHtml(publication.code_url)}" rel="noreferrer">GitHub</a> <small>${escapeHtml(codeNote)}</small></dd></div>` : ''}
         ${topic ? `<div><dt>${isZh ? '研究方向' : 'Research topic'}</dt><dd><a class="publication-topic-link" href="${ctx.link(`${researchRoute(language, `${topic.id}/`)}index.html`)}">${escapeHtml(localized(topic.title, language))}</a></dd></div>` : ''}
       </dl>
     </article>`;
@@ -3558,6 +3631,7 @@ ${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href=
   const post = evidence.value;
   return `<article class="research-evidence" data-evidence-type="BlogPosting" data-evidence-key="${escapeHtml(evidence.key)}" lang="${escapeHtml(post.lang)}">
     <h3 class="research-evidence-title"><a href="${postHref(ctx, post)}">${escapeHtml(post.title)}</a></h3>
+    ${String(post.lang).slice(0, 2) !== language ? originalLanguageHtml(post.lang, language) : ''}
     <p>${escapeHtml(post.description)}</p>
     <dl class="research-meta">
       <div><dt>${isZh ? '发布于' : 'Published'}</dt><dd>${escapeHtml(post.date)}</dd></div>
@@ -3566,18 +3640,24 @@ ${repo.demo_url ? `        <div><dt>${isZh ? '演示' : 'Demo'}</dt><dd><a href=
   </article>`;
 }
 
-function evidenceSections(ctx, evidence, language) {
+export function isTeachingPractice(item) {
+  return item.type === 'SoftwareSourceCode' && ['shuxuepeiyou', 'hlpp-crossword', 'tetrahedron-visualizer'].includes(item.value?.name);
+}
+
+export function evidenceSections(ctx, evidence, language) {
   const isZh = language === 'zh';
   const sections = [
-    ['SoftwareSourceCode', isZh ? '项目' : 'Projects'],
+    ['SoftwareSourceCode', isZh ? '研究相关项目' : 'Research-related projects'],
+    ['TeachingPractice', isZh ? '相关教学实践' : 'Related teaching practice'],
     ['ScholarlyArticle', isZh ? '论文' : 'Papers'],
-    ['BlogPosting', isZh ? '写作' : 'Writing']
+    ['BlogPosting', isZh ? '阅读与研究笔记' : 'Reading and research notes']
   ];
   return sections.map(([type, title]) => {
-    const items = evidence.filter((item) => item.type === type);
+    const items = evidence.filter((item) => type === 'TeachingPractice' ? isTeachingPractice(item) : item.type === type && !isTeachingPractice(item));
     if (!items.length) return '';
     return `<section class="research-section" aria-labelledby="evidence-${type}">
       <div class="research-section-head"><h2 id="evidence-${type}">${title}</h2><span>${items.length}</span></div>
+      ${type === 'TeachingPractice' ? `<p class="research-group-note">${isZh ? '教学工具与资源，不代表 AI 教育研究成果或已验证的学习效果。' : 'Teaching tools and resources, not AI education research results or validated learning outcomes.'}</p>` : ''}
       <div class="research-evidence-list">${items.map((item) => evidenceHtml(ctx, item, language)).join('')}</div>
     </section>`;
   }).join('');
@@ -3635,6 +3715,12 @@ function repositoryResearchTopics(repo) {
   return researchChildren.filter((child) => ids.has(child.id));
 }
 
+export function selectedProjectEvidence(evidence) {
+  return ['FusionTrack', 'major-intel', 'shuxuepeiyou']
+    .map((name) => evidence.find((item) => item.value.name === name && !item.value.fork && !item.value.archived))
+    .filter(Boolean);
+}
+
 async function renderProjects(language) {
   const isZh = language === 'zh';
   const relativeRoute = projectsRoute(language);
@@ -3650,30 +3736,33 @@ async function renderProjects(language) {
     key: `repo:${repo.name}`,
     value: repo
   }));
-  const researchEvidence = evidence.filter((item) => repositoryResearchTopics(item.value).length);
-  const otherEvidence = evidence.filter((item) => !repositoryResearchTopics(item.value).length);
+  const selectedEvidence = selectedProjectEvidence(evidence);
+  const selectedKeys = new Set(selectedEvidence.map((item) => item.key));
+  const researchEvidence = evidence.filter((item) => !selectedKeys.has(item.key) && repositoryResearchTopics(item.value).length);
+  const otherEvidence = evidence.filter((item) => !selectedKeys.has(item.key) && !repositoryResearchTopics(item.value).length);
   const projectGroup = (id, title, note, items) => items.length ? `<section class="research-section project-evidence-group" data-project-tier="${escapeHtml(id)}" aria-labelledby="${escapeHtml(id)}-project-list-title">
       <div class="research-section-head"><h2 id="${escapeHtml(id)}-project-list-title">${escapeHtml(title)}</h2><span>${items.length}</span></div>
-      <p class="research-group-note">${escapeHtml(note)}</p>
+      ${note ? `<p class="research-group-note">${escapeHtml(note)}</p>` : ''}
       <div class="research-evidence-list">${items.map((item) => evidenceHtml(ctx, item, language)).join('')}</div>
     </section>` : '';
   const body = `
     <header class="research-header">
       <p class="blog-kicker">${isZh ? '公开软件与资料索引' : 'Public software and materials index'}</p>
       <h1>${isZh ? '项目' : 'Projects'}</h1>
-      <p>${isZh ? '优先展示与研究方向直接关联的仓库，其它公开工作仍按成熟阶段完整保留。每项均标注阶段、公开证据与许可证状态。' : 'Research-linked repositories appear first; every other public work remains available and is ordered by maturity. Each record states its stage, public evidence, and license status.'}</p>
+      <p>${isZh ? '研究软件、检索原型与教学资源。' : 'Research software, retrieval prototypes, and teaching resources.'}</p>
       <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '浏览研究方向' : 'Browse research topics'}</a>
     </header>
+    ${projectGroup('selected', isZh ? '代表项目' : 'Selected projects', '', selectedEvidence)}
     ${projectGroup(
       'research-linked',
-      isZh ? '研究相关仓库' : 'Research-linked repositories',
-      isZh ? '已关联具体研究方向，并按研究相关性与成熟阶段排序。' : 'Mapped to a specific research topic and ordered by research relevance and maturity.',
+      isZh ? '其它研究与教学项目' : 'More research and teaching projects',
+      '',
       researchEvidence
     )}
     ${projectGroup(
       'other-public-work',
       isZh ? '其它公开工作' : 'Other public work',
-      isZh ? '包含原型、教学资料、交互演示、个人网站、课程作业、规划项目与上游分叉。' : 'Prototypes, teaching materials, interactive demos, the profile site, coursework, planning work, and upstream forks.',
+      '',
       otherEvidence
     )}`;
   const canonicalUrl = absoluteUrl(relativeRoute);
@@ -3719,7 +3808,7 @@ async function renderResearchIndex(posts, language) {
   const filePath = path.join(rootDir, relativeRoute, 'index.html');
   const ctx = createPageContext(filePath);
   const topics = researchChildren.map((child, configIndex) => {
-    const evidence = evidenceForTopic(child.id, posts);
+    const evidence = evidenceForTopic(child.id, posts, language);
     const classification = classifyResearchTopic(child, evidence, { profileAuthor: SITE.author });
     return { child, evidence, classification, tier: classification.tier, configIndex };
   }).sort(compareResearchTopics);
@@ -3740,7 +3829,7 @@ async function renderResearchIndex(posts, language) {
     <header class="research-header">
       <p class="blog-kicker">${isZh ? '可核验的研究索引' : 'Verifiable research index'}</p>
       <h1>${isZh ? '研究方向' : 'Research'}</h1>
-      <p>${isZh ? '按主题浏览公开项目、论文与研究写作。已有证据与探索方向分开展示；存在公开成果时均链接到可访问来源。' : 'Browse public projects, papers, and research writing by topic. Evidence-backed work is separated from exploratory directions, and every public result links to an accessible source.'}</p>
+      <p>${isZh ? '论文与研究产物；探索中的原型、教学实践与阅读笔记。' : 'Papers and research artifacts; exploratory prototypes, teaching practice, and reading notes.'}</p>
       <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '查看全部论文' : 'View all publications'}</a>
     </header>
     ${topicGroup(
@@ -3799,27 +3888,35 @@ async function renderResearchIndex(posts, language) {
   }));
 }
 
+export function researchTopicBody(posts, child, language, ctx) {
+  const isZh = language === 'zh';
+  const evidence = evidenceForTopic(child.id, posts, language);
+  const classification = classifyResearchTopic(child, evidence, { profileAuthor: SITE.author });
+  const reading = child.animation === 'none';
+  return `
+    <header class="research-header" data-topic-tier="${escapeHtml(classification.tier)}">
+      <p class="blog-kicker">${classification.tier === 'exploring' ? (isZh ? '探索中' : 'Exploring') : escapeHtml(localized(child.label, language))}</p>
+      <h1>${escapeHtml(localized(child.title, language))}</h1>
+      <p>${escapeHtml(localized(child.description, language))}</p>
+      <div class="blog-hero-actions">
+        <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '全部研究方向' : 'All research topics'}</a>
+        ${reading && evidence.some((item) => item.type === 'BlogPosting') ? `<a class="btn btn-primary" href="#evidence-BlogPosting">${isZh ? '阅读笔记' : 'Read notes'}</a>` : ''}
+        ${child.animation && !reading ? `<a class="btn btn-outline research-demo-link" href="${ctx.link(`${isZh ? 'zh/' : ''}index.html`)}#research/${escapeHtml(child.id)}/demo">${isZh ? '打开概念演示' : 'Open concept demo'}</a>` : ''}
+      </div>
+    </header>
+    ${evidence.length ? evidenceSections(ctx, evidence, language) : emptyEvidenceSection(language)}`;
+}
+
 async function renderResearchTopic(posts, child, language) {
   const isZh = language === 'zh';
   const relativeRoute = researchRoute(language, `${child.id}/`);
   const alternateRoute = researchRoute(isZh ? 'en' : 'zh', `${child.id}/`);
   const filePath = path.join(rootDir, relativeRoute, 'index.html');
   const ctx = createPageContext(filePath);
-  const evidence = evidenceForTopic(child.id, posts);
+  const evidence = evidenceForTopic(child.id, posts, language);
   const title = localized(child.title, language);
   const description = localized(child.description, language);
-  const body = `
-    <header class="research-header">
-      <p class="blog-kicker">${escapeHtml(localized(child.label, language))}</p>
-      <h1>${escapeHtml(title)}</h1>
-      <p>${escapeHtml(description)}</p>
-      <div class="blog-hero-actions">
-        <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '全部研究方向' : 'All research topics'}</a>
-        <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '论文列表' : 'Publications'}</a>
-        <a class="btn btn-outline research-demo-link" href="${ctx.link(`${isZh ? 'zh/' : ''}index.html`)}#research/${escapeHtml(child.id)}/demo">${isZh ? '打开概念演示' : 'Open concept demo'}</a>
-      </div>
-    </header>
-    ${evidence.length ? evidenceSections(ctx, evidence, language) : emptyEvidenceSection(language)}`;
+  const body = researchTopicBody(posts, child, language, ctx);
   const canonicalUrl = absoluteUrl(relativeRoute);
   const metadata = JSON.stringify({
     '@context': 'https://schema.org',
@@ -3863,13 +3960,13 @@ async function renderResearchTopic(posts, child, language) {
   }));
 }
 
-function publicationHighwireMeta(publication, canonicalUrl) {
+export function publicationHighwireMeta(publication, canonicalUrl) {
   const tags = [
     ['citation_title', publication.title],
     ...authorsFor(publication).map((author) => ['citation_author', author]),
     ['citation_journal_title', publication.venue],
     ['citation_publication_date', publication.citation_date],
-    ['citation_online_date', publication.published_date?.replaceAll('-', '/')],
+    ['citation_online_date', publication.online_date?.replaceAll('-', '/')],
     ['citation_volume', publication.volume],
     ['citation_firstpage', publication.article_number],
     ['citation_doi', publication.doi],
@@ -3890,7 +3987,6 @@ async function renderPublicationDetail(publication, language) {
   const canonicalUrl = absoluteUrl(relativeRoute);
   const topic = publicationTopic(publication);
   const status = publicationStatusLabel(publication, language);
-  const publishedLabel = localized(publication.publishedLabel, language);
   const summary = isZh ? publication.summaryZh : publication.summary;
   const bibtexPath = ctx.link(citationFilePath(publication, 'bib'));
   const risPath = ctx.link(citationFilePath(publication, 'ris'));
@@ -3909,13 +4005,15 @@ async function renderPublicationDetail(publication, language) {
           <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '全部论文' : 'All publications'}</a>
         </div>
       </header>
+      ${publicationResearchNotesHtml(publication, language) ? `<section class="research-section" aria-labelledby="publication-findings-title"><div class="research-section-head"><h2 id="publication-findings-title">${isZh ? '方法、结果与局限' : 'Method, results, and limitations'}</h2></div>${publicationResearchNotesHtml(publication, language)}</section>` : ''}
       <section class="research-section" aria-labelledby="publication-record-title">
         <div class="research-section-head"><h2 id="publication-record-title">${isZh ? '书目信息' : 'Bibliographic record'}</h2><span>${escapeHtml(publication.year)}</span></div>
         <dl class="research-meta publication-record-meta">
           <div><dt>${isZh ? '期刊' : 'Journal'}</dt><dd>${escapeHtml(publication.venue)}</dd></div>
           <div><dt>${isZh ? '卷' : 'Volume'}</dt><dd>${escapeHtml(publication.volume)}</dd></div>
           <div><dt>${isZh ? '文章号' : 'Article number'}</dt><dd>${escapeHtml(publication.article_number)}</dd></div>
-          <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(status)}${publishedLabel ? ` &middot; ${escapeHtml(publishedLabel)}` : ''}</dd></div>
+          <div><dt>${isZh ? '状态' : 'Status'}</dt><dd>${escapeHtml(status)}</dd></div>
+          ${publicationDatesHtml(publication, language)}
           <div><dt>DOI</dt><dd><a href="${escapeHtml(publication.link)}" rel="noreferrer">${escapeHtml(publication.doi)}</a></dd></div>
           <div><dt>ISSN</dt><dd>${escapeHtml(publication.issn)}</dd></div>
           <div><dt>${isZh ? '出版方' : 'Publisher'}</dt><dd>${escapeHtml(publication.publisher)}</dd></div>
@@ -3930,7 +4028,7 @@ async function renderPublicationDetail(publication, language) {
       ${publication.code_url ? `<section class="research-section" aria-labelledby="publication-code-title">
         <div class="research-section-head"><h2 id="publication-code-title">${isZh ? '官方实现' : 'Official implementation'}</h2><span>GitHub</span></div>
         <p><a href="${escapeHtml(publication.code_url)}" rel="noreferrer">${escapeHtml(publication.code_url)}</a></p>
-        <p class="muted">${escapeHtml(localized(publication.code_note, language))}</p>
+        <p class="muted">${escapeHtml(implementationNote(publication, language))}</p>
       </section>` : ''}
     </article>`;
   const articleMetadata = publicationSchema(publication, language, canonicalUrl);
@@ -3987,7 +4085,7 @@ async function renderPublications(language) {
     <header class="research-header">
       <p class="blog-kicker">${isZh ? '出版方链接记录' : 'Publisher-linked records'}</p>
       <h1>${isZh ? '论文' : 'Publications'}</h1>
-      <p>${isZh ? 'Chenxu Wang（wcx12）署名的已发表与录用待刊论文。作者顺序、状态、DOI 与官方实现均链接到公开来源。' : 'Published and in-press papers authored by Chenxu Wang (wcx12), with author order, status, DOI, and official implementations linked to public sources.'}</p>
+      <p>${isZh ? 'Chenxu Wang（wcx12）的论文、核心发现与官方实现。' : 'Papers, key findings, and official implementations by Chenxu Wang (wcx12) and coauthors.'}</p>
       <a class="btn btn-outline" href="${ctx.link(`${researchRoute(language)}index.html`)}">${isZh ? '浏览研究方向' : 'Browse research topics'}</a>
     </header>
     <section class="research-section" aria-labelledby="publication-list-title">
@@ -4040,13 +4138,13 @@ function publicationArea(publication) {
 
 async function renderPublicationsMarkdown() {
   const sections = staticPublications.map((publication) => {
-    const statusKey = publicationStatusKey(publication);
     const status = publicationStatusLabel(publication, 'en');
-    const heading = statusKey === 'in_press' ? 'In Press' : status;
+    const heading = status;
     const codeLines = publication.code_url
-      ? `\n- Official implementation: ${publication.code_url}\n- Hosting note: ${localized(publication.code_note, 'en')}`
+      ? `\n- Official implementation: ${publication.code_url}\n- Hosting note: ${implementationNote(publication, 'en')}`
       : '';
-    return `## ${heading}\n\n### ${publication.title}\n\n- Record: ${absoluteUrl(publicationRoute('en', publication))}\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${status}; ${localized(publication.publishedLabel, 'en')}${publication.open_access ? '; open access' : ''}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
+    const dates = [publication.online_date ? `\n- Online publication: ${publication.online_date}` : '', publication.issue_date ? `\n- Issue date: ${publication.issue_date}` : ''].join('');
+    return `## ${heading}\n\n### ${publication.title}\n\n- Record: ${absoluteUrl(publicationRoute('en', publication))}\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${status}${publication.open_access ? '; open access' : ''}${dates}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
   });
   const markdown = `# Publications\n\n${sections.join('\n\n')}\n\nOnly publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.\n`;
   await fs.writeFile(path.join(rootDir, 'publications.md'), markdown);
@@ -4259,4 +4357,4 @@ async function main() {
   console.log(`Built ${posts.length} public blog post(s) for ${today}; ${publicationCounts.scheduled} scheduled, ${publicationCounts.draft} draft.`);
 }
 
-await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

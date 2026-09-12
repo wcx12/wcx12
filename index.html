@@ -41,8 +41,8 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <script src="theme-init.js?v=108af3205d8c"></script>
-  <link rel="stylesheet" href="styles.css?v=108af3205d8c" />
+  <script src="theme-init.js?v=ddfddaffa23f"></script>
+  <link rel="stylesheet" href="styles.css?v=ddfddaffa23f" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -69,17 +69,26 @@
       "https://github.com/wcx12",
       "https://orcid.org/0009-0005-6139-4327"
     ],
-    "affiliation": {
-      "@type": "CollegeOrUniversity",
-      "name": "Beijing Institute of Technology"
-    },
     "knowsAbout": [
       "Point-cloud registration",
       "Visual place recognition",
       "Medical image analysis",
       "Large language model agents",
       "AI for Education"
-    ]
+    ],
+    "email": "mailto:c2675668@gmail.com",
+    "alumniOf": {
+      "@type": "CollegeOrUniversity",
+      "name": "Beijing Institute of Technology"
+    },
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Shenzhen Houlang Pengpai Technology Co., Ltd."
+    },
+    "homeLocation": {
+      "@type": "Place",
+      "name": "Shenzhen, China"
+    }
   },
   "inLanguage": "en",
   "primaryImageOfPage": {
@@ -126,8 +135,8 @@
         <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
         <a class="ghost-btn" href="./projects/" data-i18n="btn_projects">Projects</a>
         <a class="ghost-btn" href="./publications/" data-i18n="btn_publications">Publications</a>
-        <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Writing</a>
-        <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Profile</a>
+        <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
+        <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Resume</a>
       </nav>
       <div class="utility-menu">
         <button class="ghost-btn utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Settings</button>
@@ -160,7 +169,7 @@
         </div>
 
         <div class="quick-stats">
-          <article><span data-i18n="stat_focus">Research domains / topics</span><strong id="focusAreaCount">4 / 5</strong></article>
+          <article><span data-i18n="stat_focus">Research domains / topics</span><strong id="focusAreaCount">4 / 6</strong></article>
           <article><span data-i18n="stat_grad">Graduation</span><strong>2026</strong></article>
           <article><span data-i18n="stat_pubs">Publications</span><strong id="heroPublicationCount">2</strong></article>
         </div>
@@ -214,42 +223,51 @@
       </section>
     </noscript>
 
-    <section class="console" aria-label="Interactive portfolio tools" data-i18n-aria="aria_interactive_portfolio">
-      <div class="console-head">
-        <span class="dot pink"></span>
-        <span class="dot cyan"></span>
-        <span class="dot violet"></span>
-        <p>wcx12-lab</p>
+    <section class="selected-work" aria-labelledby="selected-work-title">
+      <h2 id="selected-work-title" data-i18n="selected_work">Selected work</h2>
+      <div class="selected-work-list">
+        <article>
+          <span data-i18n="selected_project">Project</span>
+          <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
+          <p data-i18n="selected_project_desc">College-major research with traceable sources and evidence gaps.</p>
+        </article>
+        <article>
+          <span data-i18n="selected_paper">Paper</span>
+          <h3><a href="./publications/tf-vpr/">TF-VPR</a></h3>
+          <p data-i18n="selected_paper_desc">Visual place recognition with frozen foundation models.</p>
+        </article>
+        <article>
+          <span data-i18n="selected_note">Reading notes</span>
+          <h3><a href="./research/generative-retrieval/" data-i18n="selected_note_title">TIGER &amp; Semantic IDs</a></h3>
+          <p data-i18n="selected_note_desc">From residual quantization to generative recommendation.</p>
+        </article>
       </div>
+    </section>
 
-      <p class="hint-row">
-        <span class="desktop-hint" data-i18n="hints">Shortcut: Ctrl/⌘K command palette</span>
-        <span class="touch-hint" data-i18n="hints_touch">Use Command in Settings to search and navigate.</span>
-      </p>
-
+    <section class="console" aria-label="Interactive portfolio tools" data-i18n-aria="aria_interactive_portfolio">
       <nav class="command-row" aria-label="Interactive tools" data-i18n-aria="aria_interactive_tools">
         <button class="cmd active" data-view="about" data-i18n="tab_about">overview</button>
-        <button class="cmd" data-view="research" data-i18n="tab_research">concept lab</button>
-        <button class="cmd" data-view="projects" data-i18n="tab_projects">repo explorer</button>
-        <button class="cmd" data-view="publications" data-i18n="tab_publications">paper explorer</button>
-        <button class="cmd" data-view="writing" data-i18n="tab_writing">writing search</button>
-        <button class="cmd" data-view="profile" data-i18n="tab_profile">profile summary</button>
+        <button class="cmd" data-view="research" data-i18n="tab_research">Research</button>
+        <button class="cmd" data-view="projects" data-i18n="tab_projects">Projects</button>
+        <button class="cmd" data-view="publications" data-i18n="tab_publications">Publications</button>
+        <button class="cmd" data-view="writing" data-i18n="tab_writing">Blog</button>
+        <button class="cmd" data-view="profile" data-i18n="tab_profile">Resume</button>
       </nav>
 
       <div class="view active" id="about">
         <h2 data-i18n="about_title">About</h2>
-        <p data-i18n="about_line1">I&#39;m Chenxu Wang (wcx12), studying at Beijing Institute of Technology from Sep 2022 to Jun 2026 and building in the startup setting at Shenzhen Houlang Pengpai Technology Co., Ltd. since Mar 2026.</p>
+        <p data-i18n="about_line1">I’m Chenxu Wang (wcx12). I studied at Beijing Institute of Technology from Sep 2022 to Jun 2026 and have been building educational technology at Shenzhen Houlang Pengpai since Mar 2026.</p>
         <p data-i18n="about_line2">I enjoy combining geometric understanding with reliable engineering delivery.</p>
       </div>
 
       <div class="view" id="research">
         <div class="view-heading">
           <div>
-            <h2 data-i18n="research_title">Concept Lab</h2>
-            <p class="muted" data-i18n="research_intro">Choose a sub-interest to see its concept demo, projects, and papers.</p>
+            <h2 data-i18n="research_title">Research</h2>
+            <p class="muted" data-i18n="research_intro">Geometry, visual intelligence, and AI systems.</p>
           </div>
           <div class="view-heading-actions">
-            <a class="btn btn-outline" href="./research/" data-i18n="research_static">Evidence Index</a>
+            <a class="btn btn-outline" href="./research/" data-i18n="research_static">Research overview</a>
             <button id="manageResearch" class="btn btn-outline" type="button" data-i18n="manage_research" hidden>Manage Mapping</button>
           </div>
         </div>
@@ -304,7 +322,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="project_title">Repositories</h2>
-            <p class="muted" data-i18n="project_desc">All public repositories are listed below with quick jump links.</p>
+            <p class="muted" data-i18n="project_desc">Research software, prototypes, and teaching tools.</p>
           </div>
           <a class="btn btn-outline" href="./projects/" data-i18n="project_static">Project Index</a>
         </div>
@@ -356,7 +374,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="pub_title">Publications</h2>
-            <p class="muted" data-i18n="pub_desc">Publication entries are shown below with status and links.</p>
+            <p class="muted" data-i18n="pub_desc">Peer-reviewed work in visual recognition and medical imaging.</p>
           </div>
           <a class="btn btn-outline" href="./publications/" data-i18n="publication_static">Publication Index</a>
         </div>
@@ -384,7 +402,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="writing_title">Writing</h2>
-            <p class="muted" data-i18n="writing_desc">Technical notes and research logs generated from Markdown.</p>
+            <p class="muted" data-i18n="writing_desc">Research notes and engineering practice.</p>
           </div>
           <a class="btn btn-outline" href="./blog/" data-i18n="writing_open">Open Blog</a>
         </div>
@@ -406,7 +424,7 @@
         <div class="view-heading">
           <div>
             <h2 data-i18n="profile_view_title">Academic Profile</h2>
-            <p class="muted" data-i18n="profile_view_desc">A compact overview of my trajectory, working stack, formal profile, and contact routes.</p>
+            <p class="muted" data-i18n="profile_view_desc">Research, educational technology, and open-source work.</p>
           </div>
           <a class="btn btn-outline" href="./resume/" data-i18n="cv_download">View Research Profile</a>
         </div>
@@ -425,7 +443,7 @@
               </article>
               <article>
                 <time>2026</time>
-                <p data-i18n="timeline_2026">Graduation year and active applications for Master&#39;s / PhD opportunities.</p>
+                <p data-i18n="timeline_2026">Since Mar 2026: entrepreneurial work in educational technology at Shenzhen Houlang Pengpai, alongside research and open-source development.</p>
               </article>
             </div>
           </section>
@@ -565,6 +583,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="homepage-bootstrap.js?v=108af3205d8c"></script>
+  <script type="module" src="homepage-bootstrap.js?v=ddfddaffa23f"></script>
 </body>
 </html>

@@ -1,3 +1,8 @@
+const demoContentUrl = new URL('./research-demo-content.js', import.meta.url);
+const demoAssetVersion = new URL(import.meta.url).searchParams.get('v');
+if (demoAssetVersion) demoContentUrl.searchParams.set('v', demoAssetVersion);
+const { AGENT_TASKS, EDUCATION_EXERCISES, localize, nextAgentStage, evaluateAnswer } = await import(demoContentUrl.href);
+
 let researchCanvasInstance = null;
 
 export function createResearchCanvas(options) {
@@ -15,6 +20,10 @@ export function createResearchCanvas(options) {
   const interestDemoPrevious = document.getElementById('interestDemoPrevious');
   const interestDemoAction = document.getElementById('interestDemoAction');
   const interestDemoReset = document.getElementById('interestDemoReset');
+  const controlsContainer = document.querySelector('#interestCanvasControls');
+  const demoContent = createDemoContent();
+  const say = (en, zh) => currentLang === 'zh' ? zh : en;
+  const localized = (value) => localize(value, currentLang);
   const compactInterestMotionQuery = window.matchMedia('(max-width: 720px), (hover: none), (pointer: coarse)');
   const themeColorCache = new Map();
   const MAX_CANVAS_DPR = 2;
@@ -153,11 +162,12 @@ const educationInteraction = {
   x: 0.5,
   y: 0.5,
   selectedConcept: 'functions',
-  selectedSignal: 'hint',
+  selectedSignal: 'unanswered',
+  answer: '',
+  hintVisible: false,
   hoverType: null,
   hoverId: null,
-  pulse: 0,
-  masteryBoost: 0
+  pulse: 0
 };
 
 const medicalCases = [
@@ -266,15 +276,11 @@ function bindItemToInterestAnimation(item, kind, interestId) {
   } else if (resolvedInterestId === 'agent') {
     agentInteraction.active = true;
     agentInteraction.taskIndex = hay.includes('readme') || kind === 'paper' ? 1 : 0;
-    agentInteraction.selectedStage = 'work';
-    agentInteraction.pulse = 1;
-    agentInteraction.runBoost = 0.75;
+    selectAgentTask(agentInteraction.taskIndex);
   } else if (resolvedInterestId === 'ai4edu') {
     educationInteraction.active = true;
     educationInteraction.selectedConcept = hay.includes('tetrahedron') || hay.includes('geometry') ? 'geometry' : 'functions';
-    educationInteraction.selectedSignal = 'hint';
-    educationInteraction.pulse = 1;
-    educationInteraction.masteryBoost = 1;
+    selectEducationExercise(educationInteraction.selectedConcept);
   }
 }
 
@@ -302,9 +308,7 @@ function isEducationInterestActive() {
   return activeInterestAnimationType() === 'education';
 }
 
-function medicalLearningScore() {
-  return Math.min(94, 54 + medicalInteraction.labeled.size * 4);
-}
+
 
 function medicalFindingLabel(sample) {
   if (currentLang !== 'zh') return sample.finding;
@@ -315,23 +319,28 @@ function medicalFindingLabel(sample) {
 function medicalStatusText() {
   const sample = medicalCases[medicalInteraction.selected] || medicalCases[0];
   const labeled = medicalInteraction.labeled.has(medicalInteraction.selected);
-  if (currentLang === 'zh') {
-    return `${sample.id}，不确定度 ${Math.round(sample.uncertainty * 100)}%，${labeled ? `已标注为${medicalFindingLabel(sample)}` : '待标注'}。已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}，模型得分 ${medicalLearningScore()}%。`;
-  }
-  return `${sample.id}, uncertainty ${Math.round(sample.uncertainty * 100)}%, ${labeled ? `labeled ${sample.finding}` : 'unlabeled'}. ${medicalInteraction.labeled.size}/${medicalCases.length} labeled, model score ${medicalLearningScore()}%.`;
+  return say(
+    `Synthetic sample ${sample.id}: illustrative uncertainty ${Math.round(sample.uncertainty * 100)}%; ${labeled ? `labeled ${medicalFindingLabel(sample)}` : 'unlabeled'}. ${medicalInteraction.labeled.size}/${medicalCases.length} labeled. No model training or clinical inference.`,
+    `合成样本 ${sample.id}：示意不确定度 ${Math.round(sample.uncertainty * 100)}%；${labeled ? `已标注为${medicalFindingLabel(sample)}` : '待标注'}。已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}；未进行模型训练或临床推断。`
+  );
 }
 
 function pointCloudStatusText() {
   const params = registrationParams();
-  const error = Math.max(0.2, (1 - clamp01(pointCloudInteraction.scrub)) * 8 + params.noise * 0.03 + params.missing * 0.015);
+  const error = Math.max(0.2, (1 - clamp01(pointCloudInteraction.targetScrub)) * 8 + params.noise * 0.03 + params.missing * 0.015);
   if (currentLang === 'zh') {
     return pointCloudInteraction.completed
-      ? `配准完成，估计对齐误差 ${error.toFixed(2)}，旋转 ${params.rotation}°。`
-      : `当前旋转 ${params.rotation}°，估计对齐误差 ${error.toFixed(2)}。`;
+      ? `配准示意完成，示意对齐误差 ${error.toFixed(2)}，旋转 ${params.rotation}°。`
+      : `当前旋转 ${params.rotation}°，示意对齐误差 ${error.toFixed(2)}。`;
   }
   return pointCloudInteraction.completed
-    ? `Registration complete. Estimated alignment error ${error.toFixed(2)} at ${params.rotation}° rotation.`
-    : `Current rotation ${params.rotation}°. Estimated alignment error ${error.toFixed(2)}.`;
+    ? `Illustrative registration complete. Simulated alignment error ${error.toFixed(2)} at ${params.rotation}° rotation.`
+    : `Current rotation ${params.rotation}°. Simulated alignment error ${error.toFixed(2)}.`;
+}
+
+function vprPlaceName(place) {
+  const names = { Gate: '大门', Quad: '广场', Bridge: '桥梁', Road: '道路', Corner: '转角', Hall: '大厅' };
+  return currentLang === 'zh' ? names[place.name] : place.name;
 }
 
 function selectedVprCandidate() {
@@ -344,29 +353,39 @@ function vprStatusText() {
   if (!candidate) return currentLang === 'zh' ? '当前没有匹配候选。' : 'No match candidate is selected.';
   const confidence = Math.round(candidate.score * 100);
   return currentLang === 'zh'
-    ? `当前匹配 ${candidate.id}（${candidate.name}），置信度 ${confidence}%。`
-    : `Current match ${candidate.id} (${candidate.name}), ${confidence}% confidence.`;
+    ? `当前匹配 ${candidate.id}（${vprPlaceName(candidate)}），示意相似度 ${confidence}%，不是实测置信度。`
+    : `Current match ${candidate.id} (${vprPlaceName(candidate)}), illustrative similarity ${confidence}%, not measured confidence.`;
+}
+
+function agentStageLabel() {
+  return {
+    request: say('Waiting', '等待'),
+    work: say('Processing', '处理中'),
+    deliver: say('Complete', '已完成')
+  }[agentInteraction.selectedStage];
 }
 
 function agentStatusText() {
-  const scenario = humanAiScenario();
-  const stage = humanAiStages.find((item) => item.id === agentInteraction.selectedStage) || humanAiStages[0];
-  const stageZh = { request: '提出任务', work: 'AI 协作', deliver: '交付结果' }[stage.id] || stage.label;
-  const result = stage.id === 'request' ? scenario.human : stage.id === 'work' ? scenario.ai : scenario.output;
-  return currentLang === 'zh'
-    ? `任务 ${agentInteraction.taskIndex + 1}：${scenario.task}。阶段：${stageZh}。${agentInteraction.completed ? '结果' : '当前状态'}：${result}。`
-    : `Task ${agentInteraction.taskIndex + 1}: ${scenario.task}. Stage: ${stage.label}. ${agentInteraction.completed ? 'Result' : 'Current state'}: ${result}.`;
+  const task = humanAiScenario();
+  const detail = agentInteraction.selectedStage === 'request'
+    ? say('Request received; retrieval has not started.', '已收到任务，尚未检索。')
+    : agentInteraction.selectedStage === 'work'
+      ? say('Two fixture excerpts retrieved; result not yet compiled.', '已检索两条预设片段，尚未整理结果。')
+      : say('Result compiled from excerpts S1 and S2.', '已根据片段 S1、S2 整理结果。');
+  return `${localized(task.title)} · ${agentStageLabel()}. ${detail}`;
+}
+
+function educationFeedbackText() {
+  const exercise = educationConceptForSelected();
+  if (educationInteraction.selectedSignal === 'correct') return say('Correct. ', '回答正确。') + localized(exercise.explanation);
+  if (educationInteraction.selectedSignal === 'incorrect') return say('Not quite. ', '回答不正确。') + localized(exercise.hint);
+  if (educationInteraction.selectedSignal === 'empty') return say('Choose an answer before submitting.', '请先选择答案再提交。');
+  return say('Awaiting an answer.', '等待作答。');
 }
 
 function educationStatusText() {
-  const concept = educationConceptForSelected();
-  const signal = educationSignalForSelected();
-  const mastery = Math.round(educationMastery(concept) * 100);
-  const conceptZh = { algebra: '代数', functions: '函数', geometry: '几何', proof: '证明', word: '应用题' }[concept.id] || concept.label;
-  const signalZh = { correct: '回答正确', hint: '已使用提示', incorrect: '回答错误' }[signal.id] || signal.label;
-  return currentLang === 'zh'
-    ? `当前练习：${conceptZh}。学习状态：${signalZh}，掌握度 ${mastery}%。`
-    : `Current exercise: ${concept.label}. Learning state: ${signal.label}, ${mastery}% mastery.`;
+  const announceHint = educationInteraction.hintVisible && !['correct', 'incorrect'].includes(educationInteraction.selectedSignal);
+  return `${localized(educationConceptForSelected().label)} · ${educationFeedbackText()}${announceHint ? ' ' + localized(educationConceptForSelected().hint) : ''}`;
 }
 
 function interestDemoStatusText(type) {
@@ -379,38 +398,169 @@ function interestDemoStatusText(type) {
 }
 
 function interestDemoLabels(type) {
-  const labels = currentLang === 'zh'
-    ? {
-      'point-cloud': ['旋转点云', '执行配准', '重置配准'],
-      vpr: ['前一候选', '下一候选', '重置匹配'],
-      'medical-image': ['前一高不确定样本', '标注样本', '重置主动学习'],
-      agent: ['前一任务', '执行下一步', '重置任务'],
-      education: [
-        '前一练习',
-        educationInteraction.selectedSignal === 'correct'
-          ? '下一提示'
-          : educationInteraction.selectedSignal === 'incorrect'
-            ? '重新作答'
-            : '提交回答',
-        '重置学习'
-      ]
-    }
-    : {
-      'point-cloud': ['Rotate Point Cloud', 'Run Registration', 'Reset Registration'],
-      vpr: ['Previous Candidate', 'Next Candidate', 'Reset Match'],
-      'medical-image': ['Previous Uncertain Sample', 'Annotate Sample', 'Reset Active Learning'],
-      agent: ['Previous Task', 'Run Next Step', 'Reset Task'],
-      education: [
-        'Previous Exercise',
-        educationInteraction.selectedSignal === 'correct'
-          ? 'Next Hint'
-          : educationInteraction.selectedSignal === 'incorrect'
-            ? 'Try Again'
-            : 'Submit Response',
-        'Reset Learning'
-      ]
-    };
-  return labels[type] || [];
+  const agentAction = agentInteraction.selectedStage === 'request'
+    ? say('Retrieve excerpts', '检索片段')
+    : agentInteraction.selectedStage === 'work' ? say('Compile result', '整理结果') : say('Next task', '下一任务');
+  return {
+    'point-cloud': [say('Rotate', '旋转'), say('Register', '执行配准'), say('Reset', '重置')],
+    vpr: [say('Previous', '前一候选'), say('Next', '下一候选'), say('Reset', '重置')],
+    'medical-image': [say('Previous sample', '前一样本'), say('Annotate', '标注样本'), say('Reset', '重置')],
+    agent: [say('Previous task', '前一任务'), agentAction, say('Reset task', '重置任务')],
+    education: [say('Previous exercise', '前一练习'), educationInteraction.selectedSignal === 'correct' ? say('Next exercise', '下一练习') : say('Submit answer', '提交答案'), say('Reset', '重置')]
+  }[type] || [];
+}
+
+function createDemoContent() {
+  if (!controlsContainer) return null;
+  const make = (tag, className, parent) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    parent?.append(node);
+    return node;
+  };
+  const root = make('div', 'research-demo-content');
+  root.tabIndex = 0;
+  controlsContainer.classList.add('research-demo-controls');
+  controlsContainer.prepend(root);
+  const note = make('p', 'research-demo-note', root);
+  const pickerLabel = make('label', 'research-demo-picker', root);
+  const pickerTitle = make('span', '', pickerLabel);
+  const picker = make('select', '', pickerLabel);
+  picker.dataset.demoPicker = '';
+  const agent = make('div', 'research-demo-agent', root);
+  const requestTitle = make('strong', '', agent);
+  const request = make('p', '', agent);
+  const excerptsTitle = make('strong', '', agent);
+  const excerpts = make('ul', 'research-demo-excerpts', agent);
+  const excerptItems = [make('li', '', excerpts), make('li', '', excerpts)];
+  const resultTitle = make('strong', '', agent);
+  const result = make('p', 'research-demo-result', agent);
+  const exercise = make('fieldset', 'research-demo-exercise', root);
+  const question = make('legend', '', exercise);
+  const choices = make('div', 'research-demo-choices', exercise);
+  const answers = Array.from({ length: 3 }, () => {
+    const label = make('label', 'research-demo-choice', choices);
+    const input = make('input', '', label);
+    input.type = 'radio';
+    input.name = 'research-demo-answer';
+    input.setAttribute('aria-describedby', 'interestCanvasStatus');
+    const text = make('span', '', label);
+    input.addEventListener('change', () => {
+      educationInteraction.answer = input.value;
+      educationInteraction.selectedSignal = 'unanswered';
+      commitInterestDemoControl();
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      runEducationAction();
+      commitInterestDemoControl();
+    });
+    return { input, text };
+  });
+  const feedback = make('p', 'research-demo-feedback', exercise);
+  const hintButton = make('button', 'btn btn-outline research-demo-hint', exercise);
+  hintButton.type = 'button';
+  hintButton.dataset.demoHint = '';
+  const hint = make('p', 'research-demo-hint-text', exercise);
+  hint.id = 'research-demo-hint-text';
+  hintButton.setAttribute('aria-controls', hint.id);
+  hintButton.addEventListener('click', () => {
+    requestEducationHint();
+    commitInterestDemoControl();
+  });
+  picker.addEventListener('change', () => {
+    if (isAgentInterestActive()) selectAgentTask(Number(picker.value));
+    else if (isEducationInterestActive()) selectEducationExercise(picker.value);
+    commitInterestDemoControl();
+  });
+  return { root, note, pickerLabel, pickerTitle, picker, agent, requestTitle, request, excerptsTitle, excerpts, excerptItems, resultTitle, result, exercise, question, answers, feedback, hintButton, hint };
+}
+
+function updateDemoContent(type) {
+  if (!demoContent) return;
+  const ui = demoContent;
+  const known = ['point-cloud', 'vpr', 'medical-image', 'agent', 'education'].includes(type);
+  ui.root.hidden = !known;
+  if (!known) return;
+  controlsContainer.setAttribute('aria-label', say('Research demo controls', '研究演示控件'));
+  ui.root.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+  ui.root.setAttribute('aria-label', say('Demo content', '演示内容'));
+  ui.note.textContent = type === 'medical-image'
+    ? say('Synthetic scans and illustrative uncertainty; no clinical inference.', '合成影像与示意不确定度，不作临床推断。')
+    : type === 'point-cloud' || type === 'vpr'
+      ? say('Concept demo · synthetic data and illustrative values.', '概念示意 · 合成数据与示意数值。')
+      : say('Deterministic concept demo · preset content, no external AI.', '确定性概念示意 · 预设内容，不连接外部 AI。');
+  const hasPicker = type === 'agent' || type === 'education';
+  ui.pickerLabel.hidden = !hasPicker;
+  ui.agent.hidden = type !== 'agent';
+  ui.exercise.hidden = type !== 'education';
+  if (!hasPicker) {
+    ui.root.dataset.scrollState = type;
+    ui.root.scrollTop = 0;
+    return;
+  }
+  let scrollTarget;
+  let scrollState;
+  const items = type === 'agent' ? humanAiCollabScenarios : educationConcepts;
+  if (ui.root.dataset.type !== type) {
+    ui.picker.replaceChildren(...items.map((item, index) => {
+      const option = document.createElement('option');
+      option.value = type === 'agent' ? String(index) : item.id;
+      return option;
+    }));
+    ui.root.dataset.type = type;
+  }
+  Array.from(ui.picker.options).forEach((option, index) => {
+    option.textContent = localized(type === 'agent' ? items[index].title : items[index].label);
+  });
+  ui.pickerTitle.textContent = type === 'agent' ? say('Task', '任务') : say('Exercise', '练习');
+  if (type === 'agent') {
+    const task = humanAiScenario();
+    const retrieved = agentInteraction.selectedStage !== 'request';
+    ui.root.dataset.stage = agentInteraction.selectedStage;
+    ui.picker.value = String(agentInteraction.taskIndex);
+    ui.requestTitle.textContent = say('Human request', '人类任务');
+    ui.request.textContent = localized(task.request);
+    ui.excerptsTitle.textContent = say('Retrieved excerpts · local fixtures', '检索片段 · 本地预设');
+    ui.excerptsTitle.hidden = !retrieved;
+    ui.excerpts.hidden = !retrieved;
+    ui.excerptItems.forEach((item, index) => {
+      item.textContent = retrieved ? `[${task.snippets[index].id}] ${localized(task.snippets[index].text)}` : '';
+    });
+    ui.resultTitle.textContent = say('Result', '实质结果');
+    ui.resultTitle.hidden = !agentInteraction.completed;
+    ui.result.hidden = !agentInteraction.completed;
+    ui.result.textContent = agentInteraction.completed ? localized(task.result) : '';
+    scrollState = `${type}:${task.id}:${agentInteraction.selectedStage}`;
+    scrollTarget = agentInteraction.completed ? ui.resultTitle : retrieved ? ui.excerptsTitle : null;
+  } else {
+    const exercise = educationConceptForSelected();
+    ui.picker.value = exercise.id;
+    ui.question.textContent = localized(exercise.question);
+    ui.answers.forEach(({ input, text }, index) => {
+      const choice = exercise.choices[index];
+      input.value = choice.id;
+      input.checked = educationInteraction.answer === choice.id;
+      text.textContent = localized(choice.text);
+    });
+    ui.exercise.setAttribute('aria-invalid', String(['empty', 'incorrect'].includes(educationInteraction.selectedSignal)));
+    ui.feedback.hidden = educationInteraction.selectedSignal === 'unanswered';
+    ui.feedback.textContent = ui.feedback.hidden ? '' : educationFeedbackText();
+    ui.hintButton.textContent = say('Hint', '提示');
+    ui.hintButton.setAttribute('aria-expanded', String(educationInteraction.hintVisible));
+    ui.hint.hidden = !educationInteraction.hintVisible;
+    ui.hint.textContent = educationInteraction.hintVisible ? localized(exercise.hint) : '';
+    scrollState = `${type}:${exercise.id}:${educationInteraction.selectedSignal}:${educationInteraction.hintVisible}`;
+    scrollTarget = !ui.feedback.hidden ? ui.feedback : educationInteraction.hintVisible ? ui.hint : null;
+  }
+  if (ui.root.dataset.scrollState !== scrollState) {
+    ui.root.dataset.scrollState = scrollState;
+    // Scroll only this bounded panel, leaving the page and action buttons stable.
+    ui.root.scrollTop = scrollTarget
+      ? ui.root.scrollTop + scrollTarget.getBoundingClientRect().top - ui.root.getBoundingClientRect().top - 8
+      : 0;
+  }
 }
 
 function updateInterestDemoControls() {
@@ -428,7 +578,12 @@ function updateInterestDemoControls() {
     interestDemoReset.hidden = !labels[2];
     if (labels[2]) interestDemoReset.textContent = labels[2];
   }
-  if (interestCanvasStatus) interestCanvasStatus.textContent = interestDemoStatusText(type);
+  const status = interestDemoStatusText(type);
+  if (interestCanvasStatus) {
+    interestCanvasStatus.tabIndex = 0;
+    if (interestCanvasStatus.textContent !== status) interestCanvasStatus.textContent = status;
+  }
+  updateDemoContent(type);
 }
 
 function updateInterestCanvasAccessibility() {
@@ -483,50 +638,52 @@ function selectPreviousUncertainMedicalCase() {
   selectMedicalCase(ordered[nextPosition].index);
 }
 
-function selectPreviousAgentTask() {
-  agentInteraction.taskIndex = (agentInteraction.taskIndex - 1 + humanAiCollabScenarios.length) % humanAiCollabScenarios.length;
-  agentInteraction.selectedStage = humanAiStages[0].id;
+function selectAgentTask(index) {
+  agentInteraction.taskIndex = (index + humanAiCollabScenarios.length) % humanAiCollabScenarios.length;
+  agentInteraction.selectedStage = 'request';
   agentInteraction.completed = false;
   agentInteraction.active = true;
   agentInteraction.pulse = 1;
-  agentInteraction.runBoost = 0.4;
+}
+
+function selectPreviousAgentTask() {
+  selectAgentTask(agentInteraction.taskIndex - 1);
 }
 
 function runNextAgentStage() {
-  const currentIndex = Math.max(0, humanAiStages.findIndex((stage) => stage.id === agentInteraction.selectedStage));
-  const nextIndex = Math.min(humanAiStages.length - 1, currentIndex + 1);
-  agentInteraction.selectedStage = humanAiStages[nextIndex].id;
-  agentInteraction.completed = nextIndex === humanAiStages.length - 1;
+  agentInteraction.selectedStage = nextAgentStage(agentInteraction.selectedStage);
+  agentInteraction.completed = agentInteraction.selectedStage === 'deliver';
   agentInteraction.active = true;
   agentInteraction.pulse = 1;
-  agentInteraction.runBoost = 1;
+}
+
+function selectEducationExercise(id) {
+  educationInteraction.selectedConcept = id;
+  educationInteraction.selectedSignal = 'unanswered';
+  educationInteraction.answer = '';
+  educationInteraction.hintVisible = false;
+  educationInteraction.active = true;
+  educationInteraction.pulse = 1;
 }
 
 function selectPreviousEducationExercise() {
-  const currentIndex = Math.max(0, educationConcepts.findIndex((concept) => concept.id === educationInteraction.selectedConcept));
-  const previous = educationConcepts[(currentIndex - 1 + educationConcepts.length) % educationConcepts.length];
-  educationInteraction.selectedConcept = previous.id;
-  educationInteraction.selectedSignal = 'hint';
-  educationInteraction.active = true;
+  const current = educationConcepts.findIndex((concept) => concept.id === educationInteraction.selectedConcept);
+  selectEducationExercise(educationConcepts[(current - 1 + educationConcepts.length) % educationConcepts.length].id);
+}
+
+function requestEducationHint() {
+  educationInteraction.hintVisible = true;
   educationInteraction.pulse = 1;
-  educationInteraction.masteryBoost = 0.25;
 }
 
 function runEducationAction() {
   if (educationInteraction.selectedSignal === 'correct') {
-    const currentIndex = Math.max(0, educationConcepts.findIndex((concept) => concept.id === educationInteraction.selectedConcept));
-    educationInteraction.selectedConcept = educationConcepts[(currentIndex + 1) % educationConcepts.length].id;
-    educationInteraction.selectedSignal = 'hint';
-    educationInteraction.masteryBoost = 0.3;
-  } else if (educationInteraction.selectedSignal === 'hint') {
-    educationInteraction.selectedSignal = 'incorrect';
-    educationInteraction.masteryBoost = 0.2;
+    const current = educationConcepts.findIndex((concept) => concept.id === educationInteraction.selectedConcept);
+    selectEducationExercise(educationConcepts[(current + 1) % educationConcepts.length].id);
   } else {
-    educationInteraction.selectedSignal = 'correct';
-    educationInteraction.masteryBoost = 1;
+    educationInteraction.selectedSignal = evaluateAnswer(educationInteraction.selectedConcept, educationInteraction.answer);
+    educationInteraction.pulse = 1;
   }
-  educationInteraction.active = true;
-  educationInteraction.pulse = 1;
 }
 
 function runInterestDemoPrevious() {
@@ -568,7 +725,8 @@ function runInterestDemoAction() {
     selectMedicalCase(medicalInteraction.selected, true);
     return;
   } else if (type === 'agent') {
-    runNextAgentStage();
+    if (agentInteraction.completed) selectAgentTask(agentInteraction.taskIndex + 1);
+    else runNextAgentStage();
   } else if (type === 'education') {
     runEducationAction();
   }
@@ -612,12 +770,10 @@ function resetInterestDemo() {
   } else if (type === 'education') {
     educationInteraction.active = false;
     educationInteraction.dragging = false;
-    educationInteraction.selectedConcept = 'functions';
-    educationInteraction.selectedSignal = 'hint';
+    selectEducationExercise('functions');
     educationInteraction.hoverType = null;
     educationInteraction.hoverId = null;
     educationInteraction.pulse = 0;
-    educationInteraction.masteryBoost = 0;
   }
   commitInterestDemoControl();
 }
@@ -640,13 +796,12 @@ function routePoint(width, height, u) {
 
 function vprCandidateScores() {
   return vprPlaces
-    .map((place, index) => {
+    .map((place) => {
       const spatial = Math.max(0, 1 - Math.abs(vprInteraction.route - place.u) / 0.32);
       const appearance = Math.max(0, 1 - Math.abs(vprInteraction.condition - place.condition) / 0.82);
-      const ripple = 0.03 * Math.sin(interestTick * 0.08 + index * 1.7);
       return {
         ...place,
-        score: clamp01(spatial * 0.78 + appearance * 0.22 + ripple)
+        score: clamp01(spatial * 0.78 + appearance * 0.22)
       };
     })
     .sort((a, b) => b.score - a.score);
@@ -688,8 +843,7 @@ function agentHitRegion(event) {
   const { x, y } = interestPointer(event);
   const layout = humanAiCollabLayout(interestCanvasSize.width, interestCanvasSize.height);
   const regions = [
-    ...layout.taskCards.map((item) => ({ type: 'task', item })),
-    { type: 'human', item: layout.human },
+    { type: 'human', item: { ...layout.human, x: layout.human.x - layout.human.w / 2, y: layout.human.y - layout.human.h / 2 } },
     { type: 'ai', item: { x: layout.ai.x - layout.ai.r, y: layout.ai.y - layout.ai.r, w: layout.ai.r * 2, h: layout.ai.r * 2, id: 'ai' } },
     { type: 'output', item: layout.output }
   ];
@@ -701,33 +855,16 @@ function agentHitRegion(event) {
   ));
 }
 
-const educationConcepts = [
-  { id: 'algebra', label: 'Algebra', compact: 'Alg', mastery: 0.74, x: 0.16, y: 0.36 },
-  { id: 'functions', label: 'Functions', compact: 'Func', mastery: 0.42, x: 0.3, y: 0.22 },
-  { id: 'geometry', label: 'Geometry', compact: 'Geo', mastery: 0.62, x: 0.3, y: 0.52 },
-  { id: 'proof', label: 'Proof', compact: 'Proof', mastery: 0.36, x: 0.46, y: 0.38 },
-  { id: 'word', label: 'Word Prob.', compact: 'Word', mastery: 0.58, x: 0.16, y: 0.62 }
-];
-
-const educationSignals = [
-  { id: 'correct', label: 'Correct', compact: 'OK', detail: 'Mastery rises after independent success.' },
-  { id: 'hint', label: 'Hint used', compact: 'Hint', detail: 'Feedback targets a misconception before retry.' },
-  { id: 'incorrect', label: 'Incorrect', compact: 'Miss', detail: 'System lowers confidence and selects a scaffold.' }
-];
+const educationConcepts = EDUCATION_EXERCISES;
 
 function educationConceptForSelected() {
   return educationConcepts.find((concept) => concept.id === educationInteraction.selectedConcept) || educationConcepts[1];
-}
-
-function educationSignalForSelected() {
-  return educationSignals.find((signal) => signal.id === educationInteraction.selectedSignal) || educationSignals[1];
 }
 
 function educationHitRegion(event) {
   const { x, y } = interestPointer(event);
   const layout = robotTeacherLayout(interestCanvasSize.width, interestCanvasSize.height);
   const regions = [
-    ...layout.feedbackButtons.map((item) => ({ type: 'signal', item })),
     { type: 'robot', item: { x: layout.robot.x - layout.robot.w / 2, y: layout.robot.y - layout.robot.h / 2, w: layout.robot.w, h: layout.robot.h, id: 'robot' } },
     { type: 'student', item: { x: layout.student.x - layout.student.w / 2, y: layout.student.y - layout.student.h / 2, w: layout.student.w, h: layout.student.h, id: 'student' } },
     { type: 'board', item: layout.board }
@@ -740,41 +877,7 @@ function educationHitRegion(event) {
   ));
 }
 
-function educationMastery(concept) {
-  const responseShift = educationInteraction.selectedSignal === 'correct'
-    ? 0.12
-    : educationInteraction.selectedSignal === 'hint'
-      ? 0.06
-      : -0.04;
-  return clamp01(concept.mastery + responseShift + educationInteraction.masteryBoost * 0.04);
-}
-
-const humanAiCollabScenarios = [
-  {
-    task: 'Research task',
-    shortTask: 'Task',
-    human: 'Human asks',
-    ai: 'AI works',
-    output: 'Result ready',
-    detail: 'Mapped research work'
-  },
-  {
-    task: 'Read project',
-    shortTask: 'Read',
-    human: 'Project question',
-    ai: 'AI summarizes',
-    output: 'Brief ready',
-    detail: 'Traceable summary'
-  },
-  {
-    task: 'Verify update',
-    shortTask: 'Check',
-    human: 'Need proof',
-    ai: 'AI checks page',
-    output: 'Verified',
-    detail: 'Evidence delivered'
-  }
-];
+const humanAiCollabScenarios = AGENT_TASKS;
 
 const humanAiStages = [
   { id: 'request', label: 'Human request' },
@@ -787,41 +890,13 @@ function humanAiScenario() {
 }
 
 function humanAiCollabLayout(width, height) {
-  const compact = width < 460 || height < 220;
-  const veryCompact = width < 340;
-  const centerY = height * (compact ? 0.5 : 0.54);
-  const buttonW = compact ? Math.max(74, (width - 46) / 3) : 118;
+  const compact = width < 540;
+  const centerY = height * 0.49;
   return {
     compact,
-    veryCompact,
-    taskCards: humanAiCollabScenarios.map((task, index) => ({
-      ...task,
-      index,
-      x: compact ? 14 + index * (buttonW + 7) : 18,
-      y: compact ? 14 : 24 + index * 38,
-      w: buttonW,
-      h: compact ? 28 : 30
-    })),
-    human: {
-      id: 'human',
-      x: compact ? width * 0.18 : width * 0.22,
-      y: centerY,
-      w: veryCompact ? 64 : compact ? 82 : 104,
-      h: veryCompact ? 92 : compact ? 112 : 132
-    },
-    ai: {
-      id: 'ai',
-      x: compact ? width * 0.5 : width * 0.51,
-      y: centerY - (compact ? 6 : 2),
-      r: veryCompact ? 30 : compact ? 38 : 48
-    },
-    output: {
-      id: 'output',
-      x: veryCompact ? width - Math.max(68, width * 0.27) - 6 : compact ? width * 0.7 : width * 0.73,
-      y: centerY - (compact ? 48 : 54),
-      w: veryCompact ? Math.max(68, width * 0.27) : compact ? 104 : 138,
-      h: compact ? 94 : 112
-    }
+    human: { id: 'human', x: width * 0.17, y: centerY, w: compact ? 60 : 90, h: compact ? 90 : 124 },
+    ai: { id: 'ai', x: width * 0.5, y: centerY - 4, r: compact ? 27 : 40 },
+    output: { id: 'output', x: width * 0.72, y: centerY - 43, w: width * 0.24, h: 90 }
   };
 }
 
@@ -852,9 +927,9 @@ function drawHumanFigure(ctx, figure, primary, secondary, muted, active) {
   ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.14)';
   ctx.stroke();
   ctx.fillStyle = active ? primary : muted;
-  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.font = '13px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Human', x, y + figure.h * 0.49 + 16);
+  ctx.fillText(say('Human', '人类'), x, y + figure.h * 0.49 + 16);
   ctx.textAlign = 'left';
   ctx.restore();
 }
@@ -913,164 +988,66 @@ function drawAiAssistant(ctx, ai, primary, secondary, textColor, activePulse) {
 
 function drawOutputArtifact(ctx, output, scenario, primary, secondary, muted, textColor, active) {
   ctx.save();
-  const narrow = output.w < 90;
-  drawRoundedRect(ctx, output.x, output.y, output.w, output.h, 12);
-  ctx.fillStyle = active ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.075)';
+  drawRoundedRect(ctx, output.x, output.y, output.w, output.h, 8);
+  ctx.fillStyle = active ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.055)';
   ctx.fill();
-  ctx.strokeStyle = active ? secondary : 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = active ? 2.4 : 1.2;
+  ctx.strokeStyle = active ? secondary : muted;
+  ctx.lineWidth = active ? 2 : 1;
   ctx.stroke();
-  ctx.fillStyle = secondary;
-  ctx.font = '10px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, narrow ? 'Done' : scenario.output, output.x + 12, output.y + 20, output.w - 24);
-  ctx.strokeStyle = primary;
+  ctx.fillStyle = active ? secondary : muted;
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(say('Result', '结果'), output.x + output.w / 2, output.y + 22);
+  ctx.strokeStyle = active ? primary : muted;
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(output.x + 15, output.y + 38);
-  ctx.lineTo(output.x + 26, output.y + 49);
-  ctx.lineTo(output.x + 48, output.y + 29);
+  if (active) {
+    ctx.moveTo(output.x + output.w * 0.28, output.y + 48);
+    ctx.lineTo(output.x + output.w * 0.44, output.y + 60);
+    ctx.lineTo(output.x + output.w * 0.73, output.y + 37);
+  } else {
+    ctx.moveTo(output.x + output.w * 0.3, output.y + 48);
+    ctx.lineTo(output.x + output.w * 0.7, output.y + 48);
+  }
   ctx.stroke();
-  ctx.fillStyle = textColor;
-  ctx.font = '9px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, narrow ? 'Ready' : scenario.detail, output.x + 12, output.y + 67, output.w - 24);
-  ctx.fillStyle = muted;
-  fillTruncatedText(ctx, narrow ? 'by AI' : 'Delivered by AI', output.x + 12, output.y + 84, output.w - 24);
+  ctx.fillText(active ? say('Complete', '已完成') : say('Pending', '待生成'), output.x + output.w / 2, output.y + 79);
   ctx.restore();
 }
 
 function drawHumanAiCollab(width, height, t, primary, secondary, muted) {
   const layout = humanAiCollabLayout(width, height);
-  const scenario = humanAiScenario();
   const textColor = themeColor('--text') || '#f5f5f5';
-  const progress = (t * 0.28 + agentInteraction.runBoost * 0.52) % 1;
-  const activePulse = agentInteraction.pulse;
-  const phase = progress < 0.38 ? 'toAi' : progress < 0.72 ? 'thinking' : 'toDone';
-  const tokenProgress = phase === 'toAi'
-    ? progress / 0.38
-    : phase === 'thinking'
-      ? 1
-      : (progress - 0.72) / 0.28;
-
+  const stage = agentInteraction.selectedStage;
+  // Motion decorates the explicit step; elapsed frames never advance the task.
+  const processing = stage === 'work';
   agentInteraction.pulse *= 0.86;
-  agentInteraction.runBoost *= 0.9;
-
-  const humanActive = phase === 'toAi' || agentInteraction.hoverType === 'human';
-  const outputActive = phase === 'toDone' || agentInteraction.hoverType === 'output';
-  const aiActive = phase === 'thinking' || agentInteraction.hoverType === 'ai';
-
-  layout.taskCards.forEach((card) => {
-    const selected = card.index === agentInteraction.taskIndex;
-    const hovered = agentInteraction.hoverType === 'task' && agentInteraction.hoverId === card.index;
-    drawRoundedRect(interestCtx, card.x, card.y, card.w, card.h, 10);
-    interestCtx.fillStyle = selected || hovered ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.06)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.15)';
-    interestCtx.lineWidth = selected || hovered ? 2 : 1;
-    interestCtx.stroke();
-    interestCtx.fillStyle = selected ? secondary : textColor;
-    interestCtx.font = layout.compact ? '9px JetBrains Mono, monospace' : '10px JetBrains Mono, monospace';
-    interestCtx.textAlign = 'center';
-    interestCtx.fillText(layout.compact ? card.shortTask : card.task, card.x + card.w / 2, card.y + card.h / 2 + 4);
-    interestCtx.textAlign = 'left';
-  });
-
-  drawHumanFigure(interestCtx, layout.human, primary, secondary, muted, humanActive);
-  drawAiAssistant(interestCtx, layout.ai, primary, secondary, textColor, aiActive ? activePulse + 0.35 : activePulse * 0.5);
-  drawOutputArtifact(interestCtx, layout.output, scenario, primary, secondary, muted, textColor, outputActive);
-
-  const from = { x: layout.human.x + layout.human.w * 0.33, y: layout.human.y - layout.human.h * 0.1 };
-  const mid = { x: layout.ai.x, y: layout.ai.y };
-  const to = { x: layout.output.x + layout.output.w * 0.15, y: layout.output.y + layout.output.h * 0.5 };
-  const flowStart = phase === 'toDone' ? mid : from;
-  const flowEnd = phase === 'toDone' ? to : mid;
-  const tokenX = flowStart.x + (flowEnd.x - flowStart.x) * tokenProgress;
-  const tokenY = flowStart.y + (flowEnd.y - flowStart.y) * tokenProgress + Math.sin(tokenProgress * Math.PI) * -20;
-
-  [[from, mid], [mid, to]].forEach(([a, b], index) => {
-    interestCtx.beginPath();
-    interestCtx.moveTo(a.x, a.y);
-    interestCtx.quadraticCurveTo((a.x + b.x) / 2, Math.min(a.y, b.y) - 26, b.x, b.y);
-    interestCtx.strokeStyle = index === 0 && phase === 'toAi' || index === 1 && phase === 'toDone'
-      ? `rgba(255,255,255,0.36)`
-      : 'rgba(255,255,255,0.12)';
-    interestCtx.lineWidth = index === 0 && phase === 'toAi' || index === 1 && phase === 'toDone' ? 2.2 : 1;
-    interestCtx.stroke();
-  });
-
-  const tokenWidth = layout.veryCompact ? 48 : 68;
-  drawRoundedRect(interestCtx, tokenX - tokenWidth / 2, tokenY - 15, tokenWidth, 30, 9);
-  interestCtx.fillStyle = 'rgba(3,7,18,0.72)';
-  interestCtx.fill();
-  interestCtx.strokeStyle = phase === 'thinking' ? primary : secondary;
-  interestCtx.lineWidth = 2;
-  interestCtx.stroke();
-  interestCtx.fillStyle = textColor;
-  interestCtx.font = layout.veryCompact ? '8px JetBrains Mono, monospace' : '9px JetBrains Mono, monospace';
-  interestCtx.textAlign = 'center';
-  interestCtx.fillText(phase === 'thinking' ? 'working' : scenario.shortTask, tokenX, tokenY + 3);
-  interestCtx.textAlign = 'left';
-
-  if (phase === 'thinking') {
-    for (let i = 0; i < 8; i += 1) {
-      const a = t * 0.9 + i * Math.PI / 4;
+  drawHumanFigure(interestCtx, layout.human, primary, secondary, muted, stage === 'request');
+  drawAiAssistant(interestCtx, layout.ai, primary, secondary, textColor, processing ? 0.2 + agentInteraction.pulse * 0.2 : 0);
+  drawOutputArtifact(interestCtx, layout.output, humanAiScenario(), primary, secondary, muted, textColor, stage === 'deliver');
+  if (processing) {
+    for (let i = 0; i < 4; i += 1) {
+      const a = t + i * Math.PI / 2;
       interestCtx.beginPath();
-      interestCtx.arc(layout.ai.x + Math.cos(a) * (layout.ai.r + 22), layout.ai.y + Math.sin(a) * (layout.ai.r + 18), 2.2, 0, Math.PI * 2);
+      interestCtx.arc(layout.ai.x + Math.cos(a) * (layout.ai.r + 12), layout.ai.y + Math.sin(a) * (layout.ai.r + 12), 2.5, 0, Math.PI * 2);
       interestCtx.fillStyle = i % 2 ? secondary : primary;
       interestCtx.fill();
     }
   }
-
+  interestCtx.fillStyle = textColor;
+  interestCtx.font = '14px sans-serif';
+  interestCtx.textAlign = 'center';
+  interestCtx.fillText(agentStageLabel(), width / 2, height - 22);
+  interestCtx.textAlign = 'left';
 }
 
 function robotTeacherLayout(width, height) {
-  const compact = width < 460 || height < 220;
-  const feedbackY = height - (compact ? 40 : 44);
-  const feedbackGroupW = Math.min(compact ? width - 42 : 330, width - (compact ? 36 : 120));
-  const feedbackGap = compact ? 6 : 8;
-  const feedbackX = (width - feedbackGroupW) / 2;
-  const feedbackSegmentW = (feedbackGroupW - feedbackGap * 2) / 3;
-  const boardY = compact ? 28 : 30;
-  const boardHeight = Math.max(
-    compact ? 92 : 118,
-    Math.min(compact ? height * 0.42 : height * 0.5, feedbackY - boardY - (compact ? 70 : 62))
-  );
+  const compact = width < 540;
+  const robotHeight = Math.min(compact ? 118 : 140, height * 0.46);
   return {
     compact,
-    feedbackGroup: {
-      x: feedbackX,
-      y: feedbackY,
-      w: feedbackGroupW,
-      h: compact ? 30 : 32,
-      gap: feedbackGap
-    },
-    robot: {
-      id: 'robot',
-      x: compact ? width * 0.3 : width * 0.28,
-      y: Math.min(compact ? height * 0.54 : height * 0.5, feedbackY - (compact ? 66 : 80)),
-      w: compact ? 96 : 122,
-      h: compact ? 126 : 148
-    },
-    student: {
-      id: 'student',
-      x: compact ? Math.max(40, width * 0.15) : width * 0.15,
-      y: compact ? feedbackY - 66 : feedbackY - 70,
-      w: compact ? 78 : 92,
-      h: compact ? 86 : 94
-    },
-    board: {
-      id: 'board',
-      x: compact ? width * 0.44 : width * 0.44,
-      y: boardY,
-      w: compact ? width * 0.52 : width * 0.5,
-      h: boardHeight
-    },
-    feedbackButtons: educationSignals.map((signal, index) => ({
-      ...signal,
-      x: feedbackX + index * (feedbackSegmentW + feedbackGap),
-      y: feedbackY,
-      w: feedbackSegmentW,
-      h: compact ? 30 : 32
-    }))
+    robot: { id: 'robot', x: width * 0.22, y: height * 0.34, w: Math.min(robotHeight * 0.8, width * 0.3), h: robotHeight },
+    student: { id: 'student', compact, x: width * 0.22, y: height * 0.78, w: compact ? 66 : 88, h: Math.min(78, height * 0.26) },
+    board: { id: 'board', x: width * 0.44, y: 24, w: width * 0.52, h: height - 60 }
   };
 }
 
@@ -1335,242 +1312,52 @@ function drawStudentDesk(ctx, student, primary, secondary, muted, textColor, act
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.fillStyle = active ? primary : muted;
-  ctx.font = '8.5px JetBrains Mono, monospace';
+  ctx.font = '13px sans-serif';
   if (!student.compact && w > 86) {
-    ctx.fillText('Learner', x, y + h * 0.58);
+    ctx.fillText(say('Learner', '学生'), x, y + h * 0.58);
   }
   ctx.textAlign = 'left';
   ctx.restore();
 }
 
-function drawStudentFigure(ctx, student, primary, muted, active) {
-  const x = student.x;
-  const y = student.y;
-  ctx.save();
-  ctx.strokeStyle = active ? primary : 'rgba(255,255,255,0.42)';
-  ctx.lineWidth = active ? 2.8 : 2;
-  ctx.beginPath();
-  ctx.arc(x, y - student.h * 0.22, student.w * 0.16, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x, y - student.h * 0.05);
-  ctx.lineTo(x, y + student.h * 0.25);
-  ctx.moveTo(x - student.w * 0.18, y + student.h * 0.08);
-  ctx.lineTo(x + student.w * 0.2, y + student.h * 0.08);
-  ctx.stroke();
-  ctx.fillStyle = active ? primary : muted;
-  ctx.font = '9px JetBrains Mono, monospace';
-  ctx.textAlign = 'center';
-  if (student.h >= 80) {
-    ctx.fillText('Student', x, y + student.h * 0.45);
-  }
-  ctx.textAlign = 'left';
-  ctx.restore();
-}
-
-function drawClassroomBoard(ctx, board, concept, signal, mastery, primary, secondary, muted, textColor) {
-  const narrow = board.w < 230;
-  const short = board.h < 116;
-  const title = signal.id === 'correct'
-    ? 'Next: challenge'
-    : signal.id === 'hint'
-      ? 'Hint: one step'
-      : 'Retry: simpler';
-  const line1 = signal.id === 'correct'
-    ? `${concept.label}: harder practice`
-    : signal.id === 'hint'
-      ? `${concept.label}: show key step`
-      : `${concept.label}: rebuild basics`;
-  const line2 = signal.id === 'correct'
-    ? 'Great. Move forward.'
-    : signal.id === 'hint'
-      ? 'Explain, then retry.'
-      : 'Slow down and scaffold.';
-  const displayTitle = narrow
-    ? (signal.id === 'correct' ? 'Challenge' : signal.id === 'hint' ? 'Hint step' : 'Retry')
-    : title;
-  const displayLine1 = narrow
-    ? (signal.id === 'correct'
-      ? `${concept.label}: harder`
-      : signal.id === 'hint'
-        ? `${concept.label}: key step`
-        : `${concept.label}: basics`)
-    : line1;
-  const displayLine2 = narrow
-    ? (signal.id === 'correct' ? 'Move forward.' : signal.id === 'hint' ? 'Explain, retry.' : 'Scaffold first.')
-    : line2;
-  drawRoundedRect(ctx, board.x, board.y, board.w, board.h, 16);
-  const boardFill = ctx.createLinearGradient(board.x, board.y, board.x + board.w, board.y + board.h);
-  boardFill.addColorStop(0, 'rgba(6, 16, 32, 0.84)');
-  boardFill.addColorStop(1, 'rgba(3, 7, 18, 0.72)');
-  ctx.fillStyle = boardFill;
+function drawClassroomBoard(ctx, board, concept, primary, secondary, muted, textColor) {
+  drawRoundedRect(ctx, board.x, board.y, board.w, board.h, 8);
+  ctx.fillStyle = 'rgba(3,7,18,0.72)';
   ctx.fill();
-  ctx.shadowColor = primary;
-  ctx.shadowBlur = 12;
-  ctx.strokeStyle = 'rgba(0,245,255,0.28)';
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  ctx.beginPath();
-  ctx.moveTo(board.x + 1.5, board.y + 16);
-  ctx.lineTo(board.x + 1.5, board.y + board.h - 16);
-  ctx.strokeStyle = secondary;
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  const pad = narrow || short ? 14 : 18;
-  ctx.fillStyle = primary;
-  ctx.font = short ? '11.5px JetBrains Mono, monospace' : narrow ? '12.5px JetBrains Mono, monospace' : '14px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, displayTitle, board.x + pad, board.y + (short ? 22 : 28), board.w - pad * 2);
-  ctx.fillStyle = textColor;
-  ctx.font = short ? '9px JetBrains Mono, monospace' : narrow ? '9.5px JetBrains Mono, monospace' : '10.5px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, displayLine1, board.x + pad, board.y + (short ? 44 : 56), board.w - pad * 2);
-  if (!short) {
-    ctx.fillStyle = muted;
-    fillTruncatedText(ctx, displayLine2, board.x + pad, board.y + 78, board.w - pad * 2);
-  }
-
-  ctx.globalAlpha = 0.45;
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 1;
-  for (let i = 0; !short && i < 3; i += 1) {
-    const y = board.y + 96 + i * 14;
-    if (y > board.y + board.h - 42) break;
-    ctx.beginPath();
-    ctx.moveTo(board.x + pad, y);
-    ctx.lineTo(board.x + board.w - pad, y);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  ctx.beginPath();
-  const meterY = board.y + board.h - (short ? 24 : 30);
-  ctx.moveTo(board.x + pad, meterY);
-  ctx.lineTo(board.x + board.w - pad, meterY);
-  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-  ctx.lineWidth = 7;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(board.x + pad, meterY);
-  ctx.lineTo(board.x + pad + (board.w - pad * 2) * mastery, meterY);
-  ctx.strokeStyle = mastery > 0.68 ? primary : mastery > 0.48 ? secondary : 'rgba(255,255,255,0.55)';
+  ctx.strokeStyle = primary;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.fillStyle = secondary;
-  ctx.font = '9px JetBrains Mono, monospace';
-  fillTruncatedText(ctx, `Mastery ${Math.round(mastery * 100)}%`, board.x + pad, board.y + board.h - (short ? 7 : 12), board.w - pad * 2);
-}
-
-function drawEducationFeedbackSegment(ctx, button, selected, hovered, layout, primary, secondary, textColor) {
-  ctx.save();
-  const radius = layout.compact ? 13 : 15;
-  drawRoundedRect(ctx, button.x, button.y, button.w, button.h, radius);
-  ctx.fillStyle = selected
-    ? 'rgba(255, 44, 163, 0.18)'
-    : hovered
-      ? 'rgba(0, 245, 255, 0.12)'
-      : 'rgba(255,255,255,0.055)';
-  ctx.fill();
-  ctx.strokeStyle = selected ? secondary : hovered ? primary : 'rgba(255,255,255,0.14)';
-  ctx.lineWidth = selected || hovered ? 2 : 1;
-  ctx.stroke();
-  if (selected) {
-    ctx.shadowColor = secondary;
-    ctx.shadowBlur = 12;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+  ctx.font = '14px sans-serif';
+  ctx.fillText(localized(concept.label), board.x + 12, board.y + 28);
+  ctx.fillStyle = textColor;
+  ctx.font = '14px sans-serif';
+  // Split formulas at spaces on narrow boards; the full question stays in semantic DOM.
+  let line = '';
+  let y = board.y + 57;
+  for (const word of concept.formula.split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(next).width > board.w - 24) {
+      ctx.fillText(line, board.x + 12, y);
+      y += 21;
+      line = word;
+    } else line = next;
   }
-
-  const dotR = layout.compact ? 2.2 : 2.6;
-  ctx.beginPath();
-  ctx.arc(button.x + 12, button.y + button.h / 2, dotR, 0, Math.PI * 2);
-  ctx.fillStyle = selected ? secondary : primary;
-  ctx.fill();
-
-  ctx.fillStyle = selected ? secondary : textColor;
-  ctx.font = layout.compact ? '8.5px JetBrains Mono, monospace' : '9.5px JetBrains Mono, monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(layout.compact ? button.compact : button.label, button.x + button.w / 2 + 6, button.y + button.h / 2 + 4);
-  ctx.restore();
+  ctx.fillText(line, board.x + 12, y);
+  const signal = educationInteraction.selectedSignal;
+  ctx.fillStyle = signal === 'correct' ? primary : muted;
+  ctx.font = '13px sans-serif';
+  ctx.fillText(signal === 'correct' ? say('Correct', '回答正确') : signal === 'incorrect' ? say('Try again', '再试一次') : say('Your turn', '请作答'), board.x + 12, board.y + board.h - 18);
 }
 
 function drawRobotTeacherClassroom(width, height, t, primary, secondary, muted) {
   const layout = robotTeacherLayout(width, height);
-  const concept = educationConceptForSelected();
-  const signal = educationSignalForSelected();
-  const mastery = educationMastery(concept);
   const textColor = themeColor('--text') || '#f5f5f5';
-
   educationInteraction.pulse *= 0.86;
-  educationInteraction.masteryBoost *= 0.9;
-
   drawEducationStageBackdrop(interestCtx, width, height, layout, primary, secondary);
-
-  const teacherSway = Math.sin(interestTick * 0.045) * 2.4;
-  const teacherLift = Math.sin(interestTick * 0.062) * 1.8;
-  const raisedHand = {
-    x: layout.robot.x + layout.robot.w * 0.58 + teacherSway * 0.2,
-    y: layout.robot.y - layout.robot.h * 0.3 + teacherLift
-  };
-  const pointerStart = raisedHand;
-  const pointerEnd = { x: layout.board.x + 4, y: layout.board.y + layout.board.h * 0.52 };
-  if (!layout.compact) {
-    interestCtx.beginPath();
-    interestCtx.moveTo(pointerStart.x, pointerStart.y);
-    interestCtx.quadraticCurveTo((pointerStart.x + pointerEnd.x) / 2, pointerStart.y - 20, pointerEnd.x, pointerEnd.y);
-    interestCtx.strokeStyle = secondary;
-    interestCtx.lineWidth = 2.5;
-    interestCtx.lineCap = 'round';
-    interestCtx.setLineDash([2, 8]);
-    interestCtx.stroke();
-    interestCtx.setLineDash([]);
-  }
-
-  drawClassroomBoard(interestCtx, layout.board, concept, signal, mastery, primary, secondary, muted, textColor);
+  drawClassroomBoard(interestCtx, layout.board, educationConceptForSelected(), primary, secondary, muted, textColor);
   drawStudentDesk(interestCtx, layout.student, primary, secondary, muted, textColor, educationInteraction.hoverType === 'student');
   drawRobotTeacher(interestCtx, layout.robot, primary, secondary, textColor, educationInteraction.pulse > 0.12 || educationInteraction.hoverType === 'robot');
-
-  if (signal.id === 'correct') {
-    interestCtx.beginPath();
-    interestCtx.moveTo(layout.student.x + 22, layout.student.y - 30);
-    interestCtx.lineTo(layout.student.x + 30, layout.student.y - 20);
-    interestCtx.lineTo(layout.student.x + 48, layout.student.y - 42);
-    interestCtx.strokeStyle = primary;
-    interestCtx.lineWidth = 3;
-    interestCtx.stroke();
-  } else if (signal.id === 'incorrect') {
-    drawRoundedRect(interestCtx, layout.student.x + 24, layout.student.y - 48, 58, 24, 8);
-    interestCtx.fillStyle = 'rgba(255,255,255,0.08)';
-    interestCtx.fill();
-    interestCtx.strokeStyle = secondary;
-    interestCtx.stroke();
-    interestCtx.fillStyle = secondary;
-    interestCtx.font = '9px JetBrains Mono, monospace';
-    interestCtx.fillText('try 1 step', layout.student.x + 30, layout.student.y - 33);
-  }
-
-  drawRoundedRect(interestCtx, layout.feedbackGroup.x - 5, layout.feedbackGroup.y - 5, layout.feedbackGroup.w + 10, layout.feedbackGroup.h + 10, 18);
-  interestCtx.fillStyle = 'rgba(3,7,18,0.38)';
-  interestCtx.fill();
-  interestCtx.strokeStyle = 'rgba(255,255,255,0.08)';
-  interestCtx.lineWidth = 1;
-  interestCtx.stroke();
-
-  layout.feedbackButtons.forEach((button) => {
-    const selected = button.id === educationInteraction.selectedSignal;
-    const hovered = educationInteraction.hoverType === 'signal' && educationInteraction.hoverId === button.id;
-    drawEducationFeedbackSegment(interestCtx, button, selected, hovered, layout, primary, secondary, textColor);
-  });
-
-  if (educationInteraction.active && (educationInteraction.dragging || educationInteraction.pulse > 0.18)) {
-    const pointerX = educationInteraction.x * width;
-    const pointerY = educationInteraction.y * height;
-    interestCtx.beginPath();
-    interestCtx.arc(pointerX, pointerY, 7 + educationInteraction.pulse * 8, 0, Math.PI * 2);
-    interestCtx.strokeStyle = 'rgba(255,255,255,0.24)';
-    interestCtx.lineWidth = 1.2;
-    interestCtx.stroke();
-  }
 }
 
 function medicalActiveLearningLayout(width, height) {
@@ -1674,8 +1461,8 @@ function drawMedicalScan(ctx, tile, sample, options = {}) {
 
   if (!large) {
     ctx.fillStyle = selected ? secondary : labeled ? primary : muted;
-    ctx.font = `${tile.w < 62 ? 7.5 : 8.5}px JetBrains Mono, monospace`;
-    ctx.fillText(sample.id, tile.x + 5, tile.y + 11);
+    ctx.font = '12px sans-serif';
+    ctx.fillText(sample.id, tile.x + 5, tile.y + 14);
     const meterWidth = Math.max(8, tile.w - 10);
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.fillRect(tile.x + 5, tile.y + tile.h - 5, meterWidth, 2);
@@ -1686,98 +1473,32 @@ function drawMedicalScan(ctx, tile, sample, options = {}) {
 
 function drawMedicalActiveLearning(width, height, t, primary, secondary, muted) {
   const layout = medicalActiveLearningLayout(width, height);
-  const selected = medicalCases[medicalInteraction.selected] || medicalCases[0];
-  const isLabeled = medicalInteraction.labeled.has(medicalInteraction.selected);
-  const textColor = themeColor('--text') || '#f5f5f5';
+  const sample = medicalCases[medicalInteraction.selected] || medicalCases[0];
+  const labeled = medicalInteraction.labeled.has(medicalInteraction.selected);
   medicalInteraction.pulse *= 0.9;
-
   interestCtx.fillStyle = muted;
-  interestCtx.font = `${layout.compact ? 8.5 : 10}px JetBrains Mono, monospace`;
-  fillTruncatedText(
-    interestCtx,
-    currentLang === 'zh' ? '选择高不确定度影像进行标注 · 方向键 + 回车' : 'Select an uncertain scan to annotate · arrows + Enter',
-    layout.compact ? 10 : 16,
-    layout.compact ? 19 : 22,
-    width - (layout.compact ? 20 : 32)
-  );
-
+  interestCtx.font = '13px sans-serif';
+  interestCtx.fillText(say('Synthetic scan pool', '合成影像样本池'), layout.compact ? 10 : 16, 22);
   layout.tiles.forEach((tile) => {
     drawMedicalScan(interestCtx, tile, tile, {
       selected: tile.index === medicalInteraction.selected || tile.index === medicalInteraction.hoverIndex,
-      labeled: medicalInteraction.labeled.has(tile.index),
-      primary,
-      secondary,
-      muted
+      labeled: medicalInteraction.labeled.has(tile.index), primary, secondary, muted
     });
   });
-
   const detail = layout.detail;
-  if (layout.compact) {
-    const score = medicalLearningScore();
-    interestCtx.fillStyle = isLabeled ? primary : secondary;
-    interestCtx.font = '700 9px JetBrains Mono, monospace';
-    const stateText = currentLang === 'zh'
-      ? `${selected.id} · ${isLabeled ? `已标注 ${medicalFindingLabel(selected)}` : `不确定度 ${Math.round(selected.uncertainty * 100)}%`}`
-      : `${selected.id} · ${isLabeled ? `labeled ${selected.finding}` : `${Math.round(selected.uncertainty * 100)}% uncertain`}`;
-    fillTruncatedText(interestCtx, stateText, detail.x, detail.y + 12, detail.w * 0.58);
-    interestCtx.fillStyle = muted;
-    interestCtx.font = '8px JetBrains Mono, monospace';
-    fillTruncatedText(
-      interestCtx,
-      currentLang === 'zh' ? `模型得分 ${score}% · 已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}` : `Model ${score}% · ${medicalInteraction.labeled.size}/${medicalCases.length} labeled`,
-      detail.x,
-      detail.y + 27,
-      detail.w * 0.58
-    );
-    const meterX = detail.x + detail.w * 0.62;
-    const meterY = detail.y + 18;
-    interestCtx.fillStyle = 'rgba(255,255,255,0.13)';
-    interestCtx.fillRect(meterX, meterY, detail.w * 0.36, 5);
-    interestCtx.fillStyle = primary;
-    interestCtx.fillRect(meterX, meterY, detail.w * 0.36 * score / 100, 5);
-  } else {
-    const preview = {
-      x: detail.x + detail.w * 0.14,
-      y: detail.y + 4,
-      w: detail.w * 0.72,
-      h: Math.max(72, detail.h * 0.5)
-    };
-    drawMedicalScan(interestCtx, preview, selected, {
-      selected: true,
-      labeled: isLabeled,
-      large: true,
-      primary,
-      secondary,
-      muted
-    });
-
-    interestCtx.fillStyle = isLabeled ? primary : secondary;
-    interestCtx.font = '700 11px JetBrains Mono, monospace';
-    interestCtx.fillText(`${selected.id} · ${isLabeled ? medicalFindingLabel(selected) : `${Math.round(selected.uncertainty * 100)}% ${currentLang === 'zh' ? '不确定' : 'UNCERTAIN'}`}`, detail.x, detail.y + detail.h * 0.62);
-    interestCtx.fillStyle = muted;
-    interestCtx.font = '9px JetBrains Mono, monospace';
-    fillTruncatedText(
-      interestCtx,
-      currentLang === 'zh' ? (isLabeled ? '标注已加入训练集' : '点击该影像加入标注集') : (isLabeled ? 'Annotation added to training set' : 'Click this scan to add a label'),
-      detail.x,
-      detail.y + detail.h * 0.72,
-      detail.w
-    );
-    const score = medicalLearningScore();
-    const meterY = detail.y + detail.h * 0.84;
-    interestCtx.fillStyle = 'rgba(255,255,255,0.13)';
-    interestCtx.fillRect(detail.x, meterY, detail.w, 6);
-    interestCtx.fillStyle = primary;
-    interestCtx.fillRect(detail.x, meterY, detail.w * score / 100, 6);
-    interestCtx.fillStyle = textColor;
-    interestCtx.font = '9px JetBrains Mono, monospace';
-    interestCtx.fillText(`${currentLang === 'zh' ? '模型得分' : 'MODEL SCORE'} ${score}%`, detail.x, meterY + 18);
+  if (!layout.compact) {
+    drawMedicalScan(interestCtx, { x: detail.x + detail.w * 0.1, y: detail.y, w: detail.w * 0.8, h: detail.h * 0.52 }, sample,
+      { selected: true, labeled, large: true, primary, secondary, muted });
   }
-
+  const y = layout.compact ? detail.y + 16 : detail.y + detail.h * 0.64;
+  interestCtx.fillStyle = labeled ? primary : secondary;
+  interestCtx.font = '13px sans-serif';
+  interestCtx.fillText(`${sample.id} · ${labeled ? medicalFindingLabel(sample) : say('Unlabeled', '待标注')}`, detail.x, y);
+  interestCtx.fillStyle = muted;
+  interestCtx.fillText(say(`Labeled ${medicalInteraction.labeled.size}/${medicalCases.length}`, `已标注 ${medicalInteraction.labeled.size}/${medicalCases.length}`), detail.x, y + 23);
   if (medicalInteraction.pulse > 0.02) {
     const tile = layout.tiles[medicalInteraction.selected];
-    interestCtx.beginPath();
-    interestCtx.arc(tile.x + tile.w / 2, tile.y + tile.h / 2, Math.max(tile.w, tile.h) * (0.48 + medicalInteraction.pulse * 0.18), 0, Math.PI * 2);
+    drawRoundedRect(interestCtx, tile.x - 2, tile.y - 2, tile.w + 4, tile.h + 4, 8);
     interestCtx.strokeStyle = `rgba(255,255,255,${medicalInteraction.pulse * 0.42})`;
     interestCtx.lineWidth = 2;
     interestCtx.stroke();
@@ -1957,11 +1678,13 @@ function drawInterestAnimation() {
     const best = candidates[0];
     const selected = vprInteraction.selected || best.id;
     const conditionTint = vprInteraction.condition;
+    const compact = width < 540;
+    const cardCount = compact ? 3 : 5;
     const cardY = height * 0.68;
-    const cardGap = Math.max(7, width * 0.012);
-    const cardWidth = Math.min(86, (width - cardGap * 6) / 5.2);
-    const cardHeight = Math.max(44, height * 0.2);
-    const startX = Math.max(16, width * 0.5 - (cardWidth * 5 + cardGap * 4) / 2);
+    const cardGap = 8;
+    const cardWidth = Math.min(92, (width - 32 - cardGap * (cardCount - 1)) / cardCount);
+    const cardHeight = Math.min(72, height * 0.27);
+    const startX = (width - cardWidth * cardCount - cardGap * (cardCount - 1)) / 2;
 
     interestCtx.beginPath();
     for (let step = 0; step <= 70; step += 1) {
@@ -1994,8 +1717,8 @@ function drawInterestAnimation() {
       interestCtx.lineWidth = isSelected ? 2 : 1;
       interestCtx.stroke();
       interestCtx.fillStyle = muted;
-      interestCtx.font = '10px JetBrains Mono, monospace';
-      interestCtx.fillText(place.id, point.x - 16, point.y - 14);
+      interestCtx.font = '12px sans-serif';
+      if (!compact || isBest || isSelected) interestCtx.fillText(place.id, point.x - 16, point.y - 14);
     });
 
     const bestPoint = routePoint(width, height, best.u);
@@ -2026,20 +1749,20 @@ function drawInterestAnimation() {
     interestCtx.fill();
     interestCtx.restore();
 
-    const queryPanelX = Math.max(16, query.x - 42);
-    const queryPanelY = Math.max(14, query.y - 64);
+    const queryPanelX = 16;
+    const queryPanelY = 12;
     drawRoundedRect(interestCtx, queryPanelX, queryPanelY, 84, 42, 8);
     interestCtx.fillStyle = `rgba(3, 7, 18, ${0.66 + conditionTint * 0.18})`;
     interestCtx.fill();
     interestCtx.strokeStyle = secondary;
     interestCtx.stroke();
     interestCtx.fillStyle = primary;
-    interestCtx.font = '11px JetBrains Mono, monospace';
-    interestCtx.fillText('QUERY', queryPanelX + 10, queryPanelY + 17);
+    interestCtx.font = '13px sans-serif';
+    interestCtx.fillText(say('Query', '查询'), queryPanelX + 10, queryPanelY + 17);
     interestCtx.fillStyle = muted;
-    interestCtx.fillText(conditionTint < 0.34 ? 'day' : conditionTint < 0.68 ? 'shift' : 'night', queryPanelX + 10, queryPanelY + 31);
+    interestCtx.fillText(conditionTint < 0.34 ? say('Day', '白天') : conditionTint < 0.68 ? say('Shift', '变化') : say('Night', '夜间'), queryPanelX + 10, queryPanelY + 31);
 
-    candidates.slice(0, 5).forEach((candidate, index) => {
+    candidates.slice(0, cardCount).forEach((candidate, index) => {
       const x = startX + index * (cardWidth + cardGap);
       const y = cardY;
       const isTop = index === 0;
@@ -2063,10 +1786,10 @@ function drawInterestAnimation() {
       interestCtx.stroke();
 
       interestCtx.fillStyle = isTop ? secondary : primary;
-      interestCtx.font = '10px JetBrains Mono, monospace';
+      interestCtx.font = '12px sans-serif';
       interestCtx.fillText(candidate.id, x + 8, y + 14);
       interestCtx.fillStyle = muted;
-      interestCtx.fillText(candidate.name, x + 8, y + cardHeight - 18);
+      interestCtx.fillText(vprPlaceName(candidate), x + 8, y + cardHeight - 18);
 
       interestCtx.beginPath();
       interestCtx.moveTo(x + 8, y + cardHeight - 8);
@@ -2082,16 +1805,16 @@ function drawInterestAnimation() {
       interestCtx.stroke();
     });
 
-    const scoreX = width - 114;
-    const scoreY = 20;
-    drawRoundedRect(interestCtx, scoreX, scoreY, 94, 42, 10);
+    const scoreX = width - 128;
+    const scoreY = 12;
+    drawRoundedRect(interestCtx, scoreX, scoreY, 112, 42, 8);
     interestCtx.fillStyle = 'rgba(3, 7, 18, 0.58)';
     interestCtx.fill();
     interestCtx.strokeStyle = 'rgba(255,255,255,0.16)';
     interestCtx.stroke();
     interestCtx.fillStyle = secondary;
-    interestCtx.font = '12px JetBrains Mono, monospace';
-    interestCtx.fillText(`TOP ${Math.round(best.score * 100)}%`, scoreX + 12, scoreY + 18);
+    interestCtx.font = '13px sans-serif';
+    interestCtx.fillText(say('Best match', '最佳匹配'), scoreX + 12, scoreY + 18);
     interestCtx.fillStyle = muted;
     interestCtx.fillText(best.id, scoreX + 12, scoreY + 32);
   } else if (type === 'medical-image') {
@@ -2109,6 +1832,7 @@ function updatePointCloudPointer(event) {
   pointCloudInteraction.y = clamp01(pointer.y / Math.max(1, interestCanvasSize.height));
   pointCloudInteraction.active = true;
   pointCloudInteraction.targetScrub = pointCloudInteraction.x;
+  pointCloudInteraction.completed = pointCloudInteraction.x >= 0.999;
   if (pointCloudInteraction.dragging) pointCloudInteraction.scrub = pointCloudInteraction.x;
 }
 
@@ -2135,26 +1859,9 @@ function updateAgentPointer(event) {
 
 function interactWithAgentCollab(event) {
   const hit = agentHitRegion(event);
-  if (hit?.type === 'task') {
-    agentInteraction.taskIndex = hit.item.index;
-    agentInteraction.selectedStage = 'request';
-    agentInteraction.completed = false;
-  } else if (hit?.type === 'human') {
-    agentInteraction.selectedStage = 'request';
-    agentInteraction.completed = false;
-  } else if (hit?.type === 'ai') {
-    agentInteraction.selectedStage = 'work';
-    agentInteraction.completed = false;
-  } else if (hit?.type === 'output') {
-    agentInteraction.selectedStage = 'deliver';
-    agentInteraction.completed = true;
-  } else {
-    agentInteraction.pulse = 0.35;
-    agentInteraction.runBoost = 0.24;
-    return;
-  }
-  agentInteraction.pulse = 1;
-  agentInteraction.runBoost = 0.72;
+  if (hit?.type === 'human') selectAgentTask(agentInteraction.taskIndex);
+  else if (hit?.type === 'ai') runNextAgentStage();
+  else if (hit?.type === 'output' && agentInteraction.selectedStage === 'work') runNextAgentStage();
 }
 
 function updateEducationPointer(event) {
@@ -2169,19 +1876,7 @@ function updateEducationPointer(event) {
 
 function interactWithEducationStudio(event) {
   const hit = educationHitRegion(event);
-  if (hit?.type === 'signal') {
-    educationInteraction.selectedSignal = hit.item.id;
-  } else if (hit?.type === 'robot' || hit?.type === 'board') {
-    educationInteraction.selectedSignal = 'hint';
-  } else if (hit?.type === 'student') {
-    educationInteraction.selectedSignal = 'incorrect';
-  } else {
-    educationInteraction.pulse = 0.3;
-    educationInteraction.masteryBoost = 0.2;
-    return;
-  }
-  educationInteraction.pulse = 1;
-  educationInteraction.masteryBoost = 1;
+  if (hit?.type === 'robot' || hit?.type === 'board') requestEducationHint();
 }
 
 function updateMedicalPointer(event) {
@@ -2261,7 +1956,6 @@ interestCanvas.addEventListener('pointerdown', (event) => {
     educationInteraction.dragging = true;
     updateEducationPointer(event);
     educationInteraction.pulse = 0.8;
-    educationInteraction.masteryBoost = 0.6;
   }
   interestCanvas.style.cursor = 'grabbing';
   try {
@@ -2400,7 +2094,7 @@ interestCanvas.addEventListener('pointerleave', () => {
       if (interestCanvasVisible === nextVisible) return;
       interestCanvasVisible = nextVisible;
       lastInterestFrame = 0;
-      if (nextVisible && isResearchViewActive() && document.visibilityState === 'visible' && !getContext().reducedMotion) {
+      if (nextVisible && isResearchViewActive() && document.visibilityState === 'visible') {
         render();
       }
       requestMotionFrame({ immediate: nextVisible });

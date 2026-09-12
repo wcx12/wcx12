@@ -37,12 +37,12 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=108af3205d8c"></script>
-  <link rel="stylesheet" href="../../../content.css?v=108af3205d8c" />
-  <link rel="stylesheet" href="../../../blog/assets/blog.css?v=108af3205d8c" />
+  <script src="../../../theme-init.js?v=ddfddaffa23f"></script>
+  <link rel="stylesheet" href="../../../content.css?v=ddfddaffa23f" />
+  <link rel="stylesheet" href="../../../blog/assets/blog.css?v=ddfddaffa23f" />
 
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"CollectionPage","@id":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/#page","name":"配准","description":"研究噪声、缺失与不完美观测条件下的稳健点集配准。","url":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/","inLanguage":"zh-CN","about":{"@type":"DefinedTerm","termCode":"point-cloud-registration","name":"配准","description":"研究噪声、缺失与不完美观测条件下的稳健点集配准。"},"mainEntity":{"@id":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/#evidence"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-research-zh.png","width":1200,"height":630,"caption":"wcx12 研究方向与公开成果索引页面"}},{"@type":"ItemList","@id":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/#evidence","numberOfItems":1,"itemListElement":[{"@type":"SoftwareSourceCode","@id":"https://github.com/wcx12/FusionTrack#software","name":"FusionTrack","description":"综合毕业论文仓库；本主页将其中的 code/registration 模块归入点云配准。","url":"https://github.com/wcx12/FusionTrack","codeRepository":"https://github.com/wcx12/FusionTrack","sameAs":"https://wcx12.github.io/FusionTrack/","programmingLanguage":"Python","creativeWorkStatus":"研究仓库","dateModified":"2026-06-02T16:16:58Z","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"}}]}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"CollectionPage","@id":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/#page","name":"配准","description":"研究噪声、缺失与不完美观测条件下的稳健点集配准。","url":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/","inLanguage":"zh-CN","about":{"@type":"DefinedTerm","termCode":"point-cloud-registration","name":"配准","description":"研究噪声、缺失与不完美观测条件下的稳健点集配准。"},"mainEntity":{"@id":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/#evidence"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-research-zh.png","width":1200,"height":630,"caption":"wcx12 研究方向与公开成果索引页面"}},{"@type":"ItemList","@id":"https://wcx12.github.io/wcx12/zh/research/point-cloud-registration/#evidence","numberOfItems":1,"itemListElement":[{"@type":"SoftwareSourceCode","@id":"https://github.com/wcx12/FusionTrack#software","name":"FusionTrack","description":"面向多模态目标融合、轨迹分析与异常检测的毕业设计研究软件，包含独立的点云配准模块。","url":"https://github.com/wcx12/FusionTrack","codeRepository":"https://github.com/wcx12/FusionTrack","sameAs":"https://wcx12.github.io/FusionTrack/","programmingLanguage":"Python","creativeWorkStatus":"研究仓库","dateModified":"2026-06-02T16:16:58Z","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"}}]}]}</script>
 </head>
 <body class="blog-body">
   <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -54,11 +54,12 @@
       <nav id="blogSiteNav" class="blog-nav" aria-label="站点导航">
         <a href="../../" title="返回互动主页">主页</a>
         <a href="../" aria-current="location" title="浏览研究主题与成果">研究</a>
-        <a href="../../projects/" title="浏览含阶段与公开证据说明的项目">项目</a>
+        <a href="../../projects/" title="项目与源码">项目</a>
         <a href="../../publications/" title="浏览含出版方链接的论文">论文</a>
         <a href="../../../blog/" title="打开博客">博客</a>
         <a id="blogDraftStudioLink" href="../../../blog/drafts/" title="打开站主草稿编辑器" hidden>草稿工作台</a>
         <a href="../../resume/" title="打开研究履历">履历</a>
+        <a href="../../#research" title="交互式概念演示">演示</a>
         <a id="blogLangLink" class="blog-nav-button" href="../../../research/point-cloud-registration/" hreflang="en" lang="en" title="View this page in English">EN</a>
         <select id="blogThemeSelect" aria-label="切换页面色调" title="切换页面色调">
           <option value="neon">默认</option>
@@ -69,30 +70,36 @@
     </details>
   </header>
   <main id="main-content" class="blog-shell">
-<header class="research-header">
+<header class="research-header" data-topic-tier="evidence">
       <p class="blog-kicker">对齐</p>
       <h1>配准</h1>
       <p>研究噪声、缺失与不完美观测条件下的稳健点集配准。</p>
       <div class="blog-hero-actions">
         <a class="btn btn-outline" href="../">全部研究方向</a>
-        <a class="btn btn-outline" href="../../publications/">论文列表</a>
+        
         <a class="btn btn-outline research-demo-link" href="../../#research/point-cloud-registration/demo">打开概念演示</a>
       </div>
     </header>
     <section class="research-section" aria-labelledby="evidence-SoftwareSourceCode">
-      <div class="research-section-head"><h2 id="evidence-SoftwareSourceCode">项目</h2><span>1</span></div>
-      <div class="research-evidence-list"><article class="research-evidence" data-evidence-type="SoftwareSourceCode" data-evidence-key="repo:FusionTrack">
+      <div class="research-section-head"><h2 id="evidence-SoftwareSourceCode">研究相关项目</h2><span>1</span></div>
+      
+      <div class="research-evidence-list"><article id="project-FusionTrack" class="research-evidence" data-evidence-type="SoftwareSourceCode" data-evidence-key="repo:FusionTrack">
       <h3 class="research-evidence-title"><a href="https://github.com/wcx12/FusionTrack" rel="noreferrer">FusionTrack</a></h3>
-      <p>综合毕业论文仓库；本主页将其中的 code/registration 模块归入点云配准。</p>
+      <p>面向多模态目标融合、轨迹分析与异常检测的毕业设计研究软件，包含独立的点云配准模块。</p>
+      <p class="project-artifact"><strong>产物</strong> code/registration 提供匹配、位姿估计、评测工具与实验记录；仓库同时包含异常检测基准和毕业论文源码。</p>
+      <nav class="project-entry-links" aria-label="项目入口">
+        <a href="https://wcx12.github.io/FusionTrack/" rel="noreferrer">打开演示</a>
+        <a href="https://github.com/wcx12/FusionTrack#readme" rel="noreferrer">README / 运行说明</a>
+        <a href="https://github.com/wcx12/FusionTrack/tree/main/code/registration" rel="noreferrer">研究产物</a><a href="https://github.com/wcx12/FusionTrack/blob/main/code/registration/EXPERIMENT_RECORD.md" rel="noreferrer">实验记录</a>
+      </nav>
+      <details class="project-provenance"><summary>来源与许可 · 研究仓库</summary>
       <dl class="research-meta">
         <div><dt>语言</dt><dd>Python</dd></div>
-        <div><dt>阶段</dt><dd>研究仓库</dd></div>
-        <div><dt>公开证据</dt><dd>此处依据 code/registration 模块映射；仓库还包含毕业论文代码、测试、论文源码与实验记录。</dd></div>
         <div><dt>许可证</dt><dd>未声明仓库许可证</dd></div>
 
         <div><dt>代码</dt><dd><a href="https://github.com/wcx12/FusionTrack" rel="noreferrer">GitHub</a></dd></div>
-        <div><dt>演示</dt><dd><a href="https://wcx12.github.io/FusionTrack/" rel="noreferrer">打开在线演示</a></dd></div>
       </dl>
+      </details>
     </article></div>
     </section>
   </main>
@@ -105,6 +112,6 @@
     </nav>
   </footer>
 
-  <script type="module" src="../../../blog/assets/blog.js?v=108af3205d8c"></script>
+  <script type="module" src="../../../blog/assets/blog.js?v=ddfddaffa23f"></script>
 </body>
 </html>

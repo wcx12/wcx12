@@ -102,6 +102,17 @@
             "en": "Agentic workflows with planning, tool use, retrieval, and evaluation loops.",
             "zh": "关注规划、工具调用、检索与评测闭环的大模型智能体工作流。"
           }
+        },
+        {
+          "id": "generative-retrieval",
+          "title": { "en": "Generative Retrieval", "zh": "生成式检索" },
+          "label": { "en": "recommendation & Semantic IDs", "zh": "推荐与语义 ID" },
+          "animation": "none",
+          "indexable": true,
+          "description": {
+            "en": "Reading notes on generative recommendation, semantic item identifiers, and residual quantization.",
+            "zh": "围绕生成式推荐、物品语义标识与残差量化的阅读笔记与探索。"
+          }
         }
       ]
     },
@@ -140,10 +151,10 @@
       "point-cloud-registration"
     ],
     "wcx12": [],
-    "hlpp-crossword": [],
+    "hlpp-crossword": ["ai4edu"],
     "codex-pet-battle": [],
-    "shuxuepeiyou": [],
-    "tetrahedron-visualizer": [],
+    "shuxuepeiyou": ["ai4edu"],
+    "tetrahedron-visualizer": ["ai4edu"],
     "BIT-The-mathematical-foundation-of-big-Data": [],
     "major-intel": [
       "agent"

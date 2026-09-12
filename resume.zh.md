@@ -2,13 +2,13 @@
 
 ## 教育背景
 
-- **北京理工大学**\
-  本科阶段，2022.09-2026.06
+- **{{EDUCATION_INSTITUTION}}**\
+  {{EDUCATION_MAJOR}}，{{EDUCATION_PERIOD}}
 
 ## 经历
 
-- **深圳市后浪澎湃科技有限责任公司**\
-  创业者，2026.3-至今；参与早期教育科技业务实践，深圳
+- **{{EXPERIENCE_ORGANIZATION}}**\
+  {{EXPERIENCE_ROLE}}，{{EXPERIENCE_PERIOD}}
 
 ## 论文
 
@@ -27,18 +27,20 @@
 - **大模型**
   - **[智能体系统](../research/agent/)**\
     检索、工具调用、规划与评测工作流
+  - **[生成式检索](../research/generative-retrieval/)**\
+    语义 ID、量化与推荐方向的阅读笔记
 - **AI4教育**
   - **[学习工具](../research/ai4edu/)**\
-    教育软件与交互式数学资源
+    相关教学实践：教育软件与交互式数学资源，不作为 AI 学习效果证据
 
 ## 代表项目
 
 - **[FusionTrack](https://github.com/wcx12/FusionTrack)**\
-  毕业论文与点集配准研究成果，包含可审计的基准协议和可复现评测工具
+  面向目标融合、轨迹补全与异常检测的毕业论文仓库，包含配准代码、测试与实验记录。[配准模块](https://github.com/wcx12/FusionTrack/tree/main/code/registration)
 - **[major-intel](https://github.com/wcx12/major-intel)**\
-  基于 MySQL 的 SQL 优先检索智能体，记录工具轨迹并显式处理证据缺口
+  面向高校专业信息的 SQL 优先检索原型，包含 Python 包、数据工具与测试。[README 与运行说明](https://github.com/wcx12/major-intel#readme)
 - **[shuxuepeiyou](https://github.com/wcx12/shuxuepeiyou)**\
-  面向数学培优的 LaTeX 讲义、公开 PDF 与交互式可视化
+  面向数学培优的 LaTeX 讲义、编译 PDF 与交互式可视化。[教学资源入口](https://wcx12.github.io/shuxuepeiyou/)
 
 ## 技术能力
 

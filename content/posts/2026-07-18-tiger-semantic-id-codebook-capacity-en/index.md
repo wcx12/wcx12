@@ -9,7 +9,7 @@ updated: "2026-07-18"
 description: "Starting from the anomaly that only 1 of 256 first-layer codewords survives, this article analyzes TIGER codebook collapse, the hard-ST fix, and task-dependent hierarchical capacity allocation across five Amazon categories."
 category: "Research Notes"
 tags: ["generative-recommendation", "semantic-id", "rq-vae", "tiger"]
-research: []
+research: ["generative-retrieval"]
 featured: false
 draft: false
 math: true

@@ -6,7 +6,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
   <title>TF-VPR: A novel benchmark for training-free visual place recognition（论文记录） | Chenxu Wang (wcx12)</title>
-  <meta name="description" content="面向视觉地点识别与视觉定位的免训练基准研究。" />
+  <meta name="description" content="利用冻结的视觉基础模型，结合图注意力与原型交叉注意力构建地点描述符，研究免任务训练的视觉地点识别。" />
   <meta name="author" content="Chenxu Wang" />
   <meta name="robots" content="index,follow,max-image-preview:large" />
   <meta name="theme-color" content="#070914" />
@@ -18,7 +18,7 @@
   <link rel="alternate" hreflang="x-default" href="https://wcx12.github.io/wcx12/publications/tf-vpr/" />
   <link rel="icon" type="image/svg+xml" href="../../../favicon.svg" />
   <meta property="og:title" content="TF-VPR: A novel benchmark for training-free visual place recognition（论文记录） | Chenxu Wang (wcx12)" />
-  <meta property="og:description" content="面向视觉地点识别与视觉定位的免训练基准研究。" />
+  <meta property="og:description" content="利用冻结的视觉基础模型，结合图注意力与原型交叉注意力构建地点描述符，研究免任务训练的视觉地点识别。" />
   <meta property="og:type" content="article" />
   <meta property="og:url" content="https://wcx12.github.io/wcx12/zh/publications/tf-vpr/" />
   <meta property="og:site_name" content="Chenxu Wang 研究主页" />
@@ -38,15 +38,15 @@
   <meta property="article:tag" content="Neurocomputing" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="TF-VPR: A novel benchmark for training-free visual place recognition（论文记录） | Chenxu Wang (wcx12)" />
-  <meta name="twitter:description" content="面向视觉地点识别与视觉定位的免训练基准研究。" />
+  <meta name="twitter:description" content="利用冻结的视觉基础模型，结合图注意力与原型交叉注意力构建地点描述符，研究免任务训练的视觉地点识别。" />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-publications-zh.png" />
   <meta name="twitter:image:alt" content="Chenxu Wang 论文与出版记录" />
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=108af3205d8c"></script>
-  <link rel="stylesheet" href="../../../content.css?v=108af3205d8c" />
-  <link rel="stylesheet" href="../../../blog/assets/blog.css?v=108af3205d8c" />
+  <script src="../../../theme-init.js?v=ddfddaffa23f"></script>
+  <link rel="stylesheet" href="../../../content.css?v=ddfddaffa23f" />
+  <link rel="stylesheet" href="../../../blog/assets/blog.css?v=ddfddaffa23f" />
 <meta name="citation_title" content="TF-VPR: A novel benchmark for training-free visual place recognition" />
   <meta name="citation_author" content="Chenxu Wang" />
   <meta name="citation_author" content="Qingtong Meng" />
@@ -54,7 +54,6 @@
   <meta name="citation_author" content="Fusen Guo" />
   <meta name="citation_journal_title" content="Neurocomputing" />
   <meta name="citation_publication_date" content="2026/06" />
-  <meta name="citation_online_date" content="2026/06/07" />
   <meta name="citation_volume" content="681" />
   <meta name="citation_firstpage" content="133399" />
   <meta name="citation_doi" content="10.1016/j.neucom.2026.133399" />
@@ -63,7 +62,7 @@
   <meta name="citation_language" content="en" />
   <meta name="citation_abstract_html_url" content="https://wcx12.github.io/wcx12/zh/publications/tf-vpr/" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/","url":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/","name":"TF-VPR: A novel benchmark for training-free visual place recognition（论文记录）","description":"面向视觉地点识别与视觉定位的免训练基准研究。","inLanguage":"zh-CN","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntity":{"@id":"https://doi.org/10.1016/j.neucom.2026.133399#article"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-publications-zh.png","width":1200,"height":630,"caption":"Chenxu Wang 论文与出版记录"}},{"@type":"ScholarlyArticle","@id":"https://doi.org/10.1016/j.neucom.2026.133399#article","headline":"TF-VPR: A novel benchmark for training-free visual place recognition","name":"TF-VPR: A novel benchmark for training-free visual place recognition","description":"面向视觉地点识别与视觉定位的免训练基准研究。","url":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/","sameAs":"https://doi.org/10.1016/j.neucom.2026.133399","mainEntityOfPage":{"@type":"WebPage","@id":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/"},"inLanguage":"en","creativeWorkStatus":"Published","datePublished":"2026-06-07","author":[{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/","alternateName":"wcx12","email":"mailto:c2675668@gmail.com","identifier":{"@type":"PropertyValue","propertyID":"ORCID","value":"0009-0005-6139-4327","url":"https://orcid.org/0009-0005-6139-4327"},"affiliation":{"@type":"CollegeOrUniversity","name":"Beijing Institute of Technology"},"worksFor":{"@type":"Organization","name":"Shenzhen Houlang Pengpai Technology Co., Ltd."},"sameAs":["https://github.com/wcx12","https://orcid.org/0009-0005-6139-4327"]},{"@type":"Person","name":"Qingtong Meng"},{"@type":"Person","name":"Bonan Zhang"},{"@type":"Person","name":"Fusen Guo"}],"isPartOf":{"@type":"PublicationVolume","volumeNumber":"681","isPartOf":{"@type":"Periodical","name":"Neurocomputing","issn":"0925-2312","publisher":{"@type":"Organization","name":"Elsevier BV"}}},"publisher":{"@type":"Organization","name":"Elsevier BV"},"pagination":"133399","license":"https://creativecommons.org/licenses/by/4.0/","isAccessibleForFree":true,"identifier":{"@type":"PropertyValue","propertyID":"DOI","value":"10.1016/j.neucom.2026.133399","url":"https://doi.org/10.1016/j.neucom.2026.133399"},"subjectOf":{"@type":"SoftwareSourceCode","name":"TF-VPR: A novel benchmark for training-free visual place recognition official implementation","url":"https://github.com/ddfs430/TF-VPR","codeRepository":"https://github.com/ddfs430/TF-VPR"},"about":{"@type":"DefinedTerm","termCode":"vpr","name":"VPR","url":"https://wcx12.github.io/wcx12/zh/research/vpr/"}}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/","url":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/","name":"TF-VPR: A novel benchmark for training-free visual place recognition（论文记录）","description":"利用冻结的视觉基础模型，结合图注意力与原型交叉注意力构建地点描述符，研究免任务训练的视觉地点识别。","inLanguage":"zh-CN","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntity":{"@id":"https://doi.org/10.1016/j.neucom.2026.133399#article"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-publications-zh.png","width":1200,"height":630,"caption":"Chenxu Wang 论文与出版记录"}},{"@type":"ScholarlyArticle","@id":"https://doi.org/10.1016/j.neucom.2026.133399#article","headline":"TF-VPR: A novel benchmark for training-free visual place recognition","name":"TF-VPR: A novel benchmark for training-free visual place recognition","description":"利用冻结的视觉基础模型，结合图注意力与原型交叉注意力构建地点描述符，研究免任务训练的视觉地点识别。","url":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/","sameAs":"https://doi.org/10.1016/j.neucom.2026.133399","mainEntityOfPage":{"@type":"WebPage","@id":"https://wcx12.github.io/wcx12/zh/publications/tf-vpr/"},"inLanguage":"en","creativeWorkStatus":"Published","datePublished":"2026-06-07","author":[{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/","alternateName":"wcx12","email":"mailto:c2675668@gmail.com","identifier":{"@type":"PropertyValue","propertyID":"ORCID","value":"0009-0005-6139-4327","url":"https://orcid.org/0009-0005-6139-4327"},"alumniOf":{"@type":"CollegeOrUniversity","name":"Beijing Institute of Technology"},"worksFor":{"@type":"Organization","name":"Shenzhen Houlang Pengpai Technology Co., Ltd."},"homeLocation":{"@type":"Place","name":"Shenzhen, China"},"sameAs":["https://github.com/wcx12","https://orcid.org/0009-0005-6139-4327"]},{"@type":"Person","name":"Qingtong Meng"},{"@type":"Person","name":"Bonan Zhang"},{"@type":"Person","name":"Fusen Guo"}],"isPartOf":{"@type":"PublicationVolume","volumeNumber":"681","isPartOf":{"@type":"Periodical","name":"Neurocomputing","issn":"0925-2312","publisher":{"@type":"Organization","name":"Elsevier BV"}}},"publisher":{"@type":"Organization","name":"Elsevier BV"},"pagination":"133399","license":"https://creativecommons.org/licenses/by/4.0/","isAccessibleForFree":true,"identifier":{"@type":"PropertyValue","propertyID":"DOI","value":"10.1016/j.neucom.2026.133399","url":"https://doi.org/10.1016/j.neucom.2026.133399"},"subjectOf":{"@type":"SoftwareSourceCode","name":"TF-VPR: A novel benchmark for training-free visual place recognition official implementation","url":"https://github.com/ddfs430/TF-VPR","codeRepository":"https://github.com/ddfs430/TF-VPR"},"about":{"@type":"DefinedTerm","termCode":"vpr","name":"VPR","url":"https://wcx12.github.io/wcx12/zh/research/vpr/"}}]}</script>
 </head>
 <body class="blog-body">
   <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -75,11 +74,12 @@
       <nav id="blogSiteNav" class="blog-nav" aria-label="站点导航">
         <a href="../../" title="返回互动主页">主页</a>
         <a href="../../research/" title="浏览研究主题与成果">研究</a>
-        <a href="../../projects/" title="浏览含阶段与公开证据说明的项目">项目</a>
+        <a href="../../projects/" title="项目与源码">项目</a>
         <a href="../" aria-current="location" title="浏览含出版方链接的论文">论文</a>
         <a href="../../../blog/" title="打开博客">博客</a>
         <a id="blogDraftStudioLink" href="../../../blog/drafts/" title="打开站主草稿编辑器" hidden>草稿工作台</a>
         <a href="../../resume/" title="打开研究履历">履历</a>
+        <a href="../../#research" title="交互式概念演示">演示</a>
         <a id="blogLangLink" class="blog-nav-button" href="../../../publications/tf-vpr/" hreflang="en" lang="en" title="View this page in English">EN</a>
         <select id="blogThemeSelect" aria-label="切换页面色调" title="切换页面色调">
           <option value="neon">默认</option>
@@ -94,7 +94,7 @@
       <header class="research-header">
         <p class="blog-kicker">论文记录</p>
         <h1 lang="en">TF-VPR: A novel benchmark for training-free visual place recognition</h1>
-        <p>面向视觉地点识别与视觉定位的免训练基准研究。</p>
+        <p>利用冻结的视觉基础模型，结合图注意力与原型交叉注意力构建地点描述符，研究免任务训练的视觉地点识别。</p>
         <p class="research-authors" lang="en"><strong class="resume-author-self">Chenxu Wang</strong>, Qingtong Meng, Bonan Zhang, and Fusen Guo</p>
         <div class="blog-hero-actions">
           <a class="btn btn-primary" href="https://doi.org/10.1016/j.neucom.2026.133399" rel="noreferrer">DOI</a>
@@ -103,13 +103,15 @@
           <a class="btn btn-outline" href="../">全部论文</a>
         </div>
       </header>
+      <section class="research-section" aria-labelledby="publication-findings-title"><div class="research-section-head"><h2 id="publication-findings-title">方法、结果与局限</h2></div><dl class="publication-research-notes"><div><dt>方法</dt><dd>TF-GAM 在图像内部传播 patch 特征，TF-CAM 利用无标签 K-means 原型聚合全局描述符。</dd></div><div><dt>核心结果</dt><dd>原文表 5 的 MSLS-val 消融实验中，Top-1 召回率从 CLS 的 41.1% 提高到 CAM+GAM 的 57.1%。</dd></div><div><dt>适用范围与局限</dt><dd>免训练指无需任务微调，并不意味着无需预训练和原型构建；描述符增强也会增加推理开销。</dd></div></dl></section>
       <section class="research-section" aria-labelledby="publication-record-title">
         <div class="research-section-head"><h2 id="publication-record-title">书目信息</h2><span>2026</span></div>
         <dl class="research-meta publication-record-meta">
           <div><dt>期刊</dt><dd>Neurocomputing</dd></div>
           <div><dt>卷</dt><dd>681</dd></div>
           <div><dt>文章号</dt><dd>133399</dd></div>
-          <div><dt>状态</dt><dd>已发表 &middot; 2026 年 6 月 7 日出版</dd></div>
+          <div><dt>状态</dt><dd>已发表</dd></div>
+          
           <div><dt>DOI</dt><dd><a href="https://doi.org/10.1016/j.neucom.2026.133399" rel="noreferrer">10.1016/j.neucom.2026.133399</a></dd></div>
           <div><dt>ISSN</dt><dd>0925-2312</dd></div>
           <div><dt>出版方</dt><dd>Elsevier BV</dd></div>
@@ -124,7 +126,7 @@
       <section class="research-section" aria-labelledby="publication-code-title">
         <div class="research-section-head"><h2 id="publication-code-title">官方实现</h2><span>GitHub</span></div>
         <p><a href="https://github.com/ddfs430/TF-VPR" rel="noreferrer">https://github.com/ddfs430/TF-VPR</a></p>
-        <p class="muted">官方实现托管在本主页 GitHub 账号之外；此处作为论文证据链接，不作为本账号的仓库认领。</p>
+        <p class="muted">官方实现由 ddfs430 托管。</p>
       </section>
     </article>
   </main>
@@ -137,6 +139,6 @@
     </nav>
   </footer>
 
-  <script type="module" src="../../../blog/assets/blog.js?v=108af3205d8c"></script>
+  <script type="module" src="../../../blog/assets/blog.js?v=ddfddaffa23f"></script>
 </body>
 </html>

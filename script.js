@@ -308,6 +308,16 @@ let researchInterests = [
           en: 'Agentic workflows with planning, tool use, retrieval, and evaluation loops.',
           zh: '关注规划、工具调用、检索与评测闭环的大模型智能体工作流。'
         }
+      },
+      {
+        id: 'generative-retrieval',
+        title: { en: 'Generative Retrieval', zh: '生成式检索' },
+        label: { en: 'recommendation & Semantic IDs', zh: '推荐与语义 ID' },
+        animation: 'none',
+        description: {
+          en: 'Reading notes on generative recommendation, semantic item identifiers, and residual quantization.',
+          zh: '围绕生成式推荐、物品语义标识与残差量化的阅读笔记与探索。'
+        }
       }
     ]
   },
@@ -322,8 +332,8 @@ let researchInterests = [
         label: { en: 'AI4Education', zh: 'AI4教育' },
         animation: 'education',
         description: {
-          en: 'AI-assisted learning tools, practice generation, feedback, and knowledge tracing ideas.',
-          zh: '面向学习工具、练习生成、反馈闭环与知识追踪的 AI4教育方向。'
+          en: 'Educational software, interactive mathematics visualizations, teaching resources, and exploratory AI-supported learning workflows.',
+          zh: '围绕教育软件、交互式数学可视化、教学资源与探索中的 AI 辅助学习工作流。'
         }
       }
     ]
@@ -1068,6 +1078,16 @@ function handleLocationNavigation() {
 commands.forEach((btn) => btn.addEventListener('click', () => activateView(btn.dataset.view, { focusHeading: true })));
 window.addEventListener('popstate', handleLocationNavigation);
 window.addEventListener('hashchange', handleLocationNavigation);
+
+document.querySelector('.skip-link')?.addEventListener('click', (event) => {
+  event.preventDefault();
+  const target = document.querySelector('.view.active') || document.getElementById('main-content');
+  if (!target) return;
+  target.tabIndex = -1;
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ behavior: 'auto', block: 'start' });
+});
+
 function commandItems() {
   const viewItems = Array.from(commands).map((btn) => ({
     title: btn.textContent,
@@ -1460,6 +1480,7 @@ function renderInterestRail() {
       updateRoute('research', 'push');
     });
   });
+  requestAnimationFrame(keepActiveInterestVisible);
 }
 
 function inferInterestIds(item) {
@@ -1578,10 +1599,28 @@ function attachInterestJumpHandlers(root = document) {
   });
 }
 
+function keepActiveInterestVisible() {
+  if (!document.getElementById('research')?.classList.contains('active')) return;
+  const active = interestRail.querySelector('[aria-current="page"]');
+  if (!active || interestRail.scrollWidth <= interestRail.clientWidth) return;
+  const railBounds = interestRail.getBoundingClientRect();
+  const activeBounds = active.getBoundingClientRect();
+  const offset = activeBounds.left < railBounds.left
+    ? activeBounds.left - railBounds.left - 8
+    : activeBounds.right > railBounds.right
+      ? activeBounds.right - railBounds.right + 8
+      : 0;
+  if (offset) interestRail.scrollLeft += offset;
+}
+
+new ResizeObserver(keepActiveInterestVisible).observe(interestRail);
+
 function setInterestPanel(panel) {
   const requestedPanel = ['animation', 'projects', 'papers', 'writing'].includes(panel) ? panel : 'animation';
   const requestedTab = Array.from(interestSectionTabs).find((button) => button.dataset.interestPanel === requestedPanel);
-  activeInterestPanel = requestedTab?.hidden ? 'animation' : requestedPanel;
+  activeInterestPanel = requestedTab?.hidden
+    ? Array.from(interestSectionTabs).find((tab) => !tab.hidden)?.dataset.interestPanel || 'animation'
+    : requestedPanel;
   if (interestDetail) interestDetail.dataset.panel = activeInterestPanel;
   interestSectionTabs.forEach((button) => {
     const active = button.dataset.interestPanel === activeInterestPanel;
@@ -1619,6 +1658,8 @@ function bindRepoToInterestAnimation(repo, interestId) {
 
 function jumpToResearchInterest(interestId, repoName = null) {
   if (!interestEntryById(interestId)) return;
+  if (modal.classList.contains('open')) closeModal({ restoreFocus: false });
+  if (readmeDrawer.classList.contains('open')) closeReadmeDrawer({ restoreFocus: false });
   activeInterestId = interestId;
   const repo = repoName ? allRepos.find((item) => item.name === repoName) : null;
   if (repo) bindRepoToInterestAnimation(repo, interestId);
@@ -1801,7 +1842,9 @@ function renderRelatedList(container, items, emptyText, kind) {
   container.innerHTML = items.slice(0, 4).map((item) => {
     const rawTitle = item.name || item.title || '';
     const title = escapeHtml(rawTitle);
-    const rawDetail = item.description || item.summary || item.language || item.venue || '';
+    const rawDetail = kind === 'repo' ? repoDescription(item)
+      : kind === 'paper' ? paperSummary(item)
+        : item.description || item.summary || item.language || item.venue || '';
     const detail = kind === 'repo' ? languageAwareHtml(rawDetail) : escapeHtml(rawDetail);
     const rawMeta = kind === 'repo'
       ? `${item.language || i18n[currentLang].mixed} · ${i18n[currentLang].star} ${item.stargazers_count || 0}`
@@ -1911,9 +1954,9 @@ function attachInteractiveCards(root = document) {
 }
 
 function heroPreviewEntry() {
-  const entries = allInterestChildren();
+  const entries = allInterestChildren().filter(({ child }) => child.animation !== 'none');
   if (!entries.length) return null;
-  return interestEntryById(activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
+  return entries.find(({ child }) => child.id === activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
 }
 
 function renderHeroPreview() {
@@ -2060,6 +2103,37 @@ function measureHeroPreviewSize() {
 function drawHeroScenePreview(ctx, width, height, t, scene, colors, entry) {
   const { primary, secondary, text, muted } = colors;
   ctx.clearRect(0, 0, width, height);
+  if (entry.child.animation === 'point-cloud') {
+    const phase = reducedMotionQuery.matches ? 1 : (1 + Math.sin(t * 0.3)) / 2;
+    const angle = (1 - phase) * 0.34;
+    const scale = Math.min(width * 0.27, height * 0.38);
+    for (let set = 0; set < 2; set += 1) {
+      ctx.fillStyle = colorWithAlpha(set ? secondary : primary, 0.8);
+      for (let row = 0; row < 14; row += 1) {
+        for (let column = 0; column < 23; column += 1) {
+          const u = column / 22 * Math.PI * 2;
+          const v = row / 13 * Math.PI;
+          const x = Math.sin(v) * Math.cos(u);
+          const y = Math.cos(v) * 0.65 + Math.sin(u * 3) * 0.12;
+          const z = Math.sin(v) * Math.sin(u);
+          const a = set ? angle : 0;
+          const px = (x * Math.cos(a) - y * Math.sin(a)) * scale + width / 2 + (set ? (1 - phase) * 28 : 0);
+          const py = (x * Math.sin(a) + y * Math.cos(a) - z * 0.28) * scale + height / 2;
+          ctx.beginPath();
+          ctx.arc(px, py, 1.3 + (z + 1) * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.font = '500 12px "Space Grotesk", sans-serif';
+    ctx.fillStyle = primary;
+    ctx.fillText(currentLang === 'zh' ? '目标点集' : 'Target points', 16, height - 14);
+    ctx.fillStyle = secondary;
+    ctx.textAlign = 'right';
+    ctx.fillText(currentLang === 'zh' ? '移动点集 · 示意' : 'Moving points · concept', width - 16, height - 14);
+    ctx.textAlign = 'left';
+    return;
+  }
   ctx.fillStyle = 'rgba(5, 9, 22, 0.96)';
   ctx.fillRect(0, 0, width, height);
 
@@ -2129,7 +2203,10 @@ function drawHeroScenePreview(ctx, width, height, t, scene, colors, entry) {
 
   ctx.font = '700 11px "JetBrains Mono", monospace';
   ctx.fillStyle = colorWithAlpha(muted, 0.86);
-  fillTruncatedText(ctx, scene.accent.toUpperCase(), innerX, height - pad - 14, innerW * 0.38);
+  const sceneLabel = currentLang === 'zh'
+    ? ({ route: '地点匹配', workflow: '任务协作', teaching: '教学', analysis: '影像分析', research: '研究' }[scene.accent] || '概念')
+    : scene.accent.toUpperCase();
+  fillTruncatedText(ctx, sceneLabel, innerX, height - pad - 14, innerW * 0.38);
   ctx.textAlign = 'right';
   ctx.fillStyle = colorWithAlpha(text, 0.9);
   fillTruncatedText(ctx, textFor(entry.child.title), innerX + innerW, height - pad - 14, innerW * 0.52);
@@ -2162,10 +2239,10 @@ function renderResearchInterest() {
   const repoItems = relatedRepos();
   const paperItems = relatedPapers();
   const postItems = relatedPosts();
-  setInterestPanelAvailability('animation', true);
+  setInterestPanelAvailability('animation', entry.child.animation !== 'none');
   setInterestPanelAvailability('projects', repoItems.length > 0);
   setInterestPanelAvailability('papers', paperItems.length > 0);
-  setInterestPanelAvailability('writing', postItems.length > 0);
+  setInterestPanelAvailability('writing', postItems.length > 0 || entry.child.animation === 'none');
   if (interestTabs) interestTabs.hidden = Array.from(interestSectionTabs).filter((button) => !button.hidden).length <= 1;
   setInterestPanel(activeInterestPanel);
   renderInterestRail();
@@ -2522,12 +2599,12 @@ function openModal(config) {
   requestAnimationFrame(() => modalClose?.focus());
 }
 
-function closeModal() {
+function closeModal({ restoreFocus = true } = {}) {
   const wasOpen = modal.classList.contains('open');
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   setOverlayActive(modal, false);
-  if (wasOpen) restoreOverlayFocus(modalReturnFocus);
+  if (wasOpen && restoreFocus) restoreOverlayFocus(modalReturnFocus);
   modalReturnFocus = null;
 }
 
@@ -3014,7 +3091,7 @@ function openReadmeDrawer(repo, html) {
   requestAnimationFrame(() => readmeDrawerClose?.focus());
 }
 
-function closeReadmeDrawer() {
+function closeReadmeDrawer({ restoreFocus = true } = {}) {
   if (!readmeDrawer) return;
   readmeRequestSequence += 1;
   readmeRequestController?.abort();
@@ -3025,7 +3102,7 @@ function closeReadmeDrawer() {
   readmeDrawerBody?.setAttribute('aria-busy', 'false');
   if (readmeDrawerStatus) readmeDrawerStatus.textContent = '';
   setOverlayActive(readmeDrawer, false);
-  if (wasOpen) {
+  if (wasOpen && restoreFocus) {
     const repoFallback = Array.from(document.querySelectorAll('.repo-detail'))
       .find((button) => button.dataset.repo === readmeReturnFocusRepoName);
     restoreOverlayFocus(readmeReturnFocus?.isConnected
@@ -3057,7 +3134,8 @@ function openPaperDetail(title) {
     ? `${paper.venue}${paper.volume ? ` ${paper.volume}` : ''} (${paper.year || ''})${paper.article_number ? `, ${paper.article_number}` : ''}`
     : '';
   const status = publicationStatusLabel(paper, currentLang);
-  const statusParts = [status, textFor(paper.publishedLabel), paper.open_access ? publicationLabels.openAccess : '']
+  const dateLabel = textFor(paper.publishedLabel);
+  const statusParts = [dateLabel || status, textFor(paper.issueLabel), paper.open_access ? publicationLabels.openAccess : '']
     .filter(Boolean)
     .map((value) => escapeHtml(value));
   const citationStem = paper.doi ? slugify(paper.doi) : '';
@@ -3072,9 +3150,15 @@ function openPaperDetail(title) {
     codeNote ? `<div><dt>${escapeHtml(i18n[currentLang].pub_code_note)}</dt><dd>${escapeHtml(codeNote)}</dd></div>` : ''
   ].filter(Boolean).join('');
   const paperDetails = detailRows ? `<dl class="project-evidence">${detailRows}</dl>` : '';
+  const noteLabels = currentLang === 'zh' ? { method: '方法', result: '主要结果', scope: '适用边界' }
+    : { method: 'Method', result: 'Key result', scope: 'Scope' };
+  const notes = Object.entries(noteLabels).map(([key, label]) => {
+    const value = textFor(paper.research_notes?.[key]);
+    return value ? `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>` : '';
+  }).join('');
   openModal({
     title: paper.title,
-    html: `<div class="readme-box">${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${languageAwareHtml(paperSummary(paper))}</p>${paperDetails}</div>`,
+    html: `<div class="readme-box">${authors}<div class="research-badges">${researchBadgesHtml(paper, 'paper')}</div><p>${languageAwareHtml(paperSummary(paper))}</p>${notes}${paperDetails}</div>`,
     linkText: i18n[currentLang].pub_open_article,
     link: paper.link
   });

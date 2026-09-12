@@ -32,6 +32,8 @@ test('Pages artifact contains only the explicit public surface', async () => {
     'index.html',
     'content.css',
     'homepage-bootstrap.js',
+    'profile-data.js',
+    'research-demo-content.js',
     'theme-init.js',
     'zh/index.html',
     'resume/index.html',

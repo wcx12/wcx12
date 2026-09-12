@@ -10,7 +10,9 @@
       "rq-vae",
       "tiger"
     ],
-    "research": [],
+    "research": [
+      "generative-retrieval"
+    ],
     "translationKey": "tiger-generative-retrieval-reading",
     "lang": "zh",
     "url": "./posts/tiger-generative-retrieval-reading/",
@@ -27,7 +29,9 @@
       "rq-vae",
       "tiger"
     ],
-    "research": [],
+    "research": [
+      "generative-retrieval"
+    ],
     "translationKey": "tiger-semantic-id-codebook-capacity",
     "lang": "en",
     "url": "./posts/tiger-semantic-id-codebook-capacity-en/",
@@ -44,7 +48,9 @@
       "rq-vae",
       "tiger"
     ],
-    "research": [],
+    "research": [
+      "generative-retrieval"
+    ],
     "translationKey": "tiger-semantic-id-codebook-capacity",
     "lang": "zh",
     "url": "./posts/tiger-semantic-id-codebook-capacity/",

@@ -15,15 +15,19 @@ const blogI18n = {
     skip_main: 'Skip to main content',
     nav_home: 'Home',
     nav_home_title: 'Back to the interactive homepage',
-    nav_profile: 'Profile',
+    nav_profile: 'Resume',
     nav_profile_title: 'Open the research profile',
     nav_research: 'Research',
     nav_research_title: 'Browse research topics and evidence',
     nav_projects: 'Projects',
-    nav_projects_title: 'Browse public repositories with maturity and evidence notes',
+    nav_projects_title: 'Projects and source code',
     nav_publications: 'Publications',
     nav_publications_title: 'Browse publisher-linked publications',
-    nav_blog: 'Writing',
+    nav_blog: 'Blog',
+    nav_demos: 'Demos',
+    nav_demos_title: 'Interactive concept demos',
+    original_zh: 'Chinese original',
+    original_en: 'English original',
     nav_blog_title: 'Open Research Fieldnotes',
     nav_archive: 'Archive',
     nav_archive_title: 'Browse all posts by date',
@@ -42,13 +46,13 @@ const blogI18n = {
     page_title: 'Research Fieldnotes',
     hero_kicker: 'Research · Engineering · Reflection',
     hero_title: 'Research Fieldnotes',
-    hero_desc: 'Notes on research tooling, reproducible workflows, technical writing, and the systems behind this site.',
+    hero_desc: 'Research notes, experiments, and engineering practice.',
     hero_byline: 'By',
     hero_role: 'Machine Learning Researcher',
     hero_read_latest: 'Read latest',
     hero_browse_archive: 'Browse archive',
     stat_published: 'Published',
-    stat_topics: 'Topics',
+    stat_topics: 'Browseable tags',
     stat_search: 'Search',
     stat_ready: 'Ready',
     stat_language: 'Interface',
@@ -115,10 +119,14 @@ const blogI18n = {
     nav_research: '研究',
     nav_research_title: '浏览研究主题与成果',
     nav_projects: '项目',
-    nav_projects_title: '浏览含阶段与公开证据说明的项目',
+    nav_projects_title: '项目与源码',
     nav_publications: '论文',
     nav_publications_title: '浏览含出版方链接的论文',
     nav_blog: '博客',
+    nav_demos: '演示',
+    nav_demos_title: '交互式概念演示',
+    original_zh: '中文原文',
+    original_en: '英文原文',
     nav_blog_title: '打开博客',
     nav_archive: '归档',
     nav_archive_title: '按日期浏览所有文章',
@@ -137,13 +145,13 @@ const blogI18n = {
     page_title: '知研札记',
     hero_kicker: '研究 · 工程 · 思考',
     hero_title: '知研札记',
-    hero_desc: '记录研究工具、可复现工作流、技术写作与本网站背后的系统。文章语言以源文件为准。',
+    hero_desc: '研究笔记、实验记录与工程实践。',
     hero_byline: '作者',
     hero_role: '机器学习研究者',
     hero_read_latest: '阅读最新',
     hero_browse_archive: '浏览归档',
     stat_published: '已发布',
-    stat_topics: '主题',
+    stat_topics: '可浏览标签',
     stat_search: '搜索',
     stat_ready: '可用',
     stat_language: '界面',
@@ -209,7 +217,8 @@ blogI18n.zh.draft_studio = '草稿工作台';
 blogI18n.zh.draft_studio_title = '打开站主草稿编辑器';
 
 function normalizeLang(lang) {
-  return languages.includes(lang) ? lang : 'en';
+  const normalized = String(lang || '').toLowerCase().split(/[-_]/)[0];
+  return languages.includes(normalized) ? normalized : 'en';
 }
 
 function readStorage(key, fallback = '') {
@@ -251,7 +260,8 @@ const ownerToolsEnabled = detectOwnerTools();
 if (draftStudioLink) draftStudioLink.hidden = !ownerToolsEnabled;
 
 const fixedLanguage = document.documentElement.dataset.fixedLanguage;
-let currentLang = normalizeLang(fixedLanguage || readStorage(LANG_KEY, 'en'));
+const systemLanguage = navigator.languages?.[0] || navigator.language || 'en';
+let currentLang = normalizeLang(fixedLanguage || readStorage(LANG_KEY) || systemLanguage);
 if (fixedLanguage) writeStorage(LANG_KEY, currentLang);
 
 function t(key) {
@@ -557,10 +567,13 @@ function syncPostLanguageVisibility() {
 
 function resultTemplate(item) {
   const tags = item.tags?.length ? ` - ${item.tags.slice(0, 3).map(escapeHtml).join(', ')}` : '';
+  const original = normalizeLang(item.lang) !== currentLang
+    ? `<span lang="${currentLang}">${t(normalizeLang(item.lang) === 'zh' ? 'original_zh' : 'original_en')}</span>` : '';
   return `
-    <a class="blog-search-result" href="${safeHref(item.url)}">
+    <a class="blog-search-result" href="${safeHref(item.url)}" lang="${escapeHtml(item.lang || 'en')}">
       <strong>${escapeHtml(item.title)}</strong>
       <span>${escapeHtml(item.description)}${tags}</span>
+      ${original}
     </a>
   `;
 }

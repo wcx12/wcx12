@@ -41,10 +41,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../../theme-init.js?v=108af3205d8c"></script>
-  <link rel="stylesheet" href="../../../content.css?v=108af3205d8c" />
-  <link rel="stylesheet" href="../../assets/blog.css?v=108af3205d8c" />
-<link rel="stylesheet" href="../../assets/katex.min.css?v=108af3205d8c" />
+  <script src="../../../theme-init.js?v=ddfddaffa23f"></script>
+  <link rel="stylesheet" href="../../../content.css?v=ddfddaffa23f" />
+  <link rel="stylesheet" href="../../assets/blog.css?v=ddfddaffa23f" />
+<link rel="stylesheet" href="../../assets/katex.min.css?v=ddfddaffa23f" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"TIGER：从语义 ID 到生成式推荐","description":"从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。","datePublished":"2026-08-30","dateModified":"2026-09-07","inLanguage":"zh","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"mainEntityOfPage":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","keywords":["generative-recommendation","semantic-id","rq-vae","tiger"],"image":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/media/social-card.png?v=cd98c818dd18","width":1200,"height":630,"caption":"TIGER：从语义 ID 到生成式推荐"}}</script>
 </head>
@@ -58,11 +58,12 @@
       <nav id="blogSiteNav" class="blog-nav" aria-label="Site navigation" data-blog-i18n-aria="nav_landmark">
         <a href="../../../" data-blog-nav-en="../../../" data-blog-nav-zh="../../../zh/" title="Back to the interactive homepage" data-blog-i18n="nav_home" data-blog-i18n-title="nav_home_title">Home</a>
         <a href="../../../research/" data-blog-nav-en="../../../research/" data-blog-nav-zh="../../../zh/research/" title="Browse research topics and evidence" data-blog-i18n="nav_research" data-blog-i18n-title="nav_research_title">Research</a>
-        <a href="../../../projects/" data-blog-nav-en="../../../projects/" data-blog-nav-zh="../../../zh/projects/" title="Browse public repositories with maturity and evidence notes" data-blog-i18n="nav_projects" data-blog-i18n-title="nav_projects_title">Projects</a>
+        <a href="../../../projects/" data-blog-nav-en="../../../projects/" data-blog-nav-zh="../../../zh/projects/" title="Projects and source code" data-blog-i18n="nav_projects" data-blog-i18n-title="nav_projects_title">Projects</a>
         <a href="../../../publications/" data-blog-nav-en="../../../publications/" data-blog-nav-zh="../../../zh/publications/" title="Browse publisher-linked publications" data-blog-i18n="nav_publications" data-blog-i18n-title="nav_publications_title">Publications</a>
-        <a href="../../" data-blog-nav-en="../../" data-blog-nav-zh="../../" aria-current="location" title="Open Research Fieldnotes" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title">Writing</a>
+        <a href="../../" data-blog-nav-en="../../" data-blog-nav-zh="../../" aria-current="location" title="Open Research Fieldnotes" data-blog-i18n="nav_blog" data-blog-i18n-title="nav_blog_title">Blog</a>
         <a id="blogDraftStudioLink" href="../../drafts/" title="Open the owner draft editor" data-blog-i18n="draft_studio" data-blog-i18n-title="draft_studio_title" hidden>Draft Studio</a>
-        <a href="../../../resume/" data-blog-nav-en="../../../resume/" data-blog-nav-zh="../../../zh/resume/" title="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title">Profile</a>
+        <a href="../../../resume/" data-blog-nav-en="../../../resume/" data-blog-nav-zh="../../../zh/resume/" title="Open the research profile" data-blog-i18n="nav_profile" data-blog-i18n-title="nav_profile_title">Resume</a>
+        <a href="../../../#research" data-blog-nav-en="../../../index.html#research" data-blog-nav-zh="../../../zh/index.html#research" title="Interactive concept demos" data-blog-i18n="nav_demos" data-blog-i18n-title="nav_demos_title">Demos</a>
         <button id="blogLangToggle" class="blog-nav-button" type="button" lang="zh-CN" title="Switch interface language" aria-label="切换到中文界面" data-blog-i18n="lang_button" data-blog-i18n-title="lang_title" data-blog-i18n-aria="lang_target_aria">中文</button>
         <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme" data-blog-i18n-title="theme_title" data-blog-i18n-aria="theme_title">
           <option value="neon" data-blog-i18n="theme_default">Default</option>
@@ -1493,11 +1494,13 @@ Decoder 输入（训练时提供正确答案的前缀）：
               <details class="blog-hint"><summary aria-label="About this area" title="About this area" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">About this area</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="hint_related">Related writing appears here when another post shares tags or research areas.</p></details>
             </div>
             <div class="blog-grid">
-    <a class="blog-card" href="../tiger-semantic-id-codebook-capacity/" lang="zh" data-post-card data-post-group="tiger-semantic-id-codebook-capacity" data-post-lang="zh" hidden>
+    <a class="blog-card" href="../tiger-semantic-id-codebook-capacity/" lang="zh" data-post-card data-post-group="tiger-semantic-id-codebook-capacity" data-post-lang="zh">
       <div class="blog-card-meta">
         <span data-blog-date="2026-07-18">Jul 18, 2026</span>
         <span>Research Notes</span>
         <span data-blog-minutes="22">22 min</span>
+        
+        
       </div>
       <h3>当推荐系统开始‘写’商品：TIGER 的语义 ID 为什么会坍缩</h3>
       <p>从首层 256 个码字只剩 1 个的异常出发，在五个 Amazon 类目上分析 TIGER 的码本坍缩、hard-ST 修复与任务依赖的层级容量分配。</p>
@@ -1526,6 +1529,6 @@ Decoder 输入（训练时提供正确答案的前缀）：
     </nav>
   </footer>
 
-  <script type="module" src="../../assets/blog.js?v=108af3205d8c"></script>
+  <script type="module" src="../../assets/blog.js?v=ddfddaffa23f"></script>
 </body>
 </html>

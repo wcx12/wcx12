@@ -84,7 +84,7 @@ toc: true
 上面的说明可以从公开实现中核验：
 
 - [主页源码仓库](https://github.com/wcx12/wcx12)；
-- [这篇文章的版本化 Markdown 源文件](https://github.com/wcx12/wcx12/blob/main/content/posts/2026-07-10-building-a-research-writing-system/index.md)；
+- [这篇文章的版本化 Markdown 源文件](https://github.com/wcx12/wcx12/blob/main/content/posts/2026-07-10-building-a-research-writing-system-zh/index.md)；
 - [内容校验与媒体策略](https://github.com/wcx12/wcx12/blob/main/scripts/blog-content.mjs)；
 - [确定性的站点生成器](https://github.com/wcx12/wcx12/blob/main/scripts/build-blog.mjs)；
 - [定时构建 workflow](https://github.com/wcx12/wcx12/blob/main/.github/workflows/blog-build.yml)。

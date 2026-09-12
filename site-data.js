@@ -25,8 +25,8 @@ export const localRepos = [
   },
   {
     "name": "HLPP-SKILL",
-    "description": "Reusable Codex skills from practical experience",
-    "descriptionZh": "从 GitHub 自动同步的公开仓库；详细说明请查看项目 README。",
+    "description": "Reusable Codex workflows for evidence-grounded reports and conclusion-first communication.",
+    "descriptionZh": "可复用的 Codex 工作流技能，将业务材料整理为结论先行、证据明确的汇报。",
     "language": "Python",
     "stargazers_count": 0,
     "updated_at": "2026-08-24T10:12:44Z",
@@ -40,8 +40,8 @@ export const localRepos = [
       "zh": "公开仓库"
     },
     "evidence": {
-      "en": "Automatically synchronized public repository; maturity and research classification have not yet been curated.",
-      "zh": "自动同步的公开仓库；项目阶段与研究分类尚未人工整理。"
+      "en": "A communication skill with SKILL.md, guardrail tests, and evaluation examples; the README credits the source of the communication framework.",
+      "zh": "包含沟通技能、SKILL.md、护栏测试与评测案例；表达框架的来源与致谢见 README。"
     },
     "interests": []
   },
@@ -70,8 +70,8 @@ export const localRepos = [
   },
   {
     "name": "major-intel",
-    "description": "SQL-first retrieval and agent prototype with evidence-gap tracking for college-major information.",
-    "descriptionZh": "面向高校专业信息的 SQL 优先检索与智能体原型，支持证据缺口追踪。",
+    "description": "A SQL-first agent prototype for comparing college-major information with sources, tool traces, and explicit evidence gaps.",
+    "descriptionZh": "面向院校专业信息查询与比较的 SQL 优先智能体原型，保留来源、工具轨迹与证据缺口。",
     "language": "Python",
     "stargazers_count": 2,
     "updated_at": "2026-06-18T06:54:19Z",
@@ -85,8 +85,8 @@ export const localRepos = [
       "zh": "可运行原型"
     },
     "evidence": {
-      "en": "Python package, tests, data tooling, and explicit current-state documentation.",
-      "zh": "包含 Python 包、测试、数据工具与明确的当前状态文档。"
+      "en": "Python package, MySQL retrieval tools, ingestion scripts, and tests. The core database is not public; the full evidence-update loop remains in development.",
+      "zh": "提供 Python 包、MySQL 检索工具、数据入库脚本与测试。核心数据库未公开，完整证据更新闭环仍在开发中。"
     },
     "interests": [
       "agent"
@@ -94,8 +94,8 @@ export const localRepos = [
   },
   {
     "name": "FusionTrack",
-    "description": "A broader graduation-thesis repository; this portfolio maps its code/registration module to point-cloud registration.",
-    "descriptionZh": "综合毕业论文仓库；本主页将其中的 code/registration 模块归入点云配准。",
+    "description": "Thesis research software for multimodal target fusion, trajectory analysis, and anomaly detection, including a dedicated point-cloud registration module.",
+    "descriptionZh": "面向多模态目标融合、轨迹分析与异常检测的毕业设计研究软件，包含独立的点云配准模块。",
     "language": "Python",
     "stargazers_count": 0,
     "updated_at": "2026-06-02T16:16:58Z",
@@ -110,8 +110,8 @@ export const localRepos = [
       "zh": "研究仓库"
     },
     "evidence": {
-      "en": "Mapped through code/registration; the repository also contains thesis code, tests, paper source, and experiment records.",
-      "zh": "此处依据 code/registration 模块映射；仓库还包含毕业论文代码、测试、论文源码与实验记录。"
+      "en": "The code/registration module provides matching, pose estimation, evaluation tools, and experiment records. The wider repository includes anomaly-detection benchmarks and thesis sources.",
+      "zh": "code/registration 提供匹配、位姿估计、评测工具与实验记录；仓库同时包含异常检测基准和毕业论文源码。"
     },
     "evidence_refs": [
       {
@@ -269,15 +269,29 @@ export const staticPublications = [
     "citation_key": "Wang2026TFVPR",
     "citation_month": "jun",
     "citation_date": "2026/06",
-    "summary": "Benchmark work connected to visual place recognition and visual localization.",
-    "summaryZh": "面向视觉地点识别与视觉定位的免训练基准研究。",
+    "summary": "Training-free visual place recognition using frozen foundation models, graph attention, and prototype-based cross-attention to build place descriptors.",
+    "summaryZh": "利用冻结的视觉基础模型，结合图注意力与原型交叉注意力构建地点描述符，研究免任务训练的视觉地点识别。",
+    "research_notes": {
+      "method": {
+        "en": "TF-GAM propagates patch features within an image; TF-CAM aggregates them with unlabeled K-means prototypes into a global descriptor.",
+        "zh": "TF-GAM 在图像内部传播 patch 特征，TF-CAM 利用无标签 K-means 原型聚合全局描述符。"
+      },
+      "result": {
+        "en": "In the paper's Table 5 ablation on MSLS-val, Top-1 recall rises from 41.1% for CLS to 57.1% for CAM+GAM.",
+        "zh": "原文表 5 的 MSLS-val 消融实验中，Top-1 召回率从 CLS 的 41.1% 提高到 CAM+GAM 的 57.1%。"
+      },
+      "scope": {
+        "en": "Training-free means no task-specific fine-tuning, not no pretraining or prototype construction. Descriptor refinement also adds inference cost.",
+        "zh": "免训练指无需任务微调，并不意味着无需预训练和原型构建；描述符增强也会增加推理开销。"
+      }
+    },
     "authors": "Chenxu Wang; Qingtong Meng; Bonan Zhang; Fusen Guo",
     "doi": "10.1016/j.neucom.2026.133399",
     "link": "https://doi.org/10.1016/j.neucom.2026.133399",
     "code_url": "https://github.com/ddfs430/TF-VPR",
     "code_note": {
-      "en": "Official implementation hosted outside this profile's GitHub account; linked as paper evidence, not claimed as this profile's repository.",
-      "zh": "官方实现托管在本主页 GitHub 账号之外；此处作为论文证据链接，不作为本账号的仓库认领。"
+      "en": "Official implementation · ddfs430/TF-VPR",
+      "zh": "官方实现 · ddfs430/TF-VPR"
     },
     "interests": [
       "vpr"
@@ -288,11 +302,15 @@ export const staticPublications = [
     "title": "Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification",
     "venue": "Neurocomputing",
     "year": "2026",
-    "updated_at": "2026-07-12",
-    "published_date": "2026-06-22",
+    "updated_at": "2026-09-12",
+    "issue_date": "2026-10-28",
+    "issueLabel": {
+      "en": "Volume date: 28 October 2026",
+      "zh": "卷期日期：2026 年 10 月 28 日"
+    },
     "publishedLabel": {
-      "en": "Available online 22 June 2026",
-      "zh": "2026 年 6 月 22 日在线发表"
+      "en": "",
+      "zh": ""
     },
     "status": "In press",
     "status_key": "in_press",
@@ -306,15 +324,29 @@ export const staticPublications = [
     "citation_key": "Wang2026SynergisticLearning",
     "citation_month": "oct",
     "citation_date": "2026/10",
-    "summary": "A unified training objective for sample-efficient active learning in medical image classification.",
-    "summaryZh": "面向医学影像分类的样本高效主动学习统一训练目标。",
+    "summary": "A label-efficient training objective combining cross-entropy supervision and consistency regularization for medical image classification after active sample selection.",
+    "summaryZh": "将交叉熵监督与一致性正则化结合，改善主动学习选样之后的医学图像分类训练，提高有限标注的利用效率。",
+    "research_notes": {
+      "method": {
+        "en": "The method changes how the model learns from acquired labels, rather than introducing a new acquisition rule, and can be paired with different sampling strategies.",
+        "zh": "改进的是选完样本后如何训练，而非另造采样规则，可与不同的主动学习采样策略组合。"
+      },
+      "result": {
+        "en": "The authors report improved classification performance and stability on NCT-CRC-HE and ISIC2020 across different annotation budgets.",
+        "zh": "作者报告在 NCT-CRC-HE 与 ISIC2020 上，不同标注预算下的分类性能和稳定性得到改善。"
+      },
+      "scope": {
+        "en": "These are benchmark classification experiments, not evidence of clinical effectiveness; the method still requires model training and annotated samples.",
+        "zh": "结果来自基准分类实验，不等同于临床有效性证据；方法仍需要模型训练和已标注样本。"
+      }
+    },
     "authors": "Chenxu Wang; QingTong Meng; Qianxun Lin; Bonan Zhang; Fusen Guo",
     "doi": "10.1016/j.neucom.2026.134314",
     "link": "https://doi.org/10.1016/j.neucom.2026.134314",
     "code_url": "https://github.com/ddfs430/Synergistic-Learning",
     "code_note": {
-      "en": "Official implementation hosted outside this profile's GitHub account; linked as paper evidence, not claimed as this profile's repository.",
-      "zh": "官方实现托管在本主页 GitHub 账号之外；此处作为论文证据链接，不作为本账号的仓库认领。"
+      "en": "Official implementation · ddfs430/Synergistic-Learning",
+      "zh": "官方实现 · ddfs430/Synergistic-Learning"
     },
     "interests": [
       "medical-image-analysis"

@@ -2,13 +2,13 @@
 
 ## Education
 
-- **Beijing Institute of Technology**\
-  Undergraduate study, Sep 2022-Jun 2026
+- **{{EDUCATION_INSTITUTION}}**\
+  {{EDUCATION_MAJOR}}, {{EDUCATION_PERIOD}}
 
 ## Experience
 
-- **Shenzhen Houlang Pengpai Technology Co., Ltd.**\
-  Entrepreneurial builder, Mar 2026-present; early-stage education-technology practice, Shenzhen
+- **{{EXPERIENCE_ORGANIZATION}}**\
+  {{EXPERIENCE_ROLE}}, {{EXPERIENCE_PERIOD}}
 
 ## Publications
 
@@ -27,18 +27,20 @@
 - **Large Models**
   - **[Agent Systems](../research/agent/)**\
     Retrieval, tool use, planning, and evaluation workflows
+  - **[Generative Retrieval](../research/generative-retrieval/)**\
+    Reading notes on semantic IDs, quantization, and recommendation
 - **AI for Education**
   - **[Learning Tools](../research/ai4edu/)**\
-    Educational software and interactive mathematics resources
+    Related teaching practice: educational software and mathematics resources, not evidence of AI learning outcomes
 
 ## Selected Projects
 
 - **[FusionTrack](https://github.com/wcx12/FusionTrack)**\
-  Graduation thesis and point-set registration artifacts with auditable benchmark protocols and reproducible evaluation tooling
+  Thesis repository for target fusion, trajectory completion, and anomaly detection; includes registration code, tests, and experiment records. [Registration module](https://github.com/wcx12/FusionTrack/tree/main/code/registration)
 - **[major-intel](https://github.com/wcx12/major-intel)**\
-  A MySQL-backed, SQL-first retrieval agent with tool traces and explicit evidence-gap handling
+  SQL-first retrieval prototype for college-major information, with a Python package, data tools, and tests. [README and setup](https://github.com/wcx12/major-intel#readme)
 - **[shuxuepeiyou](https://github.com/wcx12/shuxuepeiyou)**\
-  LaTeX lecture notes, published PDFs, and interactive visualizations for mathematics enrichment
+  LaTeX lecture notes, compiled PDFs, and interactive visualizations for mathematics enrichment. [Teaching resources](https://wcx12.github.io/shuxuepeiyou/)
 
 ## Technical Skills
 

@@ -147,3 +147,11 @@ test('visible evidence summaries state the evidence kind in both languages', () 
     repo('Pending sync', 'research_repository', { configured_only: true })
   ], 'zh'), '暂无公开证据');
 });
+
+test('scheduled issues do not use the generic in-press summary', () => {
+  const scheduled = paper('in_press');
+  scheduled.value.issue_date = '2026-10-28';
+  assert.equal(summarizeTopicEvidence([scheduled], 'en'), '1 issue-scheduled paper');
+  assert.equal(summarizeTopicEvidence([scheduled], 'zh'), '1 篇卷期已安排论文');
+  assert.equal(publicationStatusLabel(scheduled.value, 'en'), 'Issue scheduled');
+});
