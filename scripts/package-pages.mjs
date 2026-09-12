@@ -24,6 +24,7 @@ const publicFiles = [
   'site-data.js',
   'sitemap.xml',
   'styles.css',
+  'site-nav.css',
   'theme-init.js'
 ];
 

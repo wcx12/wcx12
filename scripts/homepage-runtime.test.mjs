@@ -190,8 +190,8 @@ test('project browsing defaults to research relevance without hiding alternative
   assert.match(scriptSource, /validTopicIds:\s*allInterestChildren\(\)\.map\(\(\{ child \}\) => child\.id\)/);
 });
 
-test('homepage navigation uses the same content order and Writing label as fixed pages', () => {
-  const navigation = indexSource.match(/<nav class="top-actions-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+test('homepage navigation uses the same content order and Blog label as fixed pages', () => {
+  const navigation = indexSource.match(/<nav\b[^>]*class="site-navigation top-actions-nav"[\s\S]*?<\/nav>/)?.[0] || '';
   const labels = ['Research', 'Projects', 'Publications', 'Blog', 'Resume'];
   let previous = -1;
   for (const label of labels) {
@@ -426,7 +426,7 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
 });
 
 test('homepage exposes navigation and hero meaning without runtime-only semantics', () => {
-  assert.match(indexSource, /<nav\s+class="top-actions-nav"[^>]+aria-label="Primary navigation"/i);
+  assert.match(indexSource, /<nav\b[^>]*class="site-navigation top-actions-nav"[^>]+aria-label="Primary navigation"/i);
   assert.match(indexSource, /id="typeTarget"[^>]*>Startup builder in Shenzhen<\/span>/i);
   assert.match(indexSource, /<canvas\s+id="heroPreviewCanvas"\s+aria-hidden="true"><\/canvas>/i);
   assert.match(indexSource, /id="heroPreviewMeta"[\s\S]*?\.\/research\/point-cloud-registration\/[\s\S]*?Robust point set registration/i);

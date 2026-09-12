@@ -40,9 +40,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../theme-init.js?v=ddfddaffa23f"></script>
-  <link rel="stylesheet" href="../../content.css?v=ddfddaffa23f" />
-  <link rel="stylesheet" href="../../blog/assets/blog.css?v=ddfddaffa23f" />
+  <script src="../../theme-init.js?v=e735a224d6fa"></script>
+  <link rel="stylesheet" href="../../content.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="../../blog/assets/blog.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="../../site-nav.css?v=e735a224d6fa" />
 
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfilePage","name":"Chenxu Wang（wcx12）学术履历","description":"Chenxu Wang（wcx12）的研究履历，涵盖教育背景、研究方向、论文、项目与技术能力。","url":"https://wcx12.github.io/wcx12/zh/resume/","inLanguage":"zh-CN","mainEntity":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/","alternateName":"wcx12","email":"mailto:c2675668@gmail.com","identifier":{"@type":"PropertyValue","propertyID":"ORCID","value":"0009-0005-6139-4327","url":"https://orcid.org/0009-0005-6139-4327"},"alumniOf":{"@type":"CollegeOrUniversity","name":"Beijing Institute of Technology"},"worksFor":{"@type":"Organization","name":"Shenzhen Houlang Pengpai Technology Co., Ltd."},"homeLocation":{"@type":"Place","name":"Shenzhen, China"},"sameAs":["https://github.com/wcx12","https://orcid.org/0009-0005-6139-4327"]},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-profile-zh.png","width":1200,"height":630,"caption":"Chenxu Wang 研究履历与论文记录"}}</script>
@@ -50,25 +51,18 @@
 <body class="blog-body">
   <a class="skip-link" href="#main-content">跳到主要内容</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
-  <header class="blog-topbar">
-    <a class="blog-brand" href="../">wcx12</a>
-    <details class="blog-menu" open>
-      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="打开站点导航">菜单</summary>
-      <nav id="blogSiteNav" class="blog-nav" aria-label="站点导航">
-        <a href="../" title="返回互动主页">主页</a>
-        <a href="../research/" title="浏览研究主题与成果">研究</a>
-        <a href="../projects/" title="项目与源码">项目</a>
-        <a href="../publications/" title="浏览含出版方链接的论文">论文</a>
-        <a href="../../blog/" title="打开博客">博客</a>
-        <a id="blogDraftStudioLink" href="../../blog/drafts/" title="打开站主草稿编辑器" hidden>草稿工作台</a>
-        <a href="./" aria-current="page" title="打开研究履历">履历</a>
-        <a href="../#research" title="交互式概念演示">演示</a>
+  <header class="blog-topbar site-header">
+    <a class="blog-brand" href="../" aria-label="首页">wcx12</a>
+    <details class="site-menu blog-menu" open>
+      <summary class="site-menu-toggle blog-menu-toggle" aria-controls="blogSiteNav">菜单</summary>
+      <nav id="blogSiteNav" class="site-navigation blog-nav" aria-label="主导航">
+        <a class="site-nav-link" data-site-section="research" href="../research/">研究</a>
+        <a class="site-nav-link" data-site-section="projects" href="../projects/">项目</a>
+        <a class="site-nav-link" data-site-section="publications" href="../publications/">论文</a>
+        <a class="site-nav-link" data-site-section="writing" href="../../blog/">博客</a>
+        <a class="site-nav-link" data-site-section="profile" href="./" aria-current="page">履历</a>
+        <select id="blogThemeSelect" class="site-theme" aria-label="页面色调"><option value="neon">默认</option><option value="warm">暖色</option><option value="mono">黑白极简</option></select>
         <a id="blogLangLink" class="blog-nav-button" href="../../resume/" hreflang="en" lang="en" title="View this page in English">EN</a>
-        <select id="blogThemeSelect" aria-label="切换页面色调" title="切换页面色调">
-          <option value="neon">默认</option>
-          <option value="warm">暖色</option>
-          <option value="mono">黑白</option>
-        </select>
       </nav>
     </details>
   </header>
@@ -250,6 +244,7 @@ LaTeX、GitHub Actions、技术文档与交互式可视化</li>
   </main>
   <footer class="blog-footer">
     <span>&copy; 2026 wcx12</span>
+    <a id="blogDraftStudioLink" href="../../blog/drafts/" hidden>草稿工作台</a>
     <nav aria-label="个人资料链接">
       <a href="../">主页</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
@@ -257,6 +252,6 @@ LaTeX、GitHub Actions、技术文档与交互式可视化</li>
     </nav>
   </footer>
 
-  <script type="module" src="../../blog/assets/blog.js?v=ddfddaffa23f"></script>
+  <script type="module" src="../../blog/assets/blog.js?v=e735a224d6fa"></script>
 </body>
 </html>

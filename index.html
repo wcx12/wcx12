@@ -41,8 +41,9 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <script src="theme-init.js?v=ddfddaffa23f"></script>
-  <link rel="stylesheet" href="styles.css?v=ddfddaffa23f" />
+  <script src="theme-init.js?v=e735a224d6fa"></script>
+  <link rel="stylesheet" href="styles.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="site-nav.css?v=e735a224d6fa" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -128,29 +129,20 @@
   </div>
   <div id="themeTransition" class="theme-transition" aria-hidden="true"></div>
 
-  <header class="topbar">
+  <header class="topbar site-header">
     <a class="brand" href="./" aria-label="Home" data-i18n-aria="aria_home">wcx12</a>
-    <div class="top-actions">
-      <nav class="top-actions-nav" aria-label="Primary navigation" data-i18n-aria="aria_primary_navigation">
-        <a class="ghost-btn" href="./research/" data-i18n="btn_research">Research</a>
-        <a class="ghost-btn" href="./projects/" data-i18n="btn_projects">Projects</a>
-        <a class="ghost-btn" href="./publications/" data-i18n="btn_publications">Publications</a>
-        <a class="ghost-btn" href="./blog/" data-i18n="btn_blog">Blog</a>
-        <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">Resume</a>
+    <details class="site-menu utility-menu" open>
+      <summary class="site-menu-toggle utility-menu-toggle" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Menu</summary>
+      <nav id="utilityMenuPanel" class="site-navigation top-actions-nav" aria-label="Primary navigation" data-i18n-aria="aria_primary_navigation">
+        <a class="site-nav-link" data-site-section="research" href="./research/" data-i18n="btn_research">Research</a>
+        <a class="site-nav-link" data-site-section="projects" href="./projects/" data-i18n="btn_projects">Projects</a>
+        <a class="site-nav-link" data-site-section="publications" href="./publications/" data-i18n="btn_publications">Publications</a>
+        <a class="site-nav-link" data-site-section="writing" href="./blog/" data-i18n="btn_blog">Blog</a>
+        <a class="site-nav-link" data-site-section="profile" href="./resume/" data-i18n="btn_profile">Resume</a>
+        <select id="themeSelect" class="site-theme" aria-label="Color theme" data-i18n-aria="aria_theme"><option value="neon" data-i18n="theme_neon">Default</option><option value="warm" data-i18n="theme_warm">Warm</option><option value="mono" data-i18n="theme_mono">Black &amp; White</option></select>
+        <a id="langToggle" class="ghost-btn" href="./zh/" hreflang="zh-CN" lang="zh-CN" title="切换到中文主页" aria-label="切换到中文主页" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">中文</a>
       </nav>
-      <div class="utility-menu">
-        <button class="ghost-btn utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Settings</button>
-        <div id="utilityMenuPanel" class="utility-menu-panel">
-          <select id="themeSelect" class="theme-select" aria-label="Color theme" data-i18n-aria="aria_theme">
-            <option value="neon" data-i18n="theme_neon">Default</option>
-            <option value="warm" data-i18n="theme_warm">Warm</option>
-            <option value="mono" data-i18n="theme_mono">Black &amp; White</option>
-          </select>
-          <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
-          <a id="langToggle" class="ghost-btn" href="./zh/" hreflang="zh-CN" lang="zh-CN" title="切换到中文主页" aria-label="切换到中文主页" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">中文</a>
-        </div>
-      </div>
-    </div>
+    </details>
   </header>
 
   <main id="main-content">
@@ -195,11 +187,8 @@
       <style>
         .console,
         .hero-preview-panel,
-        .utility-menu-toggle,
         #themeSelect,
         #openCommand { display: none !important; }
-        .utility-menu,
-        .utility-menu-panel { display: contents !important; }
         .hero { grid-template-columns: minmax(0, 1fr) !important; }
       </style>
       <section class="noscript-notice" aria-labelledby="noscriptTitle">
@@ -252,6 +241,7 @@
         <button class="cmd" data-view="publications" data-i18n="tab_publications">Publications</button>
         <button class="cmd" data-view="writing" data-i18n="tab_writing">Blog</button>
         <button class="cmd" data-view="profile" data-i18n="tab_profile">Resume</button>
+        <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
       </nav>
 
       <div class="view active" id="about">
@@ -583,6 +573,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="homepage-bootstrap.js?v=ddfddaffa23f"></script>
+  <script type="module" src="homepage-bootstrap.js?v=e735a224d6fa"></script>
 </body>
 </html>

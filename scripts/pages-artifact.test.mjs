@@ -31,6 +31,7 @@ test('Pages artifact contains only the explicit public surface', async () => {
   for (const required of [
     'index.html',
     'content.css',
+    'site-nav.css',
     'homepage-bootstrap.js',
     'profile-data.js',
     'research-demo-content.js',

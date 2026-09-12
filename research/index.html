@@ -37,9 +37,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../theme-init.js?v=ddfddaffa23f"></script>
-  <link rel="stylesheet" href="../content.css?v=ddfddaffa23f" />
-  <link rel="stylesheet" href="../blog/assets/blog.css?v=ddfddaffa23f" />
+  <script src="../theme-init.js?v=e735a224d6fa"></script>
+  <link rel="stylesheet" href="../content.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="../blog/assets/blog.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="../site-nav.css?v=e735a224d6fa" />
 
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"CollectionPage","@id":"https://wcx12.github.io/wcx12/research/#page","name":"wcx12 Research","description":"An index of wcx12 research topics and verifiable public evidence.","url":"https://wcx12.github.io/wcx12/research/","inLanguage":"en","mainEntity":{"@id":"https://wcx12.github.io/wcx12/research/#topics"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-research.png","width":1200,"height":630,"caption":"wcx12 research topics and public evidence index"}},{"@type":"ItemList","@id":"https://wcx12.github.io/wcx12/research/#topics","numberOfItems":6,"itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"DefinedTerm","termCode":"vpr","name":"VPR","description":"Visual place recognition, retrieval, and localization-oriented benchmark work.","url":"https://wcx12.github.io/wcx12/research/vpr/"}},{"@type":"ListItem","position":2,"item":{"@type":"DefinedTerm","termCode":"medical-image-analysis","name":"Medical Image Analysis","description":"Medical image classification, active learning, and sample-efficient visual model training.","url":"https://wcx12.github.io/wcx12/research/medical-image-analysis/"}},{"@type":"ListItem","position":3,"item":{"@type":"DefinedTerm","termCode":"point-cloud-registration","name":"Registration","description":"Robust point set registration under noisy, partial, and imperfect observations.","url":"https://wcx12.github.io/wcx12/research/point-cloud-registration/"}},{"@type":"ListItem","position":4,"item":{"@type":"DefinedTerm","termCode":"agent","name":"Agent","description":"Agentic workflows with planning, tool use, retrieval, and evaluation loops.","url":"https://wcx12.github.io/wcx12/research/agent/"}},{"@type":"ListItem","position":5,"item":{"@type":"DefinedTerm","termCode":"ai4edu","name":"Learning Tools","description":"Educational software, interactive mathematics visualizations, teaching resources, and exploratory AI-supported learning workflows.","url":"https://wcx12.github.io/wcx12/research/ai4edu/"}},{"@type":"ListItem","position":6,"item":{"@type":"DefinedTerm","termCode":"generative-retrieval","name":"Generative Retrieval","description":"Reading notes on generative recommendation, semantic item identifiers, and residual quantization.","url":"https://wcx12.github.io/wcx12/research/generative-retrieval/"}}]}]}</script>
@@ -47,25 +48,18 @@
 <body class="blog-body">
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
-  <header class="blog-topbar">
-    <a class="blog-brand" href="../">wcx12</a>
-    <details class="blog-menu" open>
-      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="Open site navigation">Menu</summary>
-      <nav id="blogSiteNav" class="blog-nav" aria-label="Site navigation">
-        <a href="../" title="Back to the interactive homepage">Home</a>
-        <a href="./" aria-current="page" title="Browse research topics and evidence">Research</a>
-        <a href="../projects/" title="Projects and source code">Projects</a>
-        <a href="../publications/" title="Browse publisher-linked publications">Publications</a>
-        <a href="../blog/" title="Open Research Fieldnotes">Blog</a>
-        <a id="blogDraftStudioLink" href="../blog/drafts/" title="Open the owner draft editor" hidden>Draft Studio</a>
-        <a href="../resume/" title="Open the research profile">Resume</a>
-        <a href="../#research" title="Interactive concept demos">Demos</a>
+  <header class="blog-topbar site-header">
+    <a class="blog-brand" href="../" aria-label="Home">wcx12</a>
+    <details class="site-menu blog-menu" open>
+      <summary class="site-menu-toggle blog-menu-toggle" aria-controls="blogSiteNav">Menu</summary>
+      <nav id="blogSiteNav" class="site-navigation blog-nav" aria-label="Primary navigation">
+        <a class="site-nav-link" data-site-section="research" href="./" aria-current="page">Research</a>
+        <a class="site-nav-link" data-site-section="projects" href="../projects/">Projects</a>
+        <a class="site-nav-link" data-site-section="publications" href="../publications/">Publications</a>
+        <a class="site-nav-link" data-site-section="writing" href="../blog/">Blog</a>
+        <a class="site-nav-link" data-site-section="profile" href="../resume/">Resume</a>
+        <select id="blogThemeSelect" class="site-theme" aria-label="Color theme"><option value="neon">Default</option><option value="warm">Warm</option><option value="mono">Black &amp; White</option></select>
         <a id="blogLangLink" class="blog-nav-button" href="../zh/research/" hreflang="zh-CN" lang="zh-CN" title="查看中文页面">中文</a>
-        <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
-          <option value="neon">Default</option>
-          <option value="warm">Warm</option>
-          <option value="mono">Black &amp; White</option>
-        </select>
       </nav>
     </details>
   </header>
@@ -107,6 +101,7 @@
   </main>
   <footer class="blog-footer">
     <span>&copy; 2026 wcx12</span>
+    <a id="blogDraftStudioLink" href="../blog/drafts/" hidden>Draft Studio</a>
     <nav aria-label="Profile links">
       <a href="../">Home</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
@@ -114,6 +109,6 @@
     </nav>
   </footer>
 
-  <script type="module" src="../blog/assets/blog.js?v=ddfddaffa23f"></script>
+  <script type="module" src="../blog/assets/blog.js?v=e735a224d6fa"></script>
 </body>
 </html>

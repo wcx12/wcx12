@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { renderSiteHeader } from './site-navigation.mjs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1674,7 +1675,7 @@ const shellText = {
     theme_title: '切换页面色调',
     theme_default: '默认',
     theme_warm: '暖色',
-    theme_mono: '黑白'
+    theme_mono: '黑白极简'
   }
 };
 
@@ -1920,6 +1921,7 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <script src="${versionedAssetLink(ctx, 'theme-init.js')}"></script>
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'content.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/blog.css')}" />
+  <link rel="stylesheet" href="${versionedAssetLink(ctx, 'site-nav.css')}" />
 ${extraHead.trim()}
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">${safeMetadata}</script>
@@ -1927,33 +1929,13 @@ ${extraHead.trim()}
 <body class="blog-body">
   <a class="skip-link" href="#main-content"${i18n('skip_main')}>${escapeHtml(text.skip_main)}</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
-  <header class="blog-topbar">
-    <a class="blog-brand" href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}>wcx12</a>
-    <details class="blog-menu" open>
-      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="${escapeHtml(text.nav_menu_title)}"${i18n('nav_menu')}${i18n('nav_menu_title', 'title')}>${escapeHtml(text.nav_menu)}</summary>
-      <nav id="blogSiteNav" class="blog-nav" aria-label="${escapeHtml(text.nav_landmark)}"${i18n('nav_landmark', 'aria')}>
-        <a href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}${current('home')} title="${escapeHtml(text.nav_home_title)}"${i18n('nav_home')}${i18n('nav_home_title', 'title')}>${escapeHtml(text.nav_home)}</a>
-        <a href="${ctx.link(researchPath)}"${dynamicLanguageRoutes('research/index.html', 'zh/research/index.html')}${current('research')} title="${escapeHtml(text.nav_research_title)}"${i18n('nav_research')}${i18n('nav_research_title', 'title')}>${escapeHtml(text.nav_research)}</a>
-        <a href="${ctx.link(projectsPath)}"${dynamicLanguageRoutes('projects/index.html', 'zh/projects/index.html')}${current('projects')} title="${escapeHtml(text.nav_projects_title)}"${i18n('nav_projects')}${i18n('nav_projects_title', 'title')}>${escapeHtml(text.nav_projects)}</a>
-        <a href="${ctx.link(publicationsPath)}"${dynamicLanguageRoutes('publications/index.html', 'zh/publications/index.html')}${current('publications')} title="${escapeHtml(text.nav_publications_title)}"${i18n('nav_publications')}${i18n('nav_publications_title', 'title')}>${escapeHtml(text.nav_publications)}</a>
-        <a href="${ctx.link('blog/index.html')}"${dynamicLanguageRoutes('blog/index.html', 'blog/index.html')}${current('writing')} title="${escapeHtml(text.nav_blog_title)}"${i18n('nav_blog')}${i18n('nav_blog_title', 'title')}>${escapeHtml(text.nav_blog)}</a>
-        <a id="blogDraftStudioLink" href="${ctx.link('blog/drafts/index.html')}" title="${escapeHtml(text.draft_studio_title)}"${i18n('draft_studio')}${i18n('draft_studio_title', 'title')} hidden>${escapeHtml(text.draft_studio)}</a>
-        <a href="${ctx.link(resumePath)}"${dynamicLanguageRoutes('resume/index.html', 'zh/resume/index.html')}${current('profile')} title="${escapeHtml(text.nav_profile_title)}"${i18n('nav_profile')}${i18n('nav_profile_title', 'title')}>${escapeHtml(text.nav_profile)}</a>
-        <a href="${ctx.link(homePath)}#research"${dynamicLanguageRoutes('index.html#research', 'zh/index.html#research')} title="${escapeHtml(text.nav_demos_title)}"${i18n('nav_demos')}${i18n('nav_demos_title', 'title')}>${escapeHtml(text.nav_demos)}</a>
-        ${languageControl}
-        <select id="blogThemeSelect" aria-label="${escapeHtml(text.theme_title)}" title="${escapeHtml(text.theme_title)}"${i18n('theme_title', 'title')}${i18n('theme_title', 'aria')}>
-          <option value="neon"${i18n('theme_default')}>${escapeHtml(text.theme_default)}</option>
-          <option value="warm"${i18n('theme_warm')}>${escapeHtml(text.theme_warm)}</option>
-          <option value="mono"${i18n('theme_mono')}>${escapeHtml(text.theme_mono)}</option>
-        </select>
-      </nav>
-    </details>
-  </header>
+  ${renderSiteHeader({ link: ctx.link, language: routeLanguage, fixedLanguage, languageControl, current })}
   <main id="main-content" class="blog-shell">
 ${body.trim()}
   </main>
   <footer class="blog-footer">
     <span>&copy; ${SITE.copyrightYear} wcx12</span>
+    <a id="blogDraftStudioLink" href="${ctx.link('blog/drafts/index.html')}"${i18n('draft_studio')} hidden>${escapeHtml(text.draft_studio)}</a>
     <nav aria-label="${escapeHtml(text.profile_links)}"${i18n('profile_links', 'aria')}>
       <a href="${ctx.link(homePath)}"${dynamicLanguageRoutes('index.html', 'zh/index.html')}${i18n('nav_home')}>${escapeHtml(text.nav_home)}</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
@@ -2310,6 +2292,7 @@ async function computeAssetVersion(posts) {
   const files = [
     'content.css',
     'styles.css',
+    'site-nav.css',
     'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',
@@ -2333,6 +2316,7 @@ async function computeAssetVersion(posts) {
     'scripts/portfolio-ranking.js',
     'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
+    'scripts/site-navigation.mjs',
     ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
   ].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
   const hash = createHash('sha256');
@@ -2363,11 +2347,19 @@ async function stampHomepageAssets() {
       replacement: `$1?v=${assetVersion}$2`
     }
   ];
-  let stamped = source;
+  let stamped = source.replace(
+    /(<link\s+rel="stylesheet"\s+href="styles\.css[^\"]*"[^>]*>)(?:\s*<link\s+rel="stylesheet"\s+href="site-nav\.css[^\"]*"[^>]*>)?/,
+    `$1\n  <link rel="stylesheet" href="site-nav.css?v=${assetVersion}" />`
+  );
   for (const { pattern, replacement } of replacements) {
     if (!pattern.test(stamped)) throw new Error(`Unable to stamp homepage asset using ${pattern}.`);
     stamped = stamped.replace(pattern, replacement);
   }
+  stamped = replaceRequired(stamped, /<header class="topbar(?: site-header)?">[\s\S]*?<\/header>/, renderSiteHeader({
+    homepage: true,
+    link: target => `./${target.replace(/index\.html$/, '')}`,
+    languageControl: '<a id="langToggle" class="ghost-btn" href="./zh/" hreflang="zh-CN" lang="zh-CN" title="切换到中文主页" aria-label="切换到中文主页" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">中文</a>'
+  }), 'shared homepage navigation');
   stamped = replaceRequired(stamped, /<noscript>[\s\S]*?<\/noscript>/, renderHomepageNoscript('en'), 'English no-script navigation');
   stamped = translateHomepageMarkup(stamped, 'en');
   const domainCount = researchConfig.interests.filter((domain) => domain.children.length).length;
@@ -2411,11 +2403,8 @@ function renderHomepageNoscript(language) {
       <style>
         .console,
         .hero-preview-panel,
-        .utility-menu-toggle,
         #themeSelect,
         #openCommand { display: none !important; }
-        .utility-menu,
-        .utility-menu-panel { display: contents !important; }
         .hero { grid-template-columns: minmax(0, 1fr) !important; }
       </style>
       <section class="noscript-notice" aria-labelledby="noscriptTitle">
@@ -2503,8 +2492,8 @@ async function renderChineseHomepage() {
     ['href="./assets/fonts/space-grotesk-latin.woff2"', 'href="../assets/fonts/space-grotesk-latin.woff2"', 'Chinese font preload path'],
     ['src="theme-init.js', 'src="../theme-init.js', 'Chinese theme bootstrap path'],
     ['href="styles.css', 'href="../styles.css', 'Chinese stylesheet path'],
-    ['src="homepage-bootstrap.js', 'src="../homepage-bootstrap.js', 'Chinese bootstrap path'],
-    ['<a class="brand" href="./"', '<a class="brand" href="../"', 'Chinese brand home path']
+    ['href="site-nav.css', 'href="../site-nav.css', 'Chinese navigation stylesheet path'],
+    ['src="homepage-bootstrap.js', 'src="../homepage-bootstrap.js', 'Chinese bootstrap path']
   ]) {
     localized = replaceRequired(localized, search, replacement, label);
   }
@@ -2737,6 +2726,7 @@ async function renderDraftPreviews(posts, renderer) {
     '404.html',
     'content.css',
     'styles.css',
+    'site-nav.css',
     'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',

@@ -1001,6 +1001,10 @@ function activateView(viewId, options = {}) {
   const { focusHeading = false, historyMode = 'push', scroll = true, scrollFeature = false } = options;
   const resolvedViewId = VALID_VIEW_IDS.has(viewId) ? viewId : 'about';
   const generation = ++activationGeneration;
+  document.querySelectorAll('.site-nav-link[data-site-section]').forEach(link => {
+    if (link.dataset.siteSection === resolvedViewId) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  });
   commands.forEach((command) => {
     const active = command.dataset.view === resolvedViewId;
     command.classList.toggle('active', active);
@@ -3740,14 +3744,24 @@ langToggle.addEventListener('click', () => {
 
 window.addEventListener('hashchange', updateLanguageLink);
 
+const desktopNavigation = window.matchMedia('(min-width: 1024px)');
 function setUtilityMenuOpen(open) {
-  utilityMenu?.classList.toggle('open', open);
-  utilityMenuToggle?.setAttribute('aria-expanded', String(open));
+  const expanded = desktopNavigation.matches || Boolean(open);
+  if (utilityMenu) utilityMenu.open = expanded;
+  utilityMenu?.classList.toggle('open', expanded);
+  utilityMenuToggle?.setAttribute('aria-expanded', String(expanded));
 }
 
-utilityMenuToggle?.addEventListener('click', () => {
+setUtilityMenuOpen(desktopNavigation.matches);
+desktopNavigation.addEventListener('change', () => setUtilityMenuOpen(desktopNavigation.matches));
+utilityMenuToggle?.addEventListener('click', (event) => {
+  event.preventDefault();
   setUtilityMenuOpen(!utilityMenu.classList.contains('open'));
 });
+utilityMenu?.addEventListener('focusout', event => {
+  if (!utilityMenu.contains(event.relatedTarget)) setUtilityMenuOpen(false);
+});
+utilityMenu?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setUtilityMenuOpen(false)));
 
 document.addEventListener('pointerdown', (event) => {
   if (utilityMenu?.classList.contains('open') && !utilityMenu.contains(event.target)) setUtilityMenuOpen(false);

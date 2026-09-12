@@ -41,8 +41,9 @@
   <meta name="twitter:description" content="Chenxu Wang（wcx12）的研究主页，涵盖点云配准、视觉地点识别、医学影像分析、大模型智能体与 AI4 教育。" />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home-zh.png" />
   <meta name="twitter:image:alt" content="wcx12 机器学习研究主页" />
-  <script src="../theme-init.js?v=ddfddaffa23f"></script>
-  <link rel="stylesheet" href="../styles.css?v=ddfddaffa23f" />
+  <script src="../theme-init.js?v=e735a224d6fa"></script>
+  <link rel="stylesheet" href="../styles.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="../site-nav.css?v=e735a224d6fa" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -128,29 +129,20 @@
   </div>
   <div id="themeTransition" class="theme-transition" aria-hidden="true"></div>
 
-  <header class="topbar">
-    <a class="brand" href="../" aria-label="主页" data-i18n-aria="aria_home">wcx12</a>
-    <div class="top-actions">
-      <nav class="top-actions-nav" aria-label="主要导航" data-i18n-aria="aria_primary_navigation">
-        <a class="ghost-btn" href="./research/" data-i18n="btn_research">研究</a>
-        <a class="ghost-btn" href="./projects/" data-i18n="btn_projects">项目</a>
-        <a class="ghost-btn" href="./publications/" data-i18n="btn_publications">论文</a>
-        <a class="ghost-btn" href="../blog/" data-i18n="btn_blog">博客</a>
-        <a class="ghost-btn" href="./resume/" data-i18n="btn_profile">履历</a>
+  <header class="topbar site-header">
+    <a class="brand" href="./" aria-label="主页" data-i18n-aria="aria_home">wcx12</a>
+    <details class="site-menu utility-menu" open>
+      <summary class="site-menu-toggle utility-menu-toggle" aria-controls="utilityMenuPanel" data-i18n="btn_settings">菜单</summary>
+      <nav id="utilityMenuPanel" class="site-navigation top-actions-nav" aria-label="主要导航" data-i18n-aria="aria_primary_navigation">
+        <a class="site-nav-link" data-site-section="research" href="./research/" data-i18n="btn_research">研究</a>
+        <a class="site-nav-link" data-site-section="projects" href="./projects/" data-i18n="btn_projects">项目</a>
+        <a class="site-nav-link" data-site-section="publications" href="./publications/" data-i18n="btn_publications">论文</a>
+        <a class="site-nav-link" data-site-section="writing" href="../blog/" data-i18n="btn_blog">博客</a>
+        <a class="site-nav-link" data-site-section="profile" href="./resume/" data-i18n="btn_profile">履历</a>
+        <select id="themeSelect" class="site-theme" aria-label="页面色调" data-i18n-aria="aria_theme"><option value="neon" data-i18n="theme_neon">默认</option><option value="warm" data-i18n="theme_warm">暖色</option><option value="mono" data-i18n="theme_mono">黑白极简</option></select>
+        <a id="langToggle" class="ghost-btn" href="../" hreflang="en" lang="en" title="View the English homepage" aria-label="View the English homepage" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">EN</a>
       </nav>
-      <div class="utility-menu">
-        <button class="ghost-btn utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utilityMenuPanel" data-i18n="btn_settings">设置</button>
-        <div id="utilityMenuPanel" class="utility-menu-panel">
-          <select id="themeSelect" class="theme-select" aria-label="页面色调" data-i18n-aria="aria_theme">
-            <option value="neon" data-i18n="theme_neon">默认风格</option>
-            <option value="warm" data-i18n="theme_warm">暖色</option>
-            <option value="mono" data-i18n="theme_mono">黑白极简</option>
-          </select>
-          <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">命令</button>
-          <a id="langToggle" class="ghost-btn" href="../" hreflang="en" lang="en" title="View the English homepage" aria-label="View the English homepage" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">EN</a>
-        </div>
-      </div>
-    </div>
+    </details>
   </header>
 
   <main id="main-content">
@@ -195,11 +187,8 @@
       <style>
         .console,
         .hero-preview-panel,
-        .utility-menu-toggle,
         #themeSelect,
         #openCommand { display: none !important; }
-        .utility-menu,
-        .utility-menu-panel { display: contents !important; }
         .hero { grid-template-columns: minmax(0, 1fr) !important; }
       </style>
       <section class="noscript-notice" aria-labelledby="noscriptTitle">
@@ -252,6 +241,7 @@
         <button class="cmd" data-view="publications" data-i18n="tab_publications">论文</button>
         <button class="cmd" data-view="writing" data-i18n="tab_writing">博客</button>
         <button class="cmd" data-view="profile" data-i18n="tab_profile">履历</button>
+        <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">命令</button>
       </nav>
 
       <div class="view active" id="about">
@@ -583,6 +573,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="../homepage-bootstrap.js?v=ddfddaffa23f"></script>
+  <script type="module" src="../homepage-bootstrap.js?v=e735a224d6fa"></script>
 </body>
 </html>

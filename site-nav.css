@@ -1,0 +1,132 @@
+/* One navigation surface shared by the homepage and every generated page. */
+:root { scrollbar-gutter: stable; }
+.blog-progress { z-index: 40; }
+#blogDraftStudioLink[hidden] { display: none !important; }
+:root .site-header {
+  box-sizing: border-box;
+  position: sticky;
+  inset: 0 0 auto;
+  z-index: 30;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  max-width: none;
+  height: 80px;
+  min-height: 80px;
+  margin: 0;
+  padding: 0 max(24px, calc((100% - 1280px) / 2));
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: none;
+  backdrop-filter: none;
+  font: 500 15px/20px "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+:root .site-header > :is(.brand, .blog-brand) {
+  flex: 0 0 auto;
+  padding: 0;
+  color: var(--text);
+  font: 700 20px/24px "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+  text-shadow: none;
+  text-decoration: none;
+}
+:root .site-header .site-menu { display: block; position: static; margin: 0; }
+:root .site-header .site-menu-toggle { display: none; list-style: none; }
+:root .site-header .site-menu-toggle::-webkit-details-marker { display: none; }
+:root .site-header .site-navigation {
+  display: grid;
+  grid-template-columns: repeat(5, 114px) 156px 64px;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  width: auto;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+:root .site-header .site-navigation > :is(a, button, select),
+:root .site-header .site-menu-toggle {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  letter-spacing: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  text-shadow: none;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+:root .site-header .site-menu-toggle { display: none; }
+:root .site-header .site-navigation > select { display: block; background: var(--bg); }
+:root .site-header .site-navigation > .site-theme { grid-column: 6; }
+:root .site-header .site-navigation > :last-child { grid-column: 7; }
+:root .site-header .site-navigation > [aria-current] {
+  border-color: var(--cyan);
+  color: var(--text);
+  background: color-mix(in srgb, var(--cyan) 9%, var(--bg));
+  box-shadow: inset 0 -2px 0 var(--cyan);
+}
+:root .site-header :is(a, button, select, summary):hover { border-color: var(--cyan); }
+:root .site-header :is(a, button, select, summary):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+:root .site-header .site-navigation > [hidden] { display: none !important; }
+@media (max-width: 1023px) {
+  .blog-body.blog-menu-open::after { content: none; }
+  :root .site-header { height: 72px; min-height: 72px; padding: 0 16px; }
+  :root .site-header .site-menu-toggle { display: inline-flex; width: 72px; }
+  :root .site-header .site-menu[open]::before {
+    content: "";
+    position: fixed;
+    inset: 72px 0 0;
+    background: #0006;
+    pointer-events: none;
+  }
+  :root .site-header .site-menu:not([open]) > .site-navigation { display: none; }
+  :root .site-header .site-menu[open] > .site-navigation {
+    position: absolute;
+    inset: 71px 16px auto;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    gap: 8px;
+    width: auto;
+    padding: 16px;
+    max-height: calc(100svh - 88px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+    scrollbar-width: thin;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    box-shadow: 0 12px 28px #0003;
+  }
+  :root .site-header .site-nav-link { grid-column: 1 / -1; }
+  :root .site-header .site-navigation > .site-theme { grid-column: 1; }
+  :root .site-header .site-navigation > :last-child { grid-column: 2; }
+}
+@media print { :root .site-header { display: none; } }

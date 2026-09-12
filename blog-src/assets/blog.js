@@ -141,7 +141,7 @@ const blogI18n = {
     theme_title: '切换页面色调',
     theme_default: '默认',
     theme_warm: '暖色',
-    theme_mono: '黑白',
+    theme_mono: '黑白极简',
     page_title: '知研札记',
     hero_kicker: '研究 · 工程 · 思考',
     hero_title: '知研札记',

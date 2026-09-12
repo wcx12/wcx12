@@ -37,9 +37,10 @@
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../theme-init.js?v=ddfddaffa23f"></script>
-  <link rel="stylesheet" href="../../content.css?v=ddfddaffa23f" />
-  <link rel="stylesheet" href="../../blog/assets/blog.css?v=ddfddaffa23f" />
+  <script src="../../theme-init.js?v=e735a224d6fa"></script>
+  <link rel="stylesheet" href="../../content.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="../../blog/assets/blog.css?v=e735a224d6fa" />
+  <link rel="stylesheet" href="../../site-nav.css?v=e735a224d6fa" />
 
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"CollectionPage","@id":"https://wcx12.github.io/wcx12/research/generative-retrieval/#page","name":"Generative Retrieval","description":"Reading notes on generative recommendation, semantic item identifiers, and residual quantization.","url":"https://wcx12.github.io/wcx12/research/generative-retrieval/","inLanguage":"en","about":{"@type":"DefinedTerm","termCode":"generative-retrieval","name":"Generative Retrieval","description":"Reading notes on generative recommendation, semantic item identifiers, and residual quantization."},"mainEntity":{"@id":"https://wcx12.github.io/wcx12/research/generative-retrieval/#evidence"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-research.png","width":1200,"height":630,"caption":"wcx12 research topics and public evidence index page"}},{"@type":"ItemList","@id":"https://wcx12.github.io/wcx12/research/generative-retrieval/#evidence","numberOfItems":2,"itemListElement":[{"@type":"BlogPosting","@id":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/#article","headline":"TIGER：从语义 ID 到生成式推荐","description":"从传统 ANN 检索到参数化生成，重新梳理 TIGER、RQ-VAE 与 Semantic ID 的完整链路，并区分冷启动、多样性、层次性和扩展性中哪些结论真正得到了实验支持。","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-generative-retrieval-reading/","datePublished":"2026-08-30","dateModified":"2026-09-07","inLanguage":"zh","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"}},{"@type":"BlogPosting","@id":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity-en/#article","headline":"When Recommenders Start to 'Write' Items: Why TIGER's Semantic IDs Collapse","description":"Starting from the anomaly that only 1 of 256 first-layer codewords survives, this article analyzes TIGER codebook collapse, the hard-ST fix, and task-dependent hierarchical capacity allocation across five Amazon categories.","url":"https://wcx12.github.io/wcx12/blog/posts/tiger-semantic-id-codebook-capacity-en/","datePublished":"2026-07-18","dateModified":"2026-07-18","inLanguage":"en","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"}}]}]}</script>
@@ -47,25 +48,18 @@
 <body class="blog-body">
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <div id="blogProgress" class="blog-progress" aria-hidden="true"></div>
-  <header class="blog-topbar">
-    <a class="blog-brand" href="../../">wcx12</a>
-    <details class="blog-menu" open>
-      <summary class="blog-menu-toggle" aria-controls="blogSiteNav" title="Open site navigation">Menu</summary>
-      <nav id="blogSiteNav" class="blog-nav" aria-label="Site navigation">
-        <a href="../../" title="Back to the interactive homepage">Home</a>
-        <a href="../" aria-current="location" title="Browse research topics and evidence">Research</a>
-        <a href="../../projects/" title="Projects and source code">Projects</a>
-        <a href="../../publications/" title="Browse publisher-linked publications">Publications</a>
-        <a href="../../blog/" title="Open Research Fieldnotes">Blog</a>
-        <a id="blogDraftStudioLink" href="../../blog/drafts/" title="Open the owner draft editor" hidden>Draft Studio</a>
-        <a href="../../resume/" title="Open the research profile">Resume</a>
-        <a href="../../#research" title="Interactive concept demos">Demos</a>
+  <header class="blog-topbar site-header">
+    <a class="blog-brand" href="../../" aria-label="Home">wcx12</a>
+    <details class="site-menu blog-menu" open>
+      <summary class="site-menu-toggle blog-menu-toggle" aria-controls="blogSiteNav">Menu</summary>
+      <nav id="blogSiteNav" class="site-navigation blog-nav" aria-label="Primary navigation">
+        <a class="site-nav-link" data-site-section="research" href="../" aria-current="location">Research</a>
+        <a class="site-nav-link" data-site-section="projects" href="../../projects/">Projects</a>
+        <a class="site-nav-link" data-site-section="publications" href="../../publications/">Publications</a>
+        <a class="site-nav-link" data-site-section="writing" href="../../blog/">Blog</a>
+        <a class="site-nav-link" data-site-section="profile" href="../../resume/">Resume</a>
+        <select id="blogThemeSelect" class="site-theme" aria-label="Color theme"><option value="neon">Default</option><option value="warm">Warm</option><option value="mono">Black &amp; White</option></select>
         <a id="blogLangLink" class="blog-nav-button" href="../../zh/research/generative-retrieval/" hreflang="zh-CN" lang="zh-CN" title="查看中文页面">中文</a>
-        <select id="blogThemeSelect" aria-label="Switch color theme" title="Switch color theme">
-          <option value="neon">Default</option>
-          <option value="warm">Warm</option>
-          <option value="mono">Black &amp; White</option>
-        </select>
       </nav>
     </details>
   </header>
@@ -104,6 +98,7 @@
   </main>
   <footer class="blog-footer">
     <span>&copy; 2026 wcx12</span>
+    <a id="blogDraftStudioLink" href="../../blog/drafts/" hidden>Draft Studio</a>
     <nav aria-label="Profile links">
       <a href="../../">Home</a>
       <a href="https://github.com/wcx12" target="_blank" rel="me noreferrer">GitHub</a>
@@ -111,6 +106,6 @@
     </nav>
   </footer>
 
-  <script type="module" src="../../blog/assets/blog.js?v=ddfddaffa23f"></script>
+  <script type="module" src="../../blog/assets/blog.js?v=e735a224d6fa"></script>
 </body>
 </html>

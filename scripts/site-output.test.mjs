@@ -182,6 +182,7 @@ async function expectedAssetVersion() {
   const files = [
     'content.css',
     'styles.css',
+    'site-nav.css',
     'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',
@@ -205,6 +206,7 @@ async function expectedAssetVersion() {
     'scripts/portfolio-ranking.js',
     'scripts/research-config-schema.js',
     'scripts/build-blog.mjs',
+    'scripts/site-navigation.mjs',
     ...posts.map((post) => path.relative(rootDir, post.sourcePath).replace(/\\/g, '/'))
   ].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
   const hash = createHash('sha256');
@@ -271,8 +273,8 @@ test('public HTML has stable document structure and valid JSON-LD', async () => 
 test('shared content navigation keeps visible labels in accessible names', async () => {
   for (const relativePath of ['blog/index.html', 'research/index.html', 'resume/index.html', 'zh/research/index.html']) {
     const source = await fs.readFile(path.join(rootDir, relativePath), 'utf8');
-    assert.match(source, /<details class="blog-menu" open>[\s\S]*?<summary class="blog-menu-toggle"[^>]+>[^<]+<\/summary>/);
-    assert.doesNotMatch(source.match(/<summary class="blog-menu-toggle"[\s\S]*?<\/summary>/)?.[0] || '', /aria-label=/);
+    assert.match(source, /<details class="site-menu blog-menu" open>[\s\S]*?<summary class="site-menu-toggle blog-menu-toggle"[^>]+>[^<]+<\/summary>/);
+    assert.doesNotMatch(source.match(/<summary class="site-menu-toggle blog-menu-toggle"[\s\S]*?<\/summary>/)?.[0] || '', /aria-label=/);
     const siteNav = source.match(/<nav id="blogSiteNav"[\s\S]*?<\/nav>/)?.[0] || '';
     assert.ok(siteNav, `${relativePath}: missing shared navigation`);
     assert.doesNotMatch(siteNav, /<a\b[^>]*aria-label=/, `${relativePath}: visible nav links must name themselves`);
@@ -460,7 +462,7 @@ test('generated content routes load the compact shared stylesheet', async () => 
     const relative = path.relative(rootDir, file).replace(/\\/g, '/');
     assert.match(source, /href="(?:\.\.\/)*content\.css\?v=[a-f0-9]{12}"/, `${relative}: compact shared stylesheet is missing`);
     assert.doesNotMatch(source, /href="(?:\.\.\/)*styles\.css\?v=/, `${relative}: homepage stylesheet must not leak into content routes`);
-    assert.match(source, /<details class="blog-menu" open>/, `${relative}: desktop navigation must remain available without JavaScript`);
+    assert.match(source, /<details class="site-menu blog-menu" open>/, `${relative}: desktop navigation must remain available without JavaScript`);
   }
 });
 
@@ -1041,7 +1043,7 @@ test('fixed-language routes have unique metadata and reciprocal language links',
     assert.equal(metaContent(source, 'og:locale:alternate'), isZh ? 'en_US' : 'zh_CN', `${route}: missing alternate Open Graph locale`);
     assert.equal(metaContent(source, 'og:site_name'), homepageSeo[isZh ? 'zh' : 'en'].siteName, `${route}: portfolio site name drifted`);
     const expectedHome = `${SITE.url}/${isZh ? 'zh/' : ''}`;
-    const brandHome = source.match(/<a class="blog-brand" href="([^"]+)">wcx12<\/a>/i)?.[1];
+    const brandHome = source.match(/<a class="blog-brand" href="([^"]+)"[^>]*>wcx12<\/a>/i)?.[1];
     const footerHome = source.match(/<footer class="blog-footer">[\s\S]*?<a href="([^"]+)"/i)?.[1];
     assert.equal(new URL(brandHome, canonical).href, expectedHome, `${route}: brand must return to the matching language homepage`);
     assert.equal(new URL(footerHome, canonical).href, expectedHome, `${route}: footer must return to the matching language homepage`);
