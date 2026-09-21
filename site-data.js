@@ -7,7 +7,7 @@ export const localRepos = [
     "descriptionZh": "交互式 GitHub 个人资料与研究主页。",
     "language": "HTML",
     "stargazers_count": 2,
-    "updated_at": "2026-09-20T08:16:48Z",
+    "updated_at": "2026-09-21T08:34:33Z",
     "default_branch": "main",
     "html_url": "https://github.com/wcx12/wcx12",
     "readme_url": "https://raw.githubusercontent.com/wcx12/wcx12/main/README.md",
