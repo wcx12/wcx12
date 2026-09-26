@@ -1310,10 +1310,11 @@ test('research profile has complete English and Chinese fixed-language records',
   assert.match(profileClient, /directory\.removeAttribute\('open'\)/);
   assert.match(profileClient, /directoryCurrent\.textContent/);
   assert.match(profileStyles, /@page\s*\{[^}]*size:\s*A4/s);
-  assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*0/s);
+  assert.match(profileStyles, /@page\s*\{[^}]*margin:\s*8mm 12mm/s);
   assert.match(profileStyles, /@media print[\s\S]*?:root\[data-theme="warm"\],[\s\S]*?:root\[data-theme="mono"\]\s*\{/s);
   assert.match(profileStyles, /@media print[\s\S]*?html,[\s\S]*?\.blog-body\s*\{[^}]*background:\s*#ffffff !important/s);
-  assert.match(profileStyles, /@media print[\s\S]*?\.blog-shell\s*\{[^}]*padding:\s*8mm 12mm/s);
+  assert.match(profileStyles, /@media print[\s\S]*?\.blog-shell\s*\{[^}]*padding:\s*0/s);
+  assert.match(profileStyles, /@media print[\s\S]*?\.profile-email-address\s*\{[^}]*display:\s*inline/s);
   assert.match(profileStyles, /@media print[\s\S]*?\.profile-directory,[\s\S]*?display:\s*none !important/s);
   assert.match(profileStyles, /@media print[\s\S]*?\.resume-publication-index\s*\{[^}]*display:\s*block/s);
   assert.doesNotMatch(profileStyles, /counter-reset:\s*profile-project/);
