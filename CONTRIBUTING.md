@@ -119,6 +119,21 @@ public-evidence notes, demos, and research mappings. New repositories are added
 as unclassified public records; they are never assigned to a research area
 without an explicit mapping. New forks retain upstream attribution.
 
+## Topic interactions
+
+`research-canvas.js` retains the point-cloud registration renderer.
+`topic-experiences.js` lazy-loads the other bounded, bilingual interactions:
+`topic-perception.js/css` for place recognition and annotation, and
+`topic-workbench.js/css` for scheduling and geometry. Preserve each interaction's
+state when switching topics; do not add a background animation loop or present
+synthetic examples as measured research results. Adding an asset requires updating
+both the build fingerprint/preview scaffold and the Pages allowlist.
+
+Behavior tests are in `scripts/research-demo.test.mjs` and
+`scripts/e2e/topics.spec.mjs`. `scripts/qa/topic-audit.mjs <artifact-url> <phase>`
+captures bilingual, three-theme screenshots and scoped accessibility reports.
+See `docs/topic-experiences-20260926.md` for the redesign decisions and evidence.
+
 ## Generated output
 
 `npm run build:site` writes `blog/`, `research/`, `projects/`, `publications/`,
@@ -156,6 +171,7 @@ and JSON reports are written under ignored `output/site-quality-20260926/`.
 `PLAYWRIGHT_BASE_URL` can target another already-running artifact server; do not
 run network-abort tests against an authenticated author session. Fixtures use
 synthetic private notes, never real private content or stored credentials.
+`PLAYWRIGHT_OUTPUT_DIR` selects a separate ignored report directory for a new run.
 
 Keep shared colors, type scales and font resources in `site-tokens.css`. It is
 fingerprinted with the rest of the release. Do not duplicate its definitions

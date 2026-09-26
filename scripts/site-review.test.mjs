@@ -265,7 +265,7 @@ test('shared identity and demo modules are fingerprinted and copied into draft p
   const source = await fs.readFile(path.join(root, 'scripts/build-blog.mjs'), 'utf8');
   const fingerprint = source.slice(source.indexOf('async function computeAssetVersion('), source.indexOf('async function stampHomepageAssets('));
   const scaffold = source.slice(source.indexOf('const scaffold = ['), source.indexOf('for (const relativePath of scaffold)'));
-  for (const filename of ['profile-data.js', 'research-demo-content.js']) {
+  for (const filename of ['profile-data.js', 'topic-experiences.js', 'topic-perception.js', 'topic-perception.css', 'topic-workbench.js', 'topic-workbench.css']) {
     assert.ok(fingerprint.includes(`'${filename}'`));
     assert.ok(scaffold.includes(`'${filename}'`));
   }
