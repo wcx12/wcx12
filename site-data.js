@@ -7,7 +7,7 @@ export const localRepos = [
     "descriptionZh": "交互式 GitHub 个人资料与研究主页。",
     "language": "HTML",
     "stargazers_count": 2,
-    "updated_at": "2026-09-25T08:31:40Z",
+    "updated_at": "2026-09-26T11:13:34Z",
     "default_branch": "main",
     "html_url": "https://github.com/wcx12/wcx12",
     "readme_url": "https://raw.githubusercontent.com/wcx12/wcx12/main/README.md",
@@ -257,7 +257,6 @@ export const staticPublications = [
       "en": "Volume date: 7 June 2026",
       "zh": "卷期日期：2026 年 6 月 7 日"
     },
-    // Legacy alias for the issue/cover date, not an online-publication date.
     "published_date": "2026-06-07",
     "publishedLabel": {
       "en": "Published",
