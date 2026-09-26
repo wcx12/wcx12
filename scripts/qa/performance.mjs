@@ -15,7 +15,12 @@ if (!['all', 'home-mobile'].includes(scope)) throw new Error('Invalid measuremen
 if (!/^[a-z0-9-]+$/.test(phase)) throw new Error('Invalid phase');
 const output = path.resolve('output/site-quality-20260926', phase, 'performance');
 await fs.mkdir(output, { recursive: true });
+const chromeFlags = ['--headless=new', '--disable-extensions', '--no-first-run'];
+if (process.env.GITHUB_ACTIONS === 'true' && process.platform === 'linux') {
+  chromeFlags.push('--no-sandbox', '--disable-dev-shm-usage');
+}
 const report = { started: new Date().toISOString(), phase, base, environment: { node: process.version, platform: os.platform(), cpu: os.cpus()[0].model, logicalCpus: os.cpus().length, memoryGB: os.totalmem() / 2 ** 30, cache: 'fresh Chrome profile for each navigation, Lighthouse storage reset enabled', externalNetwork: 'uncontrolled public endpoints; local artifact origin' }, runs: [] };
+report.environment.chromeFlags = chromeFlags;
 report.versions = [];
 report.scope = scope;
 for (const [version, url] of targets) {
@@ -30,7 +35,7 @@ for (const [name, route] of [['home', ''], ['article', 'blog/posts/tiger-generat
       const stem = `${version}-${name}-${device}-${run}`;
       const userDataDir = path.join(output, 'profiles', `${stem}-${Date.now()}`);
       await fs.mkdir(userDataDir, { recursive: true });
-      const chrome = await launch({ userDataDir, chromePath: chromium.executablePath(), chromeFlags: ['--headless=new', '--disable-extensions', '--no-first-run'] });
+      const chrome = await launch({ userDataDir, chromePath: chromium.executablePath(), chromeFlags });
       try {
         const result = await lighthouse(new URL(route, url).href, { port: chrome.port, output: ['json', 'html'], logLevel: 'error', onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'] }, device === 'desktop' ? desktopConfig : undefined);
         await fs.writeFile(path.join(output, `${stem}.json`), result.report[0]);

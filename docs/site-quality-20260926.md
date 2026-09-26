@@ -83,9 +83,9 @@ Visual follow-ups discovered during verification:
 - Unknown: degree award, present applications/availability, individual CRediT contributions, exact online dates, independently reproduced research results. Do not infer any from elapsed dates or author order.
 - Publicly committed history is public even after withdrawal. Hidden controls, noindex and owner URL parameters are not authentication. Real private save/publish is not exercised in this audit.
 
-## Release gate (updated on completion)
+## Release gate
 
-Not passed yet. Pending final build/content/behavior/browser/visual/performance/allowlist checks, commit identity and production verification. Do not treat exploratory scores, source-only checks or CI success as a deployed result.
+Content/build/artifact, browser and visual checks are complete as recorded below. Production remains conditional on the final Quality run and isolated performance comparison; the gate decision and subsequent hosted verification are recorded on [PR 19](https://github.com/wcx12/wcx12/pull/19). Do not treat exploratory scores, source-only checks or CI success as a deployed result.
 
 ### Completed verification
 
@@ -99,6 +99,8 @@ Not passed yet. Pending final build/content/behavior/browser/visual/performance/
 - Earlier failed runs are retained: they found existing WebKit issues, the renamed-command regression and the incorrect README test assumption. No test threshold was lowered; existing JavaScript byte budgets remain enforced.
 - Final print follow-up: `release-final-build` passed all 15 artifact tests; `release-print-e2e` passed in three engines. `release-smoke-local` verified six page bodies plus nine resources against artifact hashes, mobile theme/navigation/language/reload and 404 recovery, with no unexpected console errors. This is local, not online evidence.
 - The first `release-final-validate` exposed the old zero-`@page`/shell-padding contract. Assertions now require the intentional repeated 8mm/12mm page margin, zero shell padding and visible email. This matches the reviewed PDF instead of removing print coverage.
+- `release-final-validate-corrected` passed. Quality run 36237413131 also passed content/build/artifact/three-engine/link/reproducibility checks, but its added Lighthouse step failed to launch Chrome on the Linux runner (connection refused on the debugging port). The runner launch now uses the same sandbox-disabled headless environment convention as Playwright, only in GitHub Actions; site CSP, deployment permissions and production behavior are unchanged. This failed run is not a performance result.
+- `final/interaction-timing.json`: three repetitions of actual command open/close and project/publication panel clicks at 390px with 4x CPU slowdown. Event Timing medians were 224/96/176/112 ms respectively (first project activation 384 ms). Not all slow-device operations meet 200ms; these are lab input-to-presentation measurements, not field INP.
 
 ### Performance evidence
 
