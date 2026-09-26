@@ -9,7 +9,7 @@
   <meta name="description" content="Chenxu Wang（wcx12）的研究主页，涵盖点云配准、视觉地点识别、医学影像分析、大模型智能体与 AI4 教育。" />
   <meta name="author" content="Chenxu Wang" />
   <meta name="robots" content="index,follow,max-image-preview:large" />
-  <meta name="theme-color" content="#070914" />
+  <meta name="theme-color" content="#101416" />
   <meta name="color-scheme" content="dark" />
   <link rel="canonical" href="https://wcx12.github.io/wcx12/zh/" />
   <link rel="alternate" hreflang="en" href="https://wcx12.github.io/wcx12/" />
@@ -41,9 +41,10 @@
   <meta name="twitter:description" content="Chenxu Wang（wcx12）的研究主页，涵盖点云配准、视觉地点识别、医学影像分析、大模型智能体与 AI4 教育。" />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home-zh.png" />
   <meta name="twitter:image:alt" content="wcx12 机器学习研究主页" />
-  <script src="../theme-init.js?v=8ee70a2f8f9c"></script>
-  <link rel="stylesheet" href="../styles.css?v=8ee70a2f8f9c" />
-  <link rel="stylesheet" href="../site-nav.css?v=8ee70a2f8f9c" />
+  <script src="../theme-init.js?v=e98d93156d42"></script>
+  <link rel="stylesheet" href="../site-tokens.css?v=e98d93156d42" />
+  <link rel="stylesheet" href="../styles.css?v=e98d93156d42" />
+  <link rel="stylesheet" href="../site-nav.css?v=e98d93156d42" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -130,7 +131,7 @@
   <div id="themeTransition" class="theme-transition" aria-hidden="true"></div>
 
   <header class="topbar site-header">
-    <a class="brand" href="./" aria-label="主页" data-i18n-aria="aria_home">wcx12</a>
+    <a class="brand" href="./" aria-label="wcx12 主页" data-i18n-aria="aria_home">wcx12</a>
     <details class="site-menu utility-menu" open>
       <summary class="site-menu-toggle utility-menu-toggle" aria-controls="utilityMenuPanel" data-i18n="btn_settings">菜单</summary>
       <nav id="utilityMenuPanel" class="site-navigation top-actions-nav" aria-label="主要导航" data-i18n-aria="aria_primary_navigation">
@@ -139,7 +140,7 @@
         <a class="site-nav-link" data-site-section="publications" href="./publications/" data-i18n="btn_publications">论文</a>
         <a class="site-nav-link" data-site-section="writing" href="../blog/" data-i18n="btn_blog">博客</a>
         <a class="site-nav-link" data-site-section="profile" href="./resume/" data-i18n="btn_profile">履历</a>
-        <select id="themeSelect" class="site-theme" aria-label="页面色调" data-i18n-aria="aria_theme"><option value="neon" data-i18n="theme_neon">默认</option><option value="warm" data-i18n="theme_warm">暖色</option><option value="mono" data-i18n="theme_mono">黑白极简</option></select>
+        <select id="themeSelect" class="site-theme" aria-label="页面色调" disabled data-i18n-aria="aria_theme"><option value="neon" data-i18n="theme_neon">默认</option><option value="warm" data-i18n="theme_warm">暖色</option><option value="mono" data-i18n="theme_mono">黑白极简</option></select>
         <a id="langToggle" class="ghost-btn" href="../" hreflang="en" lang="en" title="View the English homepage" aria-label="View the English homepage" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">EN</a>
       </nav>
     </details>
@@ -162,7 +163,7 @@
 
         <div class="quick-stats">
           <article><span data-i18n="stat_focus">研究领域 / 主题</span><strong id="focusAreaCount">4 / 6</strong></article>
-          <article><span data-i18n="stat_grad">毕业时间</span><strong>2026</strong></article>
+          <article><span data-i18n="stat_location">常驻</span><strong data-i18n="stat_location_value">深圳</strong></article>
           <article><span data-i18n="stat_pubs">论文</span><strong id="heroPublicationCount">2</strong></article>
         </div>
       </div>
@@ -216,14 +217,15 @@
       <h2 id="selected-work-title" data-i18n="selected_work">代表工作</h2>
       <div class="selected-work-list">
         <article>
-          <span data-i18n="selected_project">项目</span>
-          <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
-          <p data-i18n="selected_project_desc">面向院校专业信息的检索，保留来源与证据缺口。</p>
-        </article>
-        <article>
           <span data-i18n="selected_paper">论文</span>
           <h3><a href="./publications/tf-vpr/">TF-VPR</a></h3>
-          <p data-i18n="selected_paper_desc">利用冻结的基础模型进行视觉地点识别。</p>
+          <p data-i18n="selected_paper_desc">利用冻结的基础模型识别地点，无需任务微调。包含方法、基准实验结果与官方代码。</p>
+          <p class="selected-work-evidence">Neurocomputing · 2026</p>
+        </article>
+        <article>
+          <span data-i18n="selected_project">工程原型</span>
+          <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
+          <p data-i18n="selected_project_desc">通过 SQL 工具与 Agent 检索院校专业信息。代码和运行轨迹公开，核心数据库未公开。</p>
         </article>
         <article>
           <span data-i18n="selected_note">阅读笔记</span>
@@ -233,14 +235,23 @@
       </div>
     </section>
 
-    <section class="console" aria-label="交互式个人主页工具" data-i18n-aria="aria_interactive_portfolio">
+    <section class="enhancement-fallback" aria-live="polite">
+      <p class="enhancement-pending" data-i18n="enhancement_pending">交互工具加载中。</p>
+      <p class="enhancement-error" data-i18n="enhancement_error">交互工具暂时无法加载，研究、论文等独立页面仍可访问。</p>
+      <a href="./" data-i18n="enhancement_reload">重新加载</a>
+      <a href="./research/" data-i18n="btn_research">研究</a>
+      <a href="./publications/" data-i18n="btn_publications">论文</a>
+    </section>
+
+    <section class="console" inert aria-label="交互式个人主页工具" data-i18n-aria="aria_interactive_portfolio">
+      <h2 class="tools-title" data-i18n="tools_title">探索具体工作</h2>
       <nav class="command-row" aria-label="交互工具" data-i18n-aria="aria_interactive_tools">
         <button class="cmd active" data-view="about" data-i18n="tab_about">概览</button>
-        <button class="cmd" data-view="research" data-i18n="tab_research">研究</button>
-        <button class="cmd" data-view="projects" data-i18n="tab_projects">项目</button>
-        <button class="cmd" data-view="publications" data-i18n="tab_publications">论文</button>
-        <button class="cmd" data-view="writing" data-i18n="tab_writing">博客</button>
-        <button class="cmd" data-view="profile" data-i18n="tab_profile">履历</button>
+        <button class="cmd" data-view="research" data-i18n="tab_research">主题探索</button>
+        <button class="cmd" data-view="projects" data-i18n="tab_projects">仓库浏览</button>
+        <button class="cmd" data-view="publications" data-i18n="tab_publications">论文浏览</button>
+        <button class="cmd" data-view="writing" data-i18n="tab_writing">阅读列表</button>
+        <button class="cmd" data-view="profile" data-i18n="tab_profile">个人概况</button>
         <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">命令</button>
       </nav>
 
@@ -573,6 +584,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="../homepage-bootstrap.js?v=8ee70a2f8f9c"></script>
+  <script type="module" src="../homepage-bootstrap.js?v=e98d93156d42"></script>
 </body>
 </html>

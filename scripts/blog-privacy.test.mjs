@@ -37,7 +37,7 @@ test('withdrawn article references become text without changing live links or te
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const shell = '<!doctype html><title>Draft Studio</title><textarea data-draft-editor></textarea>';
 const fixtureFiles = [
-  '404.html', 'content.css', 'favicon.svg', 'homepage-bootstrap.js', 'homepage-i18n.js',
+  '404.html', 'content.css', 'site-tokens.css', 'favicon.svg', 'homepage-bootstrap.js', 'homepage-i18n.js',
   'profile-data.js', 'index.html', 'repo-map.js', 'research-canvas.js', 'research-demo-content.js',
   'research-config.json', 'robots.txt', 'rss.xml', 'script.js', 'site-data.js', 'sitemap.xml',
   'styles.css', 'site-nav.css', 'theme-init.js', 'scripts/portfolio-ranking.js',

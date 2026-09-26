@@ -12,11 +12,13 @@
     "build:preview": "node scripts/build-blog.mjs --preview-drafts",
     "package:pages": "node scripts/package-pages.mjs",
     "preview:blog": "node scripts/serve-preview.mjs",
-    "test:content": "node --test scripts/blog-content.test.mjs scripts/blog-discovery.test.mjs scripts/portfolio-ranking.test.mjs scripts/research-config-schema.test.mjs scripts/sync-github-repos.test.mjs",
+    "test:content": "node --test scripts/blog-content.test.mjs scripts/blog-discovery.test.mjs scripts/portfolio-ranking.test.mjs scripts/publication-metadata.test.mjs scripts/research-config-schema.test.mjs scripts/sync-github-repos.test.mjs",
     "test:homepage": "node --test scripts/homepage-runtime.test.mjs scripts/navigation-regression.test.mjs scripts/research-demo.test.mjs",
-    "test:site": "node --test scripts/site-output.test.mjs scripts/site-review.test.mjs scripts/site-navigation.test.mjs scripts/private-notes-api.test.mjs scripts/blog-privacy.test.mjs",
+    "test:site": "node --test scripts/site-output.test.mjs scripts/site-review.test.mjs scripts/site-navigation.test.mjs scripts/private-notes-api.test.mjs scripts/private-notes-session.test.mjs scripts/blog-privacy.test.mjs",
+    "test:e2e": "playwright test",
+    "test:links": "node scripts/qa/check-links.mjs --no-baseline",
     "test:pages": "node --test scripts/pages-artifact.test.mjs",
-    "test:privacy": "node --test scripts/private-notes-api.test.mjs scripts/blog-privacy.test.mjs scripts/blog-withdrawal.test.mjs",
+    "test:privacy": "node --test scripts/private-notes-api.test.mjs scripts/private-notes-session.test.mjs scripts/blog-privacy.test.mjs scripts/blog-withdrawal.test.mjs",
     "validate": "node scripts/validate-content.mjs && npm run test:content && npm run test:homepage && npm run test:site",
     "build:site": "node scripts/build-blog.mjs",
     "build:pages": "npm run build:site && npm run package:pages && npm run test:pages",
@@ -33,5 +35,10 @@
     "markdown-it-anchor": "^9.2.0",
     "markdown-it-footnote": "^4.0.0",
     "markdown-it-katex": "npm:@vscode/markdown-it-katex@1.1.2"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "lighthouse": "13.5.0"
   }
 }

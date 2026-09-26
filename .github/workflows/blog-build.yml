@@ -68,6 +68,12 @@ jobs:
       - name: Validate public Pages artifact
         run: npm run test:pages
 
+      - name: Install browser for release regression
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify visitor paths before publishing
+        run: npm run test:e2e -- --project=chromium && npm run test:links
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 

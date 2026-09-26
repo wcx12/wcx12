@@ -62,6 +62,23 @@ test('closing a modal for navigation releases inert state without restoring stal
   assert.equal(context.modalReturnFocus, null);
 });
 
+test('deferred repository initialization preserves an already-entered search result', async () => {
+  const selected = [{ name: 'major-intel' }];
+  const refreshes = [];
+  const context = {
+    localRepos: [{ name: 'major-intel' }, { name: 'another-repo' }],
+    allRepos: selected,
+    filteredRepos: selected,
+    renderHeroPreview() {},
+    refreshInitializedView: view => refreshes.push(view)
+  };
+  const initialize = vm.runInNewContext(`(${source.match(/async function loadRepos\(\) \{[\s\S]*?\n\}/)[0]})`, context);
+  await initialize();
+  assert.equal(context.filteredRepos, selected);
+  assert.equal(context.allRepos, selected);
+  assert.deepEqual(refreshes, ['projects', 'research']);
+});
+
 test('skip navigation focuses the active view without changing its hash', () => {
   let callback;
   const calls = [];

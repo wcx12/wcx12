@@ -9,7 +9,12 @@ let started = false;
 function startHomepage() {
   if (started) return;
   started = true;
-  import(appUrl.href).catch((error) => {
+  import(appUrl.href).then(() => {
+    document.documentElement.dataset.homepageReady = 'true';
+    document.querySelector('.console')?.removeAttribute('inert');
+    const theme = document.getElementById('themeSelect');
+    if (theme) theme.disabled = false;
+  }).catch((error) => {
     document.documentElement.dataset.homepageError = 'true';
     console.error('Homepage enhancement failed to load.', error);
   });

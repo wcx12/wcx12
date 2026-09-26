@@ -183,6 +183,7 @@ function structuredImageUrl(metadata) {
 async function expectedAssetVersion() {
   const { posts } = await loadPosts(rootDir);
   const files = [
+    'site-tokens.css',
     'content.css',
     'styles.css',
     'site-nav.css',
@@ -486,21 +487,29 @@ test('generated content routes load the compact shared stylesheet', async () => 
   }
 });
 
-test('compact content styles keep homepage themes and fonts in sync', async () => {
+test('home and content templates load one shared theme and font source', async () => {
   const [homepageStyles, contentStyles] = await Promise.all([
     fs.readFile(path.join(rootDir, 'styles.css'), 'utf8'),
     fs.readFile(path.join(rootDir, 'content.css'), 'utf8')
   ]);
+  const tokens = await fs.readFile(path.join(rootDir, 'site-tokens.css'), 'utf8');
   const normalize = (value) => value.replace(/\s+/g, ' ').trim();
   const ruleBody = (source, selector) => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return source.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))?.[1] || '';
   };
   for (const selector of [':root', ':root[data-theme="warm"]', ':root[data-theme="mono"]']) {
-    assert.equal(normalize(ruleBody(contentStyles, selector)), normalize(ruleBody(homepageStyles, selector)), `${selector} tokens drifted`);
+    assert.ok(normalize(ruleBody(tokens, selector)).length, `${selector} tokens missing`);
+    assert.equal(normalize(ruleBody(contentStyles, selector)), '', `${selector} must not be duplicated`);
+    assert.equal(normalize(ruleBody(homepageStyles, selector)), '', `${selector} must not be duplicated`);
   }
   const fontFaces = (source) => matches(source, /@font-face\s*\{([^}]*)\}/g).map(([, body]) => normalize(body));
-  assert.deepEqual(fontFaces(contentStyles), fontFaces(homepageStyles));
+  assert.equal(fontFaces(tokens).length, 2);
+  assert.deepEqual(fontFaces(contentStyles), []);
+  assert.deepEqual(fontFaces(homepageStyles), []);
+  for (const file of ['index.html', 'zh/index.html', 'blog/index.html', 'resume/index.html']) {
+    assert.match(await fs.readFile(path.join(rootDir, file), 'utf8'), /href="(?:\.\.\/)*site-tokens\.css\?v=[a-f0-9]{12}"/);
+  }
 });
 
 test('blog presents the agreed fieldnotes identity', async () => {
@@ -536,7 +545,8 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(styleSource, /\.blog-post-card\s*\{[^}]*border:\s*0[^}]*border-radius:\s*0[^}]*background:\s*transparent/s);
   assert.doesNotMatch(styleSource, /\.blog-body::before\s*\{[^}]*radial-gradient/s);
   assert.match(styleSource, /\.blog-content a\s*\{[^}]*overflow-wrap:\s*anywhere/s, 'long DOI links must wrap on mobile');
-  assert.match(styleSource, /@media \(max-width: 560px\)[\s\S]*?\.blog-post-title\s*\{[^}]*font-size:\s*clamp\(1\.9rem, 8vw, 2\.55rem\)/s);
+  assert.match(styleSource, /@media \(max-width: 560px\)[\s\S]*?\.blog-post-title\s*\{[^}]*font-size:\s*1\.9rem/s);
+  assert.doesNotMatch(styleSource, /font-size:\s*clamp\([^)]*vw/);
   assert.match(styleSource, /:root\[data-theme="mono"\] \.blog-card-meta,[\s\S]*?:root\[data-theme="mono"\] \.blog-content a,[\s\S]*?color:\s*var\(--text\)/s);
   assert.match(clientSource, /new URL\('\.\.\/search\.json', import\.meta\.url\)/, 'blog search must resolve from blog/assets/ to blog/search.json');
   assert.match(clientSource, /searchUrl\.searchParams\.set\('v', assetVersion\)/, 'blog search must inherit the release version');
@@ -963,7 +973,7 @@ test('generated code blocks and article contents remain keyboard reachable', asy
       assert.match(diversityMain, /真实类别标签[\s\S]*?不是模型输出 token 概率的熵/);
       assert.match(diversityMain, /原文 Table 3（第 9 页）[\s\S]*?原文 Table 4（第 9 页）[\s\S]*?表中没有给出每类商品的具体数量/);
       assert.doesNotMatch(diversityMain, /我的疑问|我更希望|katex-display/);
-      const diversityTable = diversityMain.match(/<table>([\s\S]*?)<\/table>/)?.[1] ?? '';
+      const diversityTable = diversityMain.match(/<table\b[^>]*>([\s\S]*?)<\/table>/)?.[1] ?? '';
       const diversityRows = [...diversityTable.matchAll(/<tr>([\s\S]*?)<\/tr>/g)]
         .map((row) => [...row[1].matchAll(/<td[^>]*>([^<]+)<\/td>/g)].map((cell) => cell[1]))
         .filter((row) => row.length);

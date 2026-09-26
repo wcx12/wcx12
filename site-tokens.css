@@ -1,0 +1,98 @@
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: optional;
+  src: url("./assets/fonts/space-grotesk-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: optional;
+  src: url("./assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #101416;
+  --panel: #181e21;
+  --text: #eef3f3;
+  --muted: #b4c1c7;
+  --cyan: #75dcc8;
+  --violet: #b4c4f3;
+  --pink: #f2b8bf;
+  --line: #607078;
+  --page-bg: var(--bg);
+  --hero-bg: transparent;
+  --card-bg: #1a2327;
+  --soft-bg: #202b30;
+  --field-bg: #121a1e;
+  --glow: rgba(117, 220, 200, 0.14);
+  --scroll-track: #202b30;
+  --scroll-thumb: #819aa2;
+  --font-ui: "Space Grotesk", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-reading: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-code: "JetBrains Mono", Consolas, "Microsoft YaHei", monospace;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
+  --text-reading: 1.0625rem;
+  --text-section: 1.5rem;
+  --text-title: 2.5rem;
+  --leading-ui: 1.5;
+  --leading-reading: 1.85;
+  --width-page: 72rem;
+  --width-reading: 46rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --radius: 8px;
+  --border: 1px solid var(--line);
+  --shadow-overlay: 0 20px 60px #0008;
+  --focus-ring: 3px solid var(--pink);
+  --motion-fast: 120ms;
+  --motion-standard: 200ms;
+  --z-header: 50;
+  --z-overlay: 100;
+  /* Layout breakpoints: compact 40rem; reading rail 64rem. */
+  --breakpoint-compact: 40rem;
+  --breakpoint-wide: 64rem;
+}
+
+:root[data-theme="warm"] {
+  --bg: #191819;
+  --panel: #242225;
+  --text: #f5f0eb;
+  --muted: #ccc2bd;
+  --cyan: #f2ce9e;
+  --violet: #acd8c8;
+  --pink: #edb7c7;
+  --line: #80736e;
+  --card-bg: #29272a;
+  --soft-bg: #302c2c;
+  --field-bg: #211f22;
+  --glow: rgba(242, 206, 158, 0.14);
+  --scroll-track: #302c2c;
+  --scroll-thumb: #baa595;
+}
+
+:root[data-theme="mono"] {
+  --bg: #101010;
+  --panel: #1c1c1c;
+  --text: #f5f5f5;
+  --muted: #bdbdbd;
+  --cyan: #f5f5f5;
+  --violet: #d4d4d4;
+  --pink: #fff;
+  --line: #6b6b6b;
+  --card-bg: #222;
+  --soft-bg: #2b2b2b;
+  --field-bg: #171717;
+  --glow: rgba(255, 255, 255, 0.08);
+  --scroll-track: #282828;
+  --scroll-thumb: #aaa;
+}

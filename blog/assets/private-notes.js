@@ -281,12 +281,12 @@ $('notesConnectForm').addEventListener('submit', event => {
     client = pending;
     try { await pending.connect(); } catch (error) { pending.dispose(); if (client === pending) client = null; throw error; }
     if (runEpoch !== epoch) return;
+    armLock();
     $('notesConnectForm').hidden = true; $('notesConnected').hidden = false; $('notesWorkspace').hidden = false;
     await loadRecords(runEpoch);
     if (runEpoch !== epoch) return;
     try { await loadPublicList(runEpoch); status(records.length ? 'clean' : 'empty'); }
     catch { status('publicError', true); }
-    armLock();
   });
 });
 $('notesLock').addEventListener('click', () => { if (!dirty || window.confirm(t('lockWarning'))) lock(); });

@@ -13,6 +13,7 @@ import {
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const read = (relativePath) => fs.readFile(path.join(rootDir, relativePath), 'utf8');
+const tokenSource = await read('site-tokens.css');
 
 const [
   indexSource,
@@ -64,8 +65,8 @@ test('every literal DOM lookup used by the homepage modules exists', () => {
 test('homepage paints before loading its full interaction module and keeps visualizations lazy', async () => {
   const releaseVersion = indexSource.match(/<script\s+type="module"\s+src="homepage-bootstrap\.js\?v=([a-f0-9]{12})"><\/script>/i)?.[1];
   assert.ok(releaseVersion, 'homepage bootstrap must include a release version');
-  assert.match(indexSource, /<script\s+src="theme-init\.js\?v=[a-f0-9]{12}"><\/script>\s*<link rel="stylesheet" href="styles\.css\?v=[a-f0-9]{12}" \/>/);
-  assert.match(chineseIndexSource, /<script\s+src="\.\.\/theme-init\.js\?v=[a-f0-9]{12}"><\/script>\s*<link rel="stylesheet" href="\.\.\/styles\.css\?v=[a-f0-9]{12}" \/>/);
+  assert.match(indexSource, /<script\s+src="theme-init\.js\?v=[a-f0-9]{12}"><\/script>\s*<link rel="stylesheet" href="site-tokens\.css\?v=[a-f0-9]{12}" \/>\s*<link rel="stylesheet" href="styles\.css\?v=[a-f0-9]{12}" \/>/);
+  assert.match(chineseIndexSource, /<script\s+src="\.\.\/theme-init\.js\?v=[a-f0-9]{12}"><\/script>\s*<link rel="stylesheet" href="\.\.\/site-tokens\.css\?v=[a-f0-9]{12}" \/>\s*<link rel="stylesheet" href="\.\.\/styles\.css\?v=[a-f0-9]{12}" \/>/);
   assert.match(themeInitSource, /localStorage[\s\S]*?getItem\('wcx12-theme'\)/);
   assert.match(themeInitSource, /document\.documentElement\.dataset\.theme = theme/);
   assert.match(themeInitSource, /meta\[name="theme-color"\]/);
@@ -131,7 +132,7 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.match(indexSource, /<html lang="en" data-fixed-language="en">/);
   assert.match(indexSource, /hreflang="zh-CN" href="https:\/\/wcx12\.github\.io\/wcx12\/zh\/"/);
   assert.match(indexSource, /<h1>Chenxu Wang <span class="hero-alias">\(wcx12\)<\/span><\/h1>/);
-  assert.match(indexSource, /<a class="brand" href="\.\/" aria-label="Home"[^>]*>wcx12<\/a>/);
+  assert.match(indexSource, /<a class="brand" href="\.\/" aria-label="wcx12 Home"[^>]*>wcx12<\/a>/);
   const expectedTopics = researchConfig.interests.reduce((count, domain) => count + domain.children.length, 0);
   assert.ok(indexSource.includes(`<strong id="focusAreaCount">${researchConfig.interests.length} / ${expectedTopics}</strong>`));
   assert.match(indexSource, /"propertyID": "ORCID"/);
@@ -140,16 +141,17 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
   assert.match(indexSource, /rel="preload" href="\.\/assets\/fonts\/space-grotesk-latin\.woff2" as="font" type="font\/woff2" crossorigin/);
   assert.doesNotMatch(indexSource, /rel="preload"[^>]+jetbrains-mono/i);
-  assert.match(styleSource, /space-grotesk-latin\.woff2/);
-  assert.match(styleSource, /jetbrains-mono-latin\.woff2/);
-  assert.equal(styleSource.match(/font-display:\s*optional/g)?.length || 0, 2, 'local fonts should not delay or shift a cold visit');
+  assert.match(tokenSource, /space-grotesk-latin\.woff2/);
+  assert.match(tokenSource, /jetbrains-mono-latin\.woff2/);
+  assert.equal(tokenSource.match(/font-display:\s*optional/g)?.length || 0, 2, 'local fonts should not delay or shift a cold visit');
 
   const initialization = scriptSource.slice(scriptSource.lastIndexOf('initCustomCursor();'));
   assert.doesNotMatch(initialization, /\bload(?:Repos|Publications|BlogPosts|RemoteResearchConfig)\(\);/);
   assert.match(initialization, /applyTranslations\(\{ translateDocument: !fixedLanguage \}\)/);
   assert.match(scriptSource, /function applyTranslations\(\{ translateDocument = true \} = \{\}\) \{\s*if \(translateDocument\)/);
   assert.match(scriptSource, /void ensureViewData\(resolvedViewId\)/);
-  assert.match(scriptSource, /async function loadRepos\(\) \{\s*repoDataSource = 'snapshot';\s*allRepos = \[\.\.\.localRepos\]/);
+  assert.match(scriptSource, /let allRepos = \[\.\.\.localRepos\]/);
+  assert.match(scriptSource, /let repoDataSource = 'snapshot'/);
   assert.doesNotMatch(scriptSource, /api\.github\.com\/users\/\$\{GITHUB_OWNER\}\/repos/);
   assert.equal(homepageI18n.en.repo_source_snapshot, 'published GitHub snapshot');
   assert.match(scriptSource, /rawTarget === 'demo'\) target = 'demo'/);
@@ -202,10 +204,10 @@ test('homepage navigation uses the same content order and Blog label as fixed pa
   assert.equal(homepageI18n.en.btn_blog, 'Blog');
 });
 
-test('interactive views use familiar module names and leave representative work above the tools', () => {
+test('interactive tools are distinguished from page navigation and follow representative work', () => {
   const commandRow = indexSource.match(/<nav class="command-row"[\s\S]*?<\/nav>/)?.[0] || '';
   assert.equal((commandRow.match(/class="cmd/g) || []).length, 6);
-  for (const label of ['overview', 'Research', 'Projects', 'Publications', 'Blog', 'Resume']) {
+  for (const label of ['overview', 'Topic explorer', 'Repository browser', 'Paper browser', 'Reading list', 'At a glance']) {
     assert.match(commandRow, new RegExp(`>${label}<\\/button>`));
   }
   assert.doesNotMatch(indexSource, />wcx12-lab<\/p>/);
@@ -456,10 +458,11 @@ test('canonical repository and publication data stays unique and classifiable', 
     assert.ok(demoRepos.has(name), `${name} unexpectedly lost its public demo`);
   }
   assert.ok(localRepos.filter((repo) => repo.demo_url).every((repo) => /^https:\/\//.test(repo.demo_url)));
-  assert.match(scriptSource, /async function loadRepos\(\) \{\s*repoDataSource = 'snapshot';\s*allRepos = \[\.\.\.localRepos\];\s*filteredRepos = \[\.\.\.allRepos\]/);
+  assert.match(scriptSource, /let filteredRepos = \[\.\.\.localRepos\]/);
+  assert.doesNotMatch(scriptSource.match(/async function loadRepos\(\) \{([\s\S]*?)\n\}/)[1], /(?:allRepos|filteredRepos)\s*=/);
   assert.doesNotMatch(scriptSource, /function normalizeGitHubRepo|api\.github\.com\/users/);
   assert.match(scriptSource, /function repoDescription\(repo\)/);
-  assert.match(scriptSource, /\.\.\.override,[\s\S]*?status: currentLang === 'zh' \? override\.statusZh : override\.status/);
+  assert.match(scriptSource, /\.\.\.override,[\s\S]*?status: publicationStatusLabel\(override, currentLang\)/);
 
   assert.ok(staticPublications.length >= 2, 'canonical publication data unexpectedly lost verified papers');
   assert.equal(new Set(staticPublications.map((publication) => publication.doi)).size, staticPublications.length, 'publication DOIs must be unique');

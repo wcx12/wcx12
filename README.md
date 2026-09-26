@@ -6,11 +6,11 @@
   <a href="https://wcx12.github.io/wcx12/"><img src="https://img.shields.io/badge/Interactive%20Website-LIVE-00F5FF?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Open the wcx12 interactive website" /></a>
   <a href="mailto:c2675668@gmail.com"><img src="https://img.shields.io/badge/Email-c2675668%40gmail.com-FF2E88?style=for-the-badge&logo=gmail&logoColor=white" alt="Email wcx12" /></a>
   <a href="https://orcid.org/0009-0005-6139-4327"><img src="https://img.shields.io/badge/ORCID-0009--0005--6139--4327-A6CE39?style=for-the-badge&logo=orcid&logoColor=white" alt="ORCID 0009-0005-6139-4327" /></a>
-  <img src="https://img.shields.io/badge/Graduation-2026-8A2BE2?style=for-the-badge&logo=academia&logoColor=white" alt="Expected graduation: 2026" />
+  <img src="https://img.shields.io/badge/Study%20period-Sep%202022%20to%20Jun%202026-8A2BE2?style=for-the-badge&logo=academia&logoColor=white" alt="Study period: Sep 2022 to Jun 2026" />
 </p>
 
 <h1 align="center">Chenxu Wang (wcx12)</h1>
-<p align="center"><b>BIT Student · Entrepreneurial Builder · ML Researcher · Public Research Software Builder</b></p>
+<p align="center"><b>BIT (Sep 2022 to Jun 2026) · Entrepreneurial Builder · ML Researcher · Public Research Software Builder</b></p>
 
 <p align="center">
   <a href="https://wcx12.github.io/wcx12/"><b>Open My Interactive Website</b></a>
@@ -19,7 +19,7 @@
 ---
 
 ## About Me
-- I am studying at **Beijing Institute of Technology** from **Sep 2022 to Jun 2026**.
+- I studied at **Beijing Institute of Technology** from **Sep 2022 to Jun 2026**.
 - Since **Mar 2026**, I have been building in the startup setting at **Shenzhen Houlang Pengpai Technology Co., Ltd.**.
 - I study reliable visual intelligence under imperfect observations and limited labels, with work spanning **Point-set Registration**, **Visual Place Recognition**, and **Medical Image Analysis**.
 - I also build **evidence-grounded LLM systems** and exploratory **AI for Education** tools.
@@ -28,7 +28,7 @@
 
 ## Selected Publications
 - **TF-VPR: A novel benchmark for training-free visual place recognition.** Neurocomputing 681 (2026), 133399. [DOI](https://doi.org/10.1016/j.neucom.2026.133399)
-- **Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification.** Neurocomputing 699 (2026), 134314; in press. [DOI](https://doi.org/10.1016/j.neucom.2026.134314)
+- **Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification.** Neurocomputing 699 (2026), 134314; issue scheduled for 28 October 2026. [DOI](https://doi.org/10.1016/j.neucom.2026.134314)
 
 Full author lists and research mappings are available in the [publication index](https://wcx12.github.io/wcx12/publications/).
 

@@ -7,6 +7,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const publicFiles = [
   '404.html',
   'content.css',
+  'site-tokens.css',
   'favicon.svg',
   'homepage-bootstrap.js',
   'homepage-i18n.js',
