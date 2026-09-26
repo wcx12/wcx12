@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { loadPosts } from './blog-content.mjs';
 import { renderSiteHeader, navigationItems } from './site-navigation.mjs';
 
 const read = file => fs.readFile(new URL(`../${file}`, import.meta.url), 'utf8');
+const { posts: sourcePosts } = await loadPosts(fileURLToPath(new URL('../', import.meta.url)));
 
 test('all navigation variants have identical primary order, control order, and native menu structure', () => {
   for (const language of ['en', 'zh']) for (const homepage of [true, false]) for (const fixedLanguage of [true, false]) {
@@ -28,7 +31,8 @@ test('the active page is a semantic attribute and never changes link text', () =
 test('every generated surface loads the same navigation stylesheet after page styles', async () => {
   const files = ['index.html', 'zh/index.html', 'research/index.html', 'projects/index.html', 'publications/index.html', 'resume/index.html',
     'zh/research/index.html', 'zh/projects/index.html', 'zh/publications/index.html', 'zh/resume/index.html',
-    'blog/index.html', 'blog/archive/index.html', 'blog/drafts/index.html', 'blog/posts/tiger-generative-retrieval-reading/index.html'];
+    'blog/index.html', 'blog/archive/index.html', 'blog/drafts/index.html',
+    ...sourcePosts.map((post) => `blog/posts/${post.slug}/index.html`)];
   for (const file of files) {
     const html = await read(file);
     assert.equal((html.match(/<header class="[^"]*site-header"/g) || []).length, 1, file);

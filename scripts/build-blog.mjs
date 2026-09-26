@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import { renderSiteHeader } from './site-navigation.mjs';
+import { notesStudioBody } from './notes-studio-shell.mjs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,9 +58,6 @@ const generatedDirectories = ['blog', 'projects', 'resume', 'research', 'publica
 const generatedFiles = ['index.html', 'publications.md', 'rss.xml', 'sitemap.xml'];
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
 const researchChildren = researchConfig.interests.flatMap((interest) => interest.children);
-const GITHUB_REPOSITORY = 'wcx12/wcx12';
-const GITHUB_BRANCH = 'main';
-const BLOG_DRAFT_UPDATE_WORKFLOW = 'blog-draft-update.yml';
 const glossaryTerms = {
   index: {
     en: 'Index: the mechanism that maps a query to candidate result addresses without scanning every item. It can be an explicit structure such as a vector index, or a learned query-to-ID mapping, but the learned version is not a table you can directly browse or edit.',
@@ -1779,6 +1777,7 @@ function renderShell({
   body,
   extraHead = '',
   extraScripts = '',
+  privateWorkspace = false,
   jsonLd = '',
   pageType = 'website',
   schemaType = 'WebPage',
@@ -1889,7 +1888,9 @@ function renderShell({
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="${privateWorkspace
+    ? "default-src 'none'; base-uri 'none'; object-src 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self'; connect-src 'self' https://api.github.com; frame-src 'none'"
+    : "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'"}" />
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeHtml(pageDescription)}" />
   <meta name="author" content="${escapeHtml(SITE.author)}" />
@@ -1949,7 +1950,7 @@ ${extraScripts.trim()}
 `;
 }
 
-export function createMarkdownRenderer() {
+export function createMarkdownRenderer({ publishedSlugs = null } = {}) {
   const md = new MarkdownIt({
     html: false,
     linkify: true,
@@ -2091,10 +2092,32 @@ export function createMarkdownRenderer() {
 
   const defaultLinkOpen = md.renderer.rules.link_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
   const defaultLinkClose = md.renderer.rules.link_close || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+  const unavailableArticle = (href, post) => {
+    if (!publishedSlugs || !post?.slug) return false;
+    try {
+      const target = new URL(href, absoluteUrl(postUrl(post)));
+      const postsRoot = new URL(absoluteUrl('blog/posts/'));
+      if (target.origin !== postsRoot.origin || !target.pathname.startsWith(postsRoot.pathname)) return false;
+      const match = /^([^/]+)(?:\/(?:index\.html)?)?$/.exec(target.pathname.slice(postsRoot.pathname.length));
+      return Boolean(match && !publishedSlugs.has(decodeURIComponent(match[1])));
+    } catch {
+      return false;
+    }
+  };
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
     const rawHref = tokens[idx].attrGet('href') || '';
     const term = termFromHref(rawHref, env.post?.lang || 'en');
-    if (term) return renderTermChipOpen(term, env);
+    env.linkKinds ||= [];
+    if (term) {
+      env.linkKinds.push('term');
+      return renderTermChipOpen(term, env);
+    }
+    if (unavailableArticle(rawHref, env.post)) {
+      env.linkKinds.push('unavailable');
+      const title = env.post.lang === 'zh' ? '该文章当前未公开' : 'This article is not currently public';
+      return `<span title="${escapeHtml(title)}">`;
+    }
+    env.linkKinds.push('link');
 
     const href = versionPostMedia(rawHref, env.post);
     tokens[idx].attrSet('href', href);
@@ -2105,7 +2128,9 @@ export function createMarkdownRenderer() {
     return defaultLinkOpen(tokens, idx, options, env, self);
   };
   md.renderer.rules.link_close = (tokens, idx, options, env, self) => {
-    if (env.termStack?.length) return renderTermChipClose(env);
+    const kind = env.linkKinds?.pop();
+    if (kind === 'term') return renderTermChipClose(env);
+    if (kind === 'unavailable') return '</span>';
     return defaultLinkClose(tokens, idx, options, env, self);
   };
 
@@ -2260,6 +2285,9 @@ async function copyAssets() {
   }
 
   const katexDistDir = path.join(rootDir, 'node_modules', 'katex', 'dist');
+  for (const [packageName, file] of [['markdown-it', 'markdown-it.min.js'], ['js-yaml', 'js-yaml.min.js']]) {
+    await fs.copyFile(path.join(rootDir, 'node_modules', packageName, 'dist', file), path.join(outputAssetsDir, file));
+  }
   const katexCssPath = path.join(katexDistDir, 'katex.min.css');
   const katexCss = await fs.readFile(katexCssPath, 'utf8');
   const fontPaths = referencedKatexFonts(katexCss, katexDistDir);
@@ -2305,6 +2333,12 @@ async function computeAssetVersion(posts) {
     'blog-src/assets/blog.css',
     'blog-src/assets/blog.js',
     'blog-src/assets/draft-studio.js',
+    'blog-src/assets/private-notes.js',
+    'blog-src/assets/private-notes-api.js',
+    'blog-src/assets/private-notes.css',
+    'scripts/notes-studio-shell.mjs',
+    'node_modules/markdown-it/dist/markdown-it.min.js',
+    'node_modules/js-yaml/dist/js-yaml.min.js',
     'node_modules/katex/dist/katex.min.css',
     'node_modules/katex/dist/katex.min.js',
     'node_modules/katex/dist/contrib/auto-render.min.js',
@@ -2782,182 +2816,31 @@ async function renderDraftPreviews(posts, renderer) {
   }), previewRoot);
 }
 
-function sha256Text(value) {
-  return createHash('sha256').update(String(value).replace(/\r\n?/g, '\n')).digest('hex');
-}
-
-function base64Utf8(value) {
-  return Buffer.from(String(value).replace(/\r\n?/g, '\n'), 'utf8').toString('base64');
-}
-
-async function copyDraftStudioMedia(post) {
-  for (const media of draftStudioMediaFiles(post)) {
-    const destination = path.join(outputDir, 'drafts', 'media', post.slug, media.publicPath);
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.copyFile(media.sourcePath, destination);
-  }
-}
-
-function draftStudioMediaFiles(post) {
-  return (post.mediaFiles || []).filter((media) => media.publicPath !== post.socialImage);
-}
-
-async function renderDraftStudio(unpublishedPosts, today) {
+async function renderDraftStudio() {
   const filePath = path.join(outputDir, 'drafts', 'index.html');
   const ctx = createPageContext(filePath);
-  const drafts = [];
-  for (const post of unpublishedPosts) {
-    const source = (await fs.readFile(post.sourcePath, 'utf8')).replace(/\r\n?/g, '\n');
-    await copyDraftStudioMedia(post);
-    drafts.push({
-      title: post.title,
-      slug: post.slug,
-      path: post.relativePath,
-      editUrl: `https://github.com/${GITHUB_REPOSITORY}/edit/${GITHUB_BRANCH}/${post.relativePath}`,
-      workflowUrl: `https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${BLOG_DRAFT_UPDATE_WORKFLOW}`,
-      date: post.date,
-      updated: post.updated,
-      category: post.category,
-      tags: post.tags,
-      lang: post.lang,
-      state: post.publicationState,
-      contentHash: sha256Text(source),
-      contentBase64: base64Utf8(source),
-      media: Object.fromEntries(draftStudioMediaFiles(post).map((media) => [
-        media.publicPath,
-        `media/${post.slug}/${media.publicPath}?v=${media.version}`
-      ]))
-    });
-  }
-  await writePage('blog/drafts/drafts.json', `${JSON.stringify({
-    version: 1,
-    repository: GITHUB_REPOSITORY,
-    branch: GITHUB_BRANCH,
-    workflow: BLOG_DRAFT_UPDATE_WORKFLOW,
-    generatedAt: today,
-    drafts
-  }, null, 2)}\n`);
-
-  const body = `
-    <section class="blog-hero draft-studio-hero">
-      <p class="blog-kicker" data-draft-i18n="kicker">Owner Tools</p>
-      <h1 data-draft-i18n="title">Draft Studio</h1>
-      <p data-draft-i18n="description">Edit unpublished Markdown with a live reading preview, then prepare a GitHub Actions payload that commits the change without exposing a repository token in the browser.</p>
-    </section>
-
-    <section class="blog-section draft-locked" data-draft-locked>
-      <div class="blog-section-head">
-        <div>
-          <p class="blog-section-label" data-draft-i18n="locked_label">Private entry</p>
-          <h2 data-draft-i18n="locked_title">Owner tools are hidden.</h2>
-        </div>
-      </div>
-      <p class="muted" data-draft-i18n="locked_desc">Open this page with owner tools enabled to load draft editing controls. Saving still requires permission to run the repository workflow.</p>
-      <a class="btn btn-primary" href="${ctx.link('blog/drafts/index.html')}?ownerTools=1" data-draft-i18n="enable">Enable owner tools</a>
-    </section>
-
-    <section class="draft-studio" data-draft-studio hidden>
-      <div class="draft-command">
-        <label>
-          <span data-draft-i18n="select_label">Draft</span>
-          <select data-draft-select></select>
-        </label>
-        <p class="draft-status muted" role="status" aria-live="polite" data-draft-status></p>
-      </div>
-
-      <div class="draft-fields">
-        <label>
-          <span data-draft-i18n="field_title">Title</span>
-          <input data-draft-title type="text" autocomplete="off" />
-        </label>
-        <label>
-          <span data-draft-i18n="field_description">Description</span>
-          <textarea data-draft-description rows="2"></textarea>
-        </label>
-        <label>
-          <span data-draft-i18n="field_category">Category</span>
-          <select data-draft-category></select>
-        </label>
-        <label>
-          <span data-draft-i18n="field_tags">Tags</span>
-          <input data-draft-tags type="text" autocomplete="off" />
-        </label>
-        <label>
-          <span data-draft-i18n="field_date">Date</span>
-          <input data-draft-date type="date" />
-        </label>
-        <label>
-          <span data-draft-i18n="field_updated">Updated</span>
-          <input data-draft-updated type="date" />
-        </label>
-        <label class="draft-checkbox">
-          <input data-draft-published type="checkbox" />
-          <span data-draft-i18n="field_publish">Mark as ready to publish</span>
-        </label>
-      </div>
-
-      <div class="draft-workbench">
-        <section class="draft-pane">
-          <div class="draft-pane-head">
-            <h2 data-draft-i18n="markdown_title">Markdown</h2>
-            <div class="draft-actions">
-              <button class="btn btn-outline" type="button" data-draft-save-local data-draft-i18n="save_local">Save locally</button>
-              <button class="btn btn-outline" type="button" data-draft-restore data-draft-i18n="restore">Restore repo copy</button>
-            </div>
-          </div>
-          <textarea class="draft-editor" data-draft-editor spellcheck="false"></textarea>
-        </section>
-
-        <section class="draft-pane">
-          <div class="draft-pane-head">
-            <h2 data-draft-i18n="preview_title">Reading Preview</h2>
-            <span class="draft-preview-meta" data-draft-preview-meta></span>
-          </div>
-          <article class="draft-preview blog-post-card">
-            <header class="blog-post-header">
-              <p class="blog-kicker" data-draft-preview-category></p>
-              <h2 class="blog-post-title" data-draft-preview-title></h2>
-              <p class="blog-post-subtitle" data-draft-preview-description></p>
-            </header>
-            <div class="blog-content" data-draft-preview></div>
-          </article>
-        </section>
-      </div>
-
-      <section class="draft-submit">
-        <div class="draft-pane-head">
-          <div>
-            <p class="blog-section-label" data-draft-i18n="submit_label">Repository update</p>
-            <h2 data-draft-i18n="submit_title">Commit through GitHub Actions</h2>
-          </div>
-          <div class="draft-actions">
-            <button class="btn btn-primary" type="button" data-draft-prepare data-draft-i18n="prepare">Prepare payload</button>
-            <button class="btn btn-outline" type="button" data-draft-copy disabled data-draft-i18n="copy">Copy payload</button>
-            <a class="btn btn-outline" href="https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${BLOG_DRAFT_UPDATE_WORKFLOW}" target="_blank" rel="noreferrer" data-draft-workflow-link data-draft-i18n="open_actions">Open GitHub Actions</a>
-          </div>
-        </div>
-        <textarea class="draft-payload" data-draft-payload rows="4" readonly spellcheck="false"></textarea>
-        <p class="muted" data-draft-i18n="submit_hint">Paste this payload into the workflow input. If the remote file changed after this page loaded, the workflow will stop instead of overwriting it.</p>
-      </section>
-    </section>
-  `;
-
+  // The public shell contains no private data, including draft titles and media.
   await writePage('blog/drafts/index.html', renderShell({
     filePath,
-    title: 'Draft Studio',
-    description: 'Owner-only visual editing surface for unpublished blog drafts.',
-    body,
+    title: 'Private Notes',
+    privateWorkspace: true,
+    description: 'Authenticated workspace for private research notes.',
+    body: notesStudioBody(),
     robots: 'noindex,nofollow',
     schemaType: 'WebPage',
     blogPage: true,
-    extraHead: `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />`,
+    extraHead: `<meta name="referrer" content="no-referrer" />
+      <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />
+      <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/private-notes.css')}" />`,
     extraScripts: [
+      `<script src="${versionedAssetLink(ctx, 'blog/assets/markdown-it.min.js')}"></script>`,
+      `<script src="${versionedAssetLink(ctx, 'blog/assets/js-yaml.min.js')}"></script>`,
       `<script src="${versionedAssetLink(ctx, 'blog/assets/katex.min.js')}"></script>`,
       `<script src="${versionedAssetLink(ctx, 'blog/assets/auto-render.min.js')}"></script>`,
-      `<script type="module" src="${versionedAssetLink(ctx, 'blog/assets/draft-studio.js')}"></script>`
+      `<script type="module" src="${versionedAssetLink(ctx, 'blog/assets/private-notes.js')}"></script>`
     ].join('\n'),
     socialImagePath: 'assets/og-blog.png',
-    socialImageAlt: 'Draft Studio for Research Fieldnotes'
+    socialImageAlt: 'Private Notes workspace'
   }));
 }
 
@@ -4308,7 +4191,7 @@ async function main() {
   }
 
   assetVersion = await computeAssetVersion(posts);
-  const renderer = createMarkdownRenderer();
+  const renderer = createMarkdownRenderer({ publishedSlugs: new Set(posts.map((post) => post.slug)) });
   const backup = await createGeneratedSiteBackup();
   try {
     await clearGeneratedDirectories();
@@ -4328,7 +4211,7 @@ async function main() {
     await renderJsonFeeds(posts);
     await renderRss(posts);
     await renderSitemap(posts);
-    await renderDraftStudio(unpublishedPosts, today);
+    await renderDraftStudio();
 
     if (process.argv.includes('--preview-drafts')) {
       await renderDraftPreviews(unpublishedPosts, renderer);

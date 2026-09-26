@@ -5,13 +5,56 @@ and technical notes from one set of source files.
 
 ## Write a post
 
+### Private research notes
+
+This repository is **public**. A draft flag, hidden link or noindex directive
+does not protect source files committed here.
+
+Use [Private Notes](https://wcx12.github.io/wcx12/blog/drafts/) for private
+writing. It authenticates directly to the separate private repository
+`wcx12/wcx12-private-notes`. A fine-grained token needs Contents: Read and
+write for that repository. Also select `wcx12` only when public publishing or
+withdrawal is needed. No Actions, Administration or account permissions are
+required. Never commit or send your token in a message.
+
+- The editor verifies the authenticated owner and repository privacy.
+- Tokens and loaded notes stay in page memory, not localStorage/sessionStorage.
+  Closing, reloading or locking requires reconnecting. An idle, fully saved
+  workspace locks after 15 minutes; unsaved edits postpone that lock to avoid
+  losing work. Save before leaving; there is no browser autosave.
+- Saving writes only to the private repository. Draft/complete is independent
+  of visibility. Publishing requires a separate explicit confirmation.
+- Public changes are committed to this repository and trigger Pages deployment.
+  Check the linked deployment status; a successful commit is not a successful
+  deployment.
+- Existing public articles can be imported as working copies. Private saving
+  does not update or hide their public versions. Language variants are managed
+  separately.
+- Withdrawal saves the private copy before deleting the current public Markdown.
+  It does not erase public Git history, attachments, caches, forks or downloads.
+- New notes currently support text, Markdown and formulas. External images are
+  not loaded automatically in the authenticated preview. New local image bundles
+  are not published by this editor; existing public bundles retain their files.
+- Private GitHub storage is not end-to-end encryption. Repository collaborators,
+  organization administrators where applicable, and GitHub may access the data.
+  Keep the private repository private and restrict its collaborators.
+
+The public editor is an empty shell: no private titles, content, attachments or
+encoded drafts are deployed. The former draft payload workflow is disabled.
+
+### Local writing and intentional publication
+
 ```bash
 npm run new:post "Post Title"
 npm run build:site
 npm run validate
 ```
 
-Posts live in `content/posts/`. Keep `draft: true` until a post is ready. Set
+The scaffold command creates an ignored local draft under
+`output/private-drafts/content/posts/`, not in the public source tree.
+It is not a cloud backup. Do not force-add that directory to Git.
+
+Only intentionally public articles belong in `content/posts/`. Set
 `math: true` whenever prose contains KaTeX formulas. Research mappings must use
 an ID from `research-config.json` and should only be added when the article
 actually concerns that research area.
@@ -38,13 +81,14 @@ For a page-specific share preview, add a 1200 x 630 PNG to the article's
 `socialImageAlt`. The social card goes through the same signature, path, size,
 and symlink checks as images embedded in the article.
 
-Publication state is determined in `Asia/Shanghai`: `draft: true` stays private;
+Publication state is determined in `Asia/Shanghai`: `draft: true` stays off the site
+but is **not confidential** if its source is in this public repository;
 a non-draft post with a future `date` is scheduled; an eligible non-draft post
 is published. The scheduled GitHub workflow rebuilds shortly after local
 midnight. Drafts and scheduled posts remain excluded from pages, search, RSS,
 the sitemap, and research evidence.
 
-Preview unpublished writing locally:
+For local previews of public-repository draft material:
 
 ```bash
 npm run preview:blog

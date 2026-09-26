@@ -32,6 +32,11 @@ test('keeps non-Latin heading text in stable slugs', () => {
   assert.equal(slugify('Café / 研究 Notes'), 'cafe-研究-notes');
 });
 
+test('private visibility never becomes published even when draft is false', () => {
+  assert.equal(publicationState({ draft: false, visibility: 'private', date: '2020-01-01' }, '2026-09-26'), 'draft');
+  assert.equal(publicationState({ draft: false, visibility: 'public', date: '2020-01-01' }, '2026-09-26'), 'published');
+});
+
 test('new post scaffolding creates valid ASCII slugs and YAML-safe titles', async () => withContentRoot(async (root) => {
   assert.match(postSlugify('研究日志'), /^post-[a-f0-9]{10}$/);
   const title = String.raw`研究日志 C:\temp "quoted"`;
@@ -39,7 +44,10 @@ test('new post scaffolding creates valid ASCII slugs and YAML-safe titles', asyn
   assert.match(slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   assert.ok(await fs.stat(path.join(path.dirname(filePath), 'media')).then((stats) => stats.isDirectory()));
 
-  const { posts, diagnostics } = await loadPosts(root, { includeDrafts: true, today: '2026-07-10' });
+  assert.ok(filePath.startsWith(path.join(root, 'output', 'private-drafts')));
+  const { posts: publicPosts } = await loadPosts(root, { includeDrafts: true, today: '2026-07-10' });
+  assert.equal(publicPosts.length, 0);
+  const { posts, diagnostics } = await loadPosts(path.join(root, 'output', 'private-drafts'), { includeDrafts: true, today: '2026-07-10' });
   const { errors } = summarizeDiagnostics(diagnostics);
   assert.equal(errors.length, 0);
   assert.equal(posts[0].title, title);

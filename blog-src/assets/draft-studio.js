@@ -1858,5 +1858,16 @@ async function init() {
   }
 }
 
-window.addEventListener('blog-language-change', applyDraftText);
-init();
+// Only the figure renderers are reused by the authenticated notes editor.
+// The former public draft transport is deliberately never initialized.
+export function renderNoteDiagram(directive, lang) {
+  const renderers = {
+    '::tiger-pipeline': tigerPipelineFigureHtml,
+    '::tiger-rqvae-training': tigerRqvaeTrainingFigureHtml,
+    '::tiger-quantizers': tigerQuantizerAtlasFigureHtml,
+    '::tiger-generator-input': tigerGeneratorInputFigureHtml,
+    '::tiger-inference-loop': tigerInferenceLoopFigureHtml,
+    '::tiger-index-map': tigerIndexMapFigureHtml
+  };
+  return renderers[directive]?.(normalizeLang(lang)) || '';
+}

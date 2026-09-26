@@ -1,0 +1,64 @@
+.notes-heading { padding: 28px 0 24px; }
+.notes-heading h1 { margin: 6px 0 12px; font-size: 32px; line-height: 1.2; letter-spacing: 0; }
+.notes-heading p { color: var(--muted); max-width: 72ch; }
+.notes-auth { border-block: 1px solid var(--line); padding: 24px 0; }
+.notes-auth h2, .notes-editor-grid h2 { font-size: 18px; margin: 0 0 16px; }
+.notes-auth form { max-width: 720px; }
+.notes-auth label, .notes-fields label, .notes-picker { display: grid; gap: 8px; min-width: 0; font-size: 14px; }
+.notes-connect-row { display: flex; gap: 12px; margin-top: 8px; align-items: center; }
+.notes-connect-row > input, .notes-connect-row > select { flex: 1; min-width: 0; }
+.notes-workspace input, .notes-workspace select, .notes-workspace textarea, #notesToken {
+  box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit;
+}
+.notes-workspace textarea { resize: vertical; }
+.notes-workspace [hidden], #notesWorkspace[hidden], #notesConnected[hidden], #notesConnectForm[hidden] { display: none !important; }
+.notes-workspace .btn, .notes-auth .btn, .notes-confirm .btn { border-radius: 6px; min-height: 44px; font: inherit; white-space: normal; }
+.notes-workspace .btn-outline, .notes-auth .btn-outline, .notes-confirm .btn-outline { border-color: var(--line); color: var(--text); }
+.notes-workspace button:disabled, .notes-auth button:disabled, .notes-confirm button:disabled { opacity: .45; cursor: not-allowed; }
+.notes-workspace :is(input, select, textarea, button, a):focus-visible, .notes-auth :focus-visible, .notes-confirm :focus-visible {
+  outline: 2px solid var(--cyan); outline-offset: 3px;
+}
+.notes-help { max-width: 78ch; margin-top: 20px; font-size: 14px; color: var(--muted); }
+.notes-help summary, .notes-import summary { cursor: pointer; min-height: 32px; color: var(--text); }
+.notes-help a { color: var(--cyan); }
+#notesConnected { display: flex; align-items: center; gap: 20px; }
+.notes-status { min-height: 28px; padding: 12px 0; color: var(--cyan); overflow-wrap: anywhere; }
+.notes-status[data-error="true"] { color: var(--text); border-left: 3px solid var(--pink); padding-left: 12px; }
+.notes-toolbar { display: flex; gap: 12px; align-items: end; padding-bottom: 24px; }
+.notes-picker { flex: 1; }
+.notes-import { padding: 16px 0; border-block: 1px solid var(--line); }
+.notes-import p { color: var(--muted); font-size: 14px; }
+.notes-visibility-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 24px 0 16px; font-size: 14px; }
+.notes-visibility-row strong { color: var(--cyan); }
+.notes-visibility-row span { color: var(--muted); }
+.notes-visibility-row a { margin-left: auto; }
+.notes-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-bottom: 24px; }
+.notes-wide { grid-column: 1 / -1; }
+.notes-editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-block: 1px solid var(--line); }
+.notes-editor-pane, .notes-preview-pane { min-width: 0; padding: 20px 0; }
+.notes-editor-pane { padding-right: 20px; border-right: 1px solid var(--line); }
+.notes-preview-pane { padding-left: 20px; }
+#noteBody, #notesPreview { box-sizing: border-box; height: 600px; min-height: 320px; overflow: auto; scrollbar-color: var(--scroll-thumb) var(--scroll-track); scrollbar-width: thin; }
+#noteBody { font-family: var(--blog-font-mono, monospace); font-size: 14px; line-height: 1.7; resize: vertical; }
+#notesPreview { overflow-wrap: anywhere; padding-right: 12px; }
+#notesPreview > :first-child { margin-top: 0; }
+.notes-public-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 24px 0; }
+.notes-public-actions a { font-size: 14px; color: var(--cyan); }
+.notes-confirm { box-sizing: border-box; width: min(560px, calc(100% - 32px)); max-height: calc(100svh - 40px); overflow: auto; padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); }
+.notes-confirm::backdrop { background: #000a; }
+.notes-confirm h2 { font-size: 22px; margin-top: 0; }
+.notes-confirm p { line-height: 1.7; }
+.notes-confirm-check { display: flex; align-items: start; gap: 12px; margin: 24px 0; }
+.notes-confirm-check input { width: 20px; height: 20px; flex: 0 0 20px; }
+.notes-confirm-actions { display: flex; justify-content: end; gap: 12px; }
+@media (max-width: 760px) {
+  .notes-toolbar { display: grid; grid-template-columns: 1fr 1fr; }
+  .notes-picker { grid-column: 1 / -1; }
+  #notesSave { grid-column: 1 / -1; }
+  .notes-connect-row { flex-direction: column; align-items: stretch; }
+  .notes-fields, .notes-editor-grid { grid-template-columns: minmax(0, 1fr); }
+  .notes-editor-pane { padding-right: 0; border-right: 0; }
+  .notes-preview-pane { padding-left: 0; border-top: 1px solid var(--line); }
+  #noteBody, #notesPreview { height: 420px; }
+}

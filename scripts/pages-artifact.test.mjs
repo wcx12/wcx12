@@ -3,6 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { assertPublicEditor } from './package-pages.mjs';
+import './blog-privacy.test.mjs';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifactDir = path.join(rootDir, 'output', 'pages');
@@ -40,6 +42,7 @@ test('Pages artifact contains only the explicit public surface', async () => {
     'resume/index.html',
     'zh/resume/index.html',
     'blog/index.html',
+    'blog/drafts/index.html',
     'research/index.html',
     'projects/index.html',
     'publications/index.html',
@@ -53,9 +56,20 @@ test('Pages artifact contains only the explicit public surface', async () => {
 
   assert.ok(entries.every((entry) => entry.type === 'file'), 'Pages artifact must not contain symbolic links');
   assert.ok(paths.every((value) => !value.endsWith('.md')), 'source Markdown must not be deployed');
+  assert.ok(paths.every((value) => !/\.(?:markdown|map)$/i.test(value)), 'source sidecars must not be deployed');
+  assert.deepEqual(paths.filter((value) => /^blog\/drafts\//i.test(value)), ['blog/drafts/index.html']);
+  assert.deepEqual(await fs.readdir(path.join(artifactDir, 'blog', 'drafts')), ['index.html'], 'only the public editor shell may be deployed under blog/drafts');
   assert.ok(paths.every((value) => !/^(?:\.git|\.github|blog-src|content|node_modules)(?:\/|$)/.test(value)));
   for (const forbidden of ['resume.html', 'publications.html', 'publications.md', 'resume.md', 'resume.zh.md']) {
     assert.ok(!paths.includes(forbidden), `source-derived duplicate leaked into artifact: ${forbidden}`);
+  }
+});
+
+test('public editor shell and runtime contain no legacy draft data transport', async () => {
+  const shell = await fs.readFile(path.join(artifactDir, 'blog', 'drafts', 'index.html'), 'utf8');
+  assertPublicEditor(shell, { shell: true });
+  for (const entry of await walk(path.join(artifactDir, 'blog', 'assets'))) {
+    if (entry.absolute.endsWith('.js')) assertPublicEditor(await fs.readFile(entry.absolute, 'utf8'));
   }
 });
 

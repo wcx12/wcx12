@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'" />
-  <title>Draft Studio | Research Fieldnotes</title>
-  <meta name="description" content="Owner-only visual editing surface for unpublished blog drafts." />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self'; connect-src 'self' https://api.github.com; frame-src 'none'" />
+  <title>Private Notes | Research Fieldnotes</title>
+  <meta name="description" content="Authenticated workspace for private research notes." />
   <meta name="author" content="Chenxu Wang" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="theme-color" content="#070914" />
@@ -14,8 +14,8 @@
   <link rel="canonical" href="https://wcx12.github.io/wcx12/blog/drafts/" />
 
   <link rel="icon" type="image/svg+xml" href="../../favicon.svg" />
-  <meta property="og:title" content="Draft Studio | Research Fieldnotes" />
-  <meta property="og:description" content="Owner-only visual editing surface for unpublished blog drafts." />
+  <meta property="og:title" content="Private Notes | Research Fieldnotes" />
+  <meta property="og:description" content="Authenticated workspace for private research notes." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://wcx12.github.io/wcx12/blog/drafts/" />
   <meta property="og:site_name" content="Research Fieldnotes" />
@@ -24,22 +24,24 @@
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Draft Studio for Research Fieldnotes" />
+  <meta property="og:image:alt" content="Private Notes workspace" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Draft Studio | Research Fieldnotes" />
-  <meta name="twitter:description" content="Owner-only visual editing surface for unpublished blog drafts." />
+  <meta name="twitter:title" content="Private Notes | Research Fieldnotes" />
+  <meta name="twitter:description" content="Authenticated workspace for private research notes." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-blog.png" />
-  <meta name="twitter:image:alt" content="Draft Studio for Research Fieldnotes" />
+  <meta name="twitter:image:alt" content="Private Notes workspace" />
   <link rel="alternate" type="application/rss+xml" title="Research Fieldnotes" href="https://wcx12.github.io/wcx12/rss.xml" />
   <link rel="sitemap" type="application/xml" href="https://wcx12.github.io/wcx12/sitemap.xml" />
   <link rel="preload" href="../../assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <script src="../../theme-init.js?v=c00ad821aa5b"></script>
-  <link rel="stylesheet" href="../../content.css?v=c00ad821aa5b" />
-  <link rel="stylesheet" href="../assets/blog.css?v=c00ad821aa5b" />
-  <link rel="stylesheet" href="../../site-nav.css?v=c00ad821aa5b" />
-<link rel="stylesheet" href="../assets/katex.min.css?v=c00ad821aa5b" />
+  <script src="../../theme-init.js?v=86bb5b1618c1"></script>
+  <link rel="stylesheet" href="../../content.css?v=86bb5b1618c1" />
+  <link rel="stylesheet" href="../assets/blog.css?v=86bb5b1618c1" />
+  <link rel="stylesheet" href="../../site-nav.css?v=86bb5b1618c1" />
+<meta name="referrer" content="no-referrer" />
+      <link rel="stylesheet" href="../assets/katex.min.css?v=86bb5b1618c1" />
+      <link rel="stylesheet" href="../assets/private-notes.css?v=86bb5b1618c1" />
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Draft Studio | Research Fieldnotes","description":"Owner-only visual editing surface for unpublished blog drafts.","url":"https://wcx12.github.io/wcx12/blog/drafts/","inLanguage":"en","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-blog.png","width":1200,"height":630,"caption":"Draft Studio for Research Fieldnotes"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Private Notes | Research Fieldnotes","description":"Authenticated workspace for private research notes.","url":"https://wcx12.github.io/wcx12/blog/drafts/","inLanguage":"en","author":{"@type":"Person","@id":"https://wcx12.github.io/wcx12/#person","name":"Chenxu Wang","url":"https://wcx12.github.io/wcx12/"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://wcx12.github.io/wcx12/assets/og-blog.png","width":1200,"height":630,"caption":"Private Notes workspace"}}</script>
 </head>
 <body class="blog-body">
   <a class="skip-link" href="#main-content" data-blog-i18n="skip_main">Skip to main content</a>
@@ -60,107 +62,94 @@
     </details>
   </header>
   <main id="main-content" class="blog-shell">
-<section class="blog-hero draft-studio-hero">
-      <p class="blog-kicker" data-draft-i18n="kicker">Owner Tools</p>
-      <h1 data-draft-i18n="title">Draft Studio</h1>
-      <p data-draft-i18n="description">Edit unpublished Markdown with a live reading preview, then prepare a GitHub Actions payload that commits the change without exposing a repository token in the browser.</p>
+<section class="notes-heading">
+      <p class="blog-kicker" data-notes-text="kicker">Owner workspace</p>
+      <h1 data-notes-text="title">Private notes</h1>
+      <p data-notes-text="subtitle">Private by default. Publish a separate public version when ready.</p>
     </section>
-
-    <section class="blog-section draft-locked" data-draft-locked>
-      <div class="blog-section-head">
-        <div>
-          <p class="blog-section-label" data-draft-i18n="locked_label">Private entry</p>
-          <h2 data-draft-i18n="locked_title">Owner tools are hidden.</h2>
+    <section class="notes-auth" aria-labelledby="notesAuthTitle">
+      <h2 id="notesAuthTitle" data-notes-text="connectTitle">Connect private repository</h2>
+      <form id="notesConnectForm" autocomplete="off">
+        <label for="notesToken" data-notes-text="token">GitHub fine-grained token</label>
+        <div class="notes-connect-row">
+          <input id="notesToken" type="password" autocomplete="off" spellcheck="false" required />
+          <button class="btn btn-primary" id="notesConnect" type="submit" data-notes-text="connect">Connect</button>
+        </div>
+      </form>
+      <div id="notesConnected" hidden>
+        <span data-notes-text="connected">Connected as wcx12</span>
+        <button class="btn btn-outline" id="notesLock" type="button" data-notes-text="lock">Lock workspace</button>
+      </div>
+      <details class="notes-help">
+        <summary data-notes-text="accessHelp">Access and privacy</summary>
+        <p data-notes-text="tokenHelp">Select wcx12-private-notes with Contents: Read and write. Also select wcx12 to publish or withdraw public articles. The token stays in memory until this page closes or locks.</p>
+        <p data-notes-text="privateHelp">Saving writes only to the private repository. A draft is a writing status, not a visibility setting. GitHub and anyone you grant repository access to can read these notes.</p>
+        <p data-notes-text="historyHelp">Withdrawing removes the article from the website after deployment, not from Git history, cached pages or copies. Existing public attachments remain public.</p>
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer" data-notes-text="createToken">Create a token on GitHub</a>
+      </details>
+    </section>
+    <p id="notesStatus" class="notes-status" role="status" aria-live="polite" data-notes-text="locked">Locked. No private content has been loaded.</p>
+    <noscript><p>JavaScript is required to authenticate to your private repository. Private notes are never included in this page.</p></noscript>
+    <section id="notesWorkspace" class="notes-workspace" hidden>
+      <div class="notes-toolbar">
+        <label class="notes-picker"><span data-notes-text="note">Private note</span><select id="notesList"></select></label>
+        <button id="notesNew" type="button" class="btn btn-outline" data-notes-text="new">New note</button>
+        <button id="notesReload" type="button" class="btn btn-outline" data-notes-text="reload">Reload</button>
+        <button id="notesSave" type="button" class="btn btn-primary" data-notes-text="save">Save privately</button>
+      </div>
+      <details class="notes-import">
+        <summary data-notes-text="importTitle">Manage an existing public article</summary>
+        <div class="notes-connect-row">
+          <select id="notesPublicList" aria-label="Public article"></select>
+          <button id="notesImport" type="button" class="btn btn-outline" data-notes-text="import">Load private working copy</button>
+        </div>
+        <p data-notes-text="importHint">Importing does not hide the public article. Save the working copy, then use Withdraw to remove the public page. Language versions are managed separately.</p>
+      </details>
+      <div id="notesEditorArea" hidden>
+        <div class="notes-visibility-row">
+          <strong id="notesVisibility"></strong>
+          <span id="notesSaved"></span>
+          <a id="notesPublicLink" target="_blank" rel="noreferrer" hidden data-notes-text="viewPublic">View public page</a>
+        </div>
+        <form id="notesFields" class="notes-fields" autocomplete="off" spellcheck="false">
+          <label class="notes-wide"><span data-notes-text="fieldTitle">Title</span><input id="noteTitle" maxlength="300" required /></label>
+          <label class="notes-wide"><span data-notes-text="description">Description</span><textarea id="noteDescription" rows="2" maxlength="1000"></textarea></label>
+          <label><span data-notes-text="slug">Public URL slug</span><input id="noteSlug" pattern="[a-z0-9]+(-[a-z0-9]+)*" required /></label>
+          <label><span data-notes-text="language">Article language</span><select id="noteLang"><option value="zh">中文</option><option value="en">English</option></select></label>
+          <label><span data-notes-text="writingStatus">Writing status</span><select id="noteWritingStatus"><option value="draft" data-notes-text="draft">Draft</option><option value="complete" data-notes-text="complete">Complete</option></select></label>
+          <label><span data-notes-text="category">Category</span><select id="noteCategory">
+            <option>Research Notes</option><option>Computer Vision</option><option>Point Cloud</option><option>Large Models</option><option>AI for Education</option><option>Engineering</option>
+          </select></label>
+          <label><span data-notes-text="date">Article date</span><input id="noteDate" type="date" required /></label>
+          <label><span data-notes-text="tags">Tags (comma-separated)</span><input id="noteTags" placeholder="research, notes" /></label>
+        </form>
+        <div class="notes-editor-grid">
+          <section class="notes-editor-pane" aria-labelledby="notesMarkdownTitle">
+            <h2 id="notesMarkdownTitle">Markdown</h2>
+            <textarea id="noteBody" aria-label="Markdown" spellcheck="false"></textarea>
+          </section>
+          <section class="notes-preview-pane" aria-labelledby="notesPreviewTitle">
+            <h2 id="notesPreviewTitle" data-notes-text="preview">Preview</h2>
+            <div id="notesPreview" class="blog-content"></div>
+          </section>
+        </div>
+        <div class="notes-public-actions">
+          <button id="notesPublish" type="button" class="btn btn-outline" data-notes-text="publish">Publish public version</button>
+          <button id="notesWithdraw" type="button" class="btn btn-outline" data-notes-text="withdraw" disabled>Withdraw public version</button>
+          <a href="https://github.com/wcx12/wcx12/actions/workflows/blog-build.yml" target="_blank" rel="noreferrer" data-notes-text="deployment">Deployment status</a>
         </div>
       </div>
-      <p class="muted" data-draft-i18n="locked_desc">Open this page with owner tools enabled to load draft editing controls. Saving still requires permission to run the repository workflow.</p>
-      <a class="btn btn-primary" href="./?ownerTools=1" data-draft-i18n="enable">Enable owner tools</a>
+      <p id="notesEmpty" data-notes-text="empty">No private notes yet.</p>
     </section>
-
-    <section class="draft-studio" data-draft-studio hidden>
-      <div class="draft-command">
-        <label>
-          <span data-draft-i18n="select_label">Draft</span>
-          <select data-draft-select></select>
-        </label>
-        <p class="draft-status muted" role="status" aria-live="polite" data-draft-status></p>
+    <dialog id="notesConfirm" class="notes-confirm" aria-labelledby="notesConfirmTitle">
+      <h2 id="notesConfirmTitle"></h2>
+      <p id="notesConfirmMessage"></p>
+      <label class="notes-confirm-check"><input id="notesConfirmCheck" type="checkbox" /><span data-notes-text="understand">I understand and confirm this action.</span></label>
+      <div class="notes-confirm-actions">
+        <button id="notesCancel" class="btn btn-outline" type="button" data-notes-text="cancel">Cancel</button>
+        <button id="notesConfirmAction" class="btn btn-primary" type="button" disabled data-notes-text="confirm">Confirm</button>
       </div>
-
-      <div class="draft-fields">
-        <label>
-          <span data-draft-i18n="field_title">Title</span>
-          <input data-draft-title type="text" autocomplete="off" />
-        </label>
-        <label>
-          <span data-draft-i18n="field_description">Description</span>
-          <textarea data-draft-description rows="2"></textarea>
-        </label>
-        <label>
-          <span data-draft-i18n="field_category">Category</span>
-          <select data-draft-category></select>
-        </label>
-        <label>
-          <span data-draft-i18n="field_tags">Tags</span>
-          <input data-draft-tags type="text" autocomplete="off" />
-        </label>
-        <label>
-          <span data-draft-i18n="field_date">Date</span>
-          <input data-draft-date type="date" />
-        </label>
-        <label>
-          <span data-draft-i18n="field_updated">Updated</span>
-          <input data-draft-updated type="date" />
-        </label>
-        <label class="draft-checkbox">
-          <input data-draft-published type="checkbox" />
-          <span data-draft-i18n="field_publish">Mark as ready to publish</span>
-        </label>
-      </div>
-
-      <div class="draft-workbench">
-        <section class="draft-pane">
-          <div class="draft-pane-head">
-            <h2 data-draft-i18n="markdown_title">Markdown</h2>
-            <div class="draft-actions">
-              <button class="btn btn-outline" type="button" data-draft-save-local data-draft-i18n="save_local">Save locally</button>
-              <button class="btn btn-outline" type="button" data-draft-restore data-draft-i18n="restore">Restore repo copy</button>
-            </div>
-          </div>
-          <textarea class="draft-editor" data-draft-editor spellcheck="false"></textarea>
-        </section>
-
-        <section class="draft-pane">
-          <div class="draft-pane-head">
-            <h2 data-draft-i18n="preview_title">Reading Preview</h2>
-            <span class="draft-preview-meta" data-draft-preview-meta></span>
-          </div>
-          <article class="draft-preview blog-post-card">
-            <header class="blog-post-header">
-              <p class="blog-kicker" data-draft-preview-category></p>
-              <h2 class="blog-post-title" data-draft-preview-title></h2>
-              <p class="blog-post-subtitle" data-draft-preview-description></p>
-            </header>
-            <div class="blog-content" data-draft-preview></div>
-          </article>
-        </section>
-      </div>
-
-      <section class="draft-submit">
-        <div class="draft-pane-head">
-          <div>
-            <p class="blog-section-label" data-draft-i18n="submit_label">Repository update</p>
-            <h2 data-draft-i18n="submit_title">Commit through GitHub Actions</h2>
-          </div>
-          <div class="draft-actions">
-            <button class="btn btn-primary" type="button" data-draft-prepare data-draft-i18n="prepare">Prepare payload</button>
-            <button class="btn btn-outline" type="button" data-draft-copy disabled data-draft-i18n="copy">Copy payload</button>
-            <a class="btn btn-outline" href="https://github.com/wcx12/wcx12/actions/workflows/blog-draft-update.yml" target="_blank" rel="noreferrer" data-draft-workflow-link data-draft-i18n="open_actions">Open GitHub Actions</a>
-          </div>
-        </div>
-        <textarea class="draft-payload" data-draft-payload rows="4" readonly spellcheck="false"></textarea>
-        <p class="muted" data-draft-i18n="submit_hint">Paste this payload into the workflow input. If the remote file changed after this page loaded, the workflow will stop instead of overwriting it.</p>
-      </section>
-    </section>
+    </dialog>
   </main>
   <footer class="blog-footer">
     <span>&copy; 2026 wcx12</span>
@@ -171,9 +160,11 @@
       <a href="https://orcid.org/0009-0005-6139-4327" target="_blank" rel="me noreferrer" aria-label="View ORCID record 0009-0005-6139-4327" data-blog-i18n-aria="orcid_title">ORCID</a>
     </nav>
   </footer>
-<script src="../assets/katex.min.js?v=c00ad821aa5b"></script>
-<script src="../assets/auto-render.min.js?v=c00ad821aa5b"></script>
-<script type="module" src="../assets/draft-studio.js?v=c00ad821aa5b"></script>
-  <script type="module" src="../assets/blog.js?v=c00ad821aa5b"></script>
+<script src="../assets/markdown-it.min.js?v=86bb5b1618c1"></script>
+<script src="../assets/js-yaml.min.js?v=86bb5b1618c1"></script>
+<script src="../assets/katex.min.js?v=86bb5b1618c1"></script>
+<script src="../assets/auto-render.min.js?v=86bb5b1618c1"></script>
+<script type="module" src="../assets/private-notes.js?v=86bb5b1618c1"></script>
+  <script type="module" src="../assets/blog.js?v=86bb5b1618c1"></script>
 </body>
 </html>

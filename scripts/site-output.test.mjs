@@ -28,6 +28,9 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const researchConfig = JSON.parse(await fs.readFile(path.join(rootDir, 'research-config.json'), 'utf8'));
 const researchChildren = researchConfig.interests.flatMap((interest) => interest.children);
 const { posts: sourcePosts } = await loadPosts(rootDir);
+const publishedSlugs = new Set(sourcePosts.map((post) => post.slug));
+const tigerReading = sourcePosts.find((post) => post.slug === 'tiger-generative-retrieval-reading');
+const writingSystem = sourcePosts.find((post) => post.slug === 'building-a-research-writing-system');
 
 function researchRoute(language, suffix = '') {
   return `${language === 'zh' ? 'zh/' : ''}research/${suffix}`;
@@ -195,6 +198,12 @@ async function expectedAssetVersion() {
     'blog-src/assets/blog.css',
     'blog-src/assets/blog.js',
     'blog-src/assets/draft-studio.js',
+    'blog-src/assets/private-notes.js',
+    'blog-src/assets/private-notes-api.js',
+    'blog-src/assets/private-notes.css',
+    'scripts/notes-studio-shell.mjs',
+    'node_modules/markdown-it/dist/markdown-it.min.js',
+    'node_modules/js-yaml/dist/js-yaml.min.js',
     'node_modules/katex/dist/katex.min.css',
     'node_modules/katex/dist/katex.min.js',
     'node_modules/katex/dist/contrib/auto-render.min.js',
@@ -354,7 +363,10 @@ test('major pages use representative social cards in metadata and structured dat
     ['publications/index.html', '/assets/og-publications.png'],
     ['zh/publications/index.html', '/assets/og-publications-zh.png'],
     ['blog/posts/building-a-research-writing-system/index.html', '/blog/posts/building-a-research-writing-system/media/social-card.png']
-  ];
+  ].filter(([relative]) => {
+    const slug = relative.match(/^blog\/posts\/([^/]+)\/index\.html$/)?.[1];
+    return !slug || publishedSlugs.has(slug);
+  });
   const socialImages = new Set();
 
   for (const [relative, expectedSuffix] of cases) {
@@ -407,7 +419,7 @@ test('all executable and stylesheet assets share the current release version', a
 });
 
 test('single-post blog avoids duplicate discovery sections', async () => {
-  const posts = JSON.parse(await fs.readFile(path.join(rootDir, 'blog', 'posts.json'), 'utf8'));
+  const posts = sourcePosts;
   if (posts.length !== 1) return;
   const source = await fs.readFile(path.join(rootDir, 'blog', 'index.html'), 'utf8');
   assert.doesNotMatch(source, /section_featured_title/, 'one post should not be repeated in a featured section');
@@ -419,9 +431,8 @@ test('single-post blog avoids duplicate discovery sections', async () => {
   assert.equal((source.match(/class="blog-card"/g) || []).length, 1, 'the only article must appear exactly once');
   const articleSource = await fs.readFile(path.join(rootDir, 'blog', 'posts', posts[0].slug, 'index.html'), 'utf8');
   assert.doesNotMatch(articleSource, /href="\.\.\/\.\.\/tags\//, 'single-use tags should not lead to thin collection pages');
-  assert.match(articleSource, /<span class="blog-tag">personal-site<\/span>/);
+  for (const tag of posts[0].tags) assert.ok(articleSource.includes(`<span class="blog-tag">${escapeHtml(tag)}</span>`));
   assert.doesNotMatch(articleSource, /class="blog-prev-next"/, 'an only article must not end with an empty post-navigation control');
-  assert.doesNotMatch(articleSource, /Homepage Lab/, 'a single article must not imply a nonexistent series');
   const sitemapSource = await fs.readFile(path.join(rootDir, 'sitemap.xml'), 'utf8');
   assert.doesNotMatch(sitemapSource, /\/blog\/(?:archive|tags)\//, 'thin discovery pages must stay out of the sitemap');
 });
@@ -450,6 +461,15 @@ test('generated blog discovery keeps one language fallback per article and accur
       if (displayPosts.length >= 3) assert.ok(source.includes(`<strong>${links.length}</strong> <span data-blog-i18n="stat_topics">`), 'tag statistic must count available entry points');
     }
   }
+});
+
+test('generated article routes exactly match the published source collection', async () => {
+  const generated = await walk(path.join(rootDir, 'blog', 'posts'), (file) => file.endsWith('index.html'));
+  assert.deepEqual(
+    generated.map((file) => path.relative(rootDir, file).replace(/\\/g, '/')).sort(),
+    sourcePosts.map((post) => `blog/posts/${post.slug}/index.html`).sort(),
+    'published sources require generated pages, and withdrawn sources must not leave public pages'
+  );
 });
 
 test('generated content routes load the compact shared stylesheet', async () => {
@@ -507,9 +527,11 @@ test('blog presents the agreed fieldnotes identity', async () => {
   assert.match(clientSource, /querySelectorAll\('\[data-blog-nav-en\]\[data-blog-nav-zh\]'\)[\s\S]*?node\.dataset\.blogNavZh[\s\S]*?node\.setAttribute\('href', href\)/);
   assert.match(styleSource, /html\[data-ui-lang="zh"\] \.blog-hero h1/);
   assert.match(indexSource, /<summary[^>]*data-blog-i18n-aria="hint_summary"[^>]*>[\s\S]*?class="blog-hint-label"/, 'compact typography must preserve clickable region hints');
-  const readingSource = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
-  assert.match(readingSource, /class="term-chip"[^>]*aria-expanded="false"[^>]*aria-describedby="[^"]+"[^>]*data-term-chip/, 'reader glossary hints must remain accessible');
-  assert.match(readingSource, /<details class="blog-disclosure"/, 'reader explanations must remain available as native disclosures');
+  if (tigerReading) {
+    const readingSource = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
+    assert.match(readingSource, /class="term-chip"[^>]*aria-expanded="false"[^>]*aria-describedby="[^"]+"[^>]*data-term-chip/, 'reader glossary hints must remain accessible');
+    assert.match(readingSource, /<details class="blog-disclosure"/, 'reader explanations must remain available as native disclosures');
+  }
   assert.match(styleSource, /\.blog-hero\s*\{[^}]*border-top:\s*3px solid var\(--cyan\)[^}]*background:\s*transparent[^}]*box-shadow:\s*none/s);
   assert.match(styleSource, /\.blog-post-card\s*\{[^}]*border:\s*0[^}]*border-radius:\s*0[^}]*background:\s*transparent/s);
   assert.doesNotMatch(styleSource, /\.blog-body::before\s*\{[^}]*radial-gradient/s);
@@ -523,7 +545,8 @@ test('blog presents the agreed fieldnotes identity', async () => {
 test('blog region hints remain native disclosures in compact generated bodies', () => {
   const ctx = { link: (target) => `/${target.replace(/index\.html$/, '')}` };
   const catalog = Array.from({ length: 7 }, (_, index) => ({
-    ...sourcePosts[0],
+    title: 'Hint fixture', description: 'Public renderer fixture.', category: 'Research Notes',
+    research: [], readingMinutes: 1, featured: false, translations: {},
     slug: `hint-fixture-${index}`,
     translationKey: `hint-fixture-${index}`,
     lang: 'en',
@@ -594,7 +617,7 @@ test('portfolio routes use the researcher identity while blog routes retain thei
   assert.equal(profile.mainEntity.identifier.value, '0009-0005-6139-4327');
 });
 
-test('TIGER main results preserve all Table 1 values and explain item-level evaluation', async () => {
+test('TIGER main results preserve all Table 1 values and explain item-level evaluation', { skip: !tigerReading }, async () => {
   const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
   const section = source.match(/<h3[^>]*>主实验：TIGER 到底有没有赢？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] ?? '';
   const mainResults = section.slice(section.indexOf('表 3a'), section.indexOf('相对提升按'));
@@ -625,7 +648,7 @@ test('TIGER main results preserve all Table 1 values and explain item-level eval
   assert.doesNotMatch(section, /katex-error|最强 baseline/);
 });
 
-test('TIGER prose stays reader-facing and qualifies quantization claims', async () => {
+test('TIGER prose stays reader-facing and qualifies quantization claims', { skip: !tigerReading }, async () => {
   const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
   for (const phrase of [
     '不应当被误读', '真正放进同一张实验表', '真正进入同一张实验表',
@@ -685,9 +708,9 @@ test('TIGER beam example preserves cumulative scores and preview parity', async 
   close(parents.get('87,08,06,0'), 0.096);
 });
 
-test('TIGER review fixes preserve evidence, sequence, and notation', async () => {
+test('TIGER review fixes preserve evidence, sequence, and notation', { skip: !tigerReading }, async () => {
   const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
-  const markdown = await fs.readFile(path.join(rootDir, 'content/posts/2026-08-30-tiger-generative-retrieval-reading/index.md'), 'utf8');
+  const markdown = await fs.readFile(tigerReading.sourcePath, 'utf8');
   const plain = source.replace(/<[^>]+>/g, '');
   const figures = [...source.matchAll(/<figure id="(fig-tiger-[^"]+)"[\s\S]*?<figcaption>([\s\S]*?)<\/figcaption>\s*<\/figure>/g)];
   const figureNumbers = new Map([
@@ -732,7 +755,7 @@ test('TIGER review fixes preserve evidence, sequence, and notation', async () =>
   assert.doesNotMatch(markdown, /\(c_1,c_2,c_3,c_4\)/);
 });
 
-test('TIGER hierarchy evidence is visible before the reader discussion', async () => {
+test('TIGER hierarchy evidence is visible before the reader discussion', { skip: !tigerReading }, async () => {
   const source = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
   const section = source.match(/<h3[^>]*>语义层次：前面的编号真的对应粗类别吗？<\/h3>([\s\S]*?)(?=<h3)/)?.[1] || '';
   const figure = section.match(/<figure id="fig-tiger-semantic-hierarchy"[\s\S]*?<\/figure>/)?.[0] || '';
@@ -767,7 +790,7 @@ test('TIGER hierarchy evidence is visible before the reader discussion', async (
     assert.ok(index >= 0, `${name} exists in the editor`);
     return editor.slice(functionStarts[index].index, functionStarts[index + 1]?.index ?? editor.length);
   }).join('\n');
-  const markdown = await fs.readFile(path.join(rootDir, 'content/posts/2026-08-30-tiger-generative-retrieval-reading/index.md'), 'utf8');
+  const markdown = await fs.readFile(tigerReading.sourcePath, 'utf8');
   const block = markdown.match(/^::figure\[fig-tiger-semantic-hierarchy][\s\S]*?\n::$/m)?.[0];
   assert.ok(block);
   const renderPreview = value => runInNewContext(previewCode + '\nrenderMarkdown(input, { lang: "zh" })', {
@@ -783,8 +806,8 @@ test('TIGER hierarchy evidence is visible before the reader discussion', async (
   assert.match(escaped, /&lt;script&gt;/);
 });
 
-test('TIGER source additions distinguish reported evidence from teaching examples', async () => {
-  const markdown = await fs.readFile(path.join(rootDir, 'content/posts/2026-08-30-tiger-generative-retrieval-reading/index.md'), 'utf8');
+test('TIGER source additions distinguish reported evidence from teaching examples', { skip: !tigerReading }, async () => {
+  const markdown = await fs.readFile(tigerReading.sourcePath, 'utf8');
   const html = await fs.readFile(path.join(rootDir, 'blog/posts/tiger-generative-retrieval-reading/index.html'), 'utf8');
   assert.match(markdown, /无显式用户 ID token/);
   assert.match(markdown, /两组都输入用户的交互历史/);
@@ -975,8 +998,8 @@ test('generated code blocks and article contents remain keyboard reachable', asy
   assert.match(clientSource, /function openHashDisclosure\(\)[\s\S]*?details\.blog-disclosure/);
 });
 
-test('bundled post media is copied, fingerprinted, and rendered accessibly', async () => {
-  const sourcePath = path.join(rootDir, 'content', 'posts', '2026-07-10-building-a-research-writing-system', 'media', 'publishing-flow.png');
+test('bundled post media is copied, fingerprinted, and rendered accessibly', { skip: !writingSystem }, async () => {
+  const sourcePath = path.join(path.dirname(writingSystem.sourcePath), 'media', 'publishing-flow.png');
   const publicPath = path.join(rootDir, 'blog', 'posts', 'building-a-research-writing-system', 'media', 'publishing-flow.png');
   const articlePath = path.join(rootDir, 'blog', 'posts', 'building-a-research-writing-system', 'index.html');
   const [source, published, article] = await Promise.all([
@@ -1645,14 +1668,22 @@ test('RSS declares itself and preserves post taxonomy', async () => {
   assert.match(rss, /xmlns:content="http:\/\/purl\.org\/rss\/1\.0\/modules\/content\/"/);
   assert.match(rss, /xmlns:dc="http:\/\/purl\.org\/dc\/elements\/1\.1\/"/);
   assert.match(rss, /<atom:link href="https:\/\/wcx12\.github\.io\/wcx12\/rss\.xml" rel="self" type="application\/rss\+xml" \/>/);
-  assert.match(rss, /<category>Engineering<\/category>/);
-  assert.match(rss, /<category>research-workflow<\/category>/);
-  assert.match(rss, /<dc:creator>Chenxu Wang<\/dc:creator>/);
-  assert.match(rss, /<content:encoded><!\[CDATA\[[\s\S]+?<\/content:encoded>/);
-  assert.match(
-    rss,
-    /src="https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/media\/publishing-flow\.png\?v=[a-f0-9]{12}"/
-  );
+  const feedPosts = selectLanguagePosts(sourcePosts, 'en').slice(0, 20);
+  const items = matches(rss, /<item>([\s\S]*?)<\/item>/g).map(([, item]) => item);
+  assert.equal(items.length, feedPosts.length, 'RSS must contain exactly the selected public articles');
+  for (const post of feedPosts) {
+    const url = `${SITE.url}/blog/posts/${post.slug}/`;
+    const item = items.find((value) => value.includes(`<link>${escapeHtml(url)}</link>`));
+    assert.ok(item, `RSS is missing published article ${post.slug}`);
+    for (const category of [post.category, ...post.tags]) {
+      assert.ok(item.includes(`<category>${escapeHtml(category)}</category>`));
+    }
+    assert.match(item, /<dc:creator>Chenxu Wang<\/dc:creator>/);
+    assert.match(item, /<content:encoded><!\[CDATA\[[\s\S]+?<\/content:encoded>/);
+  }
+  if (writingSystem && feedPosts.includes(writingSystem)) {
+    assert.match(rss, /src="https:\/\/wcx12\.github\.io\/wcx12\/blog\/posts\/building-a-research-writing-system\/media\/publishing-flow\.png\?v=[a-f0-9]{12}"/);
+  }
 });
 
 test('fixed routes ignore stored language while preserving theme selection', async () => {

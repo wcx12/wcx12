@@ -35,6 +35,7 @@ research: []
 series: ""
 featured: false
 draft: true
+visibility: private
 math: false
 toc: true
 lang: "en"
@@ -56,7 +57,7 @@ export async function createPostDraft(titleValue, options = {}) {
   const rootDir = path.resolve(options.rootDir || defaultRootDir);
   const date = options.date || siteDate();
   const slug = postSlugify(title);
-  const bundlePath = path.join(rootDir, 'content', 'posts', `${date}-${slug}`);
+  const bundlePath = path.join(rootDir, 'output', 'private-drafts', 'content', 'posts', `${date}-${slug}`);
   const filePath = path.join(bundlePath, 'index.md');
   const template = renderPostTemplate({ title, slug, date });
 
@@ -73,6 +74,7 @@ if (path.resolve(process.argv[1] || '') === scriptPath) {
     process.exitCode = 1;
   } else {
     const { filePath, rootDir } = await createPostDraft(title);
+    console.log('Local private draft only. Do not commit private content to this public repository.');
     console.log(path.relative(rootDir, filePath).replace(/\\/g, '/'));
   }
 }

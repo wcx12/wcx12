@@ -70,6 +70,7 @@ export function siteDate(value = new Date(), timeZone = SITE_TIME_ZONE) {
 }
 
 export function publicationState(data, today = siteDate()) {
+  if (data.visibility === 'private') return 'draft';
   if (data.draft === true) return 'draft';
   return String(data.date || '') > today ? 'scheduled' : 'published';
 }
@@ -313,6 +314,9 @@ async function validatePost(post, seenSlugs, validResearchIds) {
   const warnings = [];
   const data = post.data;
   const rawData = post.rawData || data;
+  if (data.visibility && !['public', 'private'].includes(data.visibility)) {
+    errors.push('visibility must be public or private');
+  }
 
   for (const field of ['draft', 'featured', 'math', 'toc']) {
     if (Object.hasOwn(rawData, field) && typeof rawData[field] !== 'boolean') {
