@@ -11,6 +11,14 @@ import matter from 'gray-matter';
 import { assertPublicEditor, packagePages } from './package-pages.mjs';
 import { createMarkdownRenderer } from './build-blog.mjs';
 import { SITE } from './blog-content.mjs';
+import { notesStudioBody } from './notes-studio-shell.mjs';
+
+test('authentication remains disabled until the editor has installed its submit handler', async () => {
+  assert.match(notesStudioBody(), /<button\b[^>]*id="notesConnect"[^>]*\bdisabled/);
+  const source = await fs.readFile(new URL('../blog-src/assets/private-notes.js', import.meta.url), 'utf8');
+  assert.ok(source.lastIndexOf('setBusy(false);') > source.indexOf("$('notesConnectForm').addEventListener('submit'"));
+  assert.match(source, /applyLanguage\(\);\s*setBusy\(false\);\s*$/);
+});
 
 test('withdrawn article references become text without changing live links or term explanations', () => {
   const renderer = createMarkdownRenderer({ publishedSlugs: new Set(['current', 'live']) });

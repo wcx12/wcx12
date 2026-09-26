@@ -11,7 +11,7 @@ export function notesStudioBody() {
         <label for="notesToken" data-notes-text="token">GitHub fine-grained token</label>
         <div class="notes-connect-row">
           <input id="notesToken" type="password" autocomplete="off" spellcheck="false" required />
-          <button class="btn btn-primary" id="notesConnect" type="submit" data-notes-text="connect">Connect</button>
+          <button class="btn btn-primary" id="notesConnect" type="submit" data-notes-text="connect" disabled>Connect</button>
         </div>
       </form>
       <div id="notesConnected" hidden>

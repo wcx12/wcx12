@@ -376,3 +376,4 @@ window.addEventListener('blog-language-change', applyLanguage);
 document.addEventListener('pointerdown', armLock, { passive: true });
 document.addEventListener('keydown', armLock);
 applyLanguage();
+setBusy(false);
