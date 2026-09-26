@@ -185,6 +185,9 @@ test('resume printing retains identity and hides navigation; unknown route recov
   await expect(page.locator('.site-header')).not.toBeVisible();
   await expect(page.locator('.profile-email-address')).toBeVisible();
   await expect(page.locator('.profile-email-address')).toHaveText('c2675668@gmail.com');
+  await expect(page.locator('.profile-actions a')).toHaveCSS('color', 'rgb(17, 17, 17)');
+  await expect(page.locator('.profile-actions a')).toHaveCSS('border-top-width', '0px');
+  await expect(page.locator('[data-profile-kind="skills"]')).toHaveCSS('break-inside', 'avoid');
   await expect(page.locator('#printProfile')).not.toBeVisible();
   await expect(page.locator('h1')).toContainText('Chenxu Wang');
   await page.emulateMedia({ media: 'screen' });

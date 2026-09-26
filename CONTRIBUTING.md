@@ -165,8 +165,10 @@ Single-language writing is explicitly marked as an original, not auto-translated
 
 For a controlled performance comparison, copy the pre-change public artifact
 under `output/`, serve both revisions with `scripts/qa/serve.mjs`, and run
-`node scripts/qa/performance.mjs <phase> <base-url>` on each without concurrent
-CPU-heavy jobs. The script runs three cold navigations for homepage/article and
+`node scripts/qa/performance.mjs <phase> <after-url> <before-url>` without concurrent
+CPU-heavy jobs. This alternates revisions within each measurement pair to expose
+host-load drift instead of attributing it to the code. The script records artifact
+hashes and rejects an artifact changed during measurement. It runs three cold navigations for homepage/article and
 mobile/desktop, retains raw Lighthouse reports/configuration and reports median
 and range. Those are lab measurements, not field INP or a WCAG certification.
 

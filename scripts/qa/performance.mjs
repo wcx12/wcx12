@@ -10,17 +10,21 @@ import { chromium } from '@playwright/test';
 const phase = process.argv[2] || 'baseline';
 const base = process.argv[3] || 'http://127.0.0.1:4282/wcx12/';
 const targets = process.argv[4] ? [['before', process.argv[4]], ['after', base]] : [['current', base]];
+const scope = process.argv[5] || 'all';
+if (!['all', 'home-mobile'].includes(scope)) throw new Error('Invalid measurement scope');
 if (!/^[a-z0-9-]+$/.test(phase)) throw new Error('Invalid phase');
 const output = path.resolve('output/site-quality-20260926', phase, 'performance');
 await fs.mkdir(output, { recursive: true });
 const report = { started: new Date().toISOString(), phase, base, environment: { node: process.version, platform: os.platform(), cpu: os.cpus()[0].model, logicalCpus: os.cpus().length, memoryGB: os.totalmem() / 2 ** 30, cache: 'fresh Chrome profile for each navigation, Lighthouse storage reset enabled', externalNetwork: 'uncontrolled public endpoints; local artifact origin' }, runs: [] };
 report.versions = [];
+report.scope = scope;
 for (const [version, url] of targets) {
   const html = await (await fetch(url)).text();
   report.versions.push({ version, url, hash: createHash('sha256').update(html).digest('hex'), fingerprint: html.match(/[?&]v=([a-f0-9]+)/)?.[1] });
 }
 for (const [name, route] of [['home', ''], ['article', 'blog/posts/tiger-generative-retrieval-reading/']]) {
   for (const device of ['mobile', 'desktop']) {
+    if (scope === 'home-mobile' && (name !== 'home' || device !== 'mobile')) continue;
     for (let run = 1; run <= 3; run++) {
       for (const [version, url] of (run % 2 ? targets : [...targets].reverse())) {
       const stem = `${version}-${name}-${device}-${run}`;
@@ -47,6 +51,7 @@ for (const [name, route] of [['home', ''], ['article', 'blog/posts/tiger-generat
 report.groups = [];
 for (const [version] of targets) for (const name of ['home', 'article']) for (const device of ['mobile', 'desktop']) {
   const rows = report.runs.filter(row => row.version === version && row.name === name && row.device === device);
+  if (!rows.length) continue;
   const range = values => { values.sort((a, b) => a - b); return { min: values[0], median: values[1], max: values[2] }; };
   report.groups.push({ version, name, device, scores: Object.fromEntries(Object.keys(rows[0].scores).map(key => [key, range(rows.map(row => row.scores[key]))])), metrics: Object.fromEntries(Object.keys(rows[0].metrics).map(key => [key, range(rows.map(row => row.metrics[key]))])) });
 }

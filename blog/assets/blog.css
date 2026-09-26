@@ -5787,7 +5787,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 @media print {
   @page {
     size: A4;
-    margin: 0;
+    margin: 8mm 12mm;
   }
 
   :root,
@@ -5817,6 +5817,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   .blog-footer,
   .profile-actions button,
   .profile-actions a > span:not(.profile-email-address),
+  .profile-facts,
   .profile-directory,
   .profile-section-nav,
   .skip-link {
@@ -5825,7 +5826,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .blog-shell {
     width: 100%;
-    padding: 8mm 12mm;
+    padding: 0;
     box-sizing: border-box;
   }
 
@@ -5844,8 +5845,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .profile-masthead {
     grid-template-areas:
-      "heading command"
-      "facts facts";
+      "heading command";
     grid-template-columns: minmax(0, 1fr) 250px;
     gap: 10px 22px;
     padding: 0 0 8px;
@@ -5879,12 +5879,13 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 
   .profile-actions { display: block; }
-  .profile-actions a {
+  .research-profile .profile-actions a.btn {
     display: block;
     min-height: 0;
     padding: 0;
     background: none;
     border: 0;
+    border-radius: 0;
     color: #111;
     font-size: 0.78rem;
   }
@@ -5929,6 +5930,11 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .profile-section + .profile-section {
     padding-top: 4px;
+  }
+
+  .profile-section[data-profile-kind="skills"],
+  .profile-section-body > ul > li {
+    break-inside: avoid;
   }
 
   .profile-section-head h2 {
