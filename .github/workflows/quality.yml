@@ -58,10 +58,10 @@ jobs:
         run: npm run package:pages && npm run test:pages
 
       - name: Install browser for visitor-path tests
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Verify visitor paths
-        run: npm run test:e2e -- --project=chromium && npm run test:links
+        run: npm run test:e2e && npm run test:links
 
       - name: Verify generated files are current
         run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml

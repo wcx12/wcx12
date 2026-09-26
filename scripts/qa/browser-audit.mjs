@@ -76,3 +76,5 @@ for (const [name, engine] of Object.entries({ firefox, webkit })) {
   finally { await instance?.close(); }
 }
 await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2));
+if (report.checks.some(check => check.error || check.errors.length || check.failures.length || check.violations?.length || check.layout?.scrollWidth > check.layout?.pageWidth)
+  || report.engines.some(engine => engine.error || engine.overflow > 0)) process.exitCode = 1;
