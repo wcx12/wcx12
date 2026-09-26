@@ -8,6 +8,7 @@
 - Authors: Chenxu Wang, Qingtong Meng, Bonan Zhang, and Fusen Guo
 - Citation: Neurocomputing 681 (2026), 133399
 - Status: Published; open access
+- Issue date: 2026-06-07
 - DOI: https://doi.org/10.1016/j.neucom.2026.133399
 - BibTeX: https://wcx12.github.io/wcx12/publications/citations/10-1016-j-neucom-2026-133399.bib
 - RIS: https://wcx12.github.io/wcx12/publications/citations/10-1016-j-neucom-2026-133399.ris

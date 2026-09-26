@@ -141,5 +141,47 @@ npm run build:pages
 npm audit
 ```
 
+For browser changes, install the pinned test browsers and test the packaged
+project-path artifact (not the repository root):
+
+```bash
+npx playwright install chromium firefox webkit
+npm run build:pages
+npm run test:e2e
+npm run test:links
+```
+
+The suite starts and stops its own loopback-only artifact server. Browser traces
+and JSON reports are written under ignored `output/site-quality-20260926/`.
+`PLAYWRIGHT_BASE_URL` can target another already-running artifact server; do not
+run network-abort tests against an authenticated author session. Fixtures use
+synthetic private notes, never real private content or stored credentials.
+
+Keep shared colors, type scales and font resources in `site-tokens.css`. It is
+fingerprinted with the rest of the release. Do not duplicate its definitions
+in the homepage and content stylesheets. Bilingual article URLs are fixed
+language routes; the navigation language link opens their actual translation.
+Single-language writing is explicitly marked as an original, not auto-translated.
+
+For a controlled performance comparison, copy the pre-change public artifact
+under `output/`, serve both revisions with `scripts/qa/serve.mjs`, and run
+`node scripts/qa/performance.mjs <phase> <after-url> <before-url>` without concurrent
+CPU-heavy jobs. This alternates revisions within each measurement pair to expose
+host-load drift instead of attributing it to the code. The script records artifact
+hashes and rejects an artifact changed during measurement. It runs three cold navigations for homepage/article and
+mobile/desktop, retains raw Lighthouse reports/configuration and reports median
+and range. Those are lab measurements, not field INP or a WCAG certification.
+
+Release only after content/build/artifact and browser checks, visual inspection,
+and no unresolved critical task failures. Record the source commit and current
+successful Pages run. Use the existing Pages workflow and approvals, then check
+actual hosted pages and fingerprints. A workflow success alone does not verify
+the live version. Roll back with a normal revert commit, regenerate and validate,
+and redeploy through the same workflow; never force-push or reset shared history.
+
+The dated audit in `docs/site-quality-20260926.md` links the evidence, limitations
+and release record for this optimization. Reports, profiles and screenshots must
+remain outside the Pages allowlist.
+
 The self-hosted fonts in `assets/fonts/` retain their SIL Open Font License
 files and must not be replaced without updating the accompanying provenance.

@@ -1,7 +1,7 @@
 .blog-body {
-  --blog-font-ui: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --blog-font-reading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --blog-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  --blog-font-ui: var(--font-ui);
+  --blog-font-reading: var(--font-reading);
+  --blog-font-mono: var(--font-code);
   min-height: 100dvh;
   background: var(--page-bg);
   color: var(--text);
@@ -239,7 +239,7 @@
   max-width: 980px;
   margin: 0;
   color: var(--text);
-  font-size: clamp(2.1rem, 5vw, 4.4rem);
+  font-size: 3rem;
   line-height: 1.02;
   letter-spacing: 0;
 }
@@ -254,7 +254,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   max-width: 780px;
   margin: 0;
   color: var(--muted);
-  font-size: clamp(1rem, 1.7vw, 1.15rem);
+  font-size: 1.125rem;
   line-height: 1.7;
 }
 
@@ -1294,14 +1294,14 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 .blog-content {
   color: var(--text);
   font-family: var(--blog-font-reading);
-  font-size: 1.03rem;
+  font-size: var(--text-reading);
   font-weight: 400;
-  line-height: 1.72;
+  line-height: var(--leading-reading);
   min-width: 0;
 }
 
 .blog-content > * {
-  max-width: 760px;
+  max-width: var(--width-reading);
   min-width: 0;
 }
 
@@ -2047,7 +2047,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
 .tiger-pipeline-heading strong {
   max-width: 740px;
-  font-size: clamp(1.02rem, 2.05vw, 1.28rem);
+  font-size: 1.125rem;
 }
 
 .tiger-flow-map {
@@ -5174,7 +5174,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 }
 
 .draft-preview .blog-post-title {
-  font-size: clamp(1.8rem, 3.2vw, 3rem);
+  font-size: 2.5rem;
 }
 
 .draft-preview .blog-content > * {
@@ -5366,7 +5366,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .blog-hero h1,
   .blog-post-title {
-    font-size: clamp(2rem, 12vw, 3rem);
+    font-size: 2rem;
     overflow-wrap: anywhere;
   }
 
@@ -5375,7 +5375,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 
   .blog-post-title {
-    font-size: clamp(1.9rem, 8vw, 2.55rem);
+    font-size: 1.9rem;
     line-height: 1.08;
   }
 
@@ -5782,10 +5782,12 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 }
 
+.profile-email-address { display: none; }
+
 @media print {
   @page {
     size: A4;
-    margin: 0;
+    margin: 8mm 12mm;
   }
 
   :root,
@@ -5813,7 +5815,9 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   .blog-progress,
   .blog-topbar,
   .blog-footer,
-  .profile-actions,
+  .profile-actions button,
+  .profile-actions a > span:not(.profile-email-address),
+  .profile-facts,
   .profile-directory,
   .profile-section-nav,
   .skip-link {
@@ -5822,7 +5826,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .blog-shell {
     width: 100%;
-    padding: 8mm 12mm;
+    padding: 0;
     box-sizing: border-box;
   }
 
@@ -5841,8 +5845,7 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .profile-masthead {
     grid-template-areas:
-      "heading command"
-      "facts facts";
+      "heading command";
     grid-template-columns: minmax(0, 1fr) 250px;
     gap: 10px 22px;
     padding: 0 0 8px;
@@ -5874,6 +5877,19 @@ html[data-ui-lang="zh"] .blog-hero h1 {
     gap: 12px;
     margin-top: 4px;
   }
+
+  .profile-actions { display: block; }
+  .research-profile .profile-actions a.btn {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    color: #111;
+    font-size: 0.78rem;
+  }
+  .profile-email-address { display: inline; }
 
   .profile-contact-links a,
   .resume-publication-meta a {
@@ -5914,6 +5930,11 @@ html[data-ui-lang="zh"] .blog-hero h1 {
 
   .profile-section + .profile-section {
     padding-top: 4px;
+  }
+
+  .profile-section[data-profile-kind="skills"],
+  .profile-section-body > ul > li {
+    break-inside: avoid;
   }
 
   .profile-section-head h2 {

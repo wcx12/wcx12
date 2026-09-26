@@ -274,9 +274,9 @@ function applyTheme(theme) {
   writeStorage(THEME_KEY, next);
   if (themeSelect) themeSelect.value = next;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', {
-    neon: '#070914',
-    warm: '#160d08',
-    mono: '#050505'
+    neon: '#101416',
+    warm: '#191819',
+    mono: '#101010'
   }[next]);
 }
 
@@ -306,7 +306,7 @@ blogMenu?.querySelectorAll('a').forEach((link) => {
 });
 
 blogMenu?.addEventListener('focusout', (event) => {
-  if (blogMenu.open && !blogMenu.contains(event.relatedTarget)) {
+  if (blogMenu.open && event.relatedTarget && !blogMenu.contains(event.relatedTarget)) {
     setBlogMenuOpen(false);
   }
 });
@@ -420,9 +420,17 @@ function updateProgress() {
   progress.style.setProperty('--read-progress', `${value}%`);
 }
 
-window.addEventListener('scroll', updateProgress, { passive: true });
-window.addEventListener('resize', updateProgress);
-updateProgress();
+let progressFrame = 0;
+function scheduleProgress() {
+  if (progressFrame) return;
+  progressFrame = requestAnimationFrame(() => {
+    progressFrame = 0;
+    updateProgress();
+  });
+}
+window.addEventListener('scroll', scheduleProgress, { passive: true });
+window.addEventListener('resize', scheduleProgress);
+document.addEventListener('toggle', scheduleProgress, true);
 
 document.querySelectorAll('.code-frame').forEach((frame) => {
   const head = frame.querySelector('.code-head');
@@ -671,3 +679,5 @@ document.getElementById('printProfile')?.addEventListener('click', () => window.
 initProfileNavigation();
 
 applyLanguage(currentLang);
+// Measure after initial language/menu/copy-button writes, avoiding a second full article layout.
+scheduleProgress();

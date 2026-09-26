@@ -6,9 +6,9 @@
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
       meta.setAttribute('content', {
-        neon: '#070914',
-        warm: '#160d08',
-        mono: '#050505'
+        neon: '#101416',
+        warm: '#191819',
+        mono: '#101010'
       }[theme]);
     }
   } catch (error) {

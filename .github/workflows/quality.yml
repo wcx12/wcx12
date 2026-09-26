@@ -57,5 +57,39 @@ jobs:
       - name: Package and validate Pages artifact
         run: npm run package:pages && npm run test:pages
 
+      - name: Install browser for visitor-path tests
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Verify visitor paths
+        run: npm run test:e2e && npm run test:links
+
       - name: Verify generated files are current
         run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml
+
+      - name: Compare performance with the pull-request base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags origin "$BASE_SHA"
+          git worktree add --detach output/perf-baseline-source "$BASE_SHA"
+          npm --prefix output/perf-baseline-source ci --ignore-scripts
+          npm --prefix output/perf-baseline-source run build:pages
+          node scripts/qa/serve.mjs output/perf-baseline-source/output/pages 4284 &
+          before_pid=$!
+          node scripts/qa/serve.mjs output/pages 4283 &
+          after_pid=$!
+          trap 'kill "$before_pid" "$after_pid"' EXIT
+          curl --retry 10 --retry-delay 1 --retry-connrefused --fail --silent http://127.0.0.1:4284/wcx12/ -o /dev/null
+          curl --retry 10 --retry-delay 1 --retry-connrefused --fail --silent http://127.0.0.1:4283/wcx12/ -o /dev/null
+          node scripts/qa/performance.mjs ci-paired http://127.0.0.1:4283/wcx12/ http://127.0.0.1:4284/wcx12/
+
+      - name: Retain performance evidence
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: performance-review
+          path: |
+            output/site-quality-20260926/ci-paired/performance/*.json
+            output/site-quality-20260926/ci-paired/performance/*.html
+          retention-days: 7

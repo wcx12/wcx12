@@ -877,7 +877,7 @@ function ensureRepoMapFeature() {
             sortedRepos
           }),
           getInterestEntries: repoInterestEntries,
-          openRepo: openRepoDetail,
+          openRepo: openRepoReadme,
           openResearch: jumpToResearchInterest,
           requestMotionFrame: scheduleMotionLoop
         });
@@ -1099,6 +1099,7 @@ function commandItems() {
     type: i18n[currentLang].command_palette,
     kind: 'view',
     viewId: btn.dataset.view,
+    alias: i18n[currentLang][`btn_${btn.dataset.view === 'writing' ? 'blog' : btn.dataset.view}`] || '',
     action: () => activateView(btn.dataset.view, { focusHeading: true })
   }));
 
@@ -1191,7 +1192,7 @@ function commandItems() {
     type: i18n[currentLang].command_repo,
     kind: 'repo',
     repoName: repo.name,
-    action: () => openRepoDetail(repo.name)
+    action: () => openRepoReadme(repo.name)
   }));
 
   return [...utilityItems, ...viewItems, ...researchItems, ...paperItems, ...postItems, ...repoItems];
@@ -1202,7 +1203,7 @@ function filteredCommandItems() {
   const items = commandItems();
   if (!query) return items.slice(0, 12);
   return items
-    .filter((item) => `${item.title} ${item.detail} ${item.type}`.toLowerCase().includes(query))
+    .filter((item) => `${item.title} ${item.detail} ${item.type} ${item.viewId || ''} ${item.alias || ''}`.toLowerCase().includes(query))
     .slice(0, 12);
 }
 
@@ -1290,7 +1291,7 @@ function renderCommandList() {
   commandInput.setAttribute('aria-activedescendant', `command-option-${commandCursor}`);
 
   commandList.querySelectorAll('.command-item').forEach((button) => {
-    button.addEventListener('mouseenter', () => {
+    button.addEventListener('pointermove', () => {
       commandCursor = Number(button.dataset.index);
       renderCommandList();
     });
@@ -1351,11 +1352,11 @@ function handleOverlayKeydown(event, overlay, closeOverlay) {
 }
 
 function restoreOverlayFocus(element) {
-  if (element?.isConnected) element.focus();
+  if (element instanceof HTMLElement && element.isConnected) element.focus();
 }
 
 function openCommandPalette() {
-  if (!commandPalette.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+  if (!commandPalette.classList.contains('open')) {
     commandReturnFocus = document.activeElement;
   }
   commandPalette.classList.add('open');
@@ -1382,6 +1383,10 @@ function closeCommandPalette() {
   commandReturnFocus = null;
 }
 
+// WebKit does not focus pointer-clicked buttons before opening a dialog.
+document.addEventListener('click', event => {
+  event.target.closest('button')?.focus({ preventScroll: true });
+}, true);
 openCommand.addEventListener('click', openCommandPalette);
 commandClose?.addEventListener('click', closeCommandPalette);
 commandPalette.addEventListener('keydown', (event) => handleOverlayKeydown(event, commandPalette, closeCommandPalette));
@@ -1393,16 +1398,13 @@ commandInput.addEventListener('input', () => {
   renderCommandList();
 });
 commandInput.addEventListener('keydown', (event) => {
+  if (event.isComposing || event.keyCode === 229) return;
   const items = filteredCommandItems();
-  if (event.key === 'ArrowDown') {
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault();
-    commandCursor = Math.min(commandCursor + 1, Math.max(items.length - 1, 0));
+    commandCursor = Math.max(0, Math.min(items.length - 1, commandCursor + (event.key === 'ArrowDown' ? 1 : -1)));
     renderCommandList();
-  }
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    commandCursor = Math.max(commandCursor - 1, 0);
-    renderCommandList();
+    revealActiveCommand();
   }
   if (event.key === 'Enter') {
     event.preventDefault();
@@ -1413,6 +1415,15 @@ commandInput.addEventListener('keydown', (event) => {
     }
   }
 });
+
+function revealActiveCommand() {
+  const option = document.getElementById(`command-option-${commandCursor}`);
+  if (!option) return;
+  const listBounds = commandList.getBoundingClientRect();
+  const optionBounds = option.getBoundingClientRect();
+  if (optionBounds.bottom > listBounds.bottom) commandList.scrollTop += optionBounds.bottom - listBounds.bottom;
+  else if (optionBounds.top < listBounds.top) commandList.scrollTop -= listBounds.top - optionBounds.top;
+}
 
 function textFor(value) {
   if (typeof value === 'string') return value;
@@ -2276,11 +2287,7 @@ function applyTheme(theme, options = {}) {
   themeColorCache.clear();
   themeSelect.value = currentTheme;
   writeStorage('wcx12-theme', currentTheme);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', {
-    neon: '#070914',
-    warm: '#160d08',
-    mono: '#050505'
-  }[currentTheme]);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor('--bg'));
   if (animate) runThemeTransition(source);
   if (initializedViews.has('projects')) {
     if (filteredRepos.length) renderRepos(filteredRepos, true);
@@ -2319,7 +2326,7 @@ function clearManagerUpdatePayload() {
 
 function openResearchManager() {
   if (!ownerToolsEnabled) return;
-  if (!researchManager.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+  if (!researchManager.classList.contains('open')) {
     researchManagerReturnFocus = document.activeElement;
   }
   clearManagerUpdatePayload();
@@ -2582,7 +2589,7 @@ chips.forEach((chip) => {
 });
 
 function openModal(config) {
-  if (!modal.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+  if (!modal.classList.contains('open')) {
     modalReturnFocus = document.activeElement;
   }
   modalTitle.textContent = config.title;
@@ -2653,12 +2660,6 @@ function applyRepoFilter() {
   repoState.page = 1;
   repoState.infiniteCount = repoState.pageSize;
   renderRepos(filteredRepos);
-}
-
-function openRepoDetail(repoName) {
-  const repo = allRepos.find((item) => item.name === repoName);
-  if (!repo) return;
-  openRepoReadme(repo.name);
 }
 
 function escapeHtml(value) {
@@ -3071,7 +3072,7 @@ async function openRepoReadme(repoName) {
 
 function openReadmeDrawer(repo, html) {
   if (!readmeDrawer || !repo) return;
-  if (!readmeDrawer.classList.contains('open') && document.activeElement instanceof HTMLElement) {
+  if (!readmeDrawer.classList.contains('open')) {
     readmeReturnFocus = document.activeElement;
   }
   readmeReturnFocusRepoName = repo.name;
@@ -3284,7 +3285,7 @@ function renderRepos(repos, preserveScroll = false) {
   }
 
   document.querySelectorAll('.repo-detail').forEach((btn) => {
-    btn.addEventListener('click', () => openRepoDetail(btn.dataset.repo));
+    btn.addEventListener('click', () => openRepoReadme(btn.dataset.repo));
   });
   document.querySelectorAll('.repo-research').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -3357,19 +3358,6 @@ function hashString(value) {
   return String(value).split('').reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0);
 }
 
-function researchMapPalette() {
-  if (document.documentElement.dataset.theme === 'mono') {
-    return ['#f5f5f5', '#d8d8d8', '#bdbdbd', '#9f9f9f', '#7f7f7f'];
-  }
-  return [
-    themeColor('--cyan') || '#00f5ff',
-    themeColor('--pink') || '#ff2e88',
-    themeColor('--violet') || '#9b5cff',
-    '#8ee6a8',
-    '#ffd166'
-  ];
-}
-
 function repoInterestEntries(repo) {
   const entriesById = new Map(allInterestChildren().map((entry) => [entry.child.id, entry]));
   return [...new Set(assignedInterestIds(repo, 'repo'))]
@@ -3400,7 +3388,7 @@ function currentPublications() {
       ? {
         ...item,
         ...override,
-        status: currentLang === 'zh' ? override.statusZh : override.status
+        status: publicationStatusLabel(override, currentLang)
       }
       : item);
   });
@@ -3535,9 +3523,6 @@ function mapOrcidWorks(payload) {
 }
 
 async function loadRepos() {
-  repoDataSource = 'snapshot';
-  allRepos = [...localRepos];
-  filteredRepos = [...allRepos];
   renderHeroPreview();
   refreshInitializedView('projects');
   refreshInitializedView('research');
@@ -3759,7 +3744,7 @@ utilityMenuToggle?.addEventListener('click', (event) => {
   setUtilityMenuOpen(!utilityMenu.classList.contains('open'));
 });
 utilityMenu?.addEventListener('focusout', event => {
-  if (!utilityMenu.contains(event.relatedTarget)) setUtilityMenuOpen(false);
+  if (event.relatedTarget && !utilityMenu.contains(event.relatedTarget)) setUtilityMenuOpen(false);
 });
 utilityMenu?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setUtilityMenuOpen(false)));
 

@@ -9,7 +9,7 @@
   <meta name="description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="author" content="Chenxu Wang" />
   <meta name="robots" content="index,follow,max-image-preview:large" />
-  <meta name="theme-color" content="#070914" />
+  <meta name="theme-color" content="#101416" />
   <meta name="color-scheme" content="dark" />
   <link rel="canonical" href="https://wcx12.github.io/wcx12/" />
   <link rel="alternate" hreflang="en" href="https://wcx12.github.io/wcx12/" />
@@ -41,9 +41,10 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <script src="theme-init.js?v=8ee70a2f8f9c"></script>
-  <link rel="stylesheet" href="styles.css?v=8ee70a2f8f9c" />
-  <link rel="stylesheet" href="site-nav.css?v=8ee70a2f8f9c" />
+  <script src="theme-init.js?v=b509011ca304"></script>
+  <link rel="stylesheet" href="site-tokens.css?v=b509011ca304" />
+  <link rel="stylesheet" href="styles.css?v=b509011ca304" />
+  <link rel="stylesheet" href="site-nav.css?v=b509011ca304" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -130,7 +131,7 @@
   <div id="themeTransition" class="theme-transition" aria-hidden="true"></div>
 
   <header class="topbar site-header">
-    <a class="brand" href="./" aria-label="Home" data-i18n-aria="aria_home">wcx12</a>
+    <a class="brand" href="./" aria-label="wcx12 Home" data-i18n-aria="aria_home">wcx12</a>
     <details class="site-menu utility-menu" open>
       <summary class="site-menu-toggle utility-menu-toggle" aria-controls="utilityMenuPanel" data-i18n="btn_settings">Menu</summary>
       <nav id="utilityMenuPanel" class="site-navigation top-actions-nav" aria-label="Primary navigation" data-i18n-aria="aria_primary_navigation">
@@ -139,7 +140,7 @@
         <a class="site-nav-link" data-site-section="publications" href="./publications/" data-i18n="btn_publications">Publications</a>
         <a class="site-nav-link" data-site-section="writing" href="./blog/" data-i18n="btn_blog">Blog</a>
         <a class="site-nav-link" data-site-section="profile" href="./resume/" data-i18n="btn_profile">Resume</a>
-        <select id="themeSelect" class="site-theme" aria-label="Color theme" data-i18n-aria="aria_theme"><option value="neon" data-i18n="theme_neon">Default</option><option value="warm" data-i18n="theme_warm">Warm</option><option value="mono" data-i18n="theme_mono">Black &amp; White</option></select>
+        <select id="themeSelect" class="site-theme" aria-label="Color theme" disabled data-i18n-aria="aria_theme"><option value="neon" data-i18n="theme_neon">Default</option><option value="warm" data-i18n="theme_warm">Warm</option><option value="mono" data-i18n="theme_mono">Black &amp; White</option></select>
         <a id="langToggle" class="ghost-btn" href="./zh/" hreflang="zh-CN" lang="zh-CN" title="切换到中文主页" aria-label="切换到中文主页" data-i18n="lang_btn" data-i18n-title="lang_link_aria" data-i18n-aria="lang_link_aria">中文</a>
       </nav>
     </details>
@@ -162,7 +163,7 @@
 
         <div class="quick-stats">
           <article><span data-i18n="stat_focus">Research domains / topics</span><strong id="focusAreaCount">4 / 6</strong></article>
-          <article><span data-i18n="stat_grad">Graduation</span><strong>2026</strong></article>
+          <article><span data-i18n="stat_location">Based in</span><strong data-i18n="stat_location_value">Shenzhen</strong></article>
           <article><span data-i18n="stat_pubs">Publications</span><strong id="heroPublicationCount">2</strong></article>
         </div>
       </div>
@@ -216,14 +217,15 @@
       <h2 id="selected-work-title" data-i18n="selected_work">Selected work</h2>
       <div class="selected-work-list">
         <article>
-          <span data-i18n="selected_project">Project</span>
-          <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
-          <p data-i18n="selected_project_desc">College-major research with traceable sources and evidence gaps.</p>
-        </article>
-        <article>
           <span data-i18n="selected_paper">Paper</span>
           <h3><a href="./publications/tf-vpr/">TF-VPR</a></h3>
-          <p data-i18n="selected_paper_desc">Visual place recognition with frozen foundation models.</p>
+          <p data-i18n="selected_paper_desc">Recognizing places with frozen foundation models, without task-specific fine-tuning. Method, benchmark results, and official code.</p>
+          <p class="selected-work-evidence">Neurocomputing · 2026</p>
+        </article>
+        <article>
+          <span data-i18n="selected_project">Engineering prototype</span>
+          <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
+          <p data-i18n="selected_project_desc">College-major research through SQL-backed agent tools. Public code and traces; core database remains private.</p>
         </article>
         <article>
           <span data-i18n="selected_note">Reading notes</span>
@@ -233,14 +235,23 @@
       </div>
     </section>
 
-    <section class="console" aria-label="Interactive portfolio tools" data-i18n-aria="aria_interactive_portfolio">
+    <section class="enhancement-fallback" aria-live="polite">
+      <p class="enhancement-pending" data-i18n="enhancement_pending">Loading interactive tools.</p>
+      <p class="enhancement-error" data-i18n="enhancement_error">Interactive tools could not load. The portfolio pages remain available.</p>
+      <a href="./" data-i18n="enhancement_reload">Reload page</a>
+      <a href="./research/" data-i18n="btn_research">Research</a>
+      <a href="./publications/" data-i18n="btn_publications">Publications</a>
+    </section>
+
+    <section class="console" inert aria-label="Interactive portfolio tools" data-i18n-aria="aria_interactive_portfolio">
+      <h2 class="tools-title" data-i18n="tools_title">Explore the work</h2>
       <nav class="command-row" aria-label="Interactive tools" data-i18n-aria="aria_interactive_tools">
         <button class="cmd active" data-view="about" data-i18n="tab_about">overview</button>
-        <button class="cmd" data-view="research" data-i18n="tab_research">Research</button>
-        <button class="cmd" data-view="projects" data-i18n="tab_projects">Projects</button>
-        <button class="cmd" data-view="publications" data-i18n="tab_publications">Publications</button>
-        <button class="cmd" data-view="writing" data-i18n="tab_writing">Blog</button>
-        <button class="cmd" data-view="profile" data-i18n="tab_profile">Resume</button>
+        <button class="cmd" data-view="research" data-i18n="tab_research">Topic explorer</button>
+        <button class="cmd" data-view="projects" data-i18n="tab_projects">Repository browser</button>
+        <button class="cmd" data-view="publications" data-i18n="tab_publications">Paper browser</button>
+        <button class="cmd" data-view="writing" data-i18n="tab_writing">Reading list</button>
+        <button class="cmd" data-view="profile" data-i18n="tab_profile">At a glance</button>
         <button id="openCommand" class="ghost-btn" type="button" data-i18n="btn_command">Command</button>
       </nav>
 
@@ -573,6 +584,6 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="homepage-bootstrap.js?v=8ee70a2f8f9c"></script>
+  <script type="module" src="homepage-bootstrap.js?v=b509011ca304"></script>
 </body>
 </html>

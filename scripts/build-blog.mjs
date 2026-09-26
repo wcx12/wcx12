@@ -1895,7 +1895,7 @@ function renderShell({
   <meta name="description" content="${escapeHtml(pageDescription)}" />
   <meta name="author" content="${escapeHtml(SITE.author)}" />
   <meta name="robots" content="${escapeHtml(robots)}" />
-  <meta name="theme-color" content="#070914" />
+  <meta name="theme-color" content="#101416" />
   <meta name="color-scheme" content="dark" />
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
 ${languageAlternates}
@@ -1920,6 +1920,7 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <link rel="sitemap" type="application/xml" href="${escapeHtml(absoluteUrl('sitemap.xml'))}" />
   <link rel="preload" href="${ctx.link('assets/fonts/space-grotesk-latin.woff2')}" as="font" type="font/woff2" crossorigin />
   <script src="${versionedAssetLink(ctx, 'theme-init.js')}"></script>
+  <link rel="stylesheet" href="${versionedAssetLink(ctx, 'site-tokens.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'content.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/blog.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'site-nav.css')}" />
@@ -1961,6 +1962,13 @@ export function createMarkdownRenderer({ publishedSlugs = null } = {}) {
 
   md.renderer.rules.fence = (tokens, idx) => renderCodeFence(tokens[idx].content, tokens[idx].info);
   md.renderer.rules.code_block = (tokens, idx) => renderCodeFence(tokens[idx].content, 'text');
+  // Keep wide equations and data accessible to keyboard readers, including without JS.
+  const renderMathBlock = md.renderer.rules.math_block;
+  md.renderer.rules.math_block = (...args) => renderMathBlock(...args).replace('<p class="katex-block', '<p tabindex="0" class="katex-block');
+  md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
+    tokens[idx].attrSet('tabindex', '0');
+    return self.renderToken(tokens, idx, options);
+  };
   const addSimpleDirective = (tokenName, marker, render) => {
     md.block.ruler.before('paragraph', tokenName, (state, startLine, endLine, silent) => {
       const pos = state.bMarks[startLine] + state.tShift[startLine];
@@ -2318,6 +2326,7 @@ function versionedAssetLink(ctx, relativePath) {
 
 async function computeAssetVersion(posts) {
   const files = [
+    'site-tokens.css',
     'content.css',
     'styles.css',
     'site-nav.css',
@@ -2368,6 +2377,10 @@ async function stampHomepageAssets() {
   const filePath = path.join(rootDir, 'index.html');
   const source = await fs.readFile(filePath, 'utf8');
   const replacements = [
+    {
+      pattern: /(<link\s+rel="stylesheet"\s+href="site-tokens\.css)(?:\?v=[a-f0-9]{12})?("\s*\/?>)/,
+      replacement: `$1?v=${assetVersion}$2`
+    },
     {
       pattern: /(<script\s+src="theme-init\.js)(?:\?v=[a-f0-9]{12})?("\s*><\/script>)/,
       replacement: `$1?v=${assetVersion}$2`
@@ -2527,6 +2540,7 @@ async function renderChineseHomepage() {
     ['src="theme-init.js', 'src="../theme-init.js', 'Chinese theme bootstrap path'],
     ['href="styles.css', 'href="../styles.css', 'Chinese stylesheet path'],
     ['href="site-nav.css', 'href="../site-nav.css', 'Chinese navigation stylesheet path'],
+    ['href="site-tokens.css', 'href="../site-tokens.css', 'Chinese shared tokens path'],
     ['src="homepage-bootstrap.js', 'src="../homepage-bootstrap.js', 'Chinese bootstrap path']
   ]) {
     localized = replaceRequired(localized, search, replacement, label);
@@ -2665,6 +2679,7 @@ async function renderPost(post, posts, renderer, options = {}) {
   const newer = !preview && index > 0 ? languagePosts[index - 1] : null;
   const older = !preview && index >= 0 && index < languagePosts.length - 1 ? languagePosts[index + 1] : null;
   const related = preview ? [] : relatedPostsFor(post, languagePosts);
+  const alternatePost = preview ? null : variantsForPost(posts, post).find(candidate => candidate.lang !== post.lang);
   const tagRow = renderTags(ctx, post.tags, deriveBlogDiscovery(languagePosts).activeTags);
   const mathCss = post.math ? `<link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/katex.min.css')}" />` : '';
   const renderedToc = post.toc ? tocHtml(toc) : '<p class="muted" data-blog-i18n="toc_disabled">Contents disabled.</p>';
@@ -2705,6 +2720,7 @@ ${preview ? `        <div class="blog-preview-banner" role="status">${post.publi
           <p class="blog-post-subtitle">${escapeHtml(post.description)}</p>
           ${hintHtml('hint_post')}
           <div class="blog-tag-row">${tagRow}</div>
+${alternatePost ? '' : originalLanguageHtml(post.lang)}
         </header>
         <details class="blog-toc blog-toc-mobile">
           <summary data-blog-i18n="toc_title">Contents</summary>
@@ -2741,6 +2757,8 @@ ${postFooter ? `        ${postFooter}\n` : ''}      </article>
     socialImagePath: socialImage.path,
     socialImageAlt: socialImage.alt,
     contentLang: post.lang,
+    fixedLanguage: alternatePost ? post.lang : '',
+    alternateUrl: alternatePost ? postUrl(alternatePost).replace(/^\//, '') : '',
     canonicalUrlOverride: preview ? absoluteUrl(postUrl(post)) : '',
     robots: preview ? 'noindex,nofollow' : 'index,follow,max-image-preview:large',
     blogPage: preview ? true : null,
@@ -2758,6 +2776,7 @@ async function renderDraftPreviews(posts, renderer) {
   await fs.mkdir(previewRoot, { recursive: true });
   const scaffold = [
     '404.html',
+    'site-tokens.css',
     'content.css',
     'styles.css',
     'site-nav.css',
@@ -3055,7 +3074,7 @@ async function renderResume(renderer, language) {
           <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${escapeHtml(localized(profileData.status, language))}</strong></p>
           <p class="profile-command-label">${text.commandLabel}</p>
           <div class="profile-actions">
-            <a class="btn btn-primary" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}">${text.contact}</a>
+            <a class="btn btn-primary" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}"><span>${text.contact}</span><span class="profile-email-address">c2675668@gmail.com</span></a>
             <button id="printProfile" class="btn btn-outline" type="button">${text.print}</button>
           </div>
           <nav class="profile-contact-links" aria-label="${isZh ? '联系方式' : 'Contact links'}">
@@ -3873,6 +3892,7 @@ async function renderPublicationDetail(publication, language) {
         <p class="research-authors" lang="en">${readableAuthorsHtml(publication)}</p>
         <div class="blog-hero-actions">
           <a class="btn btn-primary" href="${escapeHtml(publication.link)}" rel="noreferrer">DOI</a>
+          ${publication.code_url ? `<a class="btn btn-outline" href="${escapeHtml(publication.code_url)}" rel="noreferrer">${isZh ? '官方代码' : 'Official code'}</a>` : ''}
           <a class="btn btn-outline" href="${escapeHtml(bibtexPath)}" download>BibTeX</a>
           <a class="btn btn-outline" href="${escapeHtml(risPath)}" download>RIS</a>
           <a class="btn btn-outline" href="${ctx.link(`${publicationsRoute(language)}index.html`)}">${isZh ? '全部论文' : 'All publications'}</a>

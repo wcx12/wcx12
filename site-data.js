@@ -252,10 +252,16 @@ export const staticPublications = [
     "venue": "Neurocomputing",
     "year": "2026",
     "updated_at": "2026-07-12",
+    "issue_date": "2026-06-07",
+    "issueLabel": {
+      "en": "Volume date: 7 June 2026",
+      "zh": "卷期日期：2026 年 6 月 7 日"
+    },
+    // Legacy alias for the issue/cover date, not an online-publication date.
     "published_date": "2026-06-07",
     "publishedLabel": {
-      "en": "Published 7 June 2026",
-      "zh": "2026 年 6 月 7 日出版"
+      "en": "Published",
+      "zh": "已发表"
     },
     "status": "Published",
     "status_key": "published",

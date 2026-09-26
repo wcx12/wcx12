@@ -26,12 +26,12 @@ export function renderSiteHeader({ link, language = 'en', homepage = false, fixe
   const themeOptions = [['neon', 'theme_neon', 'theme_default', 'Default', '默认'], ['warm', 'theme_warm', 'theme_warm', 'Warm', '暖色'], ['mono', 'theme_mono', 'theme_mono', 'Black & White', '黑白极简']]
     .map(([value, homeKey, key, en, cn]) => `<option value="${value}"${translated(homeKey, key)}>${escapeHtml(zh ? cn : en)}</option>`).join('');
   return `<header class="${homepage ? 'topbar' : 'blog-topbar'} site-header">
-    <a class="${homepage ? 'brand' : 'blog-brand'}" href="${escapeHtml(link(`${prefix}index.html`))}"${routes('index.html', 'zh/index.html')} aria-label="${zh ? '首页' : 'Home'}"${translated('aria_home', 'nav_home', '-aria')}>wcx12</a>
+    <a class="${homepage ? 'brand' : 'blog-brand'}" href="${escapeHtml(link(`${prefix}index.html`))}"${routes('index.html', 'zh/index.html')} aria-label="${zh ? 'wcx12 首页' : 'wcx12 Home'}"${homepage ? translated('aria_home', 'nav_home', '-aria') : ''}>wcx12</a>
     <details class="site-menu ${homepage ? 'utility-menu' : 'blog-menu'}" open>
       <summary class="site-menu-toggle ${homepage ? 'utility-menu-toggle' : 'blog-menu-toggle'}" aria-controls="${navId}"${translated('btn_settings', 'nav_menu')}>${zh ? '菜单' : 'Menu'}</summary>
       <nav id="${navId}" class="site-navigation ${homepage ? 'top-actions-nav' : 'blog-nav'}" aria-label="${zh ? '主导航' : 'Primary navigation'}"${translated('aria_primary_navigation', 'nav_landmark', '-aria')}>
         ${links}
-        <select id="${themeId}" class="site-theme" aria-label="${zh ? '页面色调' : 'Color theme'}"${translated('aria_theme', 'theme_title', '-aria')}>${themeOptions}</select>
+        <select id="${themeId}" class="site-theme" aria-label="${zh ? '页面色调' : 'Color theme'}"${homepage ? ' disabled' : ''}${translated('aria_theme', 'theme_title', '-aria')}>${themeOptions}</select>
         ${languageControl}
       </nav>
     </details>
