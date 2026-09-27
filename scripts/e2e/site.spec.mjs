@@ -222,33 +222,22 @@ test('repository search, README rendering, failure and dialog focus', async ({ p
   await page.keyboard.press('Escape');
 });
 
-test('research demos have visible outcomes and nonblank canvases under reduced motion', async ({ page }) => {
+test('registration retains its visible outcome and nonblank canvas under reduced motion', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await home(page);
   await page.locator('.command-row [data-view="research"]').click();
   const canvas = page.locator('#interestCanvas');
-  for (const interest of ['point-cloud-registration', 'vpr', 'medical-image-analysis', 'agent', 'ai4edu']) {
-    await page.locator(`#interestRail [data-interest="${interest}"]`).click();
-    await expect(page.locator('#interestDemoAction')).toBeEnabled();
-    await canvas.scrollIntoViewIfNeeded();
-    await expect.poll(() => canvas.evaluate(node => {
-      const pixels = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
-      return new Set(new Uint32Array(pixels.buffer)).size;
-    })).toBeGreaterThan(20);
-    const before = await page.locator('#interestCanvasStatus').textContent();
-    await page.locator('#interestDemoAction').click();
-    await expect(page.locator('#interestCanvasStatus')).not.toHaveText(before);
-    if (interest === 'agent') {
-      await page.locator('#interestDemoAction').click();
-      await expect(page.locator('.research-demo-result')).toContainText('14:35');
-    }
-    if (interest === 'ai4edu') {
-      await page.locator('[data-demo-hint]').click();
-      await expect(page.locator('.research-demo-hint-text')).toBeVisible();
-    }
-    await page.locator('#interestDemoReset').click();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  }
+  await expect(page.locator('#interestDemoAction')).toBeEnabled();
+  await canvas.scrollIntoViewIfNeeded();
+  await expect.poll(() => canvas.evaluate(node => {
+    const pixels = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
+    return new Set(new Uint32Array(pixels.buffer)).size;
+  })).toBeGreaterThan(20);
+  await page.locator('#interestDemoAction').click();
+  await expect(page.locator('#interestCanvasStatus')).toContainText('complete');
+  await page.locator('#interestDemoReset').click();
+  await expect(page.locator('#interestCanvasStatus')).not.toContainText('complete');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test('copy code provides clipboard content and confirmation', async ({ page, context, browserName }) => {

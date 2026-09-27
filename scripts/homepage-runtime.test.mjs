@@ -332,8 +332,8 @@ test('canvas motion respects mobile budgets and page visibility', () => {
   assert.match(repoMapSource, /if \(hoveredRepo === nextHoveredRepo && hoveredMapField === nextHoveredMapField\) return;/);
   assert.match(scriptSource, /if \(resizeFrame !== null\) return;[\s\S]*?resizeFrame = requestAnimationFrame\(\(\) => \{/);
   assert.match(scriptSource, /if \(!\('ResizeObserver' in window\)\) \{[\s\S]*?repoMapFeature\?\.resize\(\);[\s\S]*?researchCanvasFeature\?\.resize\(\);/);
-  assert.match(researchCanvasSource, /evaluateAnswer\(/);
-  assert.doesNotMatch(researchCanvasSource, /selectedSignal = 'incorrect'[\s\S]*?selectedSignal = 'correct'/);
+  assert.match(researchCanvasSource, /if \(!isPointCloudInterestActive\(\) \|\| reducedMotion/);
+  assert.match(researchCanvasSource, /topicExperiences\.show\(registration \? null/);
 });
 
 test('owner mapping hands a token-free payload to GitHub Actions', () => {
@@ -579,11 +579,9 @@ test('retired sandbox code and taxonomy drift do not return', () => {
   }
 });
 
-test('agent and education canvases expose only the current human-facing scenes', () => {
-  assert.match(researchCanvasSource, /function drawHumanAiCollab\(/);
-  assert.match(researchCanvasSource, /function drawRobotTeacherClassroom\(/);
-  assert.match(researchCanvasSource, /const humanAiStages = \[/);
-  assert.match(researchCanvasSource, /\{ id: 'request', label: 'Human request' \}/);
+test('registration is isolated from the retired generic topic scenes', () => {
+  assert.match(researchCanvasSource, /createTopicExperiences/);
+  assert.match(researchCanvasSource, /interestCanvas\.hidden = !registration/);
+  assert.doesNotMatch(researchCanvasSource, /drawHumanAiCollab|drawRobotTeacherClassroom|humanAiStages|vprCandidateScores/);
   assert.doesNotMatch(researchCanvasSource, /LEGACY_RUNNER_SCENES_ENABLED|agentRunnerLayout|educationRunnerLayout/);
-  assert.doesNotMatch(researchCanvasSource, /agentWorkbench|drawEducationGarden|selectedTool|selectedPath/);
 });

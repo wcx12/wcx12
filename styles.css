@@ -1280,6 +1280,17 @@ button.research-badge:hover {
   align-items: flex-start;
 }
 
+.interest-detail-head > div { min-width: 0; }
+.interest-detail:has(.interest-demo[data-presentation="topic"]) {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+.interest-detail-head .interest-tag {
+  max-width: 55%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .interest-detail h3 {
   margin: 4px 0 0;
   color: var(--text);
@@ -1367,6 +1378,32 @@ button.research-badge:hover {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto auto;
   gap: 8px;
+}
+
+/* Domain experiences use the full bounded surface; registration keeps its canvas layout. */
+.interest-demo[data-presentation="topic"] {
+  grid-template-rows: minmax(0, 1fr);
+}
+.interest-demo [hidden] {
+  display: none !important;
+}
+.topic-experiences {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 2px 8px 14px 2px;
+  container-type: inline-size;
+  border-top: 1px solid var(--line);
+}
+.topic-experiences:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+.topic-experiences > section {
+  min-width: 0;
 }
 
 .interest-canvas-controls {
@@ -2504,8 +2541,8 @@ html[data-homepage-error="true"] .enhancement-error { display: block; }
   .interest-canvas-controls .btn { font-size: 0.8rem; }
 }
 
-/* Integration fragment: append after styles.css; no automatic stylesheet injection. */
-.interest-demo:has(.research-demo-controls) {
+/* Registration retains the original canvas, bounded note and action row. */
+.interest-demo[data-presentation="registration"] {
   grid-template-rows: 220px minmax(0, 1fr) 72px;
   min-height: 0;
   overflow: hidden;
@@ -2544,96 +2581,6 @@ html[data-homepage-error="true"] .enhancement-error { display: block; }
   overflow-wrap: anywhere;
 }
 
-.research-demo-content [hidden],
-.research-demo-content[hidden] {
-  display: none !important;
-}
-
-.research-demo-content p {
-  margin: 6px 0 14px;
-}
-
-.research-demo-content .research-demo-note {
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.research-demo-picker {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.research-demo-picker select {
-  flex: 1 1 160px;
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--text);
-  background: var(--field-bg);
-  font: inherit;
-}
-
-.research-demo-excerpts {
-  margin: 6px 0 14px;
-  padding-left: 24px;
-}
-
-.research-demo-excerpts li + li {
-  margin-top: 8px;
-}
-
-.research-demo-exercise {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.research-demo-exercise legend {
-  width: 100%;
-  padding: 0;
-  white-space: normal;
-  font-weight: 600;
-}
-
-.research-demo-choices {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 10px 0;
-}
-
-.research-demo-choice {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  min-height: 44px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.research-demo-choice:has(:checked) {
-  border-color: var(--cyan);
-  background: var(--soft-bg);
-}
-
-.research-demo-choice input {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  accent-color: var(--cyan);
-}
-
 .research-demo-controls .btn {
   min-height: 44px;
   font-size: 0.875rem;
@@ -2642,24 +2589,19 @@ html[data-homepage-error="true"] .enhancement-error { display: block; }
   overflow-wrap: anywhere;
 }
 
-.research-demo-content :is(button, select, input):focus-visible {
-  outline: 2px solid var(--pink);
-  outline-offset: 3px;
-}
-
 .research-demo-content:focus-visible,
-.interest-demo:has(.research-demo-controls) .interest-canvas-status:focus-visible {
+.interest-demo[data-presentation="registration"] .interest-canvas-status:focus-visible {
   outline: 2px solid var(--pink);
   outline-offset: -2px;
 }
 
-.interest-demo:has(.research-demo-controls) .interest-canvas-feedback {
+.interest-demo[data-presentation="registration"] .interest-canvas-feedback {
   min-height: 0;
   align-items: stretch;
   overflow: hidden;
 }
 
-.interest-demo:has(.research-demo-controls) .interest-canvas-status {
+.interest-demo[data-presentation="registration"] .interest-canvas-status {
   min-height: 0;
   padding-right: 6px;
   overflow-y: auto;
@@ -2676,19 +2618,10 @@ html[data-homepage-error="true"] .enhancement-error { display: block; }
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .research-demo-choices {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .research-demo-controls > .btn {
     min-height: 52px;
     padding: 8px 5px;
     font-size: 0.875rem;
   }
 
-  .research-demo-exercise .research-demo-hint {
-    width: auto;
-    min-width: 72px;
-    padding: 8px 12px;
-  }
 }

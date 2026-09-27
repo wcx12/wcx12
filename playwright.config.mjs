@@ -1,13 +1,15 @@
 import { defineConfig } from '@playwright/test';
 
+const evidenceDirectory = process.env.PLAYWRIGHT_OUTPUT_DIR || 'output/site-quality-20260926';
+
 export default defineConfig({
   testDir: './scripts/e2e',
   fullyParallel: false,
   workers: 1,
   retries: 0,
   timeout: 45000,
-  outputDir: 'output/site-quality-20260926/e2e-artifacts',
-  reporter: [['list'], ['json', { outputFile: 'output/site-quality-20260926/e2e-results.json' }]],
+  outputDir: `${evidenceDirectory}/e2e-artifacts`,
+  reporter: [['list'], ['json', { outputFile: `${evidenceDirectory}/e2e-results.json` }]],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:4285/wcx12/',
     viewport: { width: 1440, height: 1000 },
