@@ -80,7 +80,7 @@ Prototype review also found and corrected:
 Environment: Windows, Node 24.14.0, Playwright 1.63.0, axe-core 4.13.0.
 CI uses the repository's Node 22.23.1 pin. No dependencies were added or updated.
 The local Pages artifact is served with the `/wcx12/` prefix, not from repository
-source. Current public asset fingerprint: `5a006de2d42b`.
+source. The September 26 browser-review fingerprint was `5a006de2d42b`.
 
 | Check | Result / evidence |
 | --- | --- |
@@ -109,12 +109,30 @@ New interactions have no autonomous animation loop, remote API, persistent
 visitor data or model dependency. They redraw only on state/theme changes.
 The registration module shrank from approximately 83.7 KB to 22 KB; this is a
 module-size comparison, not a claim that total site bytes or real-user INP
-improved. Full Lighthouse before/after results remain subject to the existing
-PR performance workflow; no previous release score is reused for this change.
+improved. PR quality run `36243272846` completed the controlled 24-navigation
+Lighthouse comparison (base/current, homepage/article, mobile/desktop, three
+observations each). Performance medians and ranges were unchanged: homepage
+mobile/desktop 100 [100-100], article mobile 97 [97-97], article desktop
+100 [100-100]. Current mobile LCP medians were 1.357 s (home) and 2.115 s
+(article), with CLS 0. These are laboratory navigations, not field INP.
+The raw artifact is retained on that run; its local copy is under
+`output/playwright/topics/pr20-performance/`. No previous release score is
+reused for this change.
 
 ## Release
 
+On September 27 the user explicitly requested merging PR #20 into main.
+Main had advanced to `ab9652bee1910b4db49619f4ef00ddec834ef536` through the
+scheduled repository metadata build (successful Pages run `36265260454`).
+That source data was preserved when integrating main. Conflicts were confined
+to generated HTML resource fingerprints; the pages were rebuilt from the
+combined sources, yielding fingerprint `40ebe8b4f9c0`. The topic modules are
+unchanged from the reviewed revision. Build/validation logs for this integration
+use the `topics-merge-*` prefix in the existing command evidence directory.
+
 Use the existing PR quality and Pages workflows without changing permissions or
-approval rules. Publishing this iteration requires the user's release decision.
-Revert the eventual merge with a normal revert commit, rebuild and run the gates;
-do not rewrite history. The known-good predecessor is the base SHA above.
+approval rules. Record final CI, merge and hosted verification on PR #20.
+Rollback uses a normal revert of the eventual PR merge (`git revert -m 1
+<merge-sha>`), followed by regeneration, validation and the same Pages workflow;
+do not rewrite history. The pre-merge main revision above is the rollback
+reference, preserving the latest metadata rather than discarding it.
