@@ -65,7 +65,7 @@ jobs:
         run: |
           # Avoid repeated package-download timeouts on the runner's Azure HTTP mirror.
           # Keep Ubuntu's signed package metadata and keys unchanged.
-          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt
           npx playwright install --with-deps chromium firefox webkit
 
       - name: Verify visitor paths

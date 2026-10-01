@@ -131,6 +131,9 @@ is changed. Release is not yet claimed in this record.
 The runner's Azure HTTP Ubuntu mirror repeatedly stalled on browser dependency
 downloads. CI now uses the official Ubuntu HTTPS mirror with the same signing
 keys/verification and a bounded install timeout; no test or approval is skipped.
+The first source-file replacement did not cover the runner's `mirror+file`
+indirection. Cancelled-run logs identified `/etc/apt/apt-mirrors.txt`; the final
+setup covers both the source declaration and this mirror list.
 Release-specific final results are retained in
 [PR 21](https://github.com/wcx12/wcx12/pull/21) and the ignored
 `output/motion-20261001/release-record.md`.

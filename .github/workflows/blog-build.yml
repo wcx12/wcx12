@@ -71,7 +71,7 @@ jobs:
       - name: Install browser for release regression
         timeout-minutes: 10
         run: |
-          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt
           npx playwright install --with-deps chromium
 
       - name: Verify visitor paths before publishing
