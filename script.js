@@ -95,7 +95,6 @@ const commandClose = document.getElementById('commandClose');
 const commandInput = document.getElementById('commandInput');
 const commandList = document.getElementById('commandList');
 const commandPreview = document.getElementById('commandPreview');
-const themeTransition = document.getElementById('themeTransition');
 const readmeDrawer = document.getElementById('readmeDrawer');
 const readmeDrawerTitle = document.getElementById('readmeDrawerTitle');
 const readmeDrawerKicker = document.getElementById('readmeDrawerKicker');
@@ -824,7 +823,7 @@ function lazyFeatureStatus(viewId, message, state = 'loading') {
 function currentFeatureContext() {
   return {
     lang: currentLang,
-    reducedMotion: reducedMotionQuery.matches,
+    reducedMotion: reducedMotionQuery.matches || window.SiteMotion?.enabled() === false,
     theme: currentTheme
   };
 }
@@ -994,7 +993,7 @@ function focusViewHeading(targetView) {
 }
 
 function preferredScrollBehavior() {
-  return compactViewportQuery.matches || reducedMotionQuery.matches ? 'auto' : 'smooth';
+  return compactViewportQuery.matches || reducedMotionQuery.matches || window.SiteMotion?.enabled() === false ? 'auto' : 'smooth';
 }
 
 function activateView(viewId, options = {}) {
@@ -1470,7 +1469,7 @@ function activeInterestEntry() {
 }
 
 function renderInterestRail() {
-  interestRail.innerHTML = researchInterests.map((domain) => `
+  const html = researchInterests.map((domain) => `
     <section class="interest-domain">
       <div class="interest-domain-head">
         <strong>${escapeHtml(textFor(domain.title))}</strong>
@@ -1484,7 +1483,10 @@ function renderInterestRail() {
       `).join('')}
     </section>
   `).join('');
-
+  if (interestRail.markup === html) return;
+  const focus = interestRail.contains(document.activeElement) && document.activeElement.dataset.interest;
+  interestRail.markup = html;
+  interestRail.innerHTML = html;
   interestRail.querySelectorAll('.interest-child').forEach((link) => {
     link.addEventListener('click', (event) => {
       if (!useInteractiveResearchNavigation(event)) return;
@@ -1495,6 +1497,7 @@ function renderInterestRail() {
       updateRoute('research', 'push');
     });
   });
+  if (focus) interestRail.querySelector(`[data-interest="${CSS.escape(focus)}"]`)?.focus({ preventScroll: true });
   requestAnimationFrame(keepActiveInterestVisible);
 }
 
@@ -1618,6 +1621,8 @@ function keepActiveInterestVisible() {
   if (!document.getElementById('research')?.classList.contains('active')) return;
   const active = interestRail.querySelector('[aria-current="page"]');
   if (!active || interestRail.scrollWidth <= interestRail.clientWidth) return;
+  const focused = document.activeElement;
+  if (focused && focused !== active && interestRail.contains(focused)) return;
   const railBounds = interestRail.getBoundingClientRect();
   const activeBounds = active.getBoundingClientRect();
   const offset = activeBounds.left < railBounds.left
@@ -1948,36 +1953,19 @@ function animateGridTransition(container, previousCards = new Map()) {
 }
 
 function attachInteractiveCards(root = document) {
-  root.querySelectorAll('.interactive-card').forEach((card) => {
-    if (card.dataset.interactiveBound === 'true') return;
-    card.dataset.interactiveBound = 'true';
-    card.addEventListener('pointermove', (event) => {
-      const rect = card.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 100;
-      const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * 100;
-      card.style.setProperty('--pointer-x', `${x.toFixed(1)}%`);
-      card.style.setProperty('--pointer-y', `${y.toFixed(1)}%`);
-    }, { passive: true });
-    card.addEventListener('pointerdown', () => card.classList.add('is-pressed'));
-    card.addEventListener('pointerup', () => card.classList.remove('is-pressed'));
-    card.addEventListener('pointerleave', () => {
-      card.classList.remove('is-pressed');
-      card.style.setProperty('--pointer-x', '50%');
-      card.style.setProperty('--pointer-y', '50%');
-    });
-  });
+  window.SiteMotion?.attachCards(root);
 }
 
 function heroPreviewEntry() {
   const entries = allInterestChildren().filter(({ child }) => child.animation !== 'none');
   if (!entries.length) return null;
-  return entries.find(({ child }) => child.id === activeInterestId) || entries[Math.floor(heroPreviewTick / 420) % entries.length];
+  return entries.find(({ child }) => child.id === activeInterestId) || entries[0];
 }
 
 function renderHeroPreview() {
   const entry = heroPreviewEntry();
   if (!entry || !heroPreviewMeta) return;
-  const metrics = interestMetrics(entry.child.id);
+  heroPreviewTick = 0;
   const domainTitle = textFor(entry.domain.title);
   const childTitle = textFor(entry.child.title);
   if (heroPreviewStatus) heroPreviewStatus.textContent = i18n[currentLang].hero_preview_live;
@@ -1987,18 +1975,19 @@ function renderHeroPreview() {
       <strong>${escapeHtml(childTitle)}</strong>
     </a>
     <p>${escapeHtml(textFor(entry.child.description))}</p>
-    <div class="hero-preview-pills">
-      <span>${metrics.projects} ${i18n[currentLang].preview_projects}</span>
-      <span>${metrics.papers} ${i18n[currentLang].preview_papers}</span>
-      <span>${i18n[currentLang].hero_preview_hint}</span>
-    </div>
   `;
   heroPreviewMeta.querySelector('[data-hero-interest]')?.addEventListener('click', (event) => {
     if (!useInteractiveResearchNavigation(event)) return;
     event.preventDefault();
     jumpToResearchInterest(entry.child.id);
   });
+  window.SiteMotion?.preview({
+    id: entry.child.id, label: i18n[currentLang].aria_research_interests,
+    topics: allInterestChildren().filter(({ child }) => child.animation !== 'none').map(({ child }) => [child.id, textFor(child.title)]),
+    select(id) { activeInterestId = id; renderHeroPreview(); if (initializedViews.has('research')) renderResearchInterest(); }
+  });
   drawHeroPreviewCanvas();
+  scheduleMotionLoop();
 }
 
 const heroPreviewScenes = {
@@ -2078,6 +2067,7 @@ function fillTruncatedText(ctx, text, x, y, maxWidth) {
 }
 
 function drawHeroPreviewCanvas() {
+  if (document.querySelector('.hero-scene-ready')) return;
   if (!heroPreviewCanvas || !heroPreviewCtx) return;
   const { width, height } = heroPreviewSize;
   if (width < 2 || height < 2) return;
@@ -2231,8 +2221,10 @@ function drawHeroScenePreview(ctx, width, height, t, scene, colors, entry) {
 function renderResearchInterest() {
   updateHeroStats();
   const entry = activeInterestEntry();
+  const previousTopic = interestTitle.dataset.topic;
+  if (entry) interestTitle.dataset.topic = entry.child.id;
   if (!entry) {
-    interestRail.innerHTML = '';
+    interestRail.innerHTML = interestRail.markup = '';
     interestPath.textContent = '';
     interestTitle.textContent = '';
     interestTag.textContent = '';
@@ -2265,30 +2257,22 @@ function renderResearchInterest() {
   renderRelatedList(interestPapers, paperItems, i18n[currentLang].no_related_papers, 'paper');
   if (interestPosts) renderRelatedList(interestPosts, postItems, i18n[currentLang].no_related_writing, 'post');
   renderHeroPreview();
+  if (entry.child.id !== previousTopic) window.dispatchEvent(new CustomEvent('site:topic-change', { detail: { id: entry.child.id } }));
   if (isResearchViewActive()) researchCanvasFeature?.render();
-}
-
-function runThemeTransition(source = themeSelect) {
-  if (!themeTransition || reducedMotionQuery.matches) return;
-  const rect = source?.getBoundingClientRect?.();
-  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-  const y = rect ? rect.top + rect.height / 2 : 24;
-  themeTransition.style.setProperty('--theme-x', `${x}px`);
-  themeTransition.style.setProperty('--theme-y', `${y}px`);
-  themeTransition.classList.remove('run');
-  void themeTransition.offsetWidth;
-  themeTransition.classList.add('run');
 }
 
 function applyTheme(theme, options = {}) {
   const { animate = true, source = themeSelect } = options;
+  if (animate && window.SiteMotion?.transitionTheme) {
+    window.SiteMotion.transitionTheme(() => applyTheme(theme, { ...options, animate: false }), source);
+    return;
+  }
   currentTheme = ['neon', 'warm', 'mono'].includes(theme) ? theme : 'neon';
   document.documentElement.dataset.theme = currentTheme;
   themeColorCache.clear();
   themeSelect.value = currentTheme;
   writeStorage('wcx12-theme', currentTheme);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor('--bg'));
-  if (animate) runThemeTransition(source);
   if (initializedViews.has('projects')) {
     if (filteredRepos.length) renderRepos(filteredRepos, true);
     else if (isProjectsViewActive()) repoMapFeature?.render();
@@ -3792,21 +3776,24 @@ function resizeCanvas() {
 }
 
 function hasVisibleMotionTarget() {
-  if (heroPreviewVisible) return true;
+  if (heroPreviewVisible && heroPreviewTick < 24 && !document.querySelector('.hero-scene-ready')) return true;
   if (isResearchViewActive()) return Boolean(researchCanvasFeature?.isVisible());
   if (isProjectsViewActive()) return Boolean(repoMapFeature?.isVisible());
-  return true;
+  return false;
 }
 
 function shouldRunMotion() {
   return !reducedMotionQuery.matches
+    && (window.SiteMotion?.enabled() ?? true)
     && document.visibilityState !== 'hidden'
     && hasVisibleMotionTarget();
 }
 
 function shouldAnimateHeroPreview(timestamp) {
   return shouldRunMotion()
+    && !document.querySelector('.hero-scene-ready')
     && heroPreviewVisible
+    && heroPreviewTick < 24
     && timestamp - lastHeroPreviewFrame >= HERO_PREVIEW_FRAME_SKIP * 16;
 }
 
@@ -3933,3 +3920,8 @@ window.addEventListener('resize', () => {
 });
 resizeCanvas();
 scheduleMotionLoop({ immediate: true });
+window.addEventListener('site:motion-change', () => {
+  researchCanvasFeature?.contextChanged();
+  repoMapFeature?.contextChanged();
+  scheduleMotionLoop({ immediate: true });
+});

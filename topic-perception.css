@@ -95,6 +95,15 @@
 .topic-vpr .vp-stage { display: grid; gap: 12px; }
 .topic-vpr .vp-picture { display: block; position: relative; aspect-ratio: 40 / 23; overflow: hidden; background: var(--soft-bg, #202b30); }
 .topic-vpr .vp-picture canvas { width: 100%; height: 100%; }
+.topic-vpr .vp-picture .vp-wipe { position: absolute; inset: 0; pointer-events: none; }
+.topic-vpr .vp-observation { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.topic-vpr .vp-observation legend { font-size: 12px; color: var(--muted, #b4c1c7); padding-bottom: 5px; }
+.topic-vpr .vp-daylight { display: flex; }
+.topic-vpr .vp-daylight button { border-radius: 0; font-size: 12px; }
+.topic-vpr .vp-daylight button + button { border-left: 0; }
+.topic-vpr .vp-daylight [aria-pressed="true"] { color: var(--cyan, #75dcc8); box-shadow: inset 0 -3px currentColor; }
+.topic-vpr .vp-observation select { min-height: 44px; max-width: 100%; padding: 8px; border: 1px solid var(--line, #607078); border-radius: 4px; color: var(--text, #eef3f3); background: var(--field-bg, #121a1e); font: inherit; font-size: 12px; }
+.topic-vpr .vp-observation select:focus-visible { outline: 3px solid var(--pink, #f2b8bf); outline-offset: 3px; }
 .topic-vpr figcaption { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: space-between; padding: 8px 0 0; }
 .topic-vpr figcaption span { font-size: 12px; color: var(--muted, #b4c1c7); }
 .topic-vpr .vp-choices { margin-top: 0; }
@@ -112,6 +121,9 @@
   pointer-events: none;
 }
 .topic-vpr .vp-region.is-active { border-style: solid; border-color: var(--cyan, #75dcc8); }
+.topic-vpr .vp-region[data-match="true"] { border-color: var(--cyan, #75dcc8); }
+.topic-vpr .vp-region[data-match="false"] { border-color: var(--pink, #f2b8bf); border-style: dashed; }
+.topic-vpr .vp-region[data-match="false"].is-active .vp-pin { background: var(--pink, #f2b8bf); }
 .topic-vpr .vp-pin {
   position: absolute;
   display: grid;
@@ -200,6 +212,11 @@
 .topic-medical .med-inspection-heading { padding-bottom: 8px; }
 .topic-medical .med-lightbox { position: relative; width: 100%; aspect-ratio: 1; padding: 8px; background: var(--soft-bg, #202b30); border: 1px solid var(--line, #607078); }
 .topic-medical .med-lightbox canvas { width: 100%; height: 100%; aspect-ratio: 1; border-radius: 50%; }
+.topic-medical .med-lightbox .med-lens { position: absolute; width: 48%; height: auto; aspect-ratio: 1; transform: translate(-50%, -50%); border: 3px solid var(--cyan, #75dcc8); box-shadow: 0 3px 12px #0006; pointer-events: none; }
+.topic-medical .med-lens[hidden] { display: none; }
+.topic-medical .med-lightbox .med-magnify { position: absolute; right: 4px; top: 4px; width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 14px; }
+.topic-medical .med-magnify[aria-pressed="true"] { color: var(--cyan, #75dcc8); border-color: currentColor; }
+.topic-medical .med-sample-image { transform-origin: top left; }
 .topic-medical .med-lightbox figcaption { position: absolute; left: 8px; right: 8px; bottom: 7px; margin: 0 auto; width: fit-content; max-width: calc(100% - 16px); padding: 3px 7px; border: 1px solid var(--line, #607078); color: var(--text, #eef3f3); background: var(--field-bg, #121a1e); font-size: 11px; text-align: center; }
 .topic-medical .med-labels { margin-top: 12px; }
 .topic-medical .med-labels > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }

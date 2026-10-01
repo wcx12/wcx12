@@ -152,7 +152,7 @@ test('small blog lists one result per article and language switches to its trans
   await page.locator('#blogLangToggle').click();
   expect(await english.count()).toBe(3);
   await expect(page.locator('#blogSearch')).toHaveCount(0);
-  await page.locator('[data-post-card]:visible').filter({ hasText: '写作系统' }).click();
+  await page.locator('[data-post-card]:visible').filter({ hasText: '写作系统' }).locator('h3 a').click();
   await expect(page).toHaveURL(/building-a-research-writing-system-zh/);
   await menu(page);
   await page.locator('#blogLangLink').click();

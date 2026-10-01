@@ -5272,9 +5272,13 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 
   .blog-stat-grid,
-  .blog-post-layout,
   .blog-prev-next {
     grid-template-columns: 1fr;
+  }
+
+  /* A single article needs no intrinsic grid-track sizing on narrow screens. */
+  .blog-post-layout {
+    display: block;
   }
 
   .blog-toc {
@@ -6041,4 +6045,278 @@ html[data-ui-lang="zh"] .blog-hero h1 {
     outline: 3px solid Highlight !important;
     outline-offset: 3px !important;
   }
+}
+
+/* Article motion is an enhancement: original prose, media and links remain visible. */
+.blog-cover,
+.blog-cover-slot {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  aspect-ratio: 640 / 264;
+  overflow: hidden;
+  background: var(--bg);
+  border-block: 1px solid var(--line);
+}
+
+.blog-cover canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.blog-post-header > .blog-cover,
+.blog-post-header > .blog-cover-slot {
+  margin-top: 24px;
+}
+
+.blog-card:has(> :is(.blog-cover, .blog-cover-slot)[data-cover-kind]),
+.blog-illustrated-card {
+  align-content: start;
+  grid-template-rows: auto auto auto 1fr auto;
+  min-width: 0;
+}
+
+.blog-illustrated-card:hover,
+.blog-illustrated-card:focus-within {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--cyan);
+}
+
+.blog-card-title-link {
+  color: inherit;
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+
+.blog-card-title-link:hover {
+  text-decoration: underline;
+}
+
+.blog-motion-button {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: 500 23px/1 var(--blog-font-ui);
+  cursor: pointer;
+  touch-action: manipulation;
+  letter-spacing: 0;
+}
+
+.blog-motion-button:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.blog-motion-button > svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  pointer-events: none;
+}
+
+.blog-motion-button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.blog-motion-button:focus-visible,
+.blog-card-title-link:focus-visible,
+.blog-figure-dialog-viewport:focus-visible {
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
+}
+
+.blog-motion-button::after {
+  content: attr(aria-label);
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max-content;
+  max-width: 180px;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: 600 12px/1.4 var(--blog-font-ui);
+  text-align: start;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.blog-motion-button:is(:hover, :focus-visible)::after { opacity: 1; }
+.blog-stage-controls > .blog-motion-button::after { right: auto; left: 0; }
+
+.blog-cover-replay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.blog-stage-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 18px;
+  padding-block: 10px;
+  border-block: 1px solid var(--line);
+}
+
+.blog-stage-status {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 2.8em;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  font: 600 13px/1.4 var(--blog-font-ui);
+  overflow-wrap: anywhere;
+}
+
+.blog-stage-active > .tiger-flow-card {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+:root[data-blog-motion="on"] .tiger-flow-card {
+  transition: outline-color 180ms ease, background-color 180ms ease;
+}
+
+.blog-figure-actions,
+.blog-image-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-block: 8px;
+}
+
+.blog-figure-dialog {
+  width: min(1200px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.blog-figure-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-figure-dialog::backdrop {
+  background: rgb(0 0 0 / 76%);
+}
+
+.blog-figure-dialog-toolbar {
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.blog-figure-dialog-toolbar h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: 650 16px/1.4 var(--blog-font-ui);
+  overflow-wrap: anywhere;
+}
+
+.blog-figure-dialog-viewport {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+  scrollbar-gutter: stable;
+}
+
+.blog-figure-dialog-viewport > img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 210px);
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.blog-figure-dialog-viewport > figure {
+  margin: 0;
+}
+
+.blog-figure-dialog[data-size="actual"] .blog-figure-dialog-viewport > img {
+  max-width: none;
+  max-height: none;
+}
+
+.blog-figure-dialog[data-size="actual"] .blog-figure-dialog-viewport > figure {
+  min-width: 960px;
+}
+
+.blog-figure-dialog-caption {
+  flex: 0 1 auto;
+  margin: 0;
+  max-height: 24dvh;
+  overflow: auto;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 400 13px/1.6 var(--blog-font-ui);
+}
+
+.code-copy[data-copy-state="success"] {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+:root[data-blog-motion="off"] .blog-illustrated-card,
+:root[data-blog-motion="off"] .tiger-flow-card {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-illustrated-card,
+  :root[data-blog-motion] .tiger-flow-card { transition: none; }
+}
+
+@media (max-width: 560px) {
+  .blog-figure-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); }
+  .blog-figure-dialog-toolbar { padding: 8px; }
+  .blog-figure-dialog-viewport { padding: 10px; }
+  .blog-stage-status { flex-basis: 100%; }
+}
+
+@media print {
+  .blog-cover,
+  .blog-cover-slot,
+  .blog-stage-controls,
+  .blog-figure-actions,
+  .blog-image-actions,
+  .blog-figure-dialog { display: none !important; }
+  .blog-stage-active > .tiger-flow-card { outline: none; }
 }

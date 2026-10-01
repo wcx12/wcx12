@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import { renderSiteHeader } from './site-navigation.mjs';
+import { build as bundle } from 'esbuild';
 import { notesStudioBody } from './notes-studio-shell.mjs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
@@ -1698,11 +1699,17 @@ function hintHtml(key) {
   return `<details class="blog-hint"><summary aria-label="${escapeHtml(blogText.hint_summary)}" title="${escapeHtml(blogText.hint_summary)}" data-blog-i18n-title="hint_summary" data-blog-i18n-aria="hint_summary"><span class="blog-hint-label" data-blog-i18n="hint_summary">${escapeHtml(blogText.hint_summary)}</span><span class="blog-hint-icon" aria-hidden="true">i</span></summary><p data-blog-i18n="${key}">${escapeHtml(blogText[key])}</p></details>`;
 }
 
+function blogCoverSlot(post) {
+  const kind = post.slug.startsWith('tiger-') ? 'semantic' : post.slug.startsWith('building-a-research-writing-system') ? 'writing' : '';
+  return kind ? `<div class="blog-cover-slot" data-cover-kind="${kind}" aria-hidden="true"></div>` : '';
+}
+
 export function cardHtml(ctx, post, { visible = true, original = false, featured = false } = {}) {
   const tags = post.tags.slice(0, 4).map((tag) => `<span class="blog-tag">${escapeHtml(tag)}</span>`).join('');
   const lang = String(post.lang || SITE.lang).slice(0, 2);
   return `
     <a class="blog-card" href="${postHref(ctx, post)}" lang="${escapeHtml(post.lang || SITE.lang)}" data-post-card data-post-group="${escapeHtml(postTranslationKey(post))}" data-post-lang="${escapeHtml(lang)}"${visible ? '' : ' hidden'}>
+      ${blogCoverSlot(post)}
       <div class="blog-card-meta">
         <span data-blog-date="${escapeHtml(post.date)}">${escapeHtml(formatDate(post.date))}</span>
         <span>${escapeHtml(post.category)}</span>
@@ -1897,6 +1904,7 @@ function renderShell({
   <meta name="robots" content="${escapeHtml(robots)}" />
   <meta name="theme-color" content="#101416" />
   <meta name="color-scheme" content="dark" />
+  <style>@view-transition { navigation: auto; }</style>
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
 ${languageAlternates}
   <link rel="icon" type="image/svg+xml" href="${ctx.link('favicon.svg')}" />
@@ -1924,6 +1932,7 @@ ${articleMetadata ? `${articleMetadata}\n` : ''}  <meta name="twitter:card" cont
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'content.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'blog/assets/blog.css')}" />
   <link rel="stylesheet" href="${versionedAssetLink(ctx, 'site-nav.css')}" />
+  <link rel="stylesheet" href="${versionedAssetLink(ctx, 'site-motion.css')}" />
 ${extraHead.trim()}
   <noscript><style>#blogLangToggle,#blogThemeSelect,.code-copy,#blogProgress{display:none!important}</style></noscript>
   <script type="application/ld+json">${safeMetadata}</script>
@@ -1946,6 +1955,7 @@ ${body.trim()}
   </footer>
 ${extraScripts.trim()}
   <script type="module" src="${versionedAssetLink(ctx, 'blog/assets/blog.js')}"></script>
+  <script type="module" src="${versionedAssetLink(ctx, 'site-motion.js')}"></script>
 </body>
 </html>
 `;
@@ -2284,6 +2294,14 @@ function referencedKatexFonts(css, katexDistDir) {
 }
 
 async function copyAssets() {
+  const threeDir = path.join(rootDir, 'assets/vendor/three');
+  await fs.mkdir(threeDir, { recursive: true });
+  await bundle({
+    stdin: { contents: 'export { WebGLRenderer, SRGBColorSpace, Scene, PerspectiveCamera, Group, BufferGeometry, BufferAttribute, ShaderMaterial, Color, Vector2, Points, LineSegments, Float32BufferAttribute, LineBasicMaterial } from "three";', resolveDir: rootDir },
+    bundle: true, minify: true, format: 'esm', target: 'es2022', legalComments: 'inline',
+    outfile: path.join(threeDir, 'three.module.min.js')
+  });
+  await fs.copyFile(path.join(rootDir, 'node_modules/three/LICENSE'), path.join(threeDir, 'LICENSE'));
   await fs.mkdir(outputAssetsDir, { recursive: true });
   const entries = await fs.readdir(sourceAssetsDir, { withFileTypes: true });
   for (const entry of entries) {
@@ -2330,6 +2348,15 @@ async function computeAssetVersion(posts) {
     'content.css',
     'styles.css',
     'site-nav.css',
+    'site-motion.css',
+    'site-motion.js',
+    'featured-posters.css',
+    'featured-posters.js',
+    'hero-scene.css',
+    'hero-scene.js',
+    'node_modules/three/build/three.core.js',
+    'node_modules/three/build/three.module.js',
+    'node_modules/esbuild/package.json',
     'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',
@@ -2405,6 +2432,10 @@ async function stampHomepageAssets() {
   for (const { pattern, replacement } of replacements) {
     if (!pattern.test(stamped)) throw new Error(`Unable to stamp homepage asset using ${pattern}.`);
     stamped = stamped.replace(pattern, replacement);
+  }
+  for (const name of ['site-motion.css', 'featured-posters.css', 'hero-scene.css', 'site-motion.js']) {
+    const escaped = name.replaceAll('.', '\\.');
+    stamped = stamped.replace(new RegExp(`((?:href|src)="${escaped})(?:\\?v=[a-f0-9]{12})?(")`, 'g'), `$1?v=${assetVersion}$2`);
   }
   stamped = replaceRequired(stamped, /<header class="topbar(?: site-header)?">[\s\S]*?<\/header>/, renderSiteHeader({
     homepage: true,
@@ -2544,6 +2575,10 @@ async function renderChineseHomepage() {
     ['src="theme-init.js', 'src="../theme-init.js', 'Chinese theme bootstrap path'],
     ['href="styles.css', 'href="../styles.css', 'Chinese stylesheet path'],
     ['href="site-nav.css', 'href="../site-nav.css', 'Chinese navigation stylesheet path'],
+    ['href="site-motion.css', 'href="../site-motion.css', 'Chinese shared motion stylesheet path'],
+    ['href="featured-posters.css', 'href="../featured-posters.css', 'Chinese poster stylesheet path'],
+    ['href="hero-scene.css', 'href="../hero-scene.css', 'Chinese spatial hero stylesheet path'],
+    ['src="site-motion.js', 'src="../site-motion.js', 'Chinese shared motion module path'],
     ['href="site-tokens.css', 'href="../site-tokens.css', 'Chinese shared tokens path'],
     ['src="homepage-bootstrap.js', 'src="../homepage-bootstrap.js', 'Chinese bootstrap path']
   ]) {
@@ -2725,6 +2760,7 @@ ${preview ? `        <div class="blog-preview-banner" role="status">${post.publi
           ${hintHtml('hint_post')}
           <div class="blog-tag-row">${tagRow}</div>
 ${alternatePost ? '' : originalLanguageHtml(post.lang)}
+          ${blogCoverSlot(post)}
         </header>
         <details class="blog-toc blog-toc-mobile">
           <summary data-blog-i18n="toc_title">Contents</summary>
@@ -2784,6 +2820,12 @@ async function renderDraftPreviews(posts, renderer) {
     'content.css',
     'styles.css',
     'site-nav.css',
+    'site-motion.css',
+    'site-motion.js',
+    'featured-posters.css',
+    'featured-posters.js',
+    'hero-scene.css',
+    'hero-scene.js',
     'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',

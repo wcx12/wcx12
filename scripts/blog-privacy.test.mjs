@@ -41,6 +41,8 @@ const fixtureFiles = [
   'profile-data.js', 'index.html', 'repo-map.js', 'research-canvas.js', 'topic-experiences.js', 'topic-perception.js', 'topic-perception.css', 'topic-workbench.js', 'topic-workbench.css',
   'research-config.json', 'robots.txt', 'rss.xml', 'script.js', 'site-data.js', 'sitemap.xml',
   'styles.css', 'site-nav.css', 'theme-init.js', 'scripts/portfolio-ranking.js',
+  'site-motion.css', 'site-motion.js', 'featured-posters.css', 'featured-posters.js',
+  'hero-scene.css', 'hero-scene.js',
   'scripts/research-config-schema.js', 'assets/public.svg', 'projects/index.html',
   'publications/index.html', 'research/index.html', 'resume/index.html', 'zh/index.html',
   'blog/index.html', 'blog/posts/public-note/index.html', 'blog/assets/blog.js'

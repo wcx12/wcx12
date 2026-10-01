@@ -11,6 +11,7 @@ const COPY = freeze({
   en: {
     vpr: 'Street match', medical: 'Annotation desk', reset: 'Reset', next: 'Next place',
     reference: 'Reference', choices: 'Same place?', day: 'Day', night: 'Night',
+    observation: 'Observation', viewpoint: 'Viewpoint', magnify: 'Magnify specimen',
     front: 'Street level', left: 'From the left', right: 'From the right',
     same: 'Same place', different: 'Lookalike, different place', pending: 'No place selected',
     clock: 'Clock', entry: 'Entrance', canopy: 'Awning', round: 'Round clock',
@@ -35,6 +36,7 @@ const COPY = freeze({
     medDisclaimer: 'Synthetic specimens and votes. No trained-model or clinical results.'
   },
   zh: {
+    observation: '\u89c2\u5bdf\u89c6\u56fe', viewpoint: '\u89c6\u89d2', magnify: '\u653e\u5927\u6837\u672c',
     vpr: '\u8857\u666f\u914d\u5bf9', medical: '\u6807\u6ce8\u5de5\u4f5c\u53f0', reset: '\u91cd\u7f6e', next: '\u4e0b\u4e00\u5730\u70b9',
     reference: '\u53c2\u8003\u8857\u666f', choices: '\u54ea\u5f20\u662f\u540c\u4e00\u5730\u70b9\uff1f', day: '\u767d\u5929', night: '\u591c\u665a',
     front: '\u6b63\u9762\u89c6\u89d2', left: '\u5de6\u4fa7\u89c6\u89d2', right: '\u53f3\u4fa7\u89c6\u89d2',
@@ -309,6 +311,32 @@ function drawStreet(canvas, features, view, palette) {
   }
 }
 
+export function paintPlacePreview(canvas, { night = false, highlight = false } = {}) {
+  const ctx = canvas?.getContext('2d');
+  if (!ctx) return;
+  const round = VPR_ROUNDS[0];
+  const view = { ...round.view, time: night ? 'night' : 'day' };
+  ctx.save();
+  try {
+    ctx.scale(canvas.width / 800, canvas.height / 460);
+    drawStreet(canvas, round.reference, view, round.palette);
+    if (highlight) {
+      for (const key of VPR_LANDMARKS) {
+        const box = landmarkBounds(key, view.angle);
+        const bounds = [box.x * 8, box.y * 4.6, box.width * 8, box.height * 4.6];
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#213a3e';
+        ctx.strokeRect(...bounds);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#c8ffdf';
+        ctx.strokeRect(...bounds);
+      }
+    }
+  } finally {
+    ctx.restore();
+  }
+}
+
 function seeded(seed) {
   let value = seed >>> 0;
   return () => { value = (Math.imul(1664525, value) + 1013904223) >>> 0; return value / 4294967296; };
@@ -387,6 +415,63 @@ function disclaimer(type, locale) {
   return `<p class="tp-disclaimer">${COPY[locale][key]}</p>`;
 }
 
+// Each lazy entry owns a finite animation lifecycle; the shared runtime is optional.
+function createTopicMotion(surface) {
+  const doc = surface.ownerDocument;
+  const view = doc.defaultView;
+  const media = view?.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const running = new Set();
+  let destroyed = false;
+  let intersecting = true;
+  const visible = node => {
+    if (!node?.isConnected || node.closest('[hidden]')) return false;
+    const box = node.getBoundingClientRect();
+    const frame = surface.closest('.topic-experiences')?.getBoundingClientRect();
+    return box.width > 0 && box.height > 0 && box.bottom > Math.max(0, frame?.top ?? 0)
+      && box.top < Math.min(view.innerHeight, frame?.bottom ?? view.innerHeight)
+      && box.right > 0 && box.left < view.innerWidth;
+  };
+  const allowed = (node = surface) => !destroyed && intersecting && !doc.hidden
+    && !media?.matches && (view?.SiteMotion?.enabled?.() ?? true) && visible(node);
+  const settle = record => {
+    if (!running.delete(record)) return;
+    record.animation.cancel();
+    record.cleanup?.();
+  };
+  const cancel = () => [...running].forEach(settle);
+  const observer = view?.IntersectionObserver ? new view.IntersectionObserver(entries => {
+    intersecting = entries[0].isIntersecting;
+    if (!intersecting) cancel();
+  }) : null;
+  observer?.observe(surface);
+  doc.addEventListener('visibilitychange', cancel);
+  doc.addEventListener('scroll', cancel, true);
+  view?.addEventListener('site:motion-change', cancel);
+  view?.addEventListener('resize', cancel);
+  media?.addEventListener?.('change', cancel);
+  return {
+    allowed, cancel,
+    play(node, frames, options = {}, cleanup) {
+      if (!allowed(node) || typeof node.animate !== 'function') { cleanup?.(); return null; }
+      const animation = node.animate(frames, { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both', ...options, iterations: 1 });
+      const record = { animation, cleanup };
+      running.add(record);
+      animation.onfinish = animation.oncancel = () => settle(record);
+      return animation;
+    },
+    destroy() {
+      destroyed = true;
+      cancel();
+      observer?.disconnect();
+      doc.removeEventListener('visibilitychange', cancel);
+      doc.removeEventListener('scroll', cancel, true);
+      view?.removeEventListener('site:motion-change', cancel);
+      view?.removeEventListener('resize', cancel);
+      media?.removeEventListener?.('change', cancel);
+    }
+  };
+}
+
 function createMount(root, className, lang) {
   if (!root?.ownerDocument || typeof root.replaceChildren !== 'function') throw new TypeError('A DOM root is required');
   const doc = root.ownerDocument;
@@ -401,12 +486,14 @@ function createMount(root, className, lang) {
   live.setAttribute('aria-atomic', 'true');
   shell.append(content, live);
   root.replaceChildren(shell);
+  const motion = createTopicMotion(shell);
   let destroyed = false;
   return {
-    shell, content,
+    shell, content, motion,
     get destroyed() { return destroyed; },
     render(html, paint) {
       if (destroyed) return;
+      motion.cancel();
       const active = shell.contains(doc.activeElement) ? doc.activeElement.dataset.control : null;
       content.innerHTML = html;
       paint?.();
@@ -416,7 +503,7 @@ function createMount(root, className, lang) {
       }
     },
     announce(text) { if (!destroyed) live.textContent = text; },
-    destroy() { destroyed = true; shell.remove(); }
+    destroy() { destroyed = true; motion.destroy(); shell.remove(); }
   };
 }
 
@@ -424,10 +511,10 @@ function streetDescription(features, view, t) {
   return `${t[view.time]}, ${t[view.angle]}. ${VPR_LANDMARKS.map(key => t[features[key]]).join('; ')}.`;
 }
 
-function markers(view, active) {
+function markers(view, active, result) {
   return VPR_LANDMARKS.map((key, index) => {
     const box = landmarkBounds(key, view.angle);
-    return `<span class="vp-region${active === key ? ' is-active' : ''}" style="left:${box.x}%;top:${box.y}%;width:${box.width}%;height:${box.height}%" aria-hidden="true"><span class="vp-pin">${index + 1}</span></span>`;
+    return `<span class="vp-region${active === key ? ' is-active' : ''}" data-landmark="${key}" data-match="${result.landmarks[index].matches}" style="left:${box.x}%;top:${box.y}%;width:${box.width}%;height:${box.height}%" aria-hidden="true"><span class="vp-pin">${index + 1}</span></span>`;
   }).join('');
 }
 
@@ -436,6 +523,7 @@ export function mountVpr(root, { lang = 'en' } = {}) {
   let roundIndex = 0;
   let selected = null;
   let activeLandmark = 'clock';
+  let observation = null;
   const mount = createMount(root, 'topic-vpr', locale);
 
   function render() {
@@ -443,8 +531,8 @@ export function mountVpr(root, { lang = 'en' } = {}) {
     const round = VPR_ROUNDS[roundIndex];
     const choice = round.candidates.find(item => item.id === selected);
     const result = choice ? evaluatePlaceChoice(round.id, selected) : null;
-    const reference = `<figure class="vp-reference"><div class="vp-picture"><canvas width="800" height="460" data-street="reference" role="img" aria-label="${streetDescription(round.reference, round.view, t)}"></canvas>${choice ? markers(round.view, activeLandmark) : ''}</div><figcaption><strong>${t.reference}</strong><span>${t[round.view.time]} / ${t[round.view.angle]}</span></figcaption></figure>`;
-    const comparison = choice ? `<figure class="vp-comparison"><div class="vp-picture"><canvas width="800" height="460" data-street="comparison" role="img" aria-label="${streetDescription(choice, choice, t)}"></canvas>${markers(choice, activeLandmark)}</div><figcaption><strong>${t.candidate} ${selected}</strong><span>${t[choice.time]} / ${t[choice.angle]}</span></figcaption></figure>` : '';
+    const reference = `<figure class="vp-reference"><div class="vp-picture"><canvas width="800" height="460" data-street="reference" role="img" aria-label="${streetDescription(round.reference, round.view, t)}"></canvas>${choice ? markers(round.view, activeLandmark, result) : ''}</div><figcaption><strong>${t.reference}</strong><span>${t[round.view.time]} / ${t[round.view.angle]}</span></figcaption></figure>`;
+    const comparison = choice ? `<figure class="vp-comparison"><div class="vp-picture"><canvas width="800" height="460" data-street="comparison" role="img" aria-label="${streetDescription(choice, observation, t)}"></canvas>${markers(observation, activeLandmark, result)}</div><figcaption><strong>${t.candidate} ${selected}</strong><span>${t[observation.time]} / ${t[observation.angle]}</span></figcaption></figure>` : '';
     mount.shell.lang = locale;
     mount.shell.setAttribute('aria-label', t.vpr);
     mount.render(`
@@ -453,15 +541,44 @@ export function mountVpr(root, { lang = 'en' } = {}) {
       <div class="vp-stage${choice ? ' has-selection' : ''}"><div class="vp-views${choice ? ' is-paired' : ''}">${reference}${comparison}</div>
       <fieldset class="vp-choices"><legend>${t.choices}</legend><div class="vp-contact-sheet">${round.candidates.map(item => `<button type="button" class="vp-choice" data-action="choose" data-id="${item.id}" data-control="choose-${item.id}" aria-pressed="${selected === item.id}"><span class="vp-picture"><canvas width="800" height="460" data-street="${item.id}" role="img" aria-label="${streetDescription(item, item, t)}"></canvas></span><span class="vp-choice-caption"><strong>${item.id}</strong><span>${t[item.time]} / ${t[item.angle]}</span></span></button>`).join('')}</div></fieldset>
       </div>
+      ${choice ? `<fieldset class="vp-observation"><legend>${t.observation}</legend><div class="vp-daylight">${['day', 'night'].map(time => `<button type="button" data-action="time" data-id="${time}" data-control="time-${time}" aria-pressed="${observation.time === time}">${t[time]}</button>`).join('')}</div><select data-control="viewpoint" aria-label="${t.viewpoint}">${['front', 'left', 'right'].map(angle => `<option value="${angle}"${angle === observation.angle ? ' selected' : ''}>${t[angle]}</option>`).join('')}</select></fieldset>` : ''}
       <div class="vp-result${result ? (result.samePlace ? ' is-match' : ' is-different') : ''}" data-result="${result ? (result.samePlace ? 'same' : 'different') : 'pending'}"><strong>${result ? `${selected} / ${result.samePlace ? t.same : t.different}` : t.pending}</strong><button type="button" data-action="next" data-control="next">${t.next}</button></div>
       ${result ? `<section class="vp-evidence" aria-label="${t.landmarks}"><h4>${t.landmarks}</h4><div class="vp-evidence-head" aria-hidden="true"><span></span><span>${t.reference}</span><span>${t.candidate} ${selected}</span></div>${result.landmarks.map((item, index) => `<button type="button" class="vp-landmark" data-action="landmark" data-id="${item.key}" data-control="landmark-${item.key}" aria-pressed="${activeLandmark === item.key}" aria-label="${index + 1}. ${t[item.key]}. ${t.reference}: ${t[item.reference]}. ${t.candidate} ${selected}: ${t[item.candidate]}. ${item.matches ? t.match : t.differs}"><span class="vp-landmark-name"><b>${index + 1}</b>${t[item.key]}</span><span>${t[item.reference]}</span><span>${t[item.candidate]}<small class="${item.matches ? '' : 'is-different'}">${item.matches ? '= ' + t.match : '\u2260 ' + t.differs}</small></span></button>`).join('')}</section>` : ''}
     `, () => {
       mount.content.querySelectorAll('[data-street]').forEach(canvas => {
         const id = canvas.dataset.street;
         const features = id === 'reference' ? round.reference : id === 'comparison' ? choice : round.candidates.find(item => item.id === id);
-        const view = id === 'reference' ? round.view : features;
+        const view = id === 'reference' ? round.view : id === 'comparison' ? observation : features;
         drawStreet(canvas, features, view, round.palette);
       });
+    });
+  }
+
+  function snapshot() {
+    mount.motion.cancel();
+    if (!mount.motion.allowed()) return null;
+    const source = mount.content.querySelector('[data-street="comparison"]') || mount.content.querySelector('[data-street="reference"]');
+    const canvas = root.ownerDocument.createElement('canvas');
+    canvas.width = source.width;
+    canvas.height = source.height;
+    canvas.getContext('2d')?.drawImage(source, 0, 0);
+    canvas.className = 'vp-wipe';
+    canvas.setAttribute('aria-hidden', 'true');
+    return canvas;
+  }
+
+  function reveal(previous, compare = true) {
+    const picture = mount.content.querySelector(compare ? '.vp-comparison .vp-picture' : '.vp-reference .vp-picture');
+    if (previous && picture) {
+      picture.append(previous);
+      mount.motion.play(previous, [{ clipPath: 'inset(0 0 0 0)' }, { clipPath: 'inset(0 0 0 100%)' }], { duration: 360 }, () => previous.remove());
+    }
+    mount.content.querySelectorAll('.vp-region').forEach((region, index) => {
+      const matches = region.dataset.match === 'true';
+      mount.motion.play(region, matches
+        ? [{ opacity: 0.25, transform: 'scale(1.3)' }, { opacity: 1, transform: 'scale(1)' }]
+        : [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)', offset: 0.35 }, { transform: 'translateX(3px)', offset: 0.65 }, { transform: 'translateX(0)' }],
+      { duration: 420, delay: (index % 3) * 65 });
     });
   }
 
@@ -470,30 +587,53 @@ export function mountVpr(root, { lang = 'en' } = {}) {
     if (!button || !mount.shell.contains(button) || mount.destroyed) return;
     const t = COPY[locale];
     if (button.dataset.action === 'choose') {
+      const previous = snapshot();
       selected = button.dataset.id;
+      const candidate = VPR_ROUNDS[roundIndex].candidates.find(item => item.id === selected);
+      observation = { time: candidate.time, angle: candidate.angle };
       const result = evaluatePlaceChoice(VPR_ROUNDS[roundIndex].id, selected);
       activeLandmark = result.landmarks.find(item => !item.matches)?.key || 'clock';
       render();
+      reveal(previous);
       mount.announce(`${selected}: ${result.samePlace ? t.same : t.different}. ${result.landmarks.map(item => `${t[item.key]}: ${item.matches ? t.match : t.differs}`).join('. ')}.`);
     } else if (button.dataset.action === 'landmark') {
       activeLandmark = button.dataset.id;
       render();
-    } else {
+      mount.content.querySelectorAll('.vp-region.is-active').forEach(region => mount.motion.play(region,
+        [{ transform: 'scale(1.3)', opacity: 0.4 }, { transform: 'scale(1)', opacity: 1 }], { duration: 330 }));
+    } else if (button.dataset.action === 'time') {
+      if (observation.time === button.dataset.id) return;
+      const previous = snapshot();
+      observation.time = button.dataset.id;
+      render();
+      reveal(previous);
+    } else if (['next', 'reset'].includes(button.dataset.action)) {
+      const previous = snapshot();
       roundIndex = button.dataset.action === 'next' ? (roundIndex + 1) % VPR_ROUNDS.length : 0;
       selected = null;
+      observation = null;
       activeLandmark = 'clock';
       render();
+      reveal(previous, false);
       mount.announce(`${t.roundLabel} ${roundIndex + 1}. ${t.pending}.`);
     }
   }
+  function onChange(event) {
+    if (event.target.dataset.control !== 'viewpoint' || !observation || mount.destroyed) return;
+    const previous = snapshot();
+    observation.angle = event.target.value;
+    render();
+    reveal(previous);
+  }
   mount.shell.addEventListener('click', onClick);
+  mount.shell.addEventListener('change', onChange);
   render();
   return {
     setLanguage(nextLang) {
       const nextLocale = language(nextLang);
       if (!mount.destroyed && nextLocale !== locale) { locale = nextLocale; mount.announce(''); render(); }
     },
-    destroy() { mount.shell.removeEventListener('click', onClick); mount.destroy(); }
+    destroy() { mount.shell.removeEventListener('click', onClick); mount.shell.removeEventListener('change', onChange); mount.destroy(); }
   };
 }
 
@@ -502,6 +642,8 @@ export function mountMedical(root, { lang = 'en' } = {}) {
   let state = createAnnotationState();
   let selected = 'S03';
   let filter = 'all';
+  let magnified = false;
+  let lensPoint = { x: 0.5, y: 0.5 };
   const mount = createMount(root, 'topic-medical', locale);
 
   function render() {
@@ -527,7 +669,7 @@ export function mountMedical(root, { lang = 'en' } = {}) {
       ${disclaimer('medical', locale)}
       <div class="med-budget"><div><strong>${t.budget}</strong><span data-budget>${remaining} / ${state.budget} ${t.remaining}</span></div><div class="med-tickets" aria-hidden="true">${Array.from({ length: state.budget }, (_, index) => `<span class="${index < used ? 'is-used' : ''}">${index + 1}</span>`).join('')}</div><button type="button" class="med-query" data-action="query" data-control="query"${remaining === 0 ? ' disabled' : ''}>${t.query}</button></div>
       <div class="med-workspace">
-        <section class="med-inspection" aria-label="${t.specimen} ${sample.id}"><div class="med-inspection-heading"><strong>${sample.id}</strong><span>${t[sample.reason]}</span></div><figure class="med-lightbox"><canvas width="480" height="480" data-specimen="detail" role="img" aria-label="${t.specimen} ${sample.id}. ${assigned ? t.key + ': ' + t[sample.shape + 'Full'] : t[(sample.reason === 'crisp' ? sample.shape : sample.reason) + 'Observation']}"></canvas><figcaption>${assigned ? t.revealed : t.observed}</figcaption></figure>
+        <section class="med-inspection" aria-label="${t.specimen} ${sample.id}"><div class="med-inspection-heading"><strong>${sample.id}</strong><span>${t[sample.reason]}</span></div><figure class="med-lightbox"><canvas width="480" height="480" data-specimen="detail" role="img" aria-label="${t.specimen} ${sample.id}. ${assigned ? t.key + ': ' + t[sample.shape + 'Full'] : t[(sample.reason === 'crisp' ? sample.shape : sample.reason) + 'Observation']}"></canvas><canvas class="med-lens" width="180" height="180" aria-hidden="true"${magnified ? '' : ' hidden'}></canvas><button type="button" class="med-magnify" data-action="magnify" data-control="magnify" aria-label="${t.magnify}" title="${t.magnify}" aria-pressed="${magnified}">2&#215;</button><figcaption>${assigned ? t.revealed : t.observed}</figcaption></figure>
           <div class="med-vote-detail"><div><strong>${t.votes}</strong><span>${t[disagreement]}</span></div><div class="med-vote-tally"><span><i class="is-single" aria-hidden="true"></i>${t.single} <b>${sample.votes[0]}</b></span><span><i class="is-lobed" aria-hidden="true"></i>${t.lobed} <b>${sample.votes[1]}</b></span></div></div>
           <fieldset class="med-labels"><legend>${t.label}</legend><div>${MEDICAL_LABELS.map(label => `<button type="button" data-action="label" data-id="${label}" data-control="label-${label}" aria-pressed="${assigned === label}"${assigned || remaining === 0 ? ' disabled' : ''}>${t[label]}</button>`).join('')}</div></fieldset>
           <div class="med-decision" data-annotation="${assigned || ''}">${assigned ? `<dl><div><dt>${t.yourLabel}</dt><dd>${t[assigned + 'Full']}</dd></div><div><dt>${t.key}</dt><dd>${t[sample.shape + 'Full']}</dd></div></dl><button type="button" data-action="undo" data-control="undo">${t.undo}</button>` : `<p>${remaining === 0 ? t.exhausted : t.unlabeled}</p>`}</div>
@@ -544,7 +686,42 @@ export function mountMedical(root, { lang = 'en' } = {}) {
         const item = canvas.dataset.specimen === 'detail' ? sample : MEDICAL_SAMPLES.find(entry => entry.id === canvas.dataset.specimen);
         drawSpecimen(canvas, item, Boolean(state.annotations[item.id]));
       });
+      drawLens();
     });
+  }
+
+  function drawLens() {
+    const source = mount.content.querySelector('[data-specimen="detail"]');
+    const lens = mount.content.querySelector('.med-lens');
+    if (!source || !lens) return;
+    lens.style.left = `${lensPoint.x * 100}%`;
+    lens.style.top = `${lensPoint.y * 100}%`;
+    const ctx = lens.getContext('2d');
+    ctx?.clearRect(0, 0, 180, 180);
+    // Magnification samples the displayed image, including its current occlusion.
+    ctx?.drawImage(source, lensPoint.x * 480 - 60, lensPoint.y * 480 - 60, 120, 120, 0, 0, 180, 180);
+  }
+
+  function moveLens(event) {
+    if (!magnified || mount.destroyed || event.target.closest('button')) return;
+    const lightbox = event.target.closest('.med-lightbox');
+    if (!lightbox) return;
+    const box = lightbox.querySelector('[data-specimen="detail"]').getBoundingClientRect();
+    lensPoint = {
+      x: Math.max(0.25, Math.min(0.75, (event.clientX - box.left) / box.width)),
+      y: Math.max(0.25, Math.min(0.75, (event.clientY - box.top) / box.height))
+    };
+    drawLens();
+  }
+
+  function transferSpecimen(previous) {
+    const target = mount.content.querySelector(`[data-control="sample-${selected}"] .med-sample-image`);
+    if (!previous || !target || !mount.motion.allowed(target)) return;
+    const box = target.getBoundingClientRect();
+    mount.motion.play(target, [
+      { transform: `translate(${previous.left - box.left}px, ${previous.top - box.top}px) scale(${previous.width / box.width})`, opacity: 0.75 },
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 }
+    ], { duration: 580 });
   }
 
   function onClick(event) {
@@ -552,6 +729,9 @@ export function mountMedical(root, { lang = 'en' } = {}) {
     if (!button || !mount.shell.contains(button) || button.disabled || mount.destroyed) return;
     const t = COPY[locale];
     const action = button.dataset.action;
+    mount.motion.cancel();
+    const previous = ['label', 'undo'].includes(action)
+      ? mount.content.querySelector(`[data-control="sample-${selected}"] .med-sample-image`)?.getBoundingClientRect() : null;
     let announcement = '';
     if (action === 'sample') {
       selected = button.dataset.id;
@@ -579,7 +759,11 @@ export function mountMedical(root, { lang = 'en' } = {}) {
       announcement = `${selected}. ${t.unlabeled}. ${state.budget - Object.keys(state.annotations).length} ${t.remaining}.`;
     } else if (action === 'reset') {
       state = createAnnotationState(); selected = 'S03'; filter = 'all';
+      magnified = false;
       announcement = `${t.reset}. ${state.budget} ${t.remaining}.`;
+    } else if (action === 'magnify') {
+      magnified = !magnified;
+      lensPoint = { x: 0.5, y: 0.5 };
     }
     render();
     if (action === 'sample' || action === 'query') {
@@ -597,15 +781,35 @@ export function mountMedical(root, { lang = 'en' } = {}) {
     }
     if (action === 'label') mount.content.querySelector('[data-control="undo"]')?.focus({ preventScroll: true });
     if (action === 'undo') mount.content.querySelector('[data-control="label-single"]')?.focus({ preventScroll: true });
+    if (action === 'label' || action === 'undo') {
+      transferSpecimen(previous);
+      const ticket = mount.content.querySelector(`.med-tickets span:nth-child(${Object.keys(state.annotations).length + (action === 'undo' ? 1 : 0)})`);
+      mount.motion.play(ticket, [{ transform: 'translateY(-5px) rotate(-8deg)' }, { transform: 'translateY(0) rotate(0)' }], { duration: 320 });
+    }
+    if (action === 'sample' || action === 'query') {
+      lensPoint = { x: 0.5, y: 0.5 };
+      drawLens();
+      mount.motion.play(mount.content.querySelector('[data-specimen="detail"]'),
+        [{ opacity: 0.5, transform: 'scale(.93)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 300 });
+    }
+    if (action === 'magnify' && magnified) mount.motion.play(mount.content.querySelector('.med-lens'),
+      [{ opacity: 0, scale: '0.7' }, { opacity: 1, scale: '1' }], { duration: 260 });
     mount.announce(announcement);
   }
   mount.shell.addEventListener('click', onClick);
+  mount.shell.addEventListener('pointermove', moveLens);
+  mount.shell.addEventListener('pointerdown', moveLens);
   render();
   return {
     setLanguage(nextLang) {
       const nextLocale = language(nextLang);
       if (!mount.destroyed && nextLocale !== locale) { locale = nextLocale; mount.announce(''); render(); }
     },
-    destroy() { mount.shell.removeEventListener('click', onClick); mount.destroy(); }
+    destroy() {
+      mount.shell.removeEventListener('click', onClick);
+      mount.shell.removeEventListener('pointermove', moveLens);
+      mount.shell.removeEventListener('pointerdown', moveLens);
+      mount.destroy();
+    }
   };
 }

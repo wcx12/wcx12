@@ -584,13 +584,13 @@ h1 { margin: 8px 0 10px; font-size: var(--text-title); line-height: 1.15; }
 .cyan { background: var(--cyan); }
 .violet { background: var(--violet); }
 
-.command-row { display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid rgba(0, 245, 255, 0.14); flex-wrap: wrap; }
+.command-row { display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 
 .cmd,
 .chip {
   min-height: 44px;
-  border: 1px solid rgba(0, 245, 255, 0.24);
-  background: rgba(0, 245, 255, 0.04);
+  border: 1px solid var(--line);
+  background: var(--soft-bg);
   color: var(--text);
   border-radius: 10px;
   padding: 7px 12px;
@@ -601,7 +601,7 @@ h1 { margin: 8px 0 10px; font-size: var(--text-title); line-height: 1.15; }
 .cmd.active,
 .cmd:hover,
 .chip:hover,
-.chip.active { border-color: var(--pink); box-shadow: 0 0 16px rgba(255, 46, 136, 0.25); }
+.chip.active { border-color: var(--pink); box-shadow: 0 0 16px color-mix(in srgb, var(--pink) 20%, transparent); }
 
 .view { display: none; padding: 18px 16px 22px; }
 .view.active { display: block; animation: fadeUp 0.25s ease; }
@@ -2541,6 +2541,41 @@ html[data-homepage-error="true"] .enhancement-error { display: block; }
   .interest-canvas-controls .btn { font-size: 0.8rem; }
 }
 
+/* Keep the spatial hero unframed while reserving stable canvas and topic bounds. */
+main { max-width: 1240px; }
+.hero { min-height: min(500px, calc(100svh - 190px)); gap: 36px; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); }
+.hero h1 { font-size: 3.5rem; max-width: 12ch; }
+.hero-alias { display: block; font-size: 1.4rem; margin-top: 10px; }
+.hero-preview-panel { position: relative; padding: 0; gap: 8px; }
+.hero-preview-head { padding-top: 4px; }
+.hero-preview-status { border: 0; border-radius: 0; background: transparent; padding: 0; color: var(--muted); }
+#heroPreviewCanvas { height: 300px; aspect-ratio: auto; }
+.hero-preview-meta { min-height: 14rem; }
+.hero-preview-pills { display: none; }
+.hero-scene-topics { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.hero-scene-topics button { min-height: 40px; background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 8px; font: 500 .8rem var(--font-ui); color: var(--muted); cursor: pointer; transition: color var(--motion-standard), border-color var(--motion-standard); }
+.hero-scene-topics button[aria-pressed="true"] { color: var(--text); border-color: var(--cyan); }
+.hero-scene-topics button:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+@media (max-width: 820px) {
+  .hero { min-height: 0; grid-template-columns: 1fr; gap: 20px; }
+  .hero h1 { max-width: none; font-size: 2.5rem; }
+  .hero-alias { display: inline; font-size: 1.25rem; }
+  .hero-preview-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
+  .hero-preview-head { display: none; }
+  #heroPreviewCanvas { height: 200px; }
+  .hero-preview-meta { min-height: 0; }
+  .hero-preview-meta > p { display: none; }
+  .hero-scene-topics { gap: 2px; }
+}
+@media (max-width: 540px) {
+  .hero h1 { font-size: 2rem; }
+  .hero-preview-panel { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  #heroPreviewCanvas { height: 170px; }
+  .hero-preview-title { flex-direction: row; align-items: baseline; gap: 10px; }
+  .hero-preview-title strong { font-size: 1rem; }
+  .hero-scene-topics button { min-height: 36px; padding: 6px; font-size: .75rem; }
+  .hero .quick-stats { margin-top: 12px; }
+}
 /* Registration retains the original canvas, bounded note and action row. */
 .interest-demo[data-presentation="registration"] {
   grid-template-rows: 220px minmax(0, 1fr) 72px;

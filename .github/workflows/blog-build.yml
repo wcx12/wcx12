@@ -69,7 +69,10 @@ jobs:
         run: npm run test:pages
 
       - name: Install browser for release regression
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 10
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt
+          npx playwright install --with-deps chromium
 
       - name: Verify visitor paths before publishing
         run: npm run test:e2e -- --project=chromium && npm run test:links
@@ -90,7 +93,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site-data.js index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml package-lock.json
+          git add site-data.js index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml package-lock.json assets/vendor
           if git diff --cached --quiet; then
             echo "No generated site changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"

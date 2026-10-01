@@ -56,6 +56,9 @@
   --focus-ring: 3px solid var(--pink);
   --motion-fast: 120ms;
   --motion-standard: 200ms;
+  --motion-scene: 650ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-spring: cubic-bezier(.2, 1.1, .4, 1);
   --z-header: 50;
   --z-overlay: 100;
   /* Layout breakpoints: compact 40rem; reading rail 64rem. */

@@ -41,6 +41,9 @@ jobs:
           node --check script.js
           node --check homepage-i18n.js
           node --check research-canvas.js
+          node --check site-motion.js
+          node --check hero-scene.js
+          node --check featured-posters.js
           node --check repo-map.js
           node --check blog-src/assets/blog.js
           node --check scripts/build-blog.mjs
@@ -58,13 +61,28 @@ jobs:
         run: npm run package:pages && npm run test:pages
 
       - name: Install browser for visitor-path tests
-        run: npx playwright install --with-deps chromium firefox webkit
+        timeout-minutes: 10
+        run: |
+          # Avoid repeated package-download timeouts on the runner's Azure HTTP mirror.
+          # Keep Ubuntu's signed package metadata and keys unchanged.
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt
+          npx playwright install --with-deps chromium firefox webkit
 
       - name: Verify visitor paths
         run: npm run test:e2e && npm run test:links
 
       - name: Verify generated files are current
-        run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml
+        run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml assets/vendor
+
+      - name: Retain failed browser evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-failure-review
+          path: |
+            output/site-quality-20260926/e2e-results.json
+            output/site-quality-20260926/e2e-artifacts/
+          retention-days: 7
 
       - name: Compare performance with the pull-request base
         if: github.event_name == 'pull_request'

@@ -206,6 +206,63 @@ const copy = {
 
 let instanceSequence = 0;
 
+// Keep this lifecycle local to the lazy entry, with no dependency on eager code.
+function createTopicMotion(surface) {
+  const doc = surface.ownerDocument;
+  const view = doc.defaultView;
+  const media = view?.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const running = new Set();
+  let destroyed = false;
+  let intersecting = true;
+  const visible = node => {
+    if (!node?.isConnected || node.closest('[hidden]')) return false;
+    const box = node.getBoundingClientRect();
+    const frame = surface.closest('.topic-experiences')?.getBoundingClientRect();
+    return box.width > 0 && box.height > 0 && box.bottom > Math.max(0, frame?.top ?? 0)
+      && box.top < Math.min(view.innerHeight, frame?.bottom ?? view.innerHeight)
+      && box.right > 0 && box.left < view.innerWidth;
+  };
+  const allowed = (node = surface) => !destroyed && intersecting && !doc.hidden
+    && !media?.matches && (view?.SiteMotion?.enabled?.() ?? true) && visible(node);
+  const settle = record => {
+    if (!running.delete(record)) return;
+    record.animation.cancel();
+    record.cleanup?.();
+  };
+  const cancel = () => [...running].forEach(settle);
+  const observer = view?.IntersectionObserver ? new view.IntersectionObserver(entries => {
+    intersecting = entries[0].isIntersecting;
+    if (!intersecting) cancel();
+  }) : null;
+  observer?.observe(surface);
+  doc.addEventListener('visibilitychange', cancel);
+  doc.addEventListener('scroll', cancel, true);
+  view?.addEventListener('site:motion-change', cancel);
+  view?.addEventListener('resize', cancel);
+  media?.addEventListener?.('change', cancel);
+  return {
+    allowed, cancel,
+    play(node, frames, options = {}, cleanup) {
+      if (!allowed(node) || typeof node.animate !== 'function') { cleanup?.(); return null; }
+      const animation = node.animate(frames, { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both', ...options, iterations: 1 });
+      const record = { animation, cleanup };
+      running.add(record);
+      animation.onfinish = animation.oncancel = () => settle(record);
+      return animation;
+    },
+    destroy() {
+      destroyed = true;
+      cancel();
+      observer?.disconnect();
+      doc.removeEventListener('visibilitychange', cancel);
+      doc.removeEventListener('scroll', cancel, true);
+      view?.removeEventListener('site:motion-change', cancel);
+      view?.removeEventListener('resize', cancel);
+      media?.removeEventListener?.('change', cancel);
+    }
+  };
+}
+
 function makeSurface(root, className, lang) {
   const document = root.ownerDocument;
   const surface = document.createElement('section');
@@ -214,10 +271,11 @@ function makeSurface(root, className, lang) {
   surface.setAttribute('role', 'region');
   surface.tabIndex = 0;
   root.append(surface);
+  const motion = createTopicMotion(surface);
   const disposers = [];
   let destroyed = false;
   return {
-    surface, document, prefix: `topic-workbench-${++instanceSequence}`,
+    surface, document, motion, prefix: `topic-workbench-${++instanceSequence}`,
     get destroyed() { return destroyed; },
     on(target, name, listener) {
       target.addEventListener(name, listener);
@@ -226,6 +284,7 @@ function makeSurface(root, className, lang) {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      motion.destroy();
       disposers.splice(0).forEach(dispose => dispose());
       surface.remove();
     }
@@ -271,7 +330,7 @@ function timeOptions(start, end) {
 
 export function mountAgent(root, { lang = 'en' } = {}) {
   const lifecycle = makeSurface(root, 'topic-agent', lang);
-  const { surface, document } = lifecycle;
+  const { surface, document, motion } = lifecycle;
   const defaults = () => ({
     calendar: createInitialCalendar(), request: 'focus', focusMinutes: 90,
     windowStart: DAY_START, windowEnd: DAY_END, bufferMinutes: 0,
@@ -390,6 +449,7 @@ export function mountAgent(root, { lang = 'en' } = {}) {
   }
 
   function render() {
+    motion.cancel();
     const strings = copy[language];
     surface.lang = language;
     surface.setAttribute('aria-label', strings.calendarRegion);
@@ -432,28 +492,73 @@ export function mountAgent(root, { lang = 'en' } = {}) {
     drawLane(previewLane, state.pending?.events, true, strings);
   }
 
+  function pendingPositions() {
+    motion.cancel();
+    return [...previewLane.querySelectorAll('[data-state="pending"]')].map(node => ({
+      id: node.dataset.eventId, box: node.getBoundingClientRect(), node
+    }));
+  }
+
+  function arrive(node, from, duration = 520, delay = 0) {
+    if (!from || !motion.allowed(node)) return;
+    const to = node.getBoundingClientRect();
+    motion.play(node, [
+      { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`, opacity: 0.5 },
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 }
+    ], { duration, delay });
+  }
+
+  function retract(records) {
+    if (!motion.allowed()) return;
+    const bounds = surface.getBoundingClientRect();
+    records.forEach(({ node, box }, index) => {
+      const ghost = document.createElement('div');
+      ghost.className = 'tw-event-flight';
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.dataset.kind = node.dataset.kind;
+      ghost.dataset.compact = node.dataset.compact;
+      for (const child of node.children) ghost.append(child.cloneNode(true));
+      Object.assign(ghost.style, { left: `${box.left - bounds.left}px`, top: `${box.top - bounds.top}px`, width: `${box.width}px`, height: `${box.height}px` });
+      surface.append(ghost);
+      motion.play(ghost, [
+        { transform: 'translate(0, 0) scale(1)', opacity: 0.8 },
+        { transform: 'translate(18px, -28px) scale(.84)', opacity: 0 }
+      ], { duration: 260, delay: index * 45 }, () => ghost.remove());
+    });
+  }
+
   lifecycle.on(surface.querySelector('form'), 'submit', event => {
     event.preventDefault();
+    motion.cancel();
+    const origin = surface.querySelector('[type="submit"]').getBoundingClientRect();
     const proposal = proposeSchedule({ ...state, events: state.calendar });
     state.pending = proposal.ok ? proposal : null;
     state.lastChanges = [];
     state.status = proposal.ok ? 'pending' : proposal.reason;
     render();
+    if (proposal.ok) previewLane.querySelectorAll('[data-state="pending"]').forEach((node, index) => {
+      const original = savedLane.querySelector(`[data-event-id="${node.dataset.eventId}"]`);
+      arrive(node, original?.getBoundingClientRect() || origin, 560, index * 65);
+    });
+    else motion.play(status, [{ transform: 'translateX(-4px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }], { duration: 240 });
     if (proposal.ok) surface.querySelector('[data-action="approve"]').focus({ preventScroll: true });
   });
   lifecycle.on(surface, 'change', event => {
     const name = event.target.dataset.field;
     if (!name || !(name in state)) return;
+    const previous = pendingPositions();
     state[name] = name === 'request' ? event.target.value : Number(event.target.value);
     state.pending = null;
     state.lastChanges = [];
     state.status = 'edited';
     render();
+    retract(previous);
   });
   lifecycle.on(surface, 'click', event => {
     const button = event.target.closest('button[data-action]');
     if (!button || button.disabled) return;
     const action = button.dataset.action;
+    const previous = pendingPositions();
     if (action === 'reset') state = defaults();
     if (action === 'approve' && state.pending) {
       state.calendar = state.pending.events.map(item => ({ ...item }));
@@ -470,6 +575,10 @@ export function mountAgent(root, { lang = 'en' } = {}) {
       state.status = 'declined';
     }
     render();
+    if (action === 'approve') previous.forEach(({ id, box }, index) => {
+      arrive(savedLane.querySelector(`[data-event-id="${id}"]`), box, 540, index * 55);
+    });
+    if (action === 'decline') retract(previous);
     if (action === 'approve' || action === 'decline') surface.querySelector('[type="submit"]').focus({ preventScroll: true });
   });
   render();
@@ -491,7 +600,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export function mountEducation(root, { lang = 'en' } = {}) {
   const lifecycle = makeSurface(root, 'topic-education', lang);
-  const { surface, document } = lifecycle;
+  const { surface, document, motion } = lifecycle;
   let language = normalizeLanguage(lang);
   let exercise = RECTANGLE_EXERCISES[0];
   let width = exercise.width;
@@ -510,8 +619,9 @@ export function mountEducation(root, { lang = 'en' } = {}) {
           <svg class="tw-area-grid" viewBox="0 0 320 300" role="img">
             <g class="tw-grid-base" aria-hidden="true"></g>
             <rect class="tw-shape-fill" aria-hidden="true"></rect>
+            <g class="tw-unit-blocks" aria-hidden="true"></g>
             <g class="tw-grid-ink" aria-hidden="true"></g>
-            <rect class="tw-shape-outline" aria-hidden="true"></rect>
+            <rect class="tw-shape-outline" pathLength="1" aria-hidden="true"></rect>
             <g class="tw-drag-handle" data-handle aria-hidden="true">
               <rect class="tw-handle-hit" width="58" height="58" x="-29" y="-29"></rect>
               <circle r="7"></circle><path d="M -3 0 H 3 M 0 -3 V 3"></path>
@@ -543,6 +653,21 @@ export function mountEducation(root, { lang = 'en' } = {}) {
   const svg = surface.querySelector('svg');
   const gridBase = surface.querySelector('.tw-grid-base');
   const gridInk = surface.querySelector('.tw-grid-ink');
+  const blocks = surface.querySelector('.tw-unit-blocks');
+  const units = [];
+  for (let row = 0; row < 10; row += 1) {
+    for (let column = 0; column < 10; column += 1) {
+      const tile = document.createElementNS(SVG_NS, 'rect');
+      tile.setAttribute('x', String(28 + column * 26 + 1));
+      tile.setAttribute('y', String(12 + row * 26 + 1));
+      tile.setAttribute('width', '24');
+      tile.setAttribute('height', '24');
+      tile.dataset.column = column;
+      tile.dataset.row = row;
+      blocks.append(tile);
+      units.push(tile);
+    }
+  }
   const ink = document.createElementNS(SVG_NS, 'path');
   gridInk.append(ink);
   const fill = surface.querySelector('.tw-shape-fill');
@@ -560,7 +685,9 @@ export function mountEducation(root, { lang = 'en' } = {}) {
     gridBase.append(line);
   }
 
-  function updateShape() {
+  function updateShape(animate = false) {
+    motion.cancel();
+    const previous = { width: Number(surface.dataset.width), height: Number(surface.dataset.height), solved: surface.dataset.solved === 'true' };
     const strings = copy[language];
     const result = evaluateRectangle(exercise.id, width, height);
     surface.dataset.solved = String(result.solved);
@@ -622,6 +749,26 @@ export function mountEducation(root, { lang = 'en' } = {}) {
     hint.hidden = !hintVisible;
     hintButton.textContent = strings[hintVisible ? 'hideHint' : 'showHint'];
     hintButton.setAttribute('aria-expanded', String(hintVisible));
+    for (const tile of units) {
+      const column = Number(tile.dataset.column);
+      const row = Number(tile.dataset.row);
+      const visible = column < width && row < height;
+      tile.toggleAttribute('hidden', !visible);
+      const assembled = result.solved && !previous.solved;
+      if (animate && visible && (assembled || column >= previous.width || row >= previous.height)) {
+        const dx = assembled ? (column - (width - 1) / 2) * 3 : column >= previous.width ? -13 : 0;
+        const dy = assembled ? (row - (height - 1) / 2) * 3 : row >= previous.height ? -13 : 0;
+        motion.play(tile, [{ transform: `translate(${dx}px, ${dy}px) scale(.76)`, opacity: 0.15 }, { transform: 'translate(0, 0) scale(1)', opacity: 1 }],
+          { duration: assembled ? 380 : 220, delay: assembled ? (row + column) * 18 : 0 });
+      }
+    }
+    if (animate && (width !== previous.width || height !== previous.height)) {
+      motion.play(gridBase, [{ opacity: 0.9 }, { opacity: 0.5 }], { duration: 260 });
+      motion.play(outline, [{ strokeDasharray: '1 1', strokeDashoffset: '1' }, { strokeDasharray: '1 1', strokeDashoffset: '0' }],
+        { duration: result.solved ? 640 : 360 });
+      if (result.solved && !previous.solved) motion.play(surface.querySelector('.tw-equation'),
+        [{ transform: 'translateY(4px)', opacity: 0.5 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 360 });
+    }
   }
 
   function render() {
@@ -637,9 +784,10 @@ export function mountEducation(root, { lang = 'en' } = {}) {
   function setSide(axis, value) {
     const next = Math.max(1, Math.min(10, Math.round(value)));
     if (!Number.isFinite(next)) return;
+    if ((axis === 'width' ? width : height) === next) return;
     if (axis === 'width') width = next;
     if (axis === 'height') height = next;
-    updateShape();
+    updateShape(true);
   }
 
   function stopDrag() {
@@ -688,6 +836,8 @@ export function mountEducation(root, { lang = 'en' } = {}) {
     pointerId = event.pointerId;
     svg.setPointerCapture(pointerId);
     surface.dataset.dragging = 'true';
+    motion.cancel();
+    motion.play(handle.querySelector('circle'), [{ r: '10px' }, { r: '7px' }], { duration: 220 });
   });
   lifecycle.on(svg, 'pointermove', event => {
     if (event.pointerId !== pointerId) return;
@@ -702,7 +852,7 @@ export function mountEducation(root, { lang = 'en' } = {}) {
     if (nextWidth === width && nextHeight === height) return;
     width = nextWidth;
     height = nextHeight;
-    updateShape();
+    updateShape(true);
   });
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) lifecycle.on(svg, name, event => {
     if (event.pointerId === pointerId) stopDrag();
