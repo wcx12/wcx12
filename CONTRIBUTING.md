@@ -134,6 +134,32 @@ Behavior tests are in `scripts/research-demo.test.mjs` and
 captures bilingual, three-theme screenshots and scoped accessibility reports.
 See `docs/topic-experiences-20260926.md` for the redesign decisions and evidence.
 
+## Motion and visual previews
+
+`site-motion.js/css` owns finite transitions, motion preferences, navigation
+indicators and reading-position feedback. Its `SiteMotion` API is optional:
+failed enhancements must not block links, content or theme changes. The footer
+switch stores only `wcx12-motion`; an OS reduced-motion preference takes priority.
+
+The homepage loads `featured-posters.js` after its content initializes. This
+module owns cover previews and the hero controller, keeping decoration out of
+the application module. `hero-scene.js/css` loads Three.js only when the hero is
+visible and motion is enabled. The renderer stops after settling and pauses
+offscreen/background; its 2D fallback remains available on WebGL failure.
+The build bundles only used Three.js exports with pinned esbuild and preserves
+`assets/vendor/three/LICENSE`. Commit that generated bundle with source changes.
+Inline Lucide icons retain attribution in `assets/vendor/lucide/LICENSE`.
+
+Blog cover geometry is rendered by `scripts/build-blog.mjs` before JS hydration;
+`blog-src/assets/blog.js/css` adds opt-in replay, figure zoom and the TIGER
+walkthrough. Do not animate prose or put replay buttons inside article links.
+Private Notes must never receive public article previews or loaded note data.
+
+The `*-motion.spec.mjs` browser suites cover visible output, cancellation,
+keyboard behavior, themes and responsive layouts. Topic animation lifecycle
+tests run as part of `npm run test:homepage`. Add scripts to the build fingerprint,
+preview fixture and Pages allowlist together; never publish test evidence.
+
 ## Generated output
 
 `npm run build:site` writes `blog/`, `research/`, `projects/`, `publications/`,

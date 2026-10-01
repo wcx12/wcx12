@@ -1,0 +1,44 @@
+::view-transition-old(root) { animation: motion-page-out 180ms ease both; }
+::view-transition-new(root) { animation: motion-page-in 300ms var(--ease-out) both; }
+html[data-transition="theme"]::view-transition-old(root),
+html[data-transition="theme"]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html[data-transition="theme"]::view-transition-new(root) { z-index: 2; }
+html[data-transition="theme"]::view-transition-group(*) { animation: none; }
+@keyframes motion-page-out { to { opacity: 0; } }
+@keyframes motion-page-in { from { opacity: 0; transform: translateY(8px); } }
+.site-header { view-transition-name: site-header; }
+html[data-transition="theme"] .site-header { view-transition-name: none; }
+.motion-rail { position: relative; }
+.motion-marker { position: absolute; pointer-events: none; display: block; left: 0; bottom: -4px; height: 2px; border-radius: 0; background: var(--cyan); z-index: 1; }
+.motion-marker-vertical { top: 0; bottom: auto; width: 3px; height: 0; }
+.motion-marker[hidden] { display: none; }
+.site-navigation > .motion-marker { grid-column: auto !important; grid-row: auto !important; }
+:root .site-header .site-navigation > :is(#langToggle, #blogLangLink, #blogLangToggle) { grid-column: 7; }
+.site-motion-setting { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font: 500 .85rem/1.4 var(--font-ui); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.site-motion-setting input { appearance: none; width: 34px; height: 20px; margin: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--field-bg); position: relative; cursor: pointer; }
+.site-motion-setting input::after { content: ''; position: absolute; width: 12px; height: 12px; top: 3px; left: 3px; border-radius: 50%; background: var(--muted); transition: transform var(--motion-standard), background var(--motion-standard); }
+.site-motion-setting input:checked::after { transform: translateX(14px); background: var(--cyan); }
+.site-motion-setting input:focus-visible { outline: var(--focus-ring); outline-offset: 4px; }
+.site-motion-setting input:disabled { opacity: .6; cursor: default; }
+.hero-actions .btn-primary { position: relative; overflow: clip; }
+.hero-actions .btn-primary::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%) skewX(-22deg); background: #fff3; width: 30%; pointer-events: none; }
+.hero-actions .btn-primary:is(:hover, :focus-visible)::after { animation: motion-sheen 650ms var(--ease-out); }
+@keyframes motion-sheen { to { transform: translateX(450%) skewX(-22deg); } }
+.custom-cursor[data-mode="drag"] .cursor-ring { border-radius: 5px; transform: rotate(-12deg); }
+.custom-cursor[data-mode="rotate"] .cursor-ring { border-style: dashed; width: 42px; height: 42px; }
+.custom-cursor[data-mode="zoom"] .cursor-ring { width: 42px; height: 42px; border-radius: 50%; }
+.custom-cursor[data-mode="zoom"] .cursor-dot { width: 14px; height: 2px; border-radius: 0; }
+.timeline article { position: relative; }
+.timeline article::before { content: ''; position: absolute; left: -5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--pink); }
+.timeline article.motion-entered { animation: motion-timeline 650ms var(--ease-out); }
+.blog-toc a { transition: color var(--motion-standard), background-color var(--motion-standard), border-color var(--motion-standard); }
+.blog-toc a[aria-current="location"] { color: var(--text); border-left: 2px solid var(--cyan); background: var(--soft-bg); }
+@keyframes motion-timeline { from { border-left-color: transparent; } to { border-left-color: var(--pink); } }
+html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+html[data-motion="off"]::view-transition-group(*), html[data-motion="off"]::view-transition-old(*), html[data-motion="off"]::view-transition-new(*) { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .hero-actions .btn-primary::after { display: none; }
+}
+@media (max-width: 1023px) { .site-navigation > .motion-marker { display: none; } }
+@media print { .site-motion-setting, .motion-marker { display: none !important; } }

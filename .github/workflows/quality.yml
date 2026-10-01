@@ -41,6 +41,9 @@ jobs:
           node --check script.js
           node --check homepage-i18n.js
           node --check research-canvas.js
+          node --check site-motion.js
+          node --check hero-scene.js
+          node --check featured-posters.js
           node --check repo-map.js
           node --check blog-src/assets/blog.js
           node --check scripts/build-blog.mjs
@@ -64,7 +67,7 @@ jobs:
         run: npm run test:e2e && npm run test:links
 
       - name: Verify generated files are current
-        run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml
+        run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml assets/vendor
 
       - name: Compare performance with the pull-request base
         if: github.event_name == 'pull_request'

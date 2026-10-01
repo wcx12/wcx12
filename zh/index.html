@@ -11,6 +11,7 @@
   <meta name="robots" content="index,follow,max-image-preview:large" />
   <meta name="theme-color" content="#101416" />
   <meta name="color-scheme" content="dark" />
+  <style>@view-transition { navigation: auto; }</style>
   <link rel="canonical" href="https://wcx12.github.io/wcx12/zh/" />
   <link rel="alternate" hreflang="en" href="https://wcx12.github.io/wcx12/" />
   <link rel="alternate" hreflang="zh-CN" href="https://wcx12.github.io/wcx12/zh/" />
@@ -41,10 +42,13 @@
   <meta name="twitter:description" content="Chenxu Wang（wcx12）的研究主页，涵盖点云配准、视觉地点识别、医学影像分析、大模型智能体与 AI4 教育。" />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home-zh.png" />
   <meta name="twitter:image:alt" content="wcx12 机器学习研究主页" />
-  <script src="../theme-init.js?v=cfaf93e5e3c3"></script>
-  <link rel="stylesheet" href="../site-tokens.css?v=cfaf93e5e3c3" />
-  <link rel="stylesheet" href="../styles.css?v=cfaf93e5e3c3" />
-  <link rel="stylesheet" href="../site-nav.css?v=cfaf93e5e3c3" />
+  <script src="../theme-init.js?v=732c26c2dbd0"></script>
+  <link rel="stylesheet" href="../site-tokens.css?v=732c26c2dbd0" />
+  <link rel="stylesheet" href="../styles.css?v=732c26c2dbd0" />
+  <link rel="stylesheet" href="../site-nav.css?v=732c26c2dbd0" />
+  <link rel="stylesheet" href="../site-motion.css?v=732c26c2dbd0" />
+  <link rel="stylesheet" href="../featured-posters.css?v=732c26c2dbd0" />
+  <link rel="stylesheet" href="../hero-scene.css?v=732c26c2dbd0" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -217,17 +221,30 @@
       <h2 id="selected-work-title" data-i18n="selected_work">代表工作</h2>
       <div class="selected-work-list">
         <article>
+          <figure class="work-poster" data-work-poster="vpr">
+            <div class="poster-day" aria-hidden="true"><i></i><i></i><i></i></div>
+            <canvas aria-hidden="true"></canvas>
+            <figcaption><span data-i18n="poster_vpr_caption">同一地点，不同观测 · 概念示意</span><button type="button" data-i18n-aria="poster_replay" data-i18n-title="poster_replay" aria-label="重播预览" title="重播预览"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg></button></figcaption>
+          </figure>
           <span data-i18n="selected_paper">论文</span>
           <h3><a href="./publications/tf-vpr/">TF-VPR</a></h3>
           <p data-i18n="selected_paper_desc">利用冻结的基础模型识别地点，无需任务微调。包含方法、基准实验结果与官方代码。</p>
           <p class="selected-work-evidence">Neurocomputing · 2026</p>
         </article>
         <article>
+          <figure class="work-poster" data-work-poster="source">
+            <div class="poster-source" aria-hidden="true"><span data-poster-layer><b>01</b> function_calls / registry.py</span><span data-poster-layer><b>02</b> retrieval_tools.py</span><span data-poster-layer><b>03</b> source_tables + tool_trace</span><span class="source-gap" data-poster-layer><b>04</b> data_gaps</span></div>
+            <figcaption><span data-i18n="poster_source_caption">公开接口结构 · 非实时运行</span><button type="button" data-i18n-aria="poster_replay" data-i18n-title="poster_replay" aria-label="重播预览" title="重播预览"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg></button></figcaption>
+          </figure>
           <span data-i18n="selected_project">工程原型</span>
           <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
           <p data-i18n="selected_project_desc">通过 SQL 工具与 Agent 检索院校专业信息。代码和运行轨迹公开，核心数据库未公开。</p>
         </article>
         <article>
+          <figure class="work-poster" data-work-poster="tokens">
+            <div class="poster-tokens" aria-hidden="true"><div class="token-stack" data-poster-layer><i></i><i></i><i></i><i></i><i></i><i></i></div><em>→</em><b data-poster-layer>12</b><b data-poster-layer>87</b><b data-poster-layer>203</b></div>
+            <figcaption><span data-i18n="poster_tokens_caption">内容到语义编号 · 概念示意</span><button type="button" data-i18n-aria="poster_replay" data-i18n-title="poster_replay" aria-label="重播预览" title="重播预览"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg></button></figcaption>
+          </figure>
           <span data-i18n="selected_note">阅读笔记</span>
           <h3><a href="./research/generative-retrieval/" data-i18n="selected_note_title">TIGER 与语义 ID</a></h3>
           <p data-i18n="selected_note_desc">从残差量化到生成式推荐。</p>
@@ -584,6 +601,7 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="../homepage-bootstrap.js?v=cfaf93e5e3c3"></script>
+  <script type="module" src="../site-motion.js?v=732c26c2dbd0"></script>
+  <script type="module" src="../homepage-bootstrap.js?v=732c26c2dbd0"></script>
 </body>
 </html>

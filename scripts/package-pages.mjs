@@ -28,6 +28,12 @@ const publicFiles = [
   'sitemap.xml',
   'styles.css',
   'site-nav.css',
+  'site-motion.css',
+  'site-motion.js',
+  'featured-posters.css',
+  'featured-posters.js',
+  'hero-scene.css',
+  'hero-scene.js',
   'theme-init.js'
 ];
 

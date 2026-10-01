@@ -282,7 +282,11 @@ function applyTheme(theme) {
 
 applyTheme(readStorage(THEME_KEY, 'neon'));
 
-themeSelect?.addEventListener('change', () => applyTheme(themeSelect.value));
+themeSelect?.addEventListener('change', () => {
+  const theme = themeSelect.value;
+  if (window.SiteMotion?.transitionTheme) window.SiteMotion.transitionTheme(() => applyTheme(theme), themeSelect);
+  else applyTheme(theme);
+});
 
 function setBlogMenuOpen(open) {
   if (!blogMenu) return;
@@ -442,13 +446,18 @@ document.querySelectorAll('.code-frame').forEach((frame) => {
   button.setAttribute('aria-live', 'polite');
   button.textContent = t('code_copy');
   head.append(button);
+  let resetCopyTimer;
   button.addEventListener('click', async () => {
     const code = frame?.querySelector('code')?.innerText || '';
     try {
       await navigator.clipboard.writeText(code);
+      window.clearTimeout(resetCopyTimer);
       button.textContent = t('code_copied');
-      window.setTimeout(() => {
+      button.dataset.copyState = 'success';
+      animateBlog(button, [{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 260 });
+      resetCopyTimer = window.setTimeout(() => {
         button.textContent = t('code_copy');
+        delete button.dataset.copyState;
       }, 1400);
     } catch {
       button.textContent = t('code_select');
@@ -677,6 +686,520 @@ function initProfileNavigation() {
 
 document.getElementById('printProfile')?.addEventListener('click', () => window.print());
 initProfileNavigation();
+
+Object.assign(blogI18n.en, {
+  cover_replay: 'Replay cover', zoom_open: 'Enlarge figure', zoom_title: 'Figure detail',
+  zoom_close: 'Close figure', zoom_actual: 'Actual size', zoom_fit: 'Fit to view',
+  stage_previous: 'Previous stage', stage_next: 'Next stage', stage_play: 'Play stages',
+  stage_pause: 'Pause stages', stage_group: 'Architecture stages'
+});
+Object.assign(blogI18n.zh, {
+  cover_replay: '重播封面', zoom_open: '放大图示', zoom_title: '图示详情',
+  zoom_close: '关闭图示', zoom_actual: '原始大小', zoom_fit: '适应窗口',
+  stage_previous: '上一步', stage_next: '下一步', stage_play: '播放步骤',
+  stage_pause: '暂停步骤', stage_group: '架构步骤'
+});
+
+const blogReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const blogAnimations = new Set();
+const blogMotionStops = new Set();
+function blogMotionEnabled() {
+  return !blogReducedMotion.matches && (window.SiteMotion?.enabled?.() ?? true);
+}
+
+function animateBlog(node, keyframes, options = {}) {
+  if (!blogMotionEnabled() || !node.animate) return null;
+  const animation = node.animate(keyframes, { easing: 'cubic-bezier(.2,.75,.25,1)', ...options });
+  blogAnimations.add(animation);
+  animation.finished.catch(() => {}).finally(() => blogAnimations.delete(animation));
+  return animation;
+}
+
+function syncBlogMotion() {
+  const enabled = blogMotionEnabled();
+  document.documentElement.dataset.blogMotion = enabled ? 'on' : 'off';
+  if (!enabled || document.hidden) {
+    blogAnimations.forEach((animation) => animation.cancel());
+    blogMotionStops.forEach((stop) => stop());
+  }
+}
+window.addEventListener('site:motion-change', syncBlogMotion);
+blogReducedMotion.addEventListener('change', syncBlogMotion);
+document.addEventListener('visibilitychange', syncBlogMotion);
+window.addEventListener('pagehide', () => blogMotionStops.forEach((stop) => stop()));
+syncBlogMotion();
+
+/*
+ * Lucide 0.468.0: https://github.com/lucide-icons/lucide/tree/0.468.0/icons
+ * ISC License
+ * Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as
+ * part of Feather (MIT). All other copyright (c) for Lucide are held by
+ * Lucide Contributors 2022.
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+const BLOG_LUCIDE_ICONS = Object.freeze({
+  'rotate-ccw': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  'arrow-left': '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+  pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+  'zoom-in': '<circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/>',
+  'zoom-out': '<circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  'maximize-2': '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/>'
+});
+
+function setBlogIcon(button, name) {
+  if (button.dataset.icon === name) return;
+  button.dataset.icon = name;
+  button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${BLOG_LUCIDE_ICONS[name]}</svg>`;
+}
+
+function blogIconButton(key, icon) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'blog-motion-button';
+  setBlogIcon(button, icon);
+  labelBlogButton(button, key);
+  return button;
+}
+
+function labelBlogButton(button, key) {
+  button.dataset.blogI18nAria = key;
+  button.dataset.blogI18nTitle = key;
+  button.setAttribute('aria-label', t(key));
+  button.title = t(key);
+}
+
+function blogCoverKindForUrl(href) {
+  const slug = new URL(href, document.baseURI).pathname.replace(/\/index\.html$/, '/').split('/').filter(Boolean).pop();
+  return {
+    'tiger-generative-retrieval-reading': 'semantic',
+    'tiger-semantic-id-codebook-capacity': 'semantic',
+    'tiger-semantic-id-codebook-capacity-en': 'semantic',
+    'building-a-research-writing-system': 'writing',
+    'building-a-research-writing-system-zh': 'writing'
+  }[slug] || '';
+}
+
+function enhanceBlogCover(slot) {
+  const kind = slot.dataset.coverKind;
+  if (!slot.matches('.blog-cover-slot') || !['semantic', 'writing'].includes(kind)) return null;
+  const cover = document.createElement('div');
+  cover.className = 'blog-cover';
+  cover.dataset.coverKind = kind;
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+  const replay = blogIconButton('cover_replay', 'rotate-ccw');
+  replay.classList.add('blog-cover-replay');
+  cover.append(canvas, replay);
+  slot.replaceWith(cover);
+  let frame = 0;
+  let palette;
+  let width = 0;
+  let height = 0;
+  let entered = false;
+  let focused = false;
+
+  const draw = (phase = -1) => {
+    if (!width || !height) return;
+    const ctx = context;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = palette.background;
+    ctx.fillRect(0, 0, width, height);
+    ctx.save();
+    ctx.scale(width / 640, height / 264);
+    ctx.lineWidth = 1.5;
+    const line = (x, y, endX, endY, color = palette.rule) => {
+      ctx.strokeStyle = color;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(endX, endY); ctx.stroke();
+    };
+    const page = (x, y, w, h, accent) => {
+      ctx.fillStyle = palette.surface;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = accent;
+      ctx.strokeRect(x, y, w, h);
+      line(x + 15, y + 26, x + w - 15, y + 26, accent);
+      [46, 59, 72, 85].forEach((offset, index) => line(x + 15, y + offset, x + w - 15 - (index % 2) * 17, y + offset));
+    };
+    const emphasis = (index) => phase < 0 ? 0 : Math.max(0, 1 - Math.abs(phase * 3.8 - index - .6) * 2);
+    const rise = (index) => -emphasis(index) * 8;
+    const zh = currentLang === 'zh';
+    // Decorative source-to-result motifs use symbols, never synthetic research measurements.
+    if (kind === 'semantic') {
+      page(38, 61 + rise(0), 108, 127, palette.ink);
+      ctx.fillStyle = palette.ink;
+      ctx.font = '16px monospace';
+      ctx.fillText('item', 53, 166 + rise(0));
+      line(159, 126, 205, 126, palette.primary);
+      [0, 1, 2].forEach((layer) => {
+        const x = 222 + layer * 18;
+        const y = 73 + layer * 14 + rise(1);
+        ctx.fillStyle = palette.surface; ctx.fillRect(x, y, 81, 92);
+        ctx.strokeStyle = layer === 2 ? palette.primary : palette.rule; ctx.strokeRect(x, y, 81, 92);
+        for (let row = 0; row < 3; row++) for (let col = 0; col < 3; col++) {
+          ctx.fillStyle = row === layer && col === 1 ? palette.primary : palette.rule;
+          ctx.fillRect(x + 13 + col * 20, y + 17 + row * 21, 11, 11);
+        }
+      });
+      line(350, 126, 389, 126, palette.secondary);
+      ['a', 'b', 'c'].forEach((token, index) => {
+        const x = 405 + index * 59;
+        const y = 97 + rise(2 + index * .15);
+        ctx.fillStyle = palette.surface; ctx.fillRect(x, y, 48, 58);
+        ctx.strokeStyle = index % 2 ? palette.secondary : palette.primary; ctx.strokeRect(x, y, 48, 58);
+        ctx.fillStyle = palette.ink; ctx.font = '23px monospace'; ctx.fillText(token, x + 17, y + 36);
+      });
+      ctx.fillStyle = palette.muted; ctx.font = '14px sans-serif';
+      ctx.fillText(zh ? '物品文本' : 'Item text', 39, 225);
+      ctx.fillText('RQ-VAE', 238, 225);
+      ctx.fillText(zh ? '语义编码' : 'Semantic codes', 405, 225);
+    } else {
+      page(48, 52 + rise(0), 138, 155, palette.primary);
+      ctx.fillStyle = palette.primary; ctx.font = '18px monospace';
+      ctx.fillText('# .md', 64, 181 + rise(0));
+      line(201, 131, 268, 131, palette.primary);
+      const y = 100 + rise(1);
+      ctx.strokeStyle = palette.secondary; ctx.strokeRect(281, y, 58, 62);
+      line(296, y + 30, 307, y + 41, palette.secondary);
+      line(307, y + 41, 325, y + 20, palette.secondary);
+      line(352, 131, 419, 131, palette.secondary);
+      page(454, 49 + rise(2), 126, 154, palette.rule);
+      page(438, 64 + rise(2), 126, 154, palette.ink);
+      ctx.fillStyle = palette.secondary; ctx.fillRect(453, 170 + rise(2), 37, 28);
+      line(500, 176 + rise(2), 546, 176 + rise(2));
+      line(500, 190 + rise(2), 535, 190 + rise(2));
+      ctx.fillStyle = palette.muted; ctx.font = '14px sans-serif';
+      ctx.fillText(zh ? '源文件' : 'Source', 48, 243);
+      ctx.fillText(zh ? '校验' : 'Validate', 282, 243);
+      ctx.fillText(zh ? '文章' : 'Article', 438, 243);
+    }
+    if (phase >= 0) {
+      ctx.fillStyle = palette.primary;
+      ctx.fillRect(32 + 570 * phase, 28, 6, 3);
+    }
+    ctx.restore();
+  };
+  const stop = () => {
+    cancelAnimationFrame(frame);
+    frame = 0;
+    cover.dataset.playing = 'false';
+    draw();
+  };
+  const resize = () => {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width) { stop(); return; }
+    width = rect.width; height = rect.height;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const style = getComputedStyle(cover);
+    palette = Object.fromEntries(Object.entries({ background: '--bg', surface: '--panel', ink: '--text', muted: '--muted', rule: '--line', primary: '--cyan', secondary: '--pink' }).map(([key, value]) => [key, style.getPropertyValue(value).trim()]));
+    stop();
+  };
+  const isVisible = () => {
+    const rect = cover.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
+  };
+  const play = () => {
+    if (frame || !blogMotionEnabled() || document.hidden || !isVisible()) return;
+    resize();
+    cover.dataset.playing = 'true';
+    const start = performance.now();
+    const tick = (now) => {
+      const phase = Math.min(1, (now - start) / 1200);
+      draw(phase);
+      if (phase < 1 && blogMotionEnabled()) frame = requestAnimationFrame(tick);
+      else stop();
+    };
+    frame = requestAnimationFrame(tick);
+  };
+  cover.addEventListener('pointerenter', (event) => {
+    if (event.pointerType !== 'touch' && !entered) { entered = true; play(); }
+  });
+  cover.addEventListener('pointerleave', () => { entered = false; });
+  cover.addEventListener('focusin', () => { if (!focused) { focused = true; play(); } });
+  cover.addEventListener('focusout', (event) => { if (!cover.contains(event.relatedTarget)) focused = false; });
+  replay.addEventListener('click', play);
+  cover.addEventListener('blog:replay-cover', play);
+  blogMotionStops.add(stop);
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) { stop(); entered = false; }
+    }).observe(cover);
+  } else {
+    window.addEventListener('scroll', () => { if (frame && !isVisible()) stop(); }, { passive: true });
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
+  else { requestAnimationFrame(resize); window.addEventListener('resize', resize); }
+  new MutationObserver(resize).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  window.addEventListener('blog-language-change', resize);
+  return cover;
+}
+
+function initBlogCovers() {
+  document.querySelectorAll('.blog-card[data-post-card]').forEach((source) => {
+    const slot = source.querySelector(':scope > .blog-cover-slot[data-cover-kind]');
+    const title = source.querySelector('h3');
+    const href = source.getAttribute('href') || title?.querySelector('a')?.getAttribute('href');
+    if (!slot || !title || !href || blogCoverKindForUrl(href) !== slot.dataset.coverKind) return;
+    const cover = enhanceBlogCover(slot);
+    if (!cover) return;
+    // Native title navigation and replay are siblings, never nested interactive targets.
+    let card = source;
+    let titleLink = title.querySelector('a');
+    if (source.matches('a')) {
+      card = document.createElement('article');
+      for (const attribute of source.attributes) if (attribute.name !== 'href') card.setAttribute(attribute.name, attribute.value);
+      titleLink = document.createElement('a');
+      titleLink.href = source.href;
+      titleLink.className = 'blog-card-title-link';
+      titleLink.append(...title.childNodes);
+      title.append(titleLink);
+      card.append(...source.childNodes);
+      source.replaceWith(card);
+    }
+    card.classList.add('blog-illustrated-card');
+    card.addEventListener('pointerenter', (event) => {
+      if (event.pointerType !== 'touch') cover.dispatchEvent(new Event('blog:replay-cover'));
+    });
+    titleLink?.addEventListener('focus', () => cover.dispatchEvent(new Event('blog:replay-cover')));
+  });
+  document.querySelectorAll('.blog-post-layout > .blog-post-card > .blog-post-header > .blog-cover-slot[data-cover-kind]').forEach((slot) => {
+    if (blogCoverKindForUrl(location.href) === slot.dataset.coverKind) enhanceBlogCover(slot);
+  });
+}
+
+function initTigerWalkthrough(figure) {
+  const stages = [...figure.querySelectorAll('.tiger-flow-step')];
+  if (!stages.length || figure.querySelector('.blog-stage-controls')) return;
+  const controls = document.createElement('div');
+  controls.className = 'blog-stage-controls';
+  controls.setAttribute('role', 'group');
+  controls.dataset.blogI18nAria = 'stage_group';
+  const previous = blogIconButton('stage_previous', 'arrow-left');
+  const play = blogIconButton('stage_play', 'play');
+  const next = blogIconButton('stage_next', 'arrow-right');
+  const status = document.createElement('span');
+  status.className = 'blog-stage-status';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-atomic', 'true');
+  controls.append(previous, play, next, status);
+  figure.querySelector('.tiger-pipeline-heading').after(controls);
+  let index = -1;
+  let timer = 0;
+  const update = () => {
+    previous.disabled = index <= 0;
+    next.disabled = index >= stages.length - 1;
+    play.disabled = !blogMotionEnabled();
+    play.setAttribute('aria-pressed', String(Boolean(timer)));
+    setBlogIcon(play, timer ? 'pause' : 'play');
+    labelBlogButton(play, timer ? 'stage_pause' : 'stage_play');
+    status.textContent = index < 0 ? '' : `${index + 1} / ${stages.length} · ${stages[index].querySelector('.tiger-flow-copy strong').textContent}`;
+  };
+  const pause = () => { window.clearTimeout(timer); timer = 0; update(); };
+  const select = (value) => {
+    index = Math.max(0, Math.min(stages.length - 1, value));
+    stages.forEach((stage, position) => {
+      stage.classList.toggle('blog-stage-active', position === index);
+      if (position === index) stage.setAttribute('aria-current', 'step');
+      else stage.removeAttribute('aria-current');
+    });
+    update();
+  };
+  previous.addEventListener('click', () => { pause(); select(index - 1); });
+  next.addEventListener('click', () => { pause(); select(index + 1); });
+  const advance = () => {
+    select(index + 1);
+    if (index === stages.length - 1) pause();
+    else { timer = window.setTimeout(advance, 1600); update(); }
+  };
+  play.addEventListener('click', () => {
+    if (timer) { pause(); return; }
+    if (index === stages.length - 1) index = -1;
+    if (!blogMotionEnabled()) return;
+    advance();
+  });
+  stages.forEach((stage, position) => stage.querySelector('summary')?.addEventListener('click', () => { pause(); select(position); }));
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => { if (!entries[0].isIntersecting) pause(); }).observe(figure);
+  }
+  blogMotionStops.add(pause);
+  window.addEventListener('site:motion-change', update);
+  blogReducedMotion.addEventListener('change', update);
+  document.addEventListener('visibilitychange', update);
+  window.addEventListener('blog-language-change', update);
+  update();
+}
+
+function initBlogFigureZoom(content) {
+  if (!window.HTMLDialogElement || document.querySelector('.blog-figure-dialog')) return;
+  const dialog = document.createElement('dialog');
+  dialog.id = 'blogFigureDialog';
+  dialog.className = 'blog-figure-dialog';
+  dialog.setAttribute('aria-labelledby', 'blogFigureDialogTitle');
+  const toolbar = document.createElement('div');
+  toolbar.className = 'blog-figure-dialog-toolbar';
+  const title = document.createElement('h2');
+  title.id = 'blogFigureDialogTitle';
+  title.dataset.blogI18n = 'zoom_title';
+  const size = blogIconButton('zoom_actual', 'zoom-in');
+  const close = blogIconButton('zoom_close', 'x');
+  close.autofocus = true;
+  toolbar.append(title, size, close);
+  const viewport = document.createElement('div');
+  viewport.className = 'blog-figure-dialog-viewport';
+  viewport.tabIndex = 0;
+  viewport.setAttribute('role', 'region');
+  viewport.dataset.blogI18nAria = 'zoom_title';
+  const caption = document.createElement('p');
+  caption.className = 'blog-figure-dialog-caption';
+  dialog.append(toolbar, viewport, caption);
+  document.body.append(dialog);
+  let source;
+  let opener;
+  let savedScroll;
+  let savedOverflow;
+  let inertStates = [];
+  let closing = false;
+
+  const originFrames = () => {
+    const from = source.getBoundingClientRect();
+    const to = viewport.firstElementChild.getBoundingClientRect();
+    return [{ transformOrigin: '0 0', transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${Math.max(.02, from.width / to.width)}, ${Math.max(.02, from.height / to.height)})`, opacity: .65 }, { transformOrigin: '0 0', transform: 'none', opacity: 1 }];
+  };
+  const restore = () => {
+    if (!savedScroll) return;
+    inertStates.forEach(([element, inert]) => { element.inert = inert; });
+    document.documentElement.style.overflow = savedOverflow;
+    opener?.focus({ preventScroll: true });
+    window.scrollTo({ left: savedScroll.x, top: savedScroll.y, behavior: 'instant' });
+    savedScroll = null;
+    viewport.replaceChildren();
+    closing = false;
+  };
+  const dismiss = async () => {
+    if (!dialog.open || closing) return;
+    closing = true;
+    const animation = animateBlog(viewport.firstElementChild, originFrames().reverse(), { duration: 190 });
+    if (animation) await animation.finished.catch(() => {});
+    dialog.close();
+    restore();
+  };
+  close.addEventListener('click', dismiss);
+  dialog.addEventListener('cancel', (event) => { event.preventDefault(); dismiss(); });
+  dialog.addEventListener('close', restore);
+  dialog.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab' || !dialog.open) return;
+    const focusable = [...dialog.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]')]
+      .filter((node) => node.tabIndex >= 0 && !node.matches(':disabled') && !node.closest('[inert]')
+        && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden');
+    const first = focusable[0] || close;
+    const last = focusable.at(-1) || close;
+    const active = document.activeElement;
+    // Native modal inertness does not prevent Tab from advancing to browser chrome.
+    if (event.shiftKey && (active === first || active === dialog)) {
+      event.preventDefault();
+      last.focus({ preventScroll: true });
+    } else if (!event.shiftKey && (active === last || active === dialog)) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  });
+  dialog.addEventListener('click', (event) => {
+    if (event.target !== dialog) return;
+    const rect = dialog.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dismiss();
+  });
+  size.addEventListener('click', () => {
+    const actual = dialog.dataset.size !== 'actual';
+    dialog.dataset.size = actual ? 'actual' : 'fit';
+    size.setAttribute('aria-pressed', String(actual));
+    labelBlogButton(size, actual ? 'zoom_fit' : 'zoom_actual');
+    setBlogIcon(size, actual ? 'zoom-out' : 'zoom-in');
+  });
+  window.addEventListener('pagehide', () => { if (dialog.open) { dialog.close(); restore(); } });
+
+  const addZoom = (target, container) => {
+    if (target.closest('[data-no-zoom], .draft-preview, .private-notes')) return;
+    const button = blogIconButton('zoom_open', 'maximize-2');
+    button.classList.add('blog-figure-zoom');
+    button.dataset.figureZoom = '';
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('aria-controls', dialog.id);
+    container.append(button);
+    button.addEventListener('click', () => {
+      if (dialog.open) return;
+      blogMotionStops.forEach((stop) => stop());
+      source = target; opener = button;
+      const clone = target.cloneNode(true);
+      clone.querySelectorAll('.blog-stage-controls, .blog-figure-actions, .blog-image-actions, .blog-figure-zoom').forEach((node) => node.remove());
+      // Keep ID/ARIA references valid without duplicating article fragment targets.
+      const idMap = new Map();
+      [clone, ...clone.querySelectorAll('[id]')].forEach((node) => {
+        if (node.id) { idMap.set(node.id, `zoom-${node.id}`); node.id = `zoom-${node.id}`; }
+      });
+      [clone, ...clone.querySelectorAll('*')].forEach((node) => {
+        for (const attribute of ['aria-labelledby', 'aria-describedby', 'aria-controls', 'for']) {
+          if (node.hasAttribute(attribute)) node.setAttribute(attribute, node.getAttribute(attribute).split(' ').map((id) => idMap.get(id) || id).join(' '));
+        }
+        if (node.matches('a[href^="#"]')) {
+          const id = node.getAttribute('href').slice(1);
+          if (idMap.has(id)) node.setAttribute('href', `#${idMap.get(id)}`);
+        }
+      });
+      clone.classList.add('blog-zoom-content');
+      if (clone.matches('img')) { clone.loading = 'eager'; clone.removeAttribute('width'); clone.removeAttribute('height'); }
+      viewport.replaceChildren(clone);
+      caption.textContent = target.matches('img') ? target.alt : '';
+      caption.hidden = !caption.textContent;
+      dialog.dataset.size = 'fit';
+      labelBlogButton(size, 'zoom_actual'); setBlogIcon(size, 'zoom-in');
+      size.setAttribute('aria-pressed', 'false');
+      savedScroll = { x: window.scrollX, y: window.scrollY };
+      savedOverflow = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = 'hidden';
+      inertStates = [...document.body.children].filter((node) => node !== dialog).map((node) => [node, node.inert]);
+      inertStates.forEach(([node]) => { node.inert = true; });
+      dialog.showModal();
+      viewport.scrollTo(0, 0);
+      close.focus({ preventScroll: true });
+      animateBlog(clone, originFrames(), { duration: 280 });
+    });
+  };
+  content.querySelectorAll('figure').forEach((figure) => {
+    const actions = document.createElement('div');
+    actions.className = 'blog-figure-actions';
+    figure.insertBefore(actions, figure.firstChild);
+    addZoom(figure, actions);
+  });
+  content.querySelectorAll('img').forEach((img) => {
+    const actions = document.createElement('span');
+    actions.className = 'blog-image-actions';
+    const anchor = img.closest('a');
+    (anchor || img).after(actions);
+    addZoom(img, actions);
+  });
+}
+
+// Only published article roots participate; private-editor previews stay untouched.
+initBlogCovers();
+const publicBlogContent = document.querySelector('.blog-post-layout > .blog-post-card > .blog-content');
+if (publicBlogContent) {
+  publicBlogContent.querySelectorAll('#fig-tiger-semantic-id-flow').forEach(initTigerWalkthrough);
+  initBlogFigureZoom(publicBlogContent);
+}
 
 applyLanguage(currentLang);
 // Measure after initial language/menu/copy-button writes, avoiding a second full article layout.

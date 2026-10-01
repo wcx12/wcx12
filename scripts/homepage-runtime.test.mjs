@@ -322,7 +322,7 @@ test('canvas motion respects mobile budgets and page visibility', () => {
   assert.match(researchCanvasSource, /INTEREST_MOBILE_IDLE_FRAME_MS = 200/);
   assert.match(researchCanvasSource, /if \(isInterestDragging\(\)\) return INTEREST_DESKTOP_FRAME_MS/);
   assert.match(repoMapSource, /REPO_MAP_MOBILE_IDLE_FRAME_MS = 200/);
-  assert.match(scriptSource, /compactViewportQuery\.matches \|\| reducedMotionQuery\.matches \? 'auto' : 'smooth'/);
+  assert.match(scriptSource, /compactViewportQuery\.matches \|\| reducedMotionQuery\.matches \|\| window\.SiteMotion\?\.enabled\(\) === false \? 'auto' : 'smooth'/);
   assert.match(researchCanvasSource, /getContext\(\)\.reducedMotion \? 'auto' : 'smooth'/);
   assert.match(repoMapSource, /context\.reducedMotion \? 'auto' : 'smooth'/);
   assert.doesNotMatch(scriptSource, /scrollIntoView\(\{ behavior: 'smooth'/);

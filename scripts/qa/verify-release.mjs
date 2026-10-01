@@ -25,6 +25,8 @@ try {
   report.expectedFingerprint = home.match(/[?&]v=([a-f0-9]+)/)?.[1];
   assert.ok(report.expectedFingerprint);
   const resources = ['site-tokens.css', 'styles.css', 'site-nav.css', 'homepage-bootstrap.js',
+    'site-motion.js', 'site-motion.css', 'featured-posters.js', 'featured-posters.css',
+    'hero-scene.js', 'hero-scene.css', 'assets/vendor/three/three.module.min.js',
     'script.js', 'site-data.js', 'blog/assets/blog.js', 'blog/assets/blog.css', '404.html'];
   for (const file of [...routes.map(route => `${route}index.html`), ...resources]) {
     const url = new URL(file, base);
