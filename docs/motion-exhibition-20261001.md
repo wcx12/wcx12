@@ -78,6 +78,10 @@ Evidence is ignored and outside the deployment allowlist:
 - `output/site-quality-20260926/motion-final/browser/`: 45 Chromium route/viewport/theme/no-JS checks plus six Firefox/WebKit checks, all passed; actual screenshots reviewed.
 - `output/motion-20261001/final-navigation/`: six repeated Chromium theme/Back checks passed after the critical-head fix.
 - Paired performance reports: pending CI completion.
+- Final topic audit: 48 combinations passed. Reading: 15 layout checks and 174
+  sampled text contrast checks passed; optional-module retry, anchors and print
+  reviewed. Real pointer drag changed the 3D rendering and emulated touch pan
+  scrolled the page. Settled screenshots: `output/motion-20261001/final-visual/`.
 
 Baseline `npm run validate`: 224 passed, two Windows symlink tests skipped (EPERM).
 First focused integration: 22/31 passed; seven transition errors, one dialog
@@ -124,6 +128,12 @@ reviewed before production approval; no previous release score substitutes for i
 Production publishing and an ordinary rollback commit were explicitly authorized
 by the user, conditional on gates. No approval or branch/environment protection
 is changed. Release is not yet claimed in this record.
+The runner's Azure HTTP Ubuntu mirror repeatedly stalled on browser dependency
+downloads. CI now uses the official Ubuntu HTTPS mirror with the same signing
+keys/verification and a bounded install timeout; no test or approval is skipped.
+Release-specific final results are retained in
+[PR 21](https://github.com/wcx12/wcx12/pull/21) and the ignored
+`output/motion-20261001/release-record.md`.
 
 After validation, merge through the existing repository policy and Pages workflow.
 Verify live fingerprint and homepage, Chinese route, research, publication,

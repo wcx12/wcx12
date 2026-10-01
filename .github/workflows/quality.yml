@@ -61,7 +61,12 @@ jobs:
         run: npm run package:pages && npm run test:pages
 
       - name: Install browser for visitor-path tests
-        run: npx playwright install --with-deps chromium firefox webkit
+        timeout-minutes: 10
+        run: |
+          # Avoid repeated package-download timeouts on the runner's Azure HTTP mirror.
+          # Keep Ubuntu's signed package metadata and keys unchanged.
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+          npx playwright install --with-deps chromium firefox webkit
 
       - name: Verify visitor paths
         run: npm run test:e2e && npm run test:links
