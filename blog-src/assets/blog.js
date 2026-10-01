@@ -898,16 +898,25 @@ function enhanceBlogCover(slot) {
     cover.dataset.playing = 'false';
     draw();
   };
-  const resize = () => {
-    const rect = canvas.getBoundingClientRect();
+  const resize = (rect = canvas.getBoundingClientRect()) => {
     if (!rect.width) { stop(); return; }
     width = rect.width; height = rect.height;
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
     const style = getComputedStyle(cover);
     palette = Object.fromEntries(Object.entries({ background: '--bg', surface: '--panel', ink: '--text', muted: '--muted', rule: '--line', primary: '--cyan', secondary: '--pink' }).map(([key, value]) => [key, style.getPropertyValue(value).trim()]));
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
+    if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+    if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
     stop();
+  };
+  let resizeFrame = 0;
+  // Read after language/theme writes have painted, not inside their mutation task.
+  const scheduleResize = () => {
+    if (resizeFrame) return;
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = requestAnimationFrame(() => { resizeFrame = 0; resize(); });
+    });
   };
   const isVisible = () => {
     const rect = cover.getBoundingClientRect();
@@ -942,10 +951,10 @@ function enhanceBlogCover(slot) {
   } else {
     window.addEventListener('scroll', () => { if (frame && !isVisible()) stop(); }, { passive: true });
   }
-  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
-  else { requestAnimationFrame(resize); window.addEventListener('resize', resize); }
-  new MutationObserver(resize).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  window.addEventListener('blog-language-change', resize);
+  if ('ResizeObserver' in window) new ResizeObserver(([entry]) => resize(entry.contentRect)).observe(canvas);
+  else { scheduleResize(); window.addEventListener('resize', scheduleResize); }
+  new MutationObserver(scheduleResize).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  window.addEventListener('blog-language-change', scheduleResize);
   return cover;
 }
 

@@ -5272,9 +5272,13 @@ html[data-ui-lang="zh"] .blog-hero h1 {
   }
 
   .blog-stat-grid,
-  .blog-post-layout,
   .blog-prev-next {
     grid-template-columns: 1fr;
+  }
+
+  /* A single article needs no intrinsic grid-track sizing on narrow screens. */
+  .blog-post-layout {
+    display: block;
   }
 
   .blog-toc {

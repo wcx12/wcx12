@@ -89,6 +89,35 @@ for (const [route, selector] of [
   });
 }
 
+test('article language change redraws its cover without synchronous layout reads', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(tiger);
+  const canvas = page.locator('.blog-post-header > .blog-cover canvas');
+  await expect.poll(() => canvasColors(canvas)).toBeGreaterThan(15);
+  const before = await canvas.evaluate(node => node.toDataURL());
+  const reads = await page.evaluate(() => {
+    const original = Element.prototype.getBoundingClientRect;
+    let synchronousReads = 0;
+    Element.prototype.getBoundingClientRect = function () {
+      if (this.matches('.blog-cover canvas')) synchronousReads++;
+      return original.call(this);
+    };
+    try { document.getElementById('blogLangToggle').click(); }
+    finally { Element.prototype.getBoundingClientRect = original; }
+    return synchronousReads;
+  });
+  expect(reads).toBe(0);
+  await expect(page.locator('.blog-post-header > .blog-cover .blog-cover-replay')).toHaveAccessibleName('重播封面');
+  await expect.poll(() => canvas.evaluate(node => node.toDataURL())).not.toBe(before);
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.locator(flow).scrollIntoViewIfNeeded();
+    await expect(page.locator(flow)).toBeVisible();
+    await noOverflow(page);
+    await expect(page.locator('.blog-content .katex').first()).toBeVisible();
+  }
+});
+
 test('cover replay cancels offscreen and does not resume automatically', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(writing);

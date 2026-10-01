@@ -61,6 +61,7 @@ Three.js bundle. Lucide and Three.js licenses are retained in `assets/vendor/`.
 | M15 | Performance regression / P1 | Local paired measurements exposed long initial WebGL tasks (first mobile sample 2,277ms), plus synchronous indicator layout. Desktop cold-start samples also regressed despite staged compilation. | Initial visits retain the lightweight preview. Desktop 3D starts on 350ms mouse dwell or button activation; narrow/coarse-pointer visits require the button. Split renderer initialization, await shader compilation, avoid redundant buffer resets, defer decorative layout until after paint. Mobile activation, actual pixels, keyboard focus and network-failure retry are tested. Final paired measurements required. |
 | M16 | Keyboard defect / P2; CI failure link unconfirmed | Topic rail resize recentered the selected interest even when a visitor focused a different interest. A new deterministic regression fails before the fix (scrollLeft 521 instead of 802). CI run 36895085395 separately had one WebKit Agent-selection failure; its exact cause could not be established without a retained trace. | Preserve the focused interest during resize; add actual browser resize/Enter coverage and retain failed CI browser evidence. Repeat the original Agent path without lowering assertions or adding retries. |
 | M17 | Keyboard defect / P1 | The next CI trace (36896967137) showed focus lost during initial data arrival. Research refresh unconditionally replaced every topic link; resize-only protection could not preserve a removed DOM node. | Skip unchanged rail markup and restore focus by topic key on necessary updates. A delayed ORCID response regression checks the original DOM node remains connected, focused and operable. |
+| M18 | Performance regression / P1 | CI 36899150319 passed all 184 browser checks (eight scoped skips), but mobile article Performance was 87 versus base 97. A CDP trace found the cover's language-change listener synchronously measuring immediately after document-wide language writes. Mobile articles also retained intrinsic single-column grid sizing. | Coalesce theme/language redraws after paint, consume ResizeObserver dimensions, preserve drawing buffers when unchanged, and use normal document flow for the single-column article. A browser regression checks translated pixels, no synchronous cover measurement, and visible figures/math without overflow at 320/390/768px. Re-run paired performance before release. |
 
 All new visual changes are reversible. Main regression risks are lifecycle
 cancellation, nested-page asset paths, keyboard focus, pointer/scroll interaction,
@@ -163,6 +164,14 @@ setup covers both the source declaration and this mirror list.
 Release-specific final results are retained in
 [PR 21](https://github.com/wcx12/wcx12/pull/21) and the ignored
 `output/motion-20261001/release-record.md`.
+
+The 712e07b candidate was also withheld despite passing CI. Its complete 24-run
+comparison is in `output/motion-20261001/ci-final-performance/`: both homepage
+profiles and desktop article scored 100 in all three runs, while mobile article
+scored 86-88 (median 87; baseline 97). Raw layout diagnostics and the follow-up
+trace are retained as `article-before-trace.json`, `article-after-trace.json`
+and `article-optimized-trace.json`. These throttled local diagnostic traces are
+not interchangeable with Lighthouse scores or user-experienced latency.
 
 After validation, merge through the existing repository policy and Pages workflow.
 Verify live fingerprint and homepage, Chinese route, research, publication,
