@@ -153,6 +153,10 @@ test('cover hover and keyboard replay end once; global and OS motion changes can
   await button.press('Enter');
   await expect(cover).toHaveAttribute('data-playing', 'false');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  // WebKit's media-change notification can arrive after emulateMedia resolves.
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'on');
+  await expect(page.locator('html')).toHaveAttribute('data-blog-motion', 'on');
+  await expect(page.locator('[data-motion-setting]')).toBeChecked();
   await button.press('Enter');
   await expect(cover).toHaveAttribute('data-playing', 'true');
   await page.evaluate(() => {
