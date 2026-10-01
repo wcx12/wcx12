@@ -138,8 +138,10 @@ test('cover hover and keyboard replay end once; global and OS motion changes can
   await page.goto(writing);
   const cover = page.locator('.blog-post-header > .blog-cover');
   const button = cover.locator('button');
-  await page.evaluate(() => window.dispatchEvent(new Event('blog-language-change')));
-  await cover.dispatchEvent('pointerenter', { pointerType: 'mouse' });
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('blog-language-change'));
+    document.querySelector('.blog-post-header > .blog-cover').dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+  });
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(cover).toHaveAttribute('data-playing', 'true');
   await expect(cover).toHaveAttribute('data-playing', 'false', { timeout: 2500 });
@@ -157,6 +159,7 @@ test('cover hover and keyboard replay end once; global and OS motion changes can
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'on');
   await expect(page.locator('html')).toHaveAttribute('data-blog-motion', 'on');
   await expect(page.locator('[data-motion-setting]')).toBeChecked();
+  await expect(cover).toHaveAttribute('data-playing', 'false');
   await button.press('Enter');
   await expect(cover).toHaveAttribute('data-playing', 'true');
   await page.evaluate(() => {
