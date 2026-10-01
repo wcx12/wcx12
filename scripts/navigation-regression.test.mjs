@@ -121,3 +121,21 @@ test('mobile topic rail reveals route-selected topics without scrolling the page
   keepVisible();
   assert.equal(rail.scrollLeft, 751);
 });
+
+test('topic rail does not pull keyboard focus back to the previously selected topic', () => {
+  const selected = { getBoundingClientRect: () => ({ left: -240, right: -20 }) };
+  const focused = {};
+  const rail = {
+    scrollWidth: 1500, clientWidth: 254, scrollLeft: 802,
+    getBoundingClientRect: () => ({ left: 33, right: 287 }),
+    querySelector: () => selected,
+    contains: node => node === focused
+  };
+  const keepVisible = loadFunction('keepActiveInterestVisible', 'setInterestPanel', {
+    interestRail: rail,
+    document: { activeElement: focused, getElementById: () => ({ classList: { contains: () => true } }) },
+    ResizeObserver: class { observe() {} }
+  });
+  keepVisible();
+  assert.equal(rail.scrollLeft, 802);
+});

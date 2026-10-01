@@ -1617,6 +1617,8 @@ function keepActiveInterestVisible() {
   if (!document.getElementById('research')?.classList.contains('active')) return;
   const active = interestRail.querySelector('[aria-current="page"]');
   if (!active || interestRail.scrollWidth <= interestRail.clientWidth) return;
+  const focused = document.activeElement;
+  if (focused && focused !== active && interestRail.contains(focused)) return;
   const railBounds = interestRail.getBoundingClientRect();
   const activeBounds = active.getBoundingClientRect();
   const offset = activeBounds.left < railBounds.left
@@ -1959,6 +1961,7 @@ function heroPreviewEntry() {
 function renderHeroPreview() {
   const entry = heroPreviewEntry();
   if (!entry || !heroPreviewMeta) return;
+  heroPreviewTick = 0;
   const domainTitle = textFor(entry.domain.title);
   const childTitle = textFor(entry.child.title);
   if (heroPreviewStatus) heroPreviewStatus.textContent = i18n[currentLang].hero_preview_live;
@@ -1980,6 +1983,7 @@ function renderHeroPreview() {
     select(id) { activeInterestId = id; renderHeroPreview(); if (initializedViews.has('research')) renderResearchInterest(); }
   });
   drawHeroPreviewCanvas();
+  scheduleMotionLoop();
 }
 
 const heroPreviewScenes = {
@@ -3768,7 +3772,7 @@ function resizeCanvas() {
 }
 
 function hasVisibleMotionTarget() {
-  if (heroPreviewVisible && !document.querySelector('.hero-scene-ready')) return true;
+  if (heroPreviewVisible && heroPreviewTick < 24 && !document.querySelector('.hero-scene-ready')) return true;
   if (isResearchViewActive()) return Boolean(researchCanvasFeature?.isVisible());
   if (isProjectsViewActive()) return Boolean(repoMapFeature?.isVisible());
   return false;
@@ -3785,6 +3789,7 @@ function shouldAnimateHeroPreview(timestamp) {
   return shouldRunMotion()
     && !document.querySelector('.hero-scene-ready')
     && heroPreviewVisible
+    && heroPreviewTick < 24
     && timestamp - lastHeroPreviewFrame >= HERO_PREVIEW_FRAME_SKIP * 16;
 }
 

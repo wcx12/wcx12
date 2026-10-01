@@ -17,7 +17,8 @@ function animate(element, frames, options = {}) {
 }
 
 function syncMotion() {
-  root.dataset.motion = preference !== 'off' && !reduced.matches ? 'on' : 'off';
+  const state = preference !== 'off' && !reduced.matches ? 'on' : 'off';
+  if (root.dataset.motion !== state) root.dataset.motion = state;
   if (!enabled()) {
     for (const animation of animations) animation.cancel();
     themeTransition?.skipTransition();

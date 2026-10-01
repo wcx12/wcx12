@@ -1,4 +1,9 @@
 (function () {
+  // Establish motion state before the article DOM is parsed, not after layout.
+  var motionDisabled = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try { motionDisabled = motionDisabled || localStorage.getItem('wcx12-motion') === 'off'; } catch (error) {}
+  document.documentElement.dataset.motion = motionDisabled ? 'off' : 'on';
+  document.documentElement.dataset.blogMotion = motionDisabled ? 'off' : 'on';
   // Native navigation can be cancelled before deferred modules install listeners.
   function observeTransition(event) {
     if (!event.viewTransition) return;

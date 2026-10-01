@@ -704,7 +704,7 @@ const blogReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const blogAnimations = new Set();
 const blogMotionStops = new Set();
 function blogMotionEnabled() {
-  return !blogReducedMotion.matches && (window.SiteMotion?.enabled?.() ?? true);
+  return !blogReducedMotion.matches && (window.SiteMotion?.enabled?.() ?? document.documentElement.dataset.motion !== 'off');
 }
 
 function animateBlog(node, keyframes, options = {}) {
@@ -717,7 +717,8 @@ function animateBlog(node, keyframes, options = {}) {
 
 function syncBlogMotion() {
   const enabled = blogMotionEnabled();
-  document.documentElement.dataset.blogMotion = enabled ? 'on' : 'off';
+  const state = enabled ? 'on' : 'off';
+  if (document.documentElement.dataset.blogMotion !== state) document.documentElement.dataset.blogMotion = state;
   if (!enabled || document.hidden) {
     blogAnimations.forEach((animation) => animation.cancel());
     blogMotionStops.forEach((stop) => stop());

@@ -18,14 +18,13 @@ function updateLaunch() {
   launchButton.title = label;
   launchButton.setAttribute('aria-label', label);
   launchButton.setAttribute('aria-busy', String(sceneLoading));
-  launchButton.hidden = !!scene && !sceneFailed && !sceneLoading || !window.SiteMotion?.enabled()
-    || (!compact.matches && !sceneFailed);
+  launchButton.hidden = !!scene && !sceneFailed && !sceneLoading || !window.SiteMotion?.enabled();
   launchButton.disabled = sceneLoading;
 }
 function loadScene() {
   updateLaunch();
   if (scene || sceneLoading || !heroVisible || !window.SiteMotion?.enabled()) return;
-  if ((compact.matches || sceneFailed) && !activated) return;
+  if (!activated) return;
   sceneLoading = true;
   sceneFailed = false;
   updateLaunch();
@@ -66,6 +65,12 @@ export function enhanceHeroPreview(detail) {
       activated = true;
       loadScene();
     });
+    let intentTimer;
+    host.addEventListener('pointerenter', event => {
+      if (event.pointerType !== 'mouse' || compact.matches || sceneFailed) return;
+      intentTimer = setTimeout(() => { activated = true; loadScene(); }, 350);
+    });
+    host.addEventListener('pointerleave', () => clearTimeout(intentTimer));
     host.append(launchButton);
     host.addEventListener('hero-scene:ready', () => {
       const focused = document.activeElement === launchButton

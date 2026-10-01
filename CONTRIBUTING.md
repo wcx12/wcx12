@@ -144,7 +144,9 @@ switch stores only `wcx12-motion`; an OS reduced-motion preference takes priorit
 The homepage loads `featured-posters.js` after its content initializes. This
 module owns cover previews and the hero controller, keeping decoration out of
 the application module. `hero-scene.js/css` loads Three.js only when the hero is
-visible and motion is enabled. The renderer stops after settling and pauses
+visible, motion is enabled, and a visitor activates 3D (button/keyboard, or a
+350ms mouse dwell on a desktop preview). Touch/narrow viewports require the
+explicit button. Initial content never waits for WebGL. The renderer stops after settling and pauses
 offscreen/background; its 2D fallback remains available on WebGL failure.
 The build bundles only used Three.js exports with pinned esbuild and preserves
 `assets/vendor/three/LICENSE`. Commit that generated bundle with source changes.

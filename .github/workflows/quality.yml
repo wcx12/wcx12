@@ -74,6 +74,16 @@ jobs:
       - name: Verify generated files are current
         run: git diff --exit-code -- index.html blog research projects publications zh resume publications.md rss.xml sitemap.xml assets/vendor
 
+      - name: Retain failed browser evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-failure-review
+          path: |
+            output/site-quality-20260926/e2e-results.json
+            output/site-quality-20260926/e2e-artifacts/
+          retention-days: 7
+
       - name: Compare performance with the pull-request base
         if: github.event_name == 'pull_request'
         env:

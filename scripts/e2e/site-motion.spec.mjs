@@ -18,6 +18,24 @@ async function pixelStats(page, png) {
 }
 const hash = buffer => createHash('sha256').update(buffer).digest('hex');
 
+test('mobile topic resize preserves a visitor focusing a different interest', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('zh/');
+  await page.locator('.command-row [data-view="research"]').click();
+  await expect(page.locator('#interestDemoAction')).toBeEnabled();
+  const target = page.locator('#interestRail [data-interest="agent"]');
+  await target.focus();
+  await page.setViewportSize({ width: 400, height: 844 });
+  await expect(target).toBeFocused();
+  await expect.poll(async () => {
+    const box = await target.boundingBox();
+    const rail = await page.locator('#interestRail').boundingBox();
+    return box.x >= rail.x - 1 && box.x + box.width <= rail.x + rail.width + 1;
+  }).toBe(true);
+  await target.press('Enter');
+  await expect(page.locator('.topic-experiences [data-topic="agent"] .tw-timeline')).toBeVisible();
+});
+
 test('fresh mobile keeps the lightweight preview until 3D is explicitly activated', async ({ page, browserName }, info) => {
   test.skip(browserName !== 'chromium', 'Chromium exercises WebGL activation; all engines test fallback and main paths.');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -70,9 +88,18 @@ test('failed 3D load retains content and a working retry command', async ({ page
 test('spatial hero is nonblank, responds to pointer and topic input, then settles', async ({ page, browserName }, info) => {
   test.skip(browserName !== 'chromium', 'WebGL is visually verified in Chromium; other engines exercise the static fallback and content paths.');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  const errors = [];
+  const errors = [], requests = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => requests.push(request.url()));
   await page.goto('zh/');
+  await expect(page.getByRole('button', { name: '开启三维交互' })).toBeVisible();
+  await page.waitForTimeout(3500);
+  expect(requests.some(url => url.includes('/assets/vendor/three/'))).toBe(false);
+  const fallback = page.locator('#heroPreviewCanvas');
+  const still = hash(await fallback.screenshot());
+  await page.waitForTimeout(400);
+  expect(hash(await fallback.screenshot())).toBe(still);
+  await page.locator('#heroPreviewCanvas').hover();
   const scene = page.locator('.hero-scene-canvas');
   await expect(scene).toBeVisible({ timeout: 20000 });
   await page.waitForTimeout(1800);

@@ -58,7 +58,8 @@ Three.js bundle. Lucide and Three.js licenses are retained in `assets/vendor/`.
 | M12 | Accessibility / P2 | Saved motion-off did not override explicit smooth scrolling. | Central scroll behavior checks the shared preference; assert actual scrollIntoView options. |
 | M13 | Consistency / P2 | Article footer matched before the global footer, misplacing the motion setting. | Explicit global-footer selection, verified by a visible article-footer control assertion. |
 | M14 | Test reliability / P2 | One Windows WebKit run exhausted the 45-second budget for 48 successive layout combinations; it reported no failed layout predicate. | Parameterize by theme, retaining all widths, pixel and error assertions and the unchanged per-test timeout. All nine engine/theme cases passed. |
-| M15 | Performance regression / P1 | Local paired mobile measurements exposed long initial WebGL tasks (first sample 2,277ms), plus synchronous indicator layout. | Fresh narrow/coarse-pointer visits require explicit 3D activation; desktop retains automatic 3D. Split renderer initialization, await shader compilation, avoid redundant buffer resets, defer decorative layout until after paint. Mobile activation, actual pixels, keyboard focus and network-failure retry are tested. Final paired measurements required. |
+| M15 | Performance regression / P1 | Local paired measurements exposed long initial WebGL tasks (first mobile sample 2,277ms), plus synchronous indicator layout. Desktop cold-start samples also regressed despite staged compilation. | Initial visits retain the lightweight preview. Desktop 3D starts on 350ms mouse dwell or button activation; narrow/coarse-pointer visits require the button. Split renderer initialization, await shader compilation, avoid redundant buffer resets, defer decorative layout until after paint. Mobile activation, actual pixels, keyboard focus and network-failure retry are tested. Final paired measurements required. |
+| M16 | Keyboard defect / P2; CI failure link unconfirmed | Topic rail resize recentered the selected interest even when a visitor focused a different interest. A new deterministic regression fails before the fix (scrollLeft 521 instead of 802). CI run 36895085395 separately had one WebKit Agent-selection failure; its exact cause could not be established without a retained trace. | Preserve the focused interest during resize; add actual browser resize/Enter coverage and retain failed CI browser evidence. Repeat the original Agent path without lowering assertions or adding retries. |
 
 All new visual changes are reversible. Main regression risks are lifecycle
 cancellation, nested-page asset paths, keyboard focus, pointer/scroll interaction,
@@ -91,7 +92,7 @@ focus failure and one fragment-encoding assertion identified and addressed.
 The earlier interrupted `motion-baseline-browser` run targeted a mutable artifact
 by mistake and is explicitly excluded from baseline/final evidence.
 
-Current final build: 15 Pages tests passed. Content/site validation: 233 passed,
+Current final build: 15 Pages tests passed. Content/site validation: 234 passed,
 two Windows symlink tests skipped. Private-notes suite: 78 passed.
 Link audit: 39 HTML pages, 1 SVG,
 1,633 hrefs, 269 fragments, 10 dynamic routes; no broken internal destinations.
@@ -137,6 +138,15 @@ green alone was not treated as release approval. The M15 follow-up retains these
 reports and adds `motion-local-home-optimized`: home Performance medians 93/89
 (base range 79-93, candidate 70-91), TBT 179/205ms. Windows timings have substantial
 variation; the final controlled CI comparison will be reported separately.
+The subsequent full Windows comparison (`motion-final-paired`, source 367570e)
+also remained unacceptable: desktop home Performance median 69 versus base 97.
+It is superseded, not release evidence. The final candidate uses intent-driven
+3D on desktop too, settles the 2D fallback after 24 frames, and establishes motion
+attributes in the head before article layout. All 24 raw reports from that
+rejected candidate are retained, including the highly variable article results.
+Eleven focused Chromium cases pass after these changes, including desktop hover,
+mobile activation, nonblank/changed pixels, static fallback settling, keyboard
+focus, actual failed-download retry, and topic-rail focus during resize.
 
 ## Release and limits
 
