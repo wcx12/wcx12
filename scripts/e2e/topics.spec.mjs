@@ -15,27 +15,25 @@ async function selectTopic(page, id, type) {
   return scene;
 }
 
-test('distinct topic surfaces remain readable in three themes and four widths', async ({ page }) => {
+for (const theme of ['neon', 'warm', 'mono']) test(`distinct topic surfaces remain readable in ${theme} and four widths`, async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await explorer(page);
-  for (const theme of ['neon', 'warm', 'mono']) {
-    await page.locator('#themeSelect').selectOption(theme);
-    for (const [id, type] of topics) {
-      const scene = await selectTopic(page, id, type);
-      await expect(page.locator('#interestCanvas')).toBeHidden();
-      for (const width of [320, 390, 768, 1440]) {
-        await page.setViewportSize({ width, height: 1000 });
-        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-        await expect.poll(() => scene.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
-      }
-      const canvases = scene.locator('canvas');
-      for (let i = 0; i < await canvases.count(); i++) {
-        await expect.poll(() => canvases.nth(i).evaluate(node => {
-          const pixels = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
-          return new Set(new Uint32Array(pixels.buffer)).size;
-        })).toBeGreaterThan(10);
-      }
+  await page.locator('#themeSelect').selectOption(theme);
+  for (const [id, type] of topics) {
+    const scene = await selectTopic(page, id, type);
+    await expect(page.locator('#interestCanvas')).toBeHidden();
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect.poll(() => scene.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+    }
+    const canvases = scene.locator('canvas');
+    for (let i = 0; i < await canvases.count(); i++) {
+      await expect.poll(() => canvases.nth(i).evaluate(node => {
+        const pixels = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
+        return new Set(new Uint32Array(pixels.buffer)).size;
+      })).toBeGreaterThan(10);
     }
   }
   expect(errors).toEqual([]);

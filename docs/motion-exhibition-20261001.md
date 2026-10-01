@@ -57,6 +57,7 @@ Three.js bundle. Lucide and Three.js licenses are retained in `assets/vendor/`.
 | M11 | Interaction / P2 | Article playback remained disabled after reenabling motion. | Recompute control state on preference/media/visibility changes; exercise off/on/play progression. |
 | M12 | Accessibility / P2 | Saved motion-off did not override explicit smooth scrolling. | Central scroll behavior checks the shared preference; assert actual scrollIntoView options. |
 | M13 | Consistency / P2 | Article footer matched before the global footer, misplacing the motion setting. | Explicit global-footer selection, verified by a visible article-footer control assertion. |
+| M14 | Test reliability / P2 | One Windows WebKit run exhausted the 45-second budget for 48 successive layout combinations; it reported no failed layout predicate. | Parameterize by theme, retaining all widths, pixel and error assertions and the unchanged per-test timeout. All nine engine/theme cases passed. |
 
 All new visual changes are reversible. Main regression risks are lifecycle
 cancellation, nested-page asset paths, keyboard focus, pointer/scroll interaction,
@@ -100,6 +101,10 @@ document load and font readiness). Replaced that test setup with an empty script
 response followed by explicit hydration; all six geometry cases now pass across
 Chromium, Firefox and WebKit. Final full CI regression and paired performance:
 in progress; early failed runs are retained, not counted as release passes.
+The later full local run had 169 passes, four scoped skips and one cumulative
+WebKit timeout (M14); its nine replacement cases passed. CI run 36891627904
+passed the unsplit full browser suite and generated-file checks before the
+final test-only refinement. The final candidate must still pass CI as a whole.
 
 Content preservation check: all 39 routes/canonicals and all five rendered article
 bodies/metadata match the frozen base. Its strict source-byte check exits 1 for
