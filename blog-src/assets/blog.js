@@ -812,9 +812,11 @@ function enhanceBlogCover(slot) {
   let height = 0;
   let entered = false;
   let focused = false;
+  let paintedPhase = -1;
 
   const draw = (phase = -1) => {
     if (!width || !height) return;
+    paintedPhase = phase;
     const ctx = context;
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = palette.background;
@@ -908,7 +910,8 @@ function enhanceBlogCover(slot) {
     if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
     if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    stop();
+    if (frame) draw(paintedPhase);
+    else stop();
   };
   let resizeFrame = 0;
   // Read after language/theme writes have painted, not inside their mutation task.

@@ -138,7 +138,9 @@ test('cover hover and keyboard replay end once; global and OS motion changes can
   await page.goto(writing);
   const cover = page.locator('.blog-post-header > .blog-cover');
   const button = cover.locator('button');
+  await page.evaluate(() => window.dispatchEvent(new Event('blog-language-change')));
   await cover.dispatchEvent('pointerenter', { pointerType: 'mouse' });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(cover).toHaveAttribute('data-playing', 'true');
   await expect(cover).toHaveAttribute('data-playing', 'false', { timeout: 2500 });
   const resting = await cover.locator('canvas').evaluate(node => node.toDataURL());
