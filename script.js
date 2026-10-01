@@ -1469,7 +1469,7 @@ function activeInterestEntry() {
 }
 
 function renderInterestRail() {
-  interestRail.innerHTML = researchInterests.map((domain) => `
+  const html = researchInterests.map((domain) => `
     <section class="interest-domain">
       <div class="interest-domain-head">
         <strong>${escapeHtml(textFor(domain.title))}</strong>
@@ -1483,7 +1483,10 @@ function renderInterestRail() {
       `).join('')}
     </section>
   `).join('');
-
+  if (interestRail.markup === html) return;
+  const focus = interestRail.contains(document.activeElement) && document.activeElement.dataset.interest;
+  interestRail.markup = html;
+  interestRail.innerHTML = html;
   interestRail.querySelectorAll('.interest-child').forEach((link) => {
     link.addEventListener('click', (event) => {
       if (!useInteractiveResearchNavigation(event)) return;
@@ -1494,6 +1497,7 @@ function renderInterestRail() {
       updateRoute('research', 'push');
     });
   });
+  if (focus) interestRail.querySelector(`[data-interest="${CSS.escape(focus)}"]`)?.focus({ preventScroll: true });
   requestAnimationFrame(keepActiveInterestVisible);
 }
 
@@ -2220,7 +2224,7 @@ function renderResearchInterest() {
   const previousTopic = interestTitle.dataset.topic;
   if (entry) interestTitle.dataset.topic = entry.child.id;
   if (!entry) {
-    interestRail.innerHTML = '';
+    interestRail.innerHTML = interestRail.markup = '';
     interestPath.textContent = '';
     interestTitle.textContent = '';
     interestTag.textContent = '';

@@ -18,6 +18,31 @@ async function pixelStats(page, png) {
 }
 const hash = buffer => createHash('sha256').update(buffer).digest('hex');
 
+test('late research metadata preserves the actual focused topic node', async ({ page }) => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('https://pub.orcid.org/**', async route => {
+    await gate;
+    await route.fulfill({ json: { group: [] } });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('zh/');
+  await page.locator('.command-row [data-view="research"]').click();
+  await expect(page.locator('#interestDemoAction')).toBeEnabled();
+  const target = page.locator('#interestRail [data-interest="agent"]');
+  await target.focus();
+  const original = await target.elementHandle();
+  const response = page.waitForResponse('https://pub.orcid.org/**');
+  release();
+  await (await response).finished();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(await original.evaluate(node => node.isConnected)).toBe(true);
+  await expect(target).toBeFocused();
+  await target.press('Enter');
+  await expect(page.locator('.topic-experiences [data-topic="agent"] .tw-timeline')).toBeVisible();
+  await expect(target).toBeFocused();
+});
+
 test('mobile topic resize preserves a visitor focusing a different interest', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('zh/');
