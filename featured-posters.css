@@ -25,6 +25,13 @@
 .poster-tokens > em { color: var(--muted); font-style: normal; }
 .selected-work-list h3 a { text-decoration: none; }
 .selected-work-list h3 a:hover { text-decoration: underline; }
+.hero-preview-panel { position: relative; }
+.hero-scene-launch { position: absolute; z-index: 3; right: 14px; top: 54px; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 60px; height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--field-bg); cursor: pointer; font: 600 .75rem var(--font-ui); }
+.hero-scene-launch[hidden] { display: none; }
+.hero-scene-launch:disabled { cursor: wait; opacity: .65; }
+.hero-scene-launch:focus-visible { outline: var(--focus-ring); outline-offset: 3px; }
+.hero-scene-launch svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 767px) { .hero-scene-launch { top: 14px; } }
 @media (max-width: 540px) {
   .work-poster { height: 192px; margin-top: 8px; margin-bottom: 12px; }
   .selected-work-list h3 { display: block; margin: 6px 0; }

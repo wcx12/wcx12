@@ -18,6 +18,55 @@ async function pixelStats(page, png) {
 }
 const hash = buffer => createHash('sha256').update(buffer).digest('hex');
 
+test('fresh mobile keeps the lightweight preview until 3D is explicitly activated', async ({ page, browserName }, info) => {
+  test.skip(browserName !== 'chromium', 'Chromium exercises WebGL activation; all engines test fallback and main paths.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const requests = [], errors = [];
+  page.on('request', request => requests.push(request.url()));
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('zh/');
+  const launch = page.getByRole('button', { name: '开启三维交互' });
+  await launch.scrollIntoViewIfNeeded();
+  await expect(launch).toBeVisible();
+  await page.waitForTimeout(800);
+  expect(requests.some(url => url.includes('/assets/vendor/three/'))).toBe(false);
+  await expect(page.locator('#heroPreviewCanvas')).toBeVisible();
+  await page.screenshot({ path: info.outputPath('mobile-before-3d.png') });
+  await launch.focus();
+  await launch.press('Enter');
+  const scene = page.locator('.hero-scene-canvas');
+  await expect(scene).toBeVisible({ timeout: 20000 });
+  await expect(scene).toBeFocused();
+  await expect(launch).toBeHidden();
+  await page.waitForTimeout(1800);
+  const pixels = await scene.screenshot({ path: info.outputPath('mobile-active-3d.png') });
+  expect((await pixelStats(page, pixels)).bright).toBeGreaterThan(80);
+  await scene.focus();
+  await scene.press('ArrowRight');
+  await page.waitForTimeout(1400);
+  expect(hash(await scene.screenshot())).not.toBe(hash(pixels));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('failed 3D load retains content and a working retry command', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Actual WebGL recovery is tested in Chromium.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/assets/vendor/three/**', route => route.abort());
+  await page.goto('zh/');
+  await page.getByRole('button', { name: '开启三维交互' }).click();
+  await expect(page.getByRole('button', { name: '重试三维交互' })).toBeVisible();
+  await expect(page.locator('#heroPreviewCanvas')).toBeVisible();
+  await page.unroute('**/assets/vendor/three/**');
+  await page.getByRole('button', { name: '重试三维交互' }).click();
+  await expect(page.locator('.hero-scene-canvas')).toBeVisible({ timeout: 20000 });
+  expect(errors).toEqual([]);
+});
+
 test('spatial hero is nonblank, responds to pointer and topic input, then settles', async ({ page, browserName }, info) => {
   test.skip(browserName !== 'chromium', 'WebGL is visually verified in Chromium; other engines exercise the static fallback and content paths.');
   await page.emulateMedia({ reducedMotion: 'no-preference' });

@@ -58,6 +58,7 @@ Three.js bundle. Lucide and Three.js licenses are retained in `assets/vendor/`.
 | M12 | Accessibility / P2 | Saved motion-off did not override explicit smooth scrolling. | Central scroll behavior checks the shared preference; assert actual scrollIntoView options. |
 | M13 | Consistency / P2 | Article footer matched before the global footer, misplacing the motion setting. | Explicit global-footer selection, verified by a visible article-footer control assertion. |
 | M14 | Test reliability / P2 | One Windows WebKit run exhausted the 45-second budget for 48 successive layout combinations; it reported no failed layout predicate. | Parameterize by theme, retaining all widths, pixel and error assertions and the unchanged per-test timeout. All nine engine/theme cases passed. |
+| M15 | Performance regression / P1 | Local paired mobile measurements exposed long initial WebGL tasks (first sample 2,277ms), plus synchronous indicator layout. | Fresh narrow/coarse-pointer visits require explicit 3D activation; desktop retains automatic 3D. Split renderer initialization, await shader compilation, avoid redundant buffer resets, defer decorative layout until after paint. Mobile activation, actual pixels, keyboard focus and network-failure retry are tested. Final paired measurements required. |
 
 All new visual changes are reversible. Main regression risks are lifecycle
 cancellation, nested-page asset paths, keyboard focus, pointer/scroll interaction,
@@ -127,6 +128,15 @@ Performance gate will use the repository's paired 24-navigation CI comparison
 (base/current, homepage/article, desktop/mobile, three samples each), avoiding
 concurrent local browser load. Raw reports, median/range and environment must be
 reviewed before production approval; no previous release score substitutes for it.
+
+The first local mobile comparison (`motion-local-home`) did NOT pass: baseline
+Performance median 86 (63-97), candidate 58 (57-65), TBT medians 339/3,041ms.
+That candidate was not released. Its CI run 36892954937 passed functional tests
+but still showed mobile article Performance 89 (88-90), versus base 97, so CI
+green alone was not treated as release approval. The M15 follow-up retains these
+reports and adds `motion-local-home-optimized`: home Performance medians 93/89
+(base range 79-93, candidate 70-91), TBT 179/205ms. Windows timings have substantial
+variation; the final controlled CI comparison will be reported separately.
 
 ## Release and limits
 

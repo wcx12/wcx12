@@ -214,6 +214,8 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   let paused = false;
   let inView = false;
   let ready = false;
+  let prepared = false;
+  let cancelStartup = null;
   let renderer;
   let scene;
   let camera;
@@ -246,7 +248,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   let centerY = 0.5;
   let useFallbackBounds = true;
   let shaderFailed = false;
-  let nextShape = makeShape(key, count);
+  let nextShape;
 
   function enabled() {
     if (media.matches || view.SiteMotion?.enabled?.() === false) return false;
@@ -266,9 +268,28 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
     lastTime = 0;
   }
 
+  // Separate context creation, scene setup, and shader warmup into browser tasks.
+  function yieldStartup() {
+    if (destroyed || failed) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const idle = typeof view.requestIdleCallback === 'function';
+      const finish = () => {
+        cancelStartup = null;
+        resolve(!destroyed && !failed);
+      };
+      const handle = idle ? view.requestIdleCallback(finish, { timeout: 200 }) : view.setTimeout(finish, 0);
+      cancelStartup = () => {
+        if (idle) view.cancelIdleCallback(handle);
+        else view.clearTimeout(handle);
+        cancelStartup = null;
+        resolve(false);
+      };
+    });
+  }
+
   function canRender() {
     return !destroyed && !failed && !paused && inView && !doc.hidden
-      && renderer && width > 0 && height > 0;
+      && prepared && renderer && width > 0 && height > 0;
   }
 
   function restoreFallback() {
@@ -290,6 +311,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
     if (failed || destroyed) return;
     failed = true;
     cancel();
+    cancelStartup?.();
     cleanup.splice(0).forEach((dispose) => dispose());
     restoreFallback();
     releaseGraphics();
@@ -312,10 +334,12 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   }
 
   function size() {
-    if (!renderer || failed || destroyed) return;
+    if (!renderer || !material || failed || destroyed) return;
     const hostRect = host.getBoundingClientRect();
     const fallbackRect = useFallbackBounds && host.contains(fallback) ? fallback.getBoundingClientRect() : null;
     rect = fallbackRect?.width && fallbackRect?.height ? fallbackRect : hostRect;
+    const previousWidth = width;
+    const previousHeight = height;
     width = rect.width;
     height = rect.height;
     if (!width || !height) return;
@@ -324,9 +348,11 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     const compact = view.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
-    pixelRatio = Math.min(view.devicePixelRatio || 1, compact ? 1 : 1.5);
-    renderer.setPixelRatio(pixelRatio);
-    renderer.setSize(width, height, false);
+    const nextPixelRatio = Math.min(view.devicePixelRatio || 1, compact ? 1 : 1.5);
+    if (width !== previousWidth || height !== previousHeight || nextPixelRatio !== pixelRatio) {
+      pixelRatio = nextPixelRatio;
+      renderer.setDrawingBufferSize(width, height, pixelRatio);
+    }
     camera.aspect = width / height;
     const fit = Math.min(camera.aspect * 2 * Math.min(centerX, 1 - centerX), 1.35);
     const distance = Math.max(7.4 / (2 * Math.min(centerY, 1 - centerY)), 6.3 / Math.max(0.35, fit));
@@ -433,8 +459,8 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       const nextKey = topicKey(id);
       if (key === nextKey) return;
       key = nextKey;
-      nextShape = makeShape(key, count);
       if (!geometry) return;
+      nextShape = makeShape(key, count);
       const current = geometry.attributes.position;
       const next = geometry.attributes.aNext;
       const progress = material.uniforms.uMorph.value;
@@ -472,6 +498,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       if (destroyed) return;
       destroyed = true;
       cancel();
+      cancelStartup?.();
       endDrag();
       cleanup.splice(0).forEach((dispose) => dispose());
       restoreFallback();
@@ -489,8 +516,10 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       const moduleUrl = new URL('./assets/vendor/three/three.module.min.js', import.meta.url);
       const version = new URL(import.meta.url).searchParams.get('v');
       if (version) moduleUrl.searchParams.set('v', version);
+      const retry = new URL(import.meta.url).searchParams.get('retry');
+      if (retry) moduleUrl.searchParams.set('retry', retry);
       const THREE = await import(moduleUrl.href);
-      if (destroyed) return;
+      if (!await yieldStartup()) return;
       canvas = doc.createElement('canvas');
       canvas.className = 'hero-scene-canvas';
       canvas.tabIndex = -1;
@@ -501,10 +530,13 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       renderer.setClearColor(0x000000, 0);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.debug.onShaderError = () => { shaderFailed = true; };
+      on(canvas, 'webglcontextlost', (event) => { event.preventDefault(); fail(); });
+      if (!await yieldStartup()) return;
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(36, 1, 0.1, 80);
       sculpture = new THREE.Group();
       scene.add(sculpture);
+      nextShape = makeShape(key, count);
       const seeds = new Float32Array(count);
       for (let i = 0; i < count; i += 1) {
         seeds[i] = fract(i * 0.754877666);
@@ -556,7 +588,6 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       inView = rect?.bottom > 0 && rect?.top < view.innerHeight
         && rect?.right > 0 && rect?.left < view.innerWidth;
 
-      on(canvas, 'webglcontextlost', (event) => { event.preventDefault(); fail(); });
       on(canvas, 'pointerdown', (event) => {
         if (!event.isPrimary || event.button !== 0 || paused) return;
         rect = canvas.getBoundingClientRect();
@@ -633,6 +664,11 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
         observer.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
         cleanup.push(() => observer.disconnect());
       }
+      if (!await yieldStartup()) return;
+      // With KHR_parallel_shader_compile this waits without forcing first-use shader queries.
+      await renderer.compileAsync(scene, camera);
+      if (destroyed || failed) return;
+      prepared = true;
       if (!enabled()) settle();
       requestFrame(1500);
     } catch {

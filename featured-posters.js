@@ -6,12 +6,32 @@ function loadPlace() {
   return placeModule ||= import(url.href).catch(() => { placeModule = null; return null; });
 }
 
+const compact = matchMedia('(max-width: 767px), (pointer: coarse)');
 let scene, sceneLoading = false, heroVisible = false, heroDetail;
+let activated = false, sceneFailed = false, attempts = 0, launchButton;
+let restoreLaunchFocus = false;
+function updateLaunch() {
+  if (!launchButton) return;
+  const zh = document.documentElement.lang.startsWith('zh');
+  const label = sceneLoading ? (zh ? '正在加载三维场景' : 'Loading 3D scene')
+    : sceneFailed ? (zh ? '重试三维交互' : 'Retry 3D scene') : (zh ? '开启三维交互' : 'Explore in 3D');
+  launchButton.title = label;
+  launchButton.setAttribute('aria-label', label);
+  launchButton.setAttribute('aria-busy', String(sceneLoading));
+  launchButton.hidden = !!scene && !sceneFailed && !sceneLoading || !window.SiteMotion?.enabled()
+    || (!compact.matches && !sceneFailed);
+  launchButton.disabled = sceneLoading;
+}
 function loadScene() {
+  updateLaunch();
   if (scene || sceneLoading || !heroVisible || !window.SiteMotion?.enabled()) return;
+  if ((compact.matches || sceneFailed) && !activated) return;
   sceneLoading = true;
+  sceneFailed = false;
+  updateLaunch();
   const url = new URL('./hero-scene.js', base);
   url.search = base.search;
+  if (attempts++) url.searchParams.set('retry', String(attempts));
   import(url.href).then(({ mountHeroScene }) => {
     scene = mountHeroScene({
       host: document.querySelector('.hero-preview-panel'),
@@ -19,7 +39,15 @@ function loadScene() {
       getTopic: () => heroDetail?.id,
       motion: () => window.SiteMotion.enabled()
     });
-  }).catch(() => { sceneLoading = false; });
+  }).catch(failedScene);
+}
+function failedScene() {
+  scene?.destroy();
+  scene = null;
+  sceneLoading = false;
+  sceneFailed = true;
+  activated = false;
+  updateLaunch();
 }
 
 export function enhanceHeroPreview(detail) {
@@ -27,13 +55,36 @@ export function enhanceHeroPreview(detail) {
   if (!meta) return;
   if (!heroDetail) {
     const fallback = document.getElementById('heroPreviewCanvas');
+    const host = fallback.closest('.hero-preview-panel');
+    launchButton = document.createElement('button');
+    launchButton.type = 'button';
+    launchButton.className = 'hero-scene-launch';
+    // Lucide Box (ISC license in assets/vendor/lucide/LICENSE).
+    launchButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg><span aria-hidden="true">3D</span>';
+    launchButton.addEventListener('click', () => {
+      restoreLaunchFocus = document.activeElement === launchButton;
+      activated = true;
+      loadScene();
+    });
+    host.append(launchButton);
+    host.addEventListener('hero-scene:ready', () => {
+      const focused = document.activeElement === launchButton
+        || restoreLaunchFocus && document.activeElement === document.body;
+      sceneLoading = false;
+      updateLaunch();
+      if (focused) host.querySelector('.hero-scene-canvas')?.focus({ preventScroll: true });
+      restoreLaunchFocus = false;
+    });
+    host.addEventListener('hero-scene:error', failedScene);
     if ('IntersectionObserver' in window) new IntersectionObserver(([entry]) => {
       heroVisible = entry.isIntersecting;
       if (heroVisible) loadScene();
     }, { threshold: .08 }).observe(fallback);
     else { heroVisible = true; loadScene(); }
     window.addEventListener('site:motion-change', loadScene);
-    new MutationObserver(() => scene?.themeChanged()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'lang'] });
+    compact.addEventListener('change', loadScene);
+    new MutationObserver(() => { scene?.themeChanged(); updateLaunch(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'lang'] });
+    updateLaunch();
   }
   heroDetail = detail;
   meta.querySelector('.hero-scene-topics')?.remove();

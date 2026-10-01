@@ -159,7 +159,14 @@ function bindRail(rail) {
   rails.set(rail, current);
   current();
 }
-document.querySelectorAll('.site-navigation, .command-row, #interestRail, .interest-section-tabs').forEach(bindRail);
+// Let content paint before nonessential indicator geometry triggers layout.
+function afterContentPaint(callback) {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if ('requestIdleCallback' in window) requestIdleCallback(callback, { timeout: 1500 });
+    else setTimeout(callback, 0);
+  }));
+}
+afterContentPaint(() => document.querySelectorAll('.site-navigation, .command-row, #interestRail, .interest-section-tabs').forEach(bindRail));
 
 // Visible by default: a failed observer or disabled JS cannot hide content.
 const revealed = new WeakSet();
@@ -172,9 +179,9 @@ const observer = 'IntersectionObserver' in window ? new IntersectionObserver(ent
     animate(entry.target, [{ opacity: .25, transform: 'translateY(20px)' }, { opacity: 1, transform: 'none' }], { duration: 600 });
   }
 }, { threshold: .08 }) : null;
-document.querySelectorAll('.selected-work-list article, .blog-section-head, .profile-entry, .timeline article, .resume-entry').forEach(element => {
+afterContentPaint(() => document.querySelectorAll('.selected-work-list article, .blog-section-head, .profile-entry, .timeline article, .resume-entry').forEach(element => {
   if (element.getBoundingClientRect().top >= innerHeight - 30) observer?.observe(element);
-});
+}));
 
 let topicAnimations = [];
 window.addEventListener('site:topic-change', () => {
@@ -235,7 +242,7 @@ if (headings.length) {
   document.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule);
   window.addEventListener('hashchange', schedule);
-  update();
+  afterContentPaint(update);
 }
 
 function clearWorkTransition() {
