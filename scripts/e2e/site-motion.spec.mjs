@@ -94,6 +94,9 @@ test('global motion preference survives navigation and yields to the system pref
   await page.goto('blog/');
   await expect(page.locator('[data-motion-setting]')).not.toBeChecked();
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
+  await page.goto('blog/posts/tiger-generative-retrieval-reading/');
+  await expect(page.locator('.blog-footer [data-motion-setting]')).toBeVisible();
+  await expect(page.locator('.blog-post-footer [data-motion-setting]')).toHaveCount(0);
   await page.locator('[data-motion-setting]').check();
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'on');
   await page.emulateMedia({ reducedMotion: 'reduce' });

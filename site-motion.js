@@ -91,7 +91,7 @@ window.addEventListener('storage', event => {
   syncMotion();
 });
 
-const footer = document.querySelector('.blog-footer, footer');
+const footer = document.querySelector('.blog-footer') || document.querySelector('body > footer');
 if (footer && !document.querySelector('#notesEditor')) {
   const label = document.createElement('label');
   label.className = 'site-motion-setting';

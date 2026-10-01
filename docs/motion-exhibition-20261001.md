@@ -56,6 +56,7 @@ Three.js bundle. Lucide and Three.js licenses are retained in `assets/vendor/`.
 | M10 | Layout / P2 | English topic descriptions changed homepage height by 22px at 1024px. | Reserve responsive metadata space; all topics in both languages stay within 1px at 390/1024/1440px in all three engines. |
 | M11 | Interaction / P2 | Article playback remained disabled after reenabling motion. | Recompute control state on preference/media/visibility changes; exercise off/on/play progression. |
 | M12 | Accessibility / P2 | Saved motion-off did not override explicit smooth scrolling. | Central scroll behavior checks the shared preference; assert actual scrollIntoView options. |
+| M13 | Consistency / P2 | Article footer matched before the global footer, misplacing the motion setting. | Explicit global-footer selection, verified by a visible article-footer control assertion. |
 
 All new visual changes are reversible. Main regression risks are lifecycle
 cancellation, nested-page asset paths, keyboard focus, pointer/scroll interaction,
@@ -74,7 +75,9 @@ Evidence is ignored and outside the deployment allowlist:
 - `output/motion-20261001/reference-slide-tabs.png`.
 - `output/motion-20261001/regression/`: cross-engine interaction reports/screenshots.
 - `output/site-quality-20260926/commands/motion-*.json` and `.log`: actual exit codes and timestamps.
-- Paired performance reports and final visual audit: pending.
+- `output/site-quality-20260926/motion-final/browser/`: 45 Chromium route/viewport/theme/no-JS checks plus six Firefox/WebKit checks, all passed; actual screenshots reviewed.
+- `output/motion-20261001/final-navigation/`: six repeated Chromium theme/Back checks passed after the critical-head fix.
+- Paired performance reports: pending CI completion.
 
 Baseline `npm run validate`: 224 passed, two Windows symlink tests skipped (EPERM).
 First focused integration: 22/31 passed; seven transition errors, one dialog
@@ -107,6 +110,9 @@ controller/posters 1,719; optional hero renderer 7,344; optional Three.js 134,17
 Main application gzip is 37,794 versus base 37,914. Blog runtime is 15,934 versus
 8,328, and CSS 22,148 versus 20,809. These size changes are not latency claims.
 Existing application/bootstrap/translation budgets remain unchanged.
+`git diff --check` flags upstream whitespace inside generated Three.js shader
+strings only; those vendor strings are retained verbatim by the bundler, not
+manually reformatted. Authored source has no whitespace errors.
 
 Performance gate will use the repository's paired 24-navigation CI comparison
 (base/current, homepage/article, desktop/mobile, three samples each), avoiding
