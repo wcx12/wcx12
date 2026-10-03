@@ -5,7 +5,7 @@ const fract = (value) => value - Math.floor(value);
 
 const artUrl = new URL('./hero-topic-art.js', import.meta.url);
 artUrl.search = new URL(import.meta.url).search;
-const { heroTopicKey: topicKey, createTopicArt, heroArtPalette, heroTopicDescription } = await import(artUrl.href);
+const { heroTopicKey: topicKey, createTopicArt, heroArtPalette, heroTopicDescription, heroTopicStages, normalizeHeroStage } = await import(artUrl.href);
 
 // Point geometry is reserved for point-cloud registration.
 function makeRegistrationShape(count) {
@@ -104,9 +104,9 @@ const fragmentShader = `
  * set --hero-scene-bounds: host for a full-host scene. --hero-scene-center-x/y
  * (0..1, default .5) can reserve space for copy in that full-width host.
  */
-export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
+export function mountHeroScene({ host, fallback, getTopic, getStage, motion } = {}) {
   if (!host?.ownerDocument) {
-    return { setTopic() {}, themeChanged() {}, pause() {}, resume() {}, destroy() {} };
+    return { setTopic() {}, setStage() {}, themeChanged() {}, pause() {}, resume() {}, destroy() {} };
   }
   mounted.get(host)?.destroy();
   const doc = host.ownerDocument;
@@ -116,6 +116,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   const count = mobile ? 1944 : 2592;
   const cleanup = [];
   let key = 'arch';
+  let storyStage = normalizeHeroStage(typeof getStage === 'function' ? getStage() : getStage);
   try { key = topicKey(typeof getTopic === 'function' ? getTopic() : getTopic); } catch { /* Keep the default sculpture. */ }
   let destroyed = false;
   let failed = false;
@@ -183,7 +184,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       if (!batches.has(id)) batches.set(id, { role, type, color, vertices: [] });
       return batches.get(id).vertices;
     };
-    for (const shape of createTopicArt(key)) {
+    for (const shape of createTopicArt(key, storyStage)) {
       if (shape.fill) {
         const vertices = batch(shape.role, 'fill', shape.fill);
         for (let i = 1; i < shape.points.length - 2; i++) vertices.push(...shape.points[0], ...shape.points[i], ...shape.points[i + 1]);
@@ -209,7 +210,10 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   function updateDescription() {
     let id;
     try { id = typeof getTopic === 'function' ? getTopic() : getTopic; } catch { id = ''; }
-    canvas?.setAttribute('aria-label', heroTopicDescription(id, doc.documentElement.lang));
+    const lang = doc.documentElement.lang;
+    const description = heroTopicStages(id, lang)[storyStage]?.description;
+    canvas?.setAttribute('aria-label', `${heroTopicDescription(id, lang)}${description ? '. ' + description : ''}`);
+    host.dataset.heroSceneStage = String(storyStage);
   }
 
   function enabled() {
@@ -235,17 +239,48 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
     if (destroyed || failed) return Promise.resolve(false);
     return new Promise((resolve) => {
       const idle = typeof view.requestIdleCallback === 'function';
-      const finish = () => {
-        cancelStartup = null;
-        resolve(!destroyed && !failed);
+      let handle = null;
+      let observer;
+      let finished = false;
+      const watches = [[doc, 'visibilitychange'], [view, 'site:motion-change'],
+        [media, 'change'], [view, 'scroll'], [view, 'resize']];
+      const eligible = () => {
+        if (!enabled() || doc.hidden || !host.isConnected) return false;
+        const bounds = (fallback || host).getBoundingClientRect();
+        return bounds.width > 0 && bounds.height > 0 && bounds.bottom > 0
+          && bounds.top < view.innerHeight && bounds.right > 0 && bounds.left < view.innerWidth;
       };
-      const handle = idle ? view.requestIdleCallback(finish, { timeout: 200 }) : view.setTimeout(finish, 0);
-      cancelStartup = () => {
-        if (idle) view.cancelIdleCallback(handle);
-        else view.clearTimeout(handle);
+      const finish = result => {
+        if (finished) return;
+        finished = true;
+        if (handle !== null) {
+          if (idle) view.cancelIdleCallback(handle);
+          else view.clearTimeout(handle);
+        }
+        watches.forEach(([target, type]) => target.removeEventListener(type, resume, true));
+        observer?.disconnect();
         cancelStartup = null;
-        resolve(false);
+        resolve(result);
       };
+      // A preference/visibility change may happen during either module download.
+      // Wait on events instead of polling or creating a context in the background.
+      const resume = () => {
+        if (finished) return;
+        if (destroyed || failed) return finish(false);
+        if (!eligible() || handle !== null) return;
+        const run = () => {
+          handle = null;
+          if (eligible()) finish(true);
+        };
+        handle = idle ? view.requestIdleCallback(run, { timeout: 200 }) : view.setTimeout(run, 0);
+      };
+      cancelStartup = () => finish(false);
+      watches.forEach(([target, type]) => target.addEventListener(type, resume, { capture: true, passive: true }));
+      if ('IntersectionObserver' in view) {
+        observer = new view.IntersectionObserver(resume);
+        observer.observe(fallback || host);
+      }
+      resume();
     });
   }
 
@@ -272,13 +307,14 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
 
   function fail() {
     if (failed || destroyed) return;
+    const restoreFocus = doc.activeElement === canvas;
     failed = true;
     cancel();
     cancelStartup?.();
     cleanup.splice(0).forEach((dispose) => dispose());
     restoreFallback();
     releaseGraphics();
-    host.dispatchEvent(new view.CustomEvent('hero-scene:error'));
+    host.dispatchEvent(new view.CustomEvent('hero-scene:error', { detail: { restoreFocus } }));
   }
 
   function readTheme() {
@@ -425,6 +461,18 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   }
 
   const api = {
+    setStage(value) {
+      const nextStage = normalizeHeroStage(value);
+      if (destroyed || failed || storyStage === nextStage) return;
+      storyStage = nextStage;
+      if (!geometry) return;
+      buildArt();
+      readTheme();
+      material.uniforms.uMorph.value = 0;
+      pendingMorph = true;
+      morphStart = 0;
+      requestFrame(1000);
+    },
     setTopic(id) {
       if (destroyed || failed) return;
       const nextKey = topicKey(id);
@@ -484,6 +532,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       fallback?.classList.remove('hero-scene-fallback');
       delete host.dataset.heroSceneTopic;
       delete host.dataset.heroSceneRepresentation;
+      delete host.dataset.heroSceneStage;
       mounted.delete(host);
     }
   };
