@@ -1,5 +1,50 @@
 # Motion exhibition, 2026-10-01
 
+## Subject correction, 2026-10-04
+
+Follow-up branch: `codex/hero-topic-semantics-20261004`, based on `83a74bf`.
+Origin and worktree were rechecked; the pre-existing `.playwright-cli/` was left
+untouched. Scheduled metadata commits after PR 21 were preserved.
+
+M21 (P2, reproduced visual communication defect): non-registration topics used
+abstract point sculptures (city, specimen, calendar, steps). Their silhouettes
+did not express place recognition, annotation, tool use or learning feedback.
+Before evidence: `output/topic-semantics-20261004/before/`, captured from the live
+site. These are rendering/task inspections, not user research.
+
+The correction keeps registration and replaces the other point sculptures with
+subject-specific relief illustrations, using shared geometry for the lightweight
+2D fallback and optional Three.js rendering. VPR pairs two observations of one
+clock landmark; medical selects a cell for annotation; Agent links an assistant,
+a tool and a delivered document; education uses congruent triangles and answer
+feedback. No synthetic scene is represented as a real model/clinical result.
+No changes to profile, publications, research mappings or article content.
+
+Short bilingual subject captions replace the repeated long topic description in
+the hero only; full descriptions remain in research pages and the explorer.
+This avoids adding a second description row and changing page height by topic.
+The first local browser pass caught that extra-row regression at 1024px, and it
+was fixed without clipping text or weakening the stable-height assertion.
+
+Tests include explicit configured IDs, deterministic bounded geometry, equal
+triangle side lengths, distinct static artwork, 3D topic correspondence and
+keyboard rotation, and actual WebGL context loss returning to the current subject.
+The assembled square has a dark diagonal partition so its two parts remain
+visible in monochrome, independent of the two accent colors.
+The context-loss comparison uses raw canvas pixels rather than an element PNG,
+which also includes overlapping controls and different subpixel screenshot origins.
+Both old failed runs and corrected evidence are retained. The initial live capture
+timed out on a hover dispatched before enhancement readiness; the completed
+baseline explicitly awaited and clicked the activation command.
+
+Release acceptance: inspect three themes at desktop and 320/390/768px, verify
+static/reduced-motion and graphics-failure paths, retain stable bilingual height,
+run content/artifact/link tests plus the browser suite, and review paired CI
+performance before publishing. Final release-specific results live in the PR and
+`output/topic-semantics-20261004/`; pending checks are not claimed as passes here.
+
+The original October 1 audit and superseded design choices follow below.
+
 ## Scope and provenance
 
 User-requested motion pass, preserving the research-first information hierarchy,

@@ -43,6 +43,7 @@ jobs:
           node --check research-canvas.js
           node --check site-motion.js
           node --check hero-scene.js
+          node --check hero-topic-art.js
           node --check featured-posters.js
           node --check repo-map.js
           node --check blog-src/assets/blog.js

@@ -34,6 +34,7 @@ const publicFiles = [
   'featured-posters.js',
   'hero-scene.css',
   'hero-scene.js',
+  'hero-topic-art.js',
   'theme-init.js'
 ];
 

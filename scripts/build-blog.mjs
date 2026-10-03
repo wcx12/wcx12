@@ -2297,7 +2297,7 @@ async function copyAssets() {
   const threeDir = path.join(rootDir, 'assets/vendor/three');
   await fs.mkdir(threeDir, { recursive: true });
   await bundle({
-    stdin: { contents: 'export { WebGLRenderer, SRGBColorSpace, Scene, PerspectiveCamera, Group, BufferGeometry, BufferAttribute, ShaderMaterial, Color, Vector2, Points, LineSegments, Float32BufferAttribute, LineBasicMaterial } from "three";', resolveDir: rootDir },
+    stdin: { contents: 'export { WebGLRenderer, SRGBColorSpace, Scene, PerspectiveCamera, Group, BufferGeometry, BufferAttribute, ShaderMaterial, Color, Vector2, Points, LineSegments, Float32BufferAttribute, LineBasicMaterial, Mesh, MeshBasicMaterial, DoubleSide } from "three";', resolveDir: rootDir },
     bundle: true, minify: true, format: 'esm', target: 'es2022', legalComments: 'inline',
     outfile: path.join(threeDir, 'three.module.min.js')
   });
@@ -2354,6 +2354,7 @@ async function computeAssetVersion(posts) {
     'featured-posters.js',
     'hero-scene.css',
     'hero-scene.js',
+    'hero-topic-art.js',
     'node_modules/three/build/three.core.js',
     'node_modules/three/build/three.module.js',
     'node_modules/esbuild/package.json',
@@ -2826,6 +2827,7 @@ async function renderDraftPreviews(posts, renderer) {
     'featured-posters.js',
     'hero-scene.css',
     'hero-scene.js',
+    'hero-topic-art.js',
     'theme-init.js',
     'homepage-bootstrap.js',
     'script.js',

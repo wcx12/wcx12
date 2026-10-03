@@ -13,7 +13,7 @@
     "package:pages": "node scripts/package-pages.mjs",
     "preview:blog": "node scripts/serve-preview.mjs",
     "test:content": "node --test scripts/blog-content.test.mjs scripts/blog-discovery.test.mjs scripts/portfolio-ranking.test.mjs scripts/publication-metadata.test.mjs scripts/research-config-schema.test.mjs scripts/sync-github-repos.test.mjs",
-    "test:homepage": "node --test scripts/homepage-runtime.test.mjs scripts/navigation-regression.test.mjs scripts/research-demo.test.mjs scripts/topic-motion.test.mjs",
+    "test:homepage": "node --test scripts/homepage-runtime.test.mjs scripts/navigation-regression.test.mjs scripts/research-demo.test.mjs scripts/topic-motion.test.mjs scripts/hero-topic-art.test.mjs",
     "test:site": "node --test scripts/site-output.test.mjs scripts/site-review.test.mjs scripts/site-navigation.test.mjs scripts/private-notes-api.test.mjs scripts/private-notes-session.test.mjs scripts/blog-privacy.test.mjs",
     "test:e2e": "playwright test",
     "test:links": "node scripts/qa/check-links.mjs --no-baseline",
