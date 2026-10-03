@@ -163,6 +163,72 @@ test('subject reliefs follow the selected topic, render visibly and retain direc
   await expect(page.locator('.hero-preview-panel')).toHaveAttribute('data-hero-scene-representation', 'point-cloud');
 });
 
+test('failed pending activation does not steal focus from a story control', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('**/hero-scene.js?*', async route => { await gate; await route.abort(); });
+  await page.goto('zh/');
+  await page.locator('.hero-scene-launch').focus();
+  await page.locator('.hero-scene-launch').press('Enter');
+  await page.locator('[data-scene-interest="agent"]').click();
+  const step = page.locator('[data-hero-stage="1"]');
+  await step.focus();
+  await step.press('Enter');
+  release();
+  await expect(page.getByRole('button', { name: '重试三维交互' })).toBeVisible();
+  await expect(step).toBeFocused();
+});
+
+test('registration context loss returns focus to its topic when motion disables retry', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Chromium exercises actual WebGL loss.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('zh/');
+  await page.locator('.hero-scene-launch').click();
+  const scene = page.locator('.hero-scene-canvas');
+  await expect(scene).toBeVisible({ timeout: 20000 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await scene.focus();
+  await scene.evaluate(canvas => canvas.getContext('webgl2').getExtension('WEBGL_lose_context').loseContext());
+  await expect(page.locator('[data-scene-interest="point-cloud-registration"]')).toBeFocused();
+  await expect(page.locator('#heroPreviewCanvas')).toBeVisible();
+});
+
+test('a delayed Three download defers context creation until motion is enabled again', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Chromium exercises actual WebGL creation.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('**/three.module.min.js?*', async route => { await gate; await route.continue(); });
+  await page.goto('zh/');
+  await page.evaluate(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    window.webglCreations = 0;
+    HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+      if (type === 'webgl2') window.webglCreations++;
+      return original.call(this, type, ...args);
+    };
+  });
+  const request = page.waitForRequest('**/three.module.min.js?*');
+  await page.locator('.hero-scene-launch').click();
+  await request;
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const response = page.waitForResponse('**/three.module.min.js?*');
+  release();
+  await (await response).finished();
+  await page.locator('[data-scene-interest="agent"]').click();
+  await page.locator('[data-hero-stage="2"]').click();
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.webglCreations)).toBe(0);
+  await expect(page.locator('#heroPreviewCanvas')).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect(page.locator('.hero-scene-canvas')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('.hero-scene-canvas')).toHaveAccessibleName(/摘要草稿已交付/);
+});
+
 test('context loss restores the current subject rather than stale point-cloud artwork', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'Chromium exercises actual WebGL context loss.');
   await page.setViewportSize({ width: 390, height: 844 });

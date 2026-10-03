@@ -239,17 +239,48 @@ export function mountHeroScene({ host, fallback, getTopic, getStage, motion } = 
     if (destroyed || failed) return Promise.resolve(false);
     return new Promise((resolve) => {
       const idle = typeof view.requestIdleCallback === 'function';
-      const finish = () => {
-        cancelStartup = null;
-        resolve(!destroyed && !failed);
+      let handle = null;
+      let observer;
+      let finished = false;
+      const watches = [[doc, 'visibilitychange'], [view, 'site:motion-change'],
+        [media, 'change'], [view, 'scroll'], [view, 'resize']];
+      const eligible = () => {
+        if (!enabled() || doc.hidden || !host.isConnected) return false;
+        const bounds = (fallback || host).getBoundingClientRect();
+        return bounds.width > 0 && bounds.height > 0 && bounds.bottom > 0
+          && bounds.top < view.innerHeight && bounds.right > 0 && bounds.left < view.innerWidth;
       };
-      const handle = idle ? view.requestIdleCallback(finish, { timeout: 200 }) : view.setTimeout(finish, 0);
-      cancelStartup = () => {
-        if (idle) view.cancelIdleCallback(handle);
-        else view.clearTimeout(handle);
+      const finish = result => {
+        if (finished) return;
+        finished = true;
+        if (handle !== null) {
+          if (idle) view.cancelIdleCallback(handle);
+          else view.clearTimeout(handle);
+        }
+        watches.forEach(([target, type]) => target.removeEventListener(type, resume, true));
+        observer?.disconnect();
         cancelStartup = null;
-        resolve(false);
+        resolve(result);
       };
+      // A preference/visibility change may happen during either module download.
+      // Wait on events instead of polling or creating a context in the background.
+      const resume = () => {
+        if (finished) return;
+        if (destroyed || failed) return finish(false);
+        if (!eligible() || handle !== null) return;
+        const run = () => {
+          handle = null;
+          if (eligible()) finish(true);
+        };
+        handle = idle ? view.requestIdleCallback(run, { timeout: 200 }) : view.setTimeout(run, 0);
+      };
+      cancelStartup = () => finish(false);
+      watches.forEach(([target, type]) => target.addEventListener(type, resume, { capture: true, passive: true }));
+      if ('IntersectionObserver' in view) {
+        observer = new view.IntersectionObserver(resume);
+        observer.observe(fallback || host);
+      }
+      resume();
     });
   }
 

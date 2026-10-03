@@ -47,7 +47,9 @@ function loadScene() {
   }).catch(failedScene);
 }
 function failedScene(event) {
-  const restore = restoreLaunchFocus || event?.detail?.restoreFocus;
+  const active = document.activeElement;
+  const restore = event?.detail?.restoreFocus || restoreLaunchFocus
+    && (active === launchButton || active === document.body);
   scene?.destroy();
   scene = null;
   sceneLoading = false;
@@ -55,7 +57,10 @@ function failedScene(event) {
   activated = false;
   updateLaunch();
   if (restore) {
-    const target = !launchButton.hidden ? launchButton : document.querySelector('.hero-story [aria-pressed="true"]');
+    const target = !launchButton.hidden ? launchButton
+      : document.querySelector('.hero-story [aria-pressed="true"]')
+        || document.querySelector('.hero-scene-topics [aria-pressed="true"]')
+        || document.querySelector('.hero-preview-title');
     target?.focus({ preventScroll: true });
   }
   restoreLaunchFocus = false;

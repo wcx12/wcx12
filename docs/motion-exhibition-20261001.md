@@ -34,6 +34,12 @@ Release gates: content, artifacts, links, three-engine browser regression, actua
 three-theme screenshots, both languages and stable heights across topics/stages,
 scoped axe checks, and paired CI performance. Final counts, reports and release
 state belong in the PR and ignored release record; pending gates are not passes.
+The final read-only integration review found two remaining focus cases and a
+second async boundary at the Three.js download. The failure handler now respects
+the visitor's current focus and can return to registration's topic button.
+Startup waits on visibility/preference events at every yield, without polling;
+deferred tasks and their temporary listeners are cancelled on destruction. Tests
+delay both module boundaries independently and exercise real context loss.
 No identity, paper metadata, research mapping, article, private-note or permission
 changes. No physical-device or field performance claim.
 
