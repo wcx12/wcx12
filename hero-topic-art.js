@@ -132,6 +132,7 @@ export function createTopicArt(key) {
     line([[.94, .31], [1.18, .31]], 'muted');
     poly([[1.31, -.02], [1.91, -.02], [1.31, .58]], 'accent', 'ink', 'triangle-output-a');
     poly([[1.31, .58], [1.91, -.02], [1.91, .58]], 'warm', 'ink', 'triangle-output-b');
+    line([[1.31, .58], [1.91, -.02]], 'screen', 'partition');
     // A learner's answer sheet receives feedback below the geometric example.
     poly([[.08, -1.13], [1.35, -1.13], [1.53, -.83], [.26, -.83]], 'surface', 'ink');
     line([[.42, -.98], [.78, -.98]], 'muted');

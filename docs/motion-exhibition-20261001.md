@@ -29,6 +29,8 @@ was fixed without clipping text or weakening the stable-height assertion.
 Tests include explicit configured IDs, deterministic bounded geometry, equal
 triangle side lengths, distinct static artwork, 3D topic correspondence and
 keyboard rotation, and actual WebGL context loss returning to the current subject.
+The assembled square has a dark diagonal partition so its two parts remain
+visible in monochrome, independent of the two accent colors.
 The context-loss comparison uses raw canvas pixels rather than an element PNG,
 which also includes overlapping controls and different subpixel screenshot origins.
 Both old failed runs and corrected evidence are retained. The initial live capture
