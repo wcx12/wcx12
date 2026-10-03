@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs/promises';
-import { heroTopicKey, heroTopicDescription, createTopicArt, paintHeroTopic } from '../hero-topic-art.js';
+import { heroTopicKey, heroTopicDescription, heroTopicStages, normalizeHeroStage, createTopicArt, paintHeroTopic } from '../hero-topic-art.js';
 
 const config = JSON.parse(await fs.readFile(new URL('../research-config.json', import.meta.url), 'utf8'));
 const topics = config.interests.flatMap(domain => domain.children).filter(topic => topic.animation !== 'none');
@@ -56,4 +56,25 @@ test('static previews draw actual subject shapes but leave registration to its e
     assert.ok(calls.some(([key]) => key === 'stroke'));
   }
   assert.equal(paintHeroTopic(ctx, 360, 170, 'point-cloud-registration', {}), false);
+});
+
+test('each story has three distinct, bounded visual states and localized results', () => {
+  for (const id of ['vpr', 'medical-image-analysis', 'agent', 'ai4edu']) {
+    const zh = heroTopicStages(id, 'zh');
+    const en = heroTopicStages(id, 'en');
+    assert.equal(zh.length, 3);
+    assert.equal(en.length, 3);
+    assert.notDeepEqual(zh, en);
+    const states = [0, 1, 2].map(stage => createTopicArt(heroTopicKey(id), stage));
+    assert.equal(new Set(states.map(s => JSON.stringify(s))).size, 3, id);
+    for (const art of states) for (const shape of art) for (const p of shape.points) {
+      assert.ok(p.every(Number.isFinite));
+      assert.ok(Math.abs(p[0]) < 2.55 && Math.abs(p[1]) < 1.55 && p[2] < .5);
+    }
+  }
+  assert.deepEqual(heroTopicStages('point-cloud-registration'), []);
+  assert.deepEqual(heroTopicStages('__proto__'), []);
+  assert.equal(normalizeHeroStage(NaN), 0);
+  assert.equal(normalizeHeroStage(-1), 0);
+  assert.equal(normalizeHeroStage(8), 2);
 });

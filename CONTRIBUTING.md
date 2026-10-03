@@ -158,6 +158,14 @@ model results. Preserve the matching fallback, bilingual captions, exact geometr
 and explicit topic IDs when adding subjects. Unknown IDs must not become a
 registration scene. Tests: `scripts/hero-topic-art.test.mjs` and
 `scripts/e2e/hero-topics.spec.mjs`.
+Each non-registration hero now has three explicit story stages. The homepage
+owns in-memory per-topic state; `featured-posters.js` presents the controls and
+`hero-scene.js.setStage()` mirrors the same state in WebGL. Stage selection must
+update the DOM result and 2D fallback even when motion is disabled. Animation
+completion must never advance semantic state. Keep shapes convex for fan
+triangulation, dispose replaced batches, and cache 2D art by topic AND stage.
+Do not recreate focused controls on late metadata updates or reload WebGL merely
+to advance a stage. These are illustrative walkthroughs, not inference services.
 The build bundles only used Three.js exports with pinned esbuild and preserves
 `assets/vendor/three/LICENSE`. Commit that generated bundle with source changes.
 Inline Lucide icons retain attribution in `assets/vendor/lucide/LICENSE`.

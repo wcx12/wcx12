@@ -11,7 +11,7 @@ function versionedModuleUrl(relativePath, parameters = {}) {
 const [
   { ORCID_ID, localRepos, staticPublications },
   { homepageI18n },
-  { paintHeroTopic, heroArtPalette, heroTopicDescription },
+  { paintHeroTopic, heroArtPalette, heroTopicDescription, heroTopicStages },
   {
     CONFIG_ID_PATTERN,
     RESEARCH_CONFIG_LIMITS,
@@ -1964,27 +1964,38 @@ function heroPreviewEntry() {
   return entries.find(({ child }) => child.id === activeInterestId) || entries[0];
 }
 
+const heroPreviewStages = new Map();
 function renderHeroPreview() {
   const entry = heroPreviewEntry();
   if (!entry || !heroPreviewMeta) return;
   heroPreviewTick = 0;
   const domainTitle = textFor(entry.domain.title);
   const childTitle = textFor(entry.child.title);
+  const stage = heroPreviewStages.get(entry.child.id) ?? 0;
+  const stages = heroTopicStages(entry.child.id, currentLang);
   if (heroPreviewStatus) heroPreviewStatus.textContent = i18n[currentLang].hero_preview_live;
-  heroPreviewMeta.innerHTML = `
-    <a class="hero-preview-title" href="${researchPageHref(entry.child.id)}" data-hero-interest="${escapeHtml(entry.child.id)}">
-      <span>${escapeHtml(domainTitle)}</span>
-      <strong>${escapeHtml(childTitle)}</strong>
-    </a>
-    <p class="hero-topic-caption">${escapeHtml(heroTopicDescription(entry.child.id, currentLang))}</p>
-  `;
-  heroPreviewMeta.querySelector('[data-hero-interest]')?.addEventListener('click', (event) => {
+  const title = heroPreviewMeta.querySelector('.hero-preview-title');
+  if (!title) return;
+  title.href = researchPageHref(entry.child.id);
+  title.dataset.heroInterest = entry.child.id;
+  title.querySelector('span').textContent = domainTitle;
+  title.querySelector('strong').textContent = childTitle;
+  const caption = heroPreviewMeta.querySelector('p');
+  caption.className = 'hero-topic-caption';
+  caption.id = 'heroStageStatus';
+  caption.setAttribute('role', 'status');
+  caption.setAttribute('aria-atomic', 'true');
+  const description = stages[stage]?.description || heroTopicDescription(entry.child.id, currentLang);
+  if (caption.textContent !== description) caption.textContent = description;
+  title.onclick = (event) => {
     if (!useInteractiveResearchNavigation(event)) return;
     event.preventDefault();
     jumpToResearchInterest(entry.child.id);
-  });
+  };
   window.SiteMotion?.preview({
     id: entry.child.id, label: i18n[currentLang].aria_research_interests,
+    stage, stages,
+    stageChanged(value) { heroPreviewStages.set(entry.child.id, value); drawHeroPreviewCanvas(); },
     topics: allInterestChildren().filter(({ child }) => child.animation !== 'none').map(({ child }) => [child.id, textFor(child.title)]),
     select(id) { activeInterestId = id; renderHeroPreview(); if (initializedViews.has('research')) renderResearchInterest(); }
   });
@@ -2046,11 +2057,13 @@ function drawHeroPreviewCanvas() {
   const entry = heroPreviewEntry();
   if (!entry) return;
   const ctx = heroPreviewCtx;
-  if (paintHeroTopic(ctx, width, height, entry.child.id, heroArtPalette(getComputedStyle(heroPreviewCanvas)))) {
+  if (paintHeroTopic(ctx, width, height, entry.child.id, heroArtPalette(getComputedStyle(heroPreviewCanvas)), heroPreviewStages.get(entry.child.id) ?? 0)) {
     heroPreviewCanvas.dataset.topicArt = entry.child.id;
+    heroPreviewCanvas.dataset.topicStage = String(heroPreviewStages.get(entry.child.id) ?? 0);
     return;
   }
   delete heroPreviewCanvas.dataset.topicArt;
+  delete heroPreviewCanvas.dataset.topicStage;
   const colors = heroThemeColors();
   const t = heroPreviewTick * 0.05;
   const scene = heroPreviewScenes[entry.child.animation] || heroPreviewScenes.generic;

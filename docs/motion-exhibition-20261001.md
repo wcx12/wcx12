@@ -1,5 +1,42 @@
 # Motion exhibition, 2026-10-01
 
+## Topic walkthrough refinement, 2026-10-04
+
+Branch `codex/hero-interactions-20261004`, base `584a2a2`; verified wcx12/wcx12
+origin and successful production run 37140502274. The previous release's online
+captures (17:32 UTC on October 3) are the same-version visual baseline, not a
+new user study. Original untracked `.playwright-cli/` remains untouched.
+
+| ID | Type / priority | Evidence and root cause | Change / acceptance |
+| --- | --- | --- | --- |
+| M22 | Usability, P2 | Reliefs identify subjects but always show completed output; no causal action/result | Three directly selectable stages per non-point subject, localized live result text, next/reset; compare pixels and visible results at every step |
+| M23 | Keyboard defect, P2 | Metadata refresh replaces focused hero controls | Reuse title/result nodes and unchanged control groups; delayed ORCID response preserves focused node and progress |
+| M24 | Lifecycle risk, P2 | Async scene import may outlive eligibility; context loss removes focused canvas | Recheck visibility/motion before mount; error event carries focus intent to retry or stage control; delayed-start and actual context-loss browser tests |
+| M25 | Visual recommendation, P2 | Angular assistant and long blank metadata space | Rounded authored silhouette, gaze/hand pose, compact bounded metadata; inspect all themes, 320-1440px and both languages |
+
+Retain the approved registration scene and existing detailed research tools.
+Do not add another particle treatment, autoplay cycle, external AI request or
+new dependency. VPR compares structural correspondences across illumination;
+medical explains illustrative selection and human annotation without claiming
+diagnostic accuracy; Agent delivers a draft for human verification; education
+uses exactly congruent isosceles right triangles. Geometry, captions and DOM
+states share the same discrete state, including reduced-motion and graphics failure.
+
+Test evidence: `output/hero-stories-20261004/`. First Chromium set: 17 passes.
+A later validation caught the main-module byte budget; duplicate markup was
+removed while preserving the existing budget. An added delayed-data test first
+timed out because it did not activate the lazy research request; this is a test
+setup defect, not a reported production failure. The first visual helper also
+used a shorthand browser context incompatible with axe; it was corrected without
+changing accessibility checks. Retain those failed runs separately.
+
+Release gates: content, artifacts, links, three-engine browser regression, actual
+three-theme screenshots, both languages and stable heights across topics/stages,
+scoped axe checks, and paired CI performance. Final counts, reports and release
+state belong in the PR and ignored release record; pending gates are not passes.
+No identity, paper metadata, research mapping, article, private-note or permission
+changes. No physical-device or field performance claim.
+
 ## Subject correction, 2026-10-04
 
 Follow-up branch: `codex/hero-topic-semantics-20261004`, based on `83a74bf`.
