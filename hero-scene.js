@@ -1,135 +1,43 @@
 const mounted = new WeakMap();
-const TAU = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const smooth = (value) => value * value * (3 - 2 * value);
 const fract = (value) => value - Math.floor(value);
 
-function topicKey(id) {
-  const name = String(id || '').toLowerCase();
-  if (name === 'vpr') return 'vpr';
-  if (name.includes('agent')) return 'agent';
-  if (name === 'ai4edu' || name === 'education') return 'education';
-  if (name.includes('medical')) return 'medical';
-  if (name.includes('generative')) return 'generative';
-  return 'arch';
-}
+const artUrl = new URL('./hero-topic-art.js', import.meta.url);
+artUrl.search = new URL(import.meta.url).search;
+const { heroTopicKey: topicKey, createTopicArt, heroArtPalette, heroTopicDescription } = await import(artUrl.href);
 
-function boxPoint(u, v, face, x, y, z, width, height, depth) {
-  const a = u - 0.5;
-  const b = v - 0.5;
-  if (face === 0) return [x + a * width, y + b * height, z + depth / 2];
-  if (face === 1) return [x + width / 2, y + b * height, z + a * depth];
-  if (face === 2) return [x + a * width, y + height / 2, z + b * depth];
-  if (face === 3) return [x - width / 2, y + b * height, z + a * depth];
-  return [x + a * width, y + b * height, z - depth / 2];
-}
-
-// Deterministic surface samples keep every topic recognizable without an asset download.
-function makeShape(key, count) {
+// Point geometry is reserved for point-cloud registration.
+function makeRegistrationShape(count) {
   const result = new Float32Array(count * 3);
   for (let i = 0; i < count; i += 1) {
-    const u = fract(i * 0.61803398875);
-    const v = fract(i * 0.41421356237);
-    let point;
-    if (key === 'vpr') {
-      if (i % 7 === 0) {
-        point = [(u - 0.5) * 4.6, -1.45, (v - 0.5) * 3.4];
-      } else {
-        const block = i % 10;
-        const side = block % 2 ? 1 : -1;
-        const row = Math.floor(block / 2);
-        const height = [1.2, 1.85, 2.6, 1.5, 2.15][row];
-        const sample = Math.floor(i / 10);
-        const grid = Math.floor(sample / 5);
-        point = boxPoint((grid % 7) / 6, (Math.floor(grid / 7) % 7) / 6, sample % 5,
-          side * (1.05 + (row % 2) * 0.14), -1.4 + height / 2,
-          (row - 2) * 0.68, 0.86, height, 0.52);
-      }
-    } else if (key === 'agent') {
-      const layer = i % 3;
-      const cell = Math.floor(i / 3) % 35;
-      const column = cell % 7;
-      const row = Math.floor(cell / 7);
-      const x = (column - 3) * 0.4 + (layer - 1) * 0.18;
-      const y = 0.8 - row * 0.43 + layer * 0.15;
-      const z = (layer - 1) * 0.78;
-      const sample = Math.floor(i / 105) % 24;
-      const edge = Math.floor(sample / 6);
-      const along = sample % 6 / 5 - 0.5;
-      point = [x + (edge % 2 ? (edge === 1 ? 0.155 : -0.155) : along * 0.31),
-        y + (edge % 2 ? along * 0.32 : (edge === 0 ? 0.16 : -0.16)), z];
-      if (i % 19 === 0) point = [(u - 0.5) * 2.85, 1.19 + layer * 0.15, z];
-    } else if (key === 'education') {
-      const tile = i % 12;
-      const column = tile % 4;
-      const row = Math.floor(tile / 4);
-      const lift = column > row ? 0.26 * (column - row) : 0;
-      const sample = Math.floor(i / 12);
-      const grid = Math.floor(sample / 5);
-      point = boxPoint((grid % 7) / 6, (Math.floor(grid / 7) % 7) / 6, sample % 5,
-        (column - 1.5) * 0.86, -0.72 + row * 0.56 + lift,
-        (row - 1) * 0.86, 0.74, 0.38, 0.74);
-    } else if (key === 'medical') {
-      const slice = i % 28;
-      const y = (slice / 27 - 0.5) * 2.85;
-      const angle = u * TAU;
-      const envelope = Math.pow(Math.max(0.035, 1 - (y / 1.57) ** 2), 0.55);
-      const radius = envelope * (0.82 + 0.14 * Math.cos(angle * 3 + y * 1.4));
-      point = [Math.cos(angle) * radius + 0.15 * Math.sin(y * 2), y,
-        Math.sin(angle) * radius * 0.79];
-      if (i % 9 === 0) point = [0.28 * Math.sin(y * 2.6), y, 0.22 * Math.cos(y * 2.6)];
-    } else if (key === 'generative') {
-      const token = i % 5;
-      const angle = u * TAU;
-      const edge = Math.floor(u * 6);
-      const along = fract(u * 6);
-      const a = edge * TAU / 6;
-      const b = (edge + 1) * TAU / 6;
-      const radius = token === 2 ? 1.08 : 0.72;
-      const x = (Math.cos(a) * (1 - along) + Math.cos(b) * along) * radius;
-      const y = (Math.sin(a) * (1 - along) + Math.sin(b) * along) * radius;
-      const face = Math.floor(i / 5) % 3;
-      const scale = face === 0 ? Math.sqrt(v) : 1;
-      point = [x * scale + (token - 2) * 0.41,
-        y * scale + Math.sin(token * 1.2) * 0.3,
-        (token - 2) * 0.57 + (face === 0 ? 0.09 : (v - 0.5) * 0.18)];
-      if (i % 23 === 0) point = [Math.cos(angle) * 1.85, -1.35, Math.sin(angle) * 1.3];
+    const rib = i % 9;
+    const sample = Math.floor(i / 9);
+    const t = (sample % 72) / 71;
+    const band = Math.floor(sample / 72);
+    const radius = 1.13 + band * 0.12;
+    let x, y;
+    if (t < 0.22) {
+      x = -radius;
+      y = -1.38 + (t / 0.22) * 1.55;
+    } else if (t > 0.78) {
+      x = radius;
+      y = 0.17 - ((t - 0.78) / 0.22) * 1.55;
     } else {
-      const rib = i % 9;
-      const sample = Math.floor(i / 9);
-      const t = (sample % 72) / 71;
-      const band = Math.floor(sample / 72);
-      const radius = 1.13 + band * 0.12;
-      let x;
-      let y;
-      if (t < 0.22) {
-        x = -radius;
-        y = -1.38 + (t / 0.22) * 1.55;
-      } else if (t > 0.78) {
-        x = radius;
-        y = 0.17 - ((t - 0.78) / 0.22) * 1.55;
-      } else {
-        const angle = Math.PI * (1 - (t - 0.22) / 0.56);
-        x = Math.cos(angle) * radius;
-        y = 0.17 + Math.sin(angle) * (radius * 1.04);
-      }
-      const lean = (rib - 4) * 0.043;
-      point = [x + lean, y + Math.sin(rib * 0.35) * 0.045, (rib - 4) * 0.285];
+      const angle = Math.PI * (1 - (t - 0.22) / 0.56);
+      x = Math.cos(angle) * radius;
+      y = 0.17 + Math.sin(angle) * (radius * 1.04);
     }
-    result.set(point, i * 3);
+    result.set([x + (rib - 4) * 0.043, y + Math.sin(rib * .35) * .045, (rib - 4) * .285], i * 3);
   }
   return result;
 }
 
-function makeTints(key, count) {
+function makeRegistrationTints(count) {
   const tints = new Float32Array(count);
   for (let i = 0; i < count; i += 1) {
     const seed = fract(i * 0.754877666);
-    const pink = key === 'vpr' ? i % 2 === 0
-      : key === 'agent' ? i % 3 === 2
-        : key === 'education' ? i % 4 > 1
-          : key === 'medical' ? i % 28 > 19
-            : key === 'generative' ? i % 5 > 2 : i % 9 > 5;
+    const pink = i % 9 > 5;
     tints[i] = pink ? 0.72 + seed * 0.28 : seed * 0.42;
   }
   return tints;
@@ -249,6 +157,60 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   let useFallbackBounds = true;
   let shaderFailed = false;
   let nextShape;
+  let three, points, topicArt, resultArt;
+
+  function disposeArt() {
+    topicArt?.traverse(node => { node.geometry?.dispose(); node.material?.dispose(); });
+    sculpture?.remove(topicArt);
+    topicArt = null;
+    resultArt = null;
+  }
+
+  function buildArt() {
+    if (!three || !sculpture) return;
+    disposeArt();
+    points.visible = key === 'arch';
+    stage.visible = key === 'arch';
+    host.dataset.heroSceneRepresentation = key === 'arch' ? 'point-cloud' : 'subject-relief';
+    if (key === 'arch') return;
+    topicArt = new three.Group();
+    resultArt = new three.Group();
+    topicArt.add(resultArt);
+    sculpture.add(topicArt);
+    const batches = new Map();
+    const batch = (role, type, color) => {
+      const id = `${role}/${type}/${color}`;
+      if (!batches.has(id)) batches.set(id, { role, type, color, vertices: [] });
+      return batches.get(id).vertices;
+    };
+    for (const shape of createTopicArt(key)) {
+      if (shape.fill) {
+        const vertices = batch(shape.role, 'fill', shape.fill);
+        for (let i = 1; i < shape.points.length - 2; i++) vertices.push(...shape.points[0], ...shape.points[i], ...shape.points[i + 1]);
+      }
+      if (shape.stroke) {
+        const vertices = batch(shape.role, 'line', shape.stroke);
+        for (let i = 1; i < shape.points.length; i++) {
+          for (const point of [shape.points[i - 1], shape.points[i]]) vertices.push(point[0], point[1], point[2] + .001);
+        }
+      }
+    }
+    for (const { role, type, color, vertices } of batches.values()) {
+      const meshGeometry = new three.BufferGeometry();
+      meshGeometry.setAttribute('position', new three.Float32BufferAttribute(vertices, 3));
+      const meshMaterial = type === 'fill'
+        ? new three.MeshBasicMaterial({ side: three.DoubleSide }) : new three.LineBasicMaterial();
+      const node = type === 'fill' ? new three.Mesh(meshGeometry, meshMaterial) : new three.LineSegments(meshGeometry, meshMaterial);
+      node.userData.colorKey = color;
+      (role === 'result' ? resultArt : topicArt).add(node);
+    }
+  }
+
+  function updateDescription() {
+    let id;
+    try { id = typeof getTopic === 'function' ? getTopic() : getTopic; } catch { id = ''; }
+    canvas?.setAttribute('aria-label', heroTopicDescription(id, doc.documentElement.lang));
+  }
 
   function enabled() {
     if (media.matches || view.SiteMotion?.enabled?.() === false) return false;
@@ -298,6 +260,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   }
 
   function releaseGraphics() {
+    disposeArt();
     geometry?.dispose();
     material?.dispose();
     stage?.geometry.dispose();
@@ -326,6 +289,9 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
     material.uniforms.uPink.value.set(color('--pink', '#f2b8bf'));
     material.uniforms.uPale.value.set(color('--text', '#eef3f3'));
     stage.material.color.set(color('--line', '#607078'));
+    const palette = heroArtPalette(styles);
+    topicArt?.traverse(node => { if (node.material) node.material.color.set(palette[node.userData.colorKey]); });
+    updateDescription();
     const x = Number.parseFloat(styles.getPropertyValue('--hero-scene-center-x'));
     const y = Number.parseFloat(styles.getPropertyValue('--hero-scene-center-y'));
     centerX = Number.isFinite(x) ? clamp(x, 0.2, 0.8) : 0.5;
@@ -356,7 +322,8 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
     camera.aspect = width / height;
     const fit = Math.min(camera.aspect * 2 * Math.min(centerX, 1 - centerX), 1.35);
     const distance = Math.max(7.4 / (2 * Math.min(centerY, 1 - centerY)), 6.3 / Math.max(0.35, fit));
-    camera.position.set(distance * 0.34, distance * 0.19, distance);
+    if (key === 'arch') camera.position.set(distance * 0.34, distance * 0.19, distance);
+    else camera.position.set(.15, .08, Math.max(4.9, 8.3 / camera.aspect));
     camera.lookAt(0, -0.04, 0);
     camera.setViewOffset(width, height, width * (0.5 - centerX), height * (0.5 - centerY), width, height);
     camera.updateProjectionMatrix();
@@ -400,11 +367,15 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       currentPitch += (targetPitch - currentPitch) * ease;
     }
     sculpture.rotation.set(currentPitch, currentYaw, 0);
+    if (resultArt) {
+      const progress = Math.min(material.uniforms.uReveal.value, material.uniforms.uMorph.value);
+      resultArt.position.set((1 - progress) * .25, (1 - progress) * .18, 0);
+    }
     try {
       renderer.render(scene, camera);
       if (shaderFailed || renderer.getContext().isContextLost()) return fail();
       if (!ready) {
-        if (!renderer.info.render.points || renderer.getContext().getError() !== 0) return fail();
+        if (!renderer.info.render.calls || renderer.getContext().getError() !== 0) return fail();
         ready = true;
         canvas.tabIndex = 0;
         host.classList.add('hero-scene-ready');
@@ -430,7 +401,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
   function resetPointer() {
     pointerX = 0;
     pointerY = 0;
-    targetYaw = -0.28 + dragYaw;
+    targetYaw = (key === 'arch' ? -.28 : -.04) + dragYaw;
     targetPitch = dragPitch;
     pulseStart = -Infinity;
     requestFrame(800);
@@ -460,7 +431,13 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       if (key === nextKey) return;
       key = nextKey;
       if (!geometry) return;
-      nextShape = makeShape(key, count);
+      dragYaw = 0;
+      dragPitch = 0;
+      resetPointer();
+      buildArt();
+      readTheme();
+      size();
+      nextShape = makeRegistrationShape(count);
       const current = geometry.attributes.position;
       const next = geometry.attributes.aNext;
       const progress = material.uniforms.uMorph.value;
@@ -470,7 +447,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       current.needsUpdate = true;
       next.array.set(nextShape);
       next.needsUpdate = true;
-      geometry.attributes.aTint.array.set(makeTints(key, count));
+      geometry.attributes.aTint.array.set(makeRegistrationTints(count));
       geometry.attributes.aTint.needsUpdate = true;
       material.uniforms.uMorph.value = 0;
       pendingMorph = true;
@@ -506,6 +483,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       host.classList.remove('hero-scene-host', 'hero-scene-positioned');
       fallback?.classList.remove('hero-scene-fallback');
       delete host.dataset.heroSceneTopic;
+      delete host.dataset.heroSceneRepresentation;
       mounted.delete(host);
     }
   };
@@ -519,6 +497,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       const retry = new URL(import.meta.url).searchParams.get('retry');
       if (retry) moduleUrl.searchParams.set('retry', retry);
       const THREE = await import(moduleUrl.href);
+      three = THREE;
       if (!await yieldStartup()) return;
       canvas = doc.createElement('canvas');
       canvas.className = 'hero-scene-canvas';
@@ -526,7 +505,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       canvas.setAttribute('role', 'img');
       canvas.setAttribute('aria-label', host.getAttribute('aria-label') || 'Spatial point sculpture');
       canvas.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown Home');
-      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'low-power' });
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
       renderer.setClearColor(0x000000, 0);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.debug.onShaderError = () => { shaderFailed = true; };
@@ -536,7 +515,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       camera = new THREE.PerspectiveCamera(36, 1, 0.1, 80);
       sculpture = new THREE.Group();
       scene.add(sculpture);
-      nextShape = makeShape(key, count);
+      nextShape = makeRegistrationShape(count);
       const seeds = new Float32Array(count);
       for (let i = 0; i < count; i += 1) {
         seeds[i] = fract(i * 0.754877666);
@@ -545,7 +524,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       geometry.setAttribute('position', new THREE.BufferAttribute(nextShape.slice(), 3));
       geometry.setAttribute('aNext', new THREE.BufferAttribute(nextShape.slice(), 3));
       geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
-      geometry.setAttribute('aTint', new THREE.BufferAttribute(makeTints(key, count), 1));
+      geometry.setAttribute('aTint', new THREE.BufferAttribute(makeRegistrationTints(count), 1));
       material = new THREE.ShaderMaterial({
         transparent: true,
         depthWrite: false,
@@ -564,7 +543,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
           uPointer: { value: new THREE.Vector2(20, 20) }
         }
       });
-      const points = new THREE.Points(geometry, material);
+      points = new THREE.Points(geometry, material);
       points.frustumCulled = false;
       sculpture.add(points);
       const floor = [];
@@ -578,6 +557,8 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
         new THREE.LineBasicMaterial({ transparent: true, opacity: 0.16, depthWrite: false })
       );
       sculpture.add(stage);
+      buildArt();
+      currentYaw = targetYaw = key === 'arch' ? -.28 : -.04;
       if (view.getComputedStyle(host).position === 'static') host.classList.add('hero-scene-positioned');
       host.classList.add('hero-scene-host');
       fallback?.classList.add('hero-scene-fallback');
@@ -614,7 +595,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
         pointerX = clamp((event.clientX - rect.left) / width * 2 - 1, -1, 1);
         pointerY = clamp((event.clientY - rect.top) / height * 2 - 1, -1, 1);
         const animate = enabled();
-        targetYaw = -0.28 + dragYaw + (animate ? pointerX * 0.075 : 0);
+        targetYaw = (key === 'arch' ? -.28 : -.04) + dragYaw + (animate ? pointerX * 0.075 : 0);
         targetPitch = dragPitch + (animate ? pointerY * 0.045 : 0);
         material.uniforms.uPointer.value.set(pointerX, -pointerY);
         pulseStart = view.performance.now();
@@ -661,7 +642,7 @@ export function mountHeroScene({ host, fallback, getTopic, motion } = {}) {
       }
       if ('MutationObserver' in view) {
         const observer = new view.MutationObserver(() => api.themeChanged());
-        observer.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        observer.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme', 'lang'] });
         cleanup.push(() => observer.disconnect());
       }
       if (!await yieldStartup()) return;

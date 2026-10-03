@@ -11,6 +11,7 @@ function versionedModuleUrl(relativePath, parameters = {}) {
 const [
   { ORCID_ID, localRepos, staticPublications },
   { homepageI18n },
+  { paintHeroTopic, heroArtPalette, heroTopicDescription },
   {
     CONFIG_ID_PATTERN,
     RESEARCH_CONFIG_LIMITS,
@@ -29,6 +30,7 @@ const [
 ] = await Promise.all([
   import(versionedModuleUrl('./site-data.js')),
   import(versionedModuleUrl('./homepage-i18n.js')),
+  import(versionedModuleUrl('./hero-topic-art.js')),
   import(versionedModuleUrl('./scripts/research-config-schema.js')),
   import(versionedModuleUrl('./scripts/portfolio-ranking.js'))
 ]);
@@ -1974,7 +1976,7 @@ function renderHeroPreview() {
       <span>${escapeHtml(domainTitle)}</span>
       <strong>${escapeHtml(childTitle)}</strong>
     </a>
-    <p>${escapeHtml(textFor(entry.child.description))}</p>
+    <p class="hero-topic-caption">${escapeHtml(heroTopicDescription(entry.child.id, currentLang))}</p>
   `;
   heroPreviewMeta.querySelector('[data-hero-interest]')?.addEventListener('click', (event) => {
     if (!useInteractiveResearchNavigation(event)) return;
@@ -1991,36 +1993,6 @@ function renderHeroPreview() {
 }
 
 const heroPreviewScenes = {
-  'point-cloud': {
-    accent: 'geometry',
-    lines: [[0.18, 0.62, 0.42, 0.46], [0.42, 0.46, 0.68, 0.54], [0.68, 0.54, 0.82, 0.34]],
-    nodes: [[0.18, 0.62], [0.28, 0.46], [0.38, 0.64], [0.52, 0.42], [0.66, 0.58], [0.78, 0.4]],
-    panels: [[0.12, 0.2, 0.26, 0.28], [0.58, 0.28, 0.28, 0.34]]
-  },
-  vpr: {
-    accent: 'route',
-    lines: [[0.12, 0.7, 0.28, 0.52], [0.28, 0.52, 0.48, 0.6], [0.48, 0.6, 0.68, 0.38], [0.68, 0.38, 0.86, 0.5]],
-    nodes: [[0.12, 0.7], [0.28, 0.52], [0.48, 0.6], [0.68, 0.38], [0.86, 0.5]],
-    panels: [[0.1, 0.22, 0.2, 0.24], [0.4, 0.18, 0.2, 0.24], [0.7, 0.24, 0.2, 0.24]]
-  },
-  agent: {
-    accent: 'workflow',
-    lines: [[0.2, 0.52, 0.42, 0.42], [0.42, 0.42, 0.62, 0.52], [0.62, 0.52, 0.8, 0.36]],
-    nodes: [[0.2, 0.52], [0.42, 0.42], [0.62, 0.52], [0.8, 0.36]],
-    panels: [[0.1, 0.34, 0.22, 0.32], [0.38, 0.24, 0.22, 0.28], [0.68, 0.18, 0.22, 0.32]]
-  },
-  education: {
-    accent: 'teaching',
-    lines: [[0.2, 0.62, 0.48, 0.34], [0.48, 0.34, 0.74, 0.5]],
-    nodes: [[0.2, 0.62], [0.48, 0.34], [0.74, 0.5], [0.82, 0.66]],
-    panels: [[0.1, 0.18, 0.38, 0.28], [0.62, 0.28, 0.26, 0.34]]
-  },
-  'medical-image': {
-    accent: 'analysis',
-    lines: [[0.2, 0.32, 0.42, 0.42], [0.42, 0.42, 0.62, 0.36], [0.62, 0.36, 0.78, 0.56]],
-    nodes: [[0.2, 0.32], [0.42, 0.42], [0.62, 0.36], [0.78, 0.56]],
-    panels: [[0.12, 0.22, 0.2, 0.24], [0.34, 0.46, 0.2, 0.24], [0.58, 0.22, 0.2, 0.24]]
-  },
   generic: {
     accent: 'research',
     lines: [[0.14, 0.58, 0.34, 0.42], [0.34, 0.42, 0.58, 0.52], [0.58, 0.52, 0.84, 0.34]],
@@ -2074,11 +2046,18 @@ function drawHeroPreviewCanvas() {
   const entry = heroPreviewEntry();
   if (!entry) return;
   const ctx = heroPreviewCtx;
+  if (paintHeroTopic(ctx, width, height, entry.child.id, heroArtPalette(getComputedStyle(heroPreviewCanvas)))) {
+    heroPreviewCanvas.dataset.topicArt = entry.child.id;
+    return;
+  }
+  delete heroPreviewCanvas.dataset.topicArt;
   const colors = heroThemeColors();
   const t = heroPreviewTick * 0.05;
   const scene = heroPreviewScenes[entry.child.animation] || heroPreviewScenes.generic;
   drawHeroScenePreview(ctx, width, height, t, scene, colors, entry);
 }
+
+heroPreviewCanvas?.parentElement.addEventListener('hero-scene:error', drawHeroPreviewCanvas);
 
 function updateHeroPreviewSize(width, height) {
   if (!heroPreviewCanvas || !heroPreviewCtx) return false;

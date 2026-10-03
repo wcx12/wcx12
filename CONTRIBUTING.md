@@ -148,6 +148,16 @@ visible, motion is enabled, and a visitor activates 3D (button/keyboard, or a
 350ms mouse dwell on a desktop preview). Touch/narrow viewports require the
 explicit button. Initial content never waits for WebGL. The renderer stops after settling and pauses
 offscreen/background; its 2D fallback remains available on WebGL failure.
+
+`hero-topic-art.js` is the shared subject-geometry source for 2D previews and
+Three.js relief illustrations. Only registration uses point-cloud geometry.
+VPR depicts two observations of one landmark; medical depicts sample selection
+and human annotation; Agent depicts task/tool/result; education depicts a
+geometry example and feedback. These are synthetic concept illustrations, not
+model results. Preserve the matching fallback, bilingual captions, exact geometry
+and explicit topic IDs when adding subjects. Unknown IDs must not become a
+registration scene. Tests: `scripts/hero-topic-art.test.mjs` and
+`scripts/e2e/hero-topics.spec.mjs`.
 The build bundles only used Three.js exports with pinned esbuild and preserves
 `assets/vendor/three/LICENSE`. Commit that generated bundle with source changes.
 Inline Lucide icons retain attribution in `assets/vendor/lucide/LICENSE`.

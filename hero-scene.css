@@ -2,6 +2,15 @@
   isolation: isolate;
 }
 
+.hero-preview-meta > .hero-topic-caption {
+  display: block;
+  min-height: 2.5em;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  max-width: 100%;
+}
+
 .hero-scene-positioned {
   position: relative;
 }
