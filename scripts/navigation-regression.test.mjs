@@ -14,16 +14,19 @@ function loadFunction(name, nextName, context) {
   return vm.runInNewContext(`${source.slice(start, end)}\n${name}`, context);
 }
 
-test('identity status and timeline share confirmed profile data in both languages', () => {
+test('identity and location share confirmed profile data in both languages', () => {
   for (const language of ['en', 'zh']) {
     assert.equal(homepageI18n[language].hero_affiliation, profileData.affiliation[language]);
-    assert.equal(homepageI18n[language].hero_status_value, profileData.status[language]);
-    assert.deepEqual(homepageI18n[language].statuses, [profileData.status[language]]);
-    assert.equal(homepageI18n[language].timeline_2026, profileData.currentWork[language]);
+    assert.equal(homepageI18n[language].hero_status_value, profileData.location[language]);
+    assert.deepEqual(homepageI18n[language].statuses, [profileData.location[language]]);
+    assert.equal(homepageI18n[language].timeline_2026, undefined);
     assert.equal(homepageI18n[language].about_line1, profileData.about[language]);
   }
   assert.equal(profileData.education.major.zh, '数据科学');
   assert.equal(profileData.location.zh, '中国深圳');
+  assert.equal(profileData.experience, undefined, 'withdrawn experience must not remain in shared data');
+  assert.equal(profileData.currentWork, undefined);
+  assert.equal(profileData.status, undefined);
 });
 
 test('research navigation closes blocking overlays before activating its destination', () => {

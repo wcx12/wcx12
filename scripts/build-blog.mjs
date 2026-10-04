@@ -1571,10 +1571,6 @@ export function personEntity() {
       '@type': 'CollegeOrUniversity',
       name: profileData.education.institution.en
     },
-    worksFor: {
-      '@type': 'Organization',
-      name: profileData.experience.organization.en
-    },
     homeLocation: { '@type': 'Place', name: profileData.location.en },
     sameAs: [
       'https://github.com/wcx12',
@@ -3019,13 +3015,12 @@ async function renderResume(renderer, language) {
   const source = await fs.readFile(path.join(rootDir, sourceFile), 'utf8');
   const text = isZh ? {
     kicker: '学术履历',
-    statusLabel: '当前状态',
     commandLabel: '联系与导出',
     print: '打印 / 保存 PDF',
     contact: '邮件联系',
     sections: '履历目录',
     sectionsLabel: '快速浏览',
-    affiliation: '当前实践',
+    affiliation: '教育背景',
     graduation: '北理阶段',
     publications: '论文记录',
     publicationUnit: '篇',
@@ -3038,13 +3033,12 @@ async function renderResume(renderer, language) {
     doiLabel: (title) => `在新标签页打开论文 ${title} 的 DOI`
   } : {
     kicker: 'Academic profile',
-    statusLabel: 'Current status',
     commandLabel: 'Contact and export',
     print: 'Print / Save PDF',
     contact: 'Email me',
     sections: 'Profile sections',
     sectionsLabel: 'Quick navigation',
-    affiliation: 'Current practice',
+    affiliation: 'Education',
     graduation: 'BIT period',
     publications: 'Publications',
     publicationUnit: 'papers',
@@ -3087,13 +3081,13 @@ async function renderResume(renderer, language) {
   const markerMarkup = `<p>${publicationMarker}</p>`;
   let publicationMarkers = 0;
   const sections = renderer.renderSections(withoutDocumentTitle);
-  const profileSectionKinds = ['education', 'experience', 'publications', 'interests', 'projects', 'skills'];
+  const profileSectionKinds = ['education', 'publications', 'interests', 'projects', 'skills'];
   const profileSectionNavLabels = isZh
-    ? ['教育背景', '经历', '论文', '研究兴趣', '代表项目', '技术能力']
-    : ['Education', 'Experience', 'Papers', 'Research', 'Projects', 'Skills'];
+    ? ['教育背景', '论文', '研究兴趣', '代表项目', '技术能力']
+    : ['Education', 'Papers', 'Research', 'Projects', 'Skills'];
   const profileSectionMobileLabels = isZh
     ? profileSectionNavLabels
-    : ['Edu', 'Exp', 'Papers', 'Topics', 'Work', 'Skills'];
+    : ['Edu', 'Papers', 'Topics', 'Work', 'Skills'];
   const sectionHtml = sections.map((section, index) => {
     const content = section.html.replace(markerMarkup, () => {
       publicationMarkers += 1;
@@ -3121,11 +3115,10 @@ async function renderResume(renderer, language) {
             <p class="blog-kicker">${text.kicker}</p>
           </div>
           <h1>${escapeHtml(profileData.name)}</h1>
-          <p class="profile-identity"><span class="profile-handle">@${escapeHtml(profileData.username)}</span><strong>${escapeHtml(localized(profileData.experience.role, language))}</strong><span>${escapeHtml(localized(profileData.location, language))}</span></p>
+          <p class="profile-identity"><span class="profile-handle">@${escapeHtml(profileData.username)}</span><span>${escapeHtml(localized(profileData.location, language))}</span></p>
           <p class="profile-summary">${escapeHtml(localized(profileData.about, language))}</p>
         </div>
         <div class="profile-command">
-          <p class="profile-status"><span>${text.statusLabel}</span><strong><i aria-hidden="true"></i>${escapeHtml(localized(profileData.status, language))}</strong></p>
           <p class="profile-command-label">${text.commandLabel}</p>
           <div class="profile-actions">
             <a class="btn btn-primary" href="mailto:c2675668@gmail.com" aria-label="${text.emailLabel}"><span>${text.contact}</span><span class="profile-email-address">c2675668@gmail.com</span></a>
@@ -3137,7 +3130,7 @@ async function renderResume(renderer, language) {
           </nav>
         </div>
         <dl class="profile-facts">
-      <div><dt>${text.affiliation}</dt><dd>${escapeHtml(localized(profileData.experience.shortName, language))}<br><span>${escapeHtml(localized(profileData.experience.period, language))}</span></dd></div>
+      <div><dt>${text.affiliation}</dt><dd>${escapeHtml(localized(profileData.education.institution, language))}<br><span>${escapeHtml(localized(profileData.education.major, language))}</span></dd></div>
       <div><dt>${text.graduation}</dt><dd>${escapeHtml(localized(profileData.education.period, language))}</dd></div>
           <div><dt>${text.publications}</dt><dd>${publicationFact}</dd></div>
         </dl>
@@ -3189,11 +3182,7 @@ export function hydrateResumeSource(source, language) {
   const fields = {
     EDUCATION_INSTITUTION: profileData.education.institution,
     EDUCATION_MAJOR: profileData.education.major,
-    EDUCATION_PERIOD: profileData.education.period,
-    EXPERIENCE_ORGANIZATION: profileData.experience.organization,
-    EXPERIENCE_ROLE: profileData.experience.role,
-    EXPERIENCE_PERIOD: profileData.experience.period,
-    CURRENT_WORK: profileData.currentWork
+    EDUCATION_PERIOD: profileData.education.period
   };
   return source.replace(/\{\{([A-Z_]+)\}\}/g, (placeholder, key) => {
     if (!Object.hasOwn(fields, key)) return placeholder;

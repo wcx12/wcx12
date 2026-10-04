@@ -99,6 +99,14 @@ exposes the generated `output/preview/` tree, which is ignored by Git.
 
 ## Update research evidence
 
+Public identity facts live in `profile-data.js`; `index.html` also contains
+the no-JavaScript fallback. When withdrawing a profile fact, update both,
+the bilingual resume sources/templates, README, and generated pages, including
+Person JSON-LD. Remove empty sections and their navigation entries together.
+Do not replace a withdrawn role with an inferred title. Verify the packaged
+site as well as the current tracked sources; this does not erase Git history
+or third-party caches.
+
 - Add or update repository and publication records in `site-data.js`.
 - Map records to research topics in `research-config.json`.
 - Keep profile facts that are not generated from canonical data synchronized in

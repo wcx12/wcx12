@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { profileData } from '../../profile-data.js';
 
 const article = 'blog/posts/tiger-generative-retrieval-reading/';
 async function home(page) {
@@ -174,6 +175,42 @@ test('no JavaScript keeps papers, writing, contact and wide tables usable', asyn
   await expect.poll(() => table.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await context.close();
+});
+
+test('public profile retains education and location without an employment section', async ({ page }, testInfo) => {
+  for (const language of ['en', 'zh']) {
+    const prefix = language === 'zh' ? 'zh/' : '';
+    await page.goto(prefix || './');
+    await expect(page.locator('#typeTarget')).toHaveText(profileData.location[language]);
+    await expect(page.locator('[data-i18n="hero_affiliation"]')).toHaveText(profileData.education.institution[language]);
+    await expect(page.locator('[data-i18n="timeline_2026"]')).toHaveCount(0);
+    await page.goto(`${prefix}resume/`);
+    await expect(page.locator('.profile-identity')).toContainText(profileData.location[language]);
+    await expect(page.locator('[data-profile-kind="education"]')).toContainText(profileData.education.major[language]);
+    await expect(page.locator('[data-profile-kind="experience"]')).toHaveCount(0);
+    await expect(page.locator('.profile-status')).toHaveCount(0);
+    const links = page.locator('.profile-section-nav a');
+    await expect(links).toHaveCount(5);
+    for (const link of await links.all()) {
+      const href = await link.getAttribute('href');
+      await link.click();
+      await expect(page.locator(href)).toBeInViewport();
+    }
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate(() => scrollTo(0, 0));
+      await expect(page.locator('.profile-heading')).toBeInViewport();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`profile-${language}-${width}.png`), fullPage: true });
+    }
+    const people = await page.locator('script[type="application/ld+json"]').evaluateAll(nodes =>
+      nodes.map(node => JSON.parse(node.textContent)).filter(data => data['@type'] === 'ProfilePage').map(data => data.mainEntity)
+    );
+    expect(people).toHaveLength(1);
+    expect(people[0]).not.toHaveProperty('worksFor');
+    expect(people[0].homeLocation.name).toBe(profileData.location.en);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+  }
 });
 
 test('resume printing retains identity and hides navigation; unknown route recovers', async ({ page }) => {

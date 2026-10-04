@@ -44,9 +44,9 @@ export const homepageI18n = {
     aria_readme_content: 'Repository README content',
     hero_kicker: 'Machine Learning Researcher',
     hero_affiliation: profileData.affiliation.en,
-    hero_status: 'Status',
+    hero_status: 'Based in',
     hero_status_separator: ':',
-    hero_status_value: profileData.status.en,
+    hero_status_value: profileData.location.en,
     hero_subtitle_html: 'Reliable visual intelligence under imperfect observations and limited labels.<br /> Research spanning 3D geometry, visual localization, medical imaging, and evidence-grounded AI systems.',
     hero_preview_label: 'Research Concept',
     hero_preview_live: 'concept',
@@ -180,7 +180,6 @@ export const homepageI18n = {
     timeline_title: 'Timeline',
     timeline_2024: 'Focused on strengthening ML engineering foundations and reproducible workflows.',
     timeline_2025: 'Deepening work on point-set registration, visual recognition, and sample-efficient learning.',
-    timeline_2026: profileData.currentWork.en,
     skill_title: 'Skill Matrix',
     skill_hint: 'Click a skill chip to highlight what I use.',
     res_title: 'Profile & Publications',
@@ -250,7 +249,7 @@ export const homepageI18n = {
     lang_btn: '中文',
     lang_link_aria: '切换到中文主页',
     chip_loaded: 'Loaded: {tag} -> actively used in my current workflow.',
-    statuses: [profileData.status.en]
+    statuses: [profileData.location.en]
   },
   zh: {
     skip_main: '跳到主要内容',
@@ -293,9 +292,9 @@ export const homepageI18n = {
     aria_readme_content: '仓库 README 内容',
     hero_kicker: '机器学习研究者',
     hero_affiliation: profileData.affiliation.zh,
-    hero_status: '状态',
+    hero_status: '常驻',
     hero_status_separator: '：',
-    hero_status_value: profileData.status.zh,
+    hero_status_value: profileData.location.zh,
     hero_subtitle_html: '研究不完整观测与有限标注条件下的可靠视觉智能。<br /> 方向涵盖三维几何、视觉定位、医学影像与证据驱动的 AI 系统。',
     hero_preview_label: '研究概念',
     hero_preview_live: '概念',
@@ -429,7 +428,6 @@ export const homepageI18n = {
     timeline_title: '时间线',
     timeline_2024: '强化机器学习工程基础与可复现实验流程。',
     timeline_2025: '深入开展点集配准、视觉识别与样本高效学习。',
-    timeline_2026: profileData.currentWork.zh,
     skill_title: '技能矩阵',
     skill_hint: '点击技能标签可查看当前使用说明。',
     res_title: '履历与论文',
@@ -499,7 +497,7 @@ export const homepageI18n = {
     lang_btn: 'EN',
     lang_link_aria: 'View the English homepage',
     chip_loaded: '已加载: {tag} -> 已纳入当前工作流。',
-    statuses: [profileData.status.zh]
+    statuses: [profileData.location.zh]
   }
 };
 
