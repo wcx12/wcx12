@@ -243,6 +243,7 @@ export function mountHeroScene({ host, fallback, getTopic, getStage, motion } = 
       let observer;
       let finished = false;
       const watches = [[doc, 'visibilitychange'], [view, 'site:motion-change'],
+        [host, 'hero-scene:representation'],
         [media, 'change'], [view, 'scroll'], [view, 'resize']];
       const eligible = () => {
         if (!enabled() || doc.hidden || !host.isConnected) return false;

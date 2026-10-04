@@ -151,6 +151,14 @@ offscreen/background; its 2D fallback remains available on WebGL failure.
 
 `hero-topic-art.js` is the shared subject-geometry source for 2D previews and
 Three.js relief illustrations. Only registration uses point-cloud geometry.
+Agent and education now use `hero-editorial.js` with native text and geometric
+pieces; they deliberately do not expose a 3D launch action. Their canvas art is
+retained as a module-failure fallback without the former robot/monitor motifs.
+The other topics retain WebGL. Switching representation must notify suspended
+startup work and refresh accessible descriptions, without losing focused steps.
+Native scenes have finite transitions, cancel when offscreen or motion is disabled,
+and reserve rem-based height for enlarged text. Keep final geometry exact; use
+an overlaid shared-edge stroke, not separated pieces, to show a partition.
 VPR depicts two observations of one landmark; medical depicts sample selection
 and human annotation; Agent depicts task/tool/result; education depicts a
 geometry example and feedback. These are synthetic concept illustrations, not

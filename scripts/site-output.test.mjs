@@ -194,6 +194,7 @@ async function expectedAssetVersion() {
     'hero-scene.css',
     'hero-scene.js',
     'hero-topic-art.js',
+    'hero-editorial.js',
     'node_modules/three/build/three.core.js',
     'node_modules/three/build/three.module.js',
     'node_modules/esbuild/package.json',

@@ -35,6 +35,7 @@ const publicFiles = [
   'hero-scene.css',
   'hero-scene.js',
   'hero-topic-art.js',
+  'hero-editorial.js',
   'theme-init.js'
 ];
 
