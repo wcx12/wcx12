@@ -39,6 +39,15 @@ assembly, text enlargement and accessible-name restoration. Final counts and
 release state are recorded in the PR; these checkpoints do not substitute for
 the final gate. Original untracked `.playwright-cli/` preserved.
 
+The expanded local run retained six failures: pointer-transparent art is not an
+actionable hover target, and enlarged-type decorative tilts escaped the bounds.
+The test now moves the real pointer; large text uses straight full-width excerpts.
+English 200% type also needed a 12rem mobile reserve. All three engines passed the
+reflow and module-failure checks. A WebKit post-click animation poll missed the
+finite interval; the replacement samples real piece transforms starting at the
+click event, asserting intermediate rotation instead of transient API state.
+Three isolated WebKit repetitions verify this behavior without changing duration.
+
 No profile, article, paper, mapping, credential or approval changes. Sources and
 citations in the illustrated brief are explicitly synthetic examples, not links
 to claimed research results. No inference service, analytics or background loop.

@@ -21,11 +21,21 @@ test('editorial scenes animate real content, stop on reduced motion, and never r
   await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2);
   await page.waitForTimeout(500);
   expect(requests.some(url => url.includes('/assets/vendor/three/'))).toBe(false);
+  await page.locator('[data-hero-stage="1"]').evaluate(button => button.addEventListener('click', () => {
+    window.heroMotionSample = new Promise(resolve => {
+      const transforms = new Set();
+      const start = performance.now();
+      const sample = () => {
+        transforms.add(getComputedStyle(document.querySelector('.geometry-b')).transform);
+        if(performance.now()-start < 1400) requestAnimationFrame(sample);
+        else resolve([...transforms]);
+      };
+      requestAnimationFrame(sample);
+    });
+  }, {once:true}));
   await page.locator('[data-hero-stage="1"]').click();
-  await expect.poll(() => scene.evaluate(el => el.getAnimations({ subtree: true }).length)).toBeGreaterThan(0);
-  const transitioning = await page.locator('.geometry-b').evaluate(el => getComputedStyle(el).transform);
-  await page.waitForTimeout(1100);
-  expect(await page.locator('.geometry-b').evaluate(el => getComputedStyle(el).transform)).not.toBe(transitioning);
+  const transforms = await page.evaluate(() => window.heroMotionSample);
+  expect(transforms.length, 'the actual piece must rotate through intermediate visible transforms').toBeGreaterThan(2);
   await page.locator('[data-hero-stage="2"]').click();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => scene.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
