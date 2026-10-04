@@ -44,6 +44,7 @@ const fixtureFiles = [
   'site-motion.css', 'site-motion.js', 'featured-posters.css', 'featured-posters.js',
   'hero-scene.css', 'hero-scene.js',
   'hero-topic-art.js',
+  'hero-editorial.js',
   'scripts/research-config-schema.js', 'assets/public.svg', 'projects/index.html',
   'publications/index.html', 'research/index.html', 'resume/index.html', 'zh/index.html',
   'blog/index.html', 'blog/posts/public-note/index.html', 'blog/assets/blog.js'

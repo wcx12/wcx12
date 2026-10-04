@@ -28,6 +28,7 @@ try {
     'site-motion.js', 'site-motion.css', 'featured-posters.js', 'featured-posters.css',
     'hero-scene.js', 'hero-scene.css', 'assets/vendor/three/three.module.min.js',
     'hero-topic-art.js',
+    'hero-editorial.js',
     'script.js', 'site-data.js', 'blog/assets/blog.js', 'blog/assets/blog.css', '404.html'];
   for (const file of [...routes.map(route => `${route}index.html`), ...resources]) {
     const url = new URL(file, base);

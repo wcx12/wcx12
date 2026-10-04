@@ -32,11 +32,11 @@ test('subject geometry stays deterministic, bounded and finite in both rendering
 });
 
 test('the education example preserves triangle lengths and areas when forming the square', () => {
-  const triangles = createTopicArt('education').filter(shape => shape.role.startsWith('triangle-'));
+  const triangles = [0, 1, 2].flatMap(stage => createTopicArt('education', stage).filter(shape => shape.role.startsWith('triangle-')));
   const partition = createTopicArt('education').find(shape => shape.role === 'partition');
   assert.equal(partition.stroke, 'screen', 'the assembled square needs a dark seam, not a color-only distinction');
-  assert.deepEqual(partition.points.map(p => p.slice(0, 2)), [[1.31, .58], [1.91, -.02]]);
-  assert.equal(triangles.length, 4);
+  assert.deepEqual(partition.points.map(p => p.slice(0, 2)), [[-.7, .8], [.7, -.6]]);
+  assert.equal(triangles.length, 6, 'two rigid pieces in every stage, without duplicating the result');
   const lengths = triangles.map(({ points }) => points.slice(0, 3).map((p, i) => {
     const q = points[(i + 1) % 3];
     return Math.hypot(p[0] - q[0], p[1] - q[1]);

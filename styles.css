@@ -2549,7 +2549,7 @@ main { max-width: 1240px; }
 .hero-preview-panel { position: relative; padding: 0; gap: 8px; }
 .hero-preview-head { padding-top: 4px; }
 .hero-preview-status { border: 0; border-radius: 0; background: transparent; padding: 0; color: var(--muted); }
-#heroPreviewCanvas { height: 300px; aspect-ratio: auto; }
+#heroPreviewCanvas { height: 18.75rem; aspect-ratio: auto; }
 .hero-preview-meta { min-height: 14rem; }
 .hero-preview-pills { display: none; }
 .hero-scene-topics { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
@@ -2562,7 +2562,7 @@ main { max-width: 1240px; }
   .hero-alias { display: inline; font-size: 1.25rem; }
   .hero-preview-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
   .hero-preview-head { display: none; }
-  #heroPreviewCanvas { height: 200px; }
+  #heroPreviewCanvas { height: 12.5rem; }
   .hero-preview-meta { min-height: 0; }
   .hero-preview-meta > p { display: none; }
   .hero-scene-topics { gap: 2px; }
@@ -2570,7 +2570,7 @@ main { max-width: 1240px; }
 @media (max-width: 540px) {
   .hero h1 { font-size: 2rem; }
   .hero-preview-panel { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  #heroPreviewCanvas { height: 170px; }
+  #heroPreviewCanvas { height: 12rem; }
   .hero-preview-title { flex-direction: row; align-items: baseline; gap: 10px; }
   .hero-preview-title strong { font-size: 1rem; }
   .hero-scene-topics button { min-height: 36px; padding: 6px; font-size: .75rem; }

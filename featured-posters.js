@@ -1,4 +1,10 @@
 const base = new URL(import.meta.url);
+const editorialUrl = new URL('./hero-editorial.js', base);
+editorialUrl.search = base.search;
+// A failed visual enhancement must not remove topic navigation or its canvas fallback.
+const editorialModule = await import(editorialUrl.href).catch(() => null);
+const isEditorial = () => !!editorialModule?.isEditorialTopic(heroDetail?.id);
+let editorial;
 let placeModule;
 function loadPlace() {
   const url = new URL('./topic-perception.js', base);
@@ -18,12 +24,12 @@ function updateLaunch() {
   launchButton.title = label;
   launchButton.setAttribute('aria-label', label);
   launchButton.setAttribute('aria-busy', String(sceneLoading));
-  launchButton.hidden = !!scene && !sceneFailed && !sceneLoading || !window.SiteMotion?.enabled();
+  launchButton.hidden = isEditorial() || !!scene && !sceneFailed && !sceneLoading || !window.SiteMotion?.enabled();
   launchButton.disabled = sceneLoading;
 }
 function loadScene() {
   updateLaunch();
-  if (scene || sceneLoading || !heroVisible || !window.SiteMotion?.enabled()) return;
+  if (scene || sceneLoading || isEditorial() || !heroVisible || !window.SiteMotion?.enabled()) return;
   if (!activated) return;
   sceneLoading = true;
   sceneFailed = false;
@@ -32,7 +38,7 @@ function loadScene() {
   url.search = base.search;
   if (attempts++) url.searchParams.set('retry', String(attempts));
   import(url.href).then(({ mountHeroScene }) => {
-    if (!heroVisible || !window.SiteMotion?.enabled()) {
+    if (isEditorial() || !heroVisible || !window.SiteMotion?.enabled()) {
       sceneLoading = false;
       updateLaunch();
       return;
@@ -42,7 +48,7 @@ function loadScene() {
       fallback: document.getElementById('heroPreviewCanvas'),
       getTopic: () => heroDetail?.id,
       getStage: () => heroDetail?.stage ?? 0,
-      motion: () => window.SiteMotion.enabled()
+      motion: () => !isEditorial() && window.SiteMotion.enabled()
     });
   }).catch(failedScene);
 }
@@ -72,13 +78,13 @@ export function enhanceHeroPreview(detail) {
   const signature = JSON.stringify([detail.id, detail.label, detail.topics, detail.stages]);
   if (heroDetail && heroSignature === signature && meta.querySelector('.hero-story')) {
     Object.assign(heroDetail, detail);
-    scene?.setTopic(detail.id);
-    scene?.setStage(detail.stage ?? 0);
+    syncRepresentation();
     return;
   }
   if (!heroDetail) {
     const fallback = document.getElementById('heroPreviewCanvas');
     const host = fallback.closest('.hero-preview-panel');
+    editorial = editorialModule?.mountHeroEditorial(host, fallback);
     launchButton = document.createElement('button');
     launchButton.type = 'button';
     launchButton.className = 'hero-scene-launch';
@@ -100,8 +106,9 @@ export function enhanceHeroPreview(detail) {
       const focused = document.activeElement === launchButton
         || restoreLaunchFocus && document.activeElement === document.body;
       sceneLoading = false;
+      if (isEditorial()) scene?.pause();
       updateLaunch();
-      if (focused) host.querySelector('.hero-scene-canvas')?.focus({ preventScroll: true });
+      if (focused && !isEditorial()) host.querySelector('.hero-scene-canvas')?.focus({ preventScroll: true });
       restoreLaunchFocus = false;
     });
     host.addEventListener('hero-scene:error', failedScene);
@@ -150,8 +157,9 @@ export function enhanceHeroPreview(detail) {
     detail.stage = value;
     const caption = meta.querySelector('.hero-topic-caption');
     if (caption) caption.textContent = detail.stages[value].description;
-    scene?.setStage(value);
+    if (!isEditorial()) scene?.setStage(value);
     detail.stageChanged(value);
+    editorial?.update(detail);
     updateStage();
   };
   for (const [index, stage] of (detail.stages || []).entries()) {
@@ -192,8 +200,21 @@ export function enhanceHeroPreview(detail) {
     group.append(button);
   }
   meta.append(group);
-  scene?.setTopic(detail.id);
-  scene?.setStage(detail.stage ?? 0);
+  syncRepresentation();
+}
+
+function syncRepresentation() {
+  editorial?.update(heroDetail);
+  if (isEditorial()) scene?.pause();
+  else {
+    scene?.setTopic(heroDetail.id);
+    scene?.setStage(heroDetail.stage ?? 0);
+    scene?.themeChanged(); // Also refresh the accessible topic after an editorial interlude.
+    scene?.resume();
+    loadScene();
+  }
+  updateLaunch();
+  document.querySelector('.hero-preview-panel')?.dispatchEvent(new Event('hero-scene:representation'));
 }
 
 export function mountFeaturedPosters() {

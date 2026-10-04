@@ -1,5 +1,48 @@
 # Motion exhibition, 2026-10-01
 
+## Editorial scenes, 2026-10-04
+
+Branch `codex/editorial-hero-20261004`, base `1f84ba6`; origin and default
+branch checked. User-requested replacement of only the Agent/Edu assistant
+illustrations. Registration, VPR, medical and the detailed Research tools stay.
+Baseline: user screenshots and verified production captures under
+`output/hero-stories-20261004/online/`. No simulated user-study claim.
+
+Considered two directions: polished 3D characters (more geometry/assets, same
+indirect metaphor) versus direct task content (native typography and geometry,
+smaller runtime). Selected the latter. Agent excerpts straighten, highlight and
+become a source-labelled brief for human review. Education pieces rotate and
+join at an exact shared diagonal, with an area relation and side dimension.
+Reuse existing theme, font, spacing and focus tokens; no new runtime dependency.
+
+Motion references visited on October 4:
+- https://21st.dev/@ibelick/components/response-stream : finite progressive text reveal.
+- https://21st.dev/@skyleen77/components/spring-element : eased direct manipulation.
+- https://21st.dev/@ibelick/components/text-morph : state-linked typography.
+These inform original native CSS/WAAPI work; no component source or assets copied.
+
+| ID | Type / priority | Evidence and root cause | Change / acceptance |
+| --- | --- | --- | --- |
+| M26 | Visual recommendation, P2 | User screenshots: mascot/monitor dominates the actual task | Replace both motifs with task content; inspect bilingual three-theme desktop/mobile screenshots |
+| M27 | Reproduced regression, P2 | Delayed Three import then editorial switch left startup waiting for an unrelated event | Explicit representation event resumes eligibility checks; retained failing and corrected browser runs |
+| M28 | Accessibility defect, P2 | Review reproduced stale VPR accessible name after an Agent/theme interlude | Refresh description on restore; browser assertion checks visible topic and accessible name |
+| M29 | Geometry inconsistency, P2 | Review found offset triangles leave a gap despite complete-square caption | Exact shared bounds plus independent diagonal stroke; numeric and browser geometry assertions |
+| M30 | Reflow defect, P2 | Review reproduced enlarged text outside fixed 170px scene | Rem-based canvas allocation and large-type brief layout; 150/200% root-font tests, not a claim of native zoom coverage |
+
+Evidence: `output/playwright/editorial-*`. First capture helper stopped at the
+mobile hidden menu; corrected helper opens the real menu before switching theme.
+Revised normal-size matrix: 72 combinations, zero errors/failed requests/overflow,
+stable stage heights and zero scoped axe violations in both languages/all themes.
+Initial integration run: nine passes, one startup regression (M27). After its
+fix: ten passes. Later tests add finite motion, failed-module fallback, exact
+assembly, text enlargement and accessible-name restoration. Final counts and
+release state are recorded in the PR; these checkpoints do not substitute for
+the final gate. Original untracked `.playwright-cli/` preserved.
+
+No profile, article, paper, mapping, credential or approval changes. Sources and
+citations in the illustrated brief are explicitly synthetic examples, not links
+to claimed research results. No inference service, analytics or background loop.
+
 ## Topic walkthrough refinement, 2026-10-04
 
 Branch `codex/hero-interactions-20261004`, base `584a2a2`; verified wcx12/wcx12

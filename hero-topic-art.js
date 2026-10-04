@@ -78,27 +78,6 @@ export function createTopicArt(key, stage = 2) {
   const check = (x, y, s = 1, role = '') => line([
     [x - .14 * s, y], [x - .03 * s, y - .12 * s], [x + .2 * s, y + .16 * s]
   ], 'accent', role);
-  const assistant = (x, y, s = 1, teaching = false) => {
-    // A task-oriented assistant silhouette, not a calendar used as a stand-in for AI.
-    const b = (dx, dy, w, h, f, c) => box(x + dx * s, y + dy * s, w * s, h * s, f, c);
-    round(x - .33 * s, y - .71 * s, .66 * s, .65 * s, .18 * s, 'surface', 'ink');
-    oval(x, y - .12 * s, .32 * s, .09 * s, 'accent', null);
-    round(x - .47 * s, y, .94 * s, .68 * s, .18 * s, 'muted', 'ink');
-    round(x - .39 * s, y + .1 * s, .78 * s, .47 * s, .13 * s, 'screen', 'accent');
-    const look = stage === 0 ? 0 : .025 * s;
-    oval(x - .19 * s + look, y + .34 * s, .045 * s, .07 * s, 'accent', null);
-    oval(x + .19 * s + look, y + .34 * s, .045 * s, .07 * s, 'accent', null);
-    line([[x - .08 * s, y + .21 * s], [x, y + .18 * s], [x + .08 * s, y + .21 * s]], 'accent');
-    line([[x, y + .68 * s], [x, y + .86 * s]], 'ink');
-    oval(x, y + .91 * s, .055 * s, .055 * s, 'warm', null);
-    line([[x - .34 * s, y - .26 * s], [x - .53 * s, y - .6 * s]], 'ink');
-    const hand = teaching && stage > 0 ? .48 : -.48;
-    line([[x + .34 * s, y - .26 * s], [x + .65 * s, y + (hand > 0 ? .2 : -.48) * s],
-      [x + .92 * s, y + hand * s]], 'accent');
-    oval(x + .92 * s, y + hand * s, .075 * s, .075 * s, 'accent', null);
-    b(-.16, -.5, .32, .06, 'accent', null);
-  };
-
   if (key === 'vpr') {
     for (const [x, night] of [[-1.25, false], [1.25, true]]) {
       const face = night && stage > 0 ? 'screen' : 'surface';
@@ -163,61 +142,45 @@ export function createTopicArt(key, stage = 2) {
     line([[-.91, .02], [-.83, -.01], [-.65, .07]], 'screen', 'result');
     }
   } else if (key === 'agent') {
-    assistant(-1.48, .08, 1.05);
-    line([[-2.12, -.9], [2.1, -.9]], 'muted');
-    box(-.35, -.48, 1.38, .95, 'surface', 'ink');
-    box(-.25, -.37, 1.18, .73, 'screen', 'accent');
-    poly([[-.5, -.68], [.96, -.68], [1.1, -.48], [-.35, -.48]], 'muted', 'ink');
+    // An open research brief; keep the script-failure fallback free of mascots.
+    line([[-2.1, 1.12], [2.1, 1.12]], 'muted');
+    line([[-2.1, -1.12], [2.1, -1.12]], 'muted');
     for (let i = 0; i < 3; i++) {
-      box(-.1, .16 - i * .2, .09, .07, i === 2 ? 'warm' : 'accent', null);
-      line([[.09, .2 - i * .2], [.65 - (stage === 0 ? .32 : i * .08), .2 - i * .2]], 'ink');
-      if (stage > 0) check(.78, .19 - i * .2, .3, 'result');
-    }
-    if (stage === 0) {
-      for (let i = 0; i < 3; i++) {
-        box(1.22 + i * .12, -.26 + i * .14, .59, .76, 'surface', 'muted');
-        line([[1.32 + i * .12, .34 + i * .14], [1.68 + i * .12, .34 + i * .14]], 'ink');
+      const y = .74 - i * .63;
+      const shift = stage === 0 ? [-.1, .12, -.04][i] : 0;
+      if (stage === 0) box(-1.9 + shift, y - .4, 3.75, .5, 'surface', 'muted');
+      box(-1.78 + shift, y - .11, .15, .15, ['accent', 'warm', 'violet'][i], null);
+      if (stage === 1) box(-1.37, y - .13, 2.3 - i * .2, .23, 'surface', null, 'result');
+      line([[-1.3 + shift, y], [1.2 + shift - i * .15, y]], stage === 1 ? 'accent' : 'ink');
+      line([[-1.3 + shift, y - .23], [.55 + shift, y - .23]], 'muted');
+      if (stage === 2) {
+        box(1.65, y - .13, .22, .22, null, 'accent', 'result');
+        line([[1.72, y - .07], [1.8, y - .07]], 'accent', 'result');
       }
-    } else if (stage === 1) {
-      for (let i = 0; i < 3; i++) {
-        round(1.24, .5 - i * .33, .78, .22, .05, 'surface', 'ink', 'result');
-        line([[1.35, .61 - i * .33], [1.84, .61 - i * .33]], 'accent', 'result');
-      }
-    } else {
-    box(1.28, -.4, .72, 1.15, 'surface', 'ink', 'result');
-    for (let i = 0; i < 3; i++) line([[1.41, .49 - i * .17], [1.86, .49 - i * .17]], 'muted', 'result');
-    check(1.61, -.17, .9, 'result');
-    for (let i = 0; i < 3; i++) box(1.41 + i * .16, -.35, .09, .05, 'accent', null, 'result');
     }
-    line([[1.18, -.63], [2.1, -.63], [2.1, -.48]], 'accent');
+    if (stage === 2) check(1.7, -.99, .4, 'result');
   } else if (key === 'education') {
-    assistant(-1.64, .05, .9, true);
-    box(-.49, -.57, 2.53, 1.66, 'surface', 'ink');
-    box(-.4, -.48, 2.35, 1.48, 'screen', 'muted');
-    line([[-.6, -.64], [2.15, -.64]], 'warm');
-    poly([[-.22, -.12], [.38, -.12], [-.22, .48]], 'accent', 'ink', 'triangle-input-a');
-    poly([[.16, .75], [.76, .15], [.76, .75]], 'warm', 'ink', 'triangle-input-b');
+    // Two rigid, congruent triangles become one square; no monitor or teacher proxy.
+    const size = 1.4;
+    const triangle = (x, y, flipped, fill, role) => poly(flipped
+      ? [[x, y + size], [x + size, y], [x + size, y + size]]
+      : [[x, y], [x + size, y], [x, y + size]], fill, 'ink', role);
     if (stage === 2) {
-    line([[.94, .2], [1.18, .2]], 'muted');
-    line([[.94, .31], [1.18, .31]], 'muted');
-    poly([[1.31, -.02], [1.91, -.02], [1.31, .58]], 'accent', 'ink', 'triangle-output-a');
-    poly([[1.31, .58], [1.91, -.02], [1.91, .58]], 'warm', 'ink', 'triangle-output-b');
-    line([[1.31, .58], [1.91, -.02]], 'screen', 'partition');
+      triangle(-.7, -.6, false, 'accent', 'triangle-output-a');
+      triangle(-.7, -.6, true, 'warm', 'triangle-output-b');
+      line([[-.7, .8], [.7, -.6]], 'screen', 'partition');
     } else {
-      box(1.31, -.02, .6, .6, null, 'muted');
-      if (stage === 1) {
-        line([[1.31, .58], [1.91, -.02]], 'accent', 'result');
-        line([[.76, .8], [1.03, .8], [1.03, .6], [1.15, .6]], 'warm', 'result');
-        line([[1.04, .69], [1.15, .6], [1.04, .51]], 'warm', 'result');
-      } else {
-        oval(1.61, .27, .1, .1, null, 'muted');
-      }
+      triangle(stage === 0 ? -1.9 : -1.1, -.6, false, 'accent', 'triangle-input-a');
+      triangle(stage === 0 ? .45 : -.25, stage === 0 ? -.6 : -.35, stage === 1, 'warm', 'triangle-input-b');
+      if (stage === 1) line([[1.45, .7], [1.7, .7], [1.7, .45]], 'warm', 'result');
     }
-    // A learner's answer sheet receives feedback below the geometric example.
-    poly([[.08, -1.13], [1.35, -1.13], [1.53, -.83], [.26, -.83]], 'surface', 'ink');
-    line([[.42, -.98], [.78, -.98]], 'muted');
-    if (stage === 2) check(1.04, -.97, .62, 'result');
-    else line([[.92, -.98], [1.15, -.98]], 'muted');
+    for (const y of [-.6, .8]) line([[-.97, y], [-.83, y]], 'muted');
+    line([[-.9, -.6], [-.9, .8]], 'muted');
+    for (let i = 0; i < 5; i++) {
+      line([[-.94, -.6 + i * .35], [-.86, -.6 + i * .35]], 'muted');
+      line([[-.7 + i * .35, -1.02], [-.7 + i * .35, -.96]], 'muted');
+    }
+    line([[-.7, -.99], [.7, -.99]], stage === 2 ? 'accent' : 'muted', 'result');
   }
   return shapes;
 }
