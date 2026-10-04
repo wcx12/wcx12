@@ -236,21 +236,20 @@ test('online and issue dates are independent; legacy publication dates never imp
   assert.doesNotMatch(publicationCountSummary(staticPublications, 'en'), /In press|in press/);
 });
 
-test('resume source hydrates confirmed major, organization, role, and month-level dates', async () => {
+test('resume source retains education and location without withdrawn employment', async () => {
   for (const language of ['en', 'zh']) {
     const source = await fs.readFile(path.join(root, language === 'zh' ? 'resume.zh.md' : 'resume.md'), 'utf8');
     const hydrated = hydrateResumeSource(source, language);
     assert.ok(hydrated.includes(profileData.education.major[language]));
     assert.ok(hydrated.includes(profileData.education.period[language]));
-    assert.ok(hydrated.includes(profileData.experience.period[language]));
-    assert.ok(hydrated.includes(profileData.experience.role[language]));
+    assert.doesNotMatch(source, /EXPERIENCE_|CURRENT_WORK|^## (?:Experience|经历)$/m);
     assert.match(hydrated, /\{\{PUBLICATIONS\}\}/);
     assert.doesNotMatch(hydrated, /\{\{(?:EDUCATION|EXPERIENCE)_/);
   }
   const person = personEntity();
   assert.equal(person.homeLocation.name, profileData.location.en);
   assert.equal(person.alumniOf.name, profileData.education.institution.en);
-  assert.equal(person.worksFor.name, profileData.experience.organization.en);
+  assert.equal(person.worksFor, undefined);
   assert.equal(person.jobTitle, undefined);
 });
 

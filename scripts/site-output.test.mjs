@@ -1250,12 +1250,10 @@ test('research profile has complete English and Chinese fixed-language records',
     for (const value of [profileData.education.institution, profileData.education.major, profileData.education.period]) {
       assert.ok(education.includes(escapeHtml(value[language])), `${language}: education facts drifted from profileData`);
     }
-    for (const value of [profileData.experience.organization, profileData.experience.role, profileData.experience.period]) {
-      assert.ok(experience.includes(escapeHtml(value[language])), `${language}: experience facts drifted from profileData`);
-    }
+    assert.equal(experience, '', `${language}: withdrawn experience must not leave a section`);
     const identity = source.match(/<p class="profile-identity">[\s\S]*?<\/p>/)?.[0] || '';
     assert.ok(identity.includes(escapeHtml(profileData.location[language])));
-    assert.ok(source.includes(escapeHtml(profileData.status[language])));
+    assert.doesNotMatch(source, /class="profile-status"/);
     assert.doesNotMatch(source, /\{\{(?:EDUCATION|EXPERIENCE|PUBLICATIONS)/);
     const counts = new Map();
     for (const publication of staticPublications) {
@@ -1264,11 +1262,11 @@ test('research profile has complete English and Chinese fixed-language records',
     }
     const facts = source.match(/<dl class="profile-facts">[\s\S]*?<\/dl>/)?.[0] || '';
     for (const [label, count] of counts) assert.ok(facts.includes(`${count} ${language === 'zh' ? '篇' : ''}${label}`));
-    for (const value of [profileData.education.period, profileData.experience.period]) assert.ok(facts.includes(escapeHtml(value[language])));
+    for (const value of [profileData.education.institution, profileData.education.major, profileData.education.period]) assert.ok(facts.includes(escapeHtml(value[language])));
     const person = jsonLdFor(source).mainEntity;
     assert.equal(person.alumniOf.name, profileData.education.institution.en);
     assert.equal(person.homeLocation.name, profileData.location.en);
-    assert.equal(person.worksFor.name, profileData.experience.organization.en);
+    assert.equal(person.worksFor, undefined);
     assert.equal(person.jobTitle, undefined, 'an unconfirmed job title must not be invented');
   }
   assert.doesNotMatch(chinese, />Research Interests</);
@@ -1277,15 +1275,15 @@ test('research profile has complete English and Chinese fixed-language records',
   for (const source of [english, chinese]) {
     assert.match(source, /<header class="profile-masthead">/);
     assert.match(source, /<p class="profile-identity"><span class="profile-handle">@wcx12<\/span>/);
-    assert.match(source, /<div class="profile-command">[\s\S]*?<p class="profile-status">/);
+    assert.match(source, /<div class="profile-command">[\s\S]*?<p class="profile-command-label">/);
     assert.match(source, /<dl class="profile-facts">/);
     assert.match(source, /<details class="profile-directory" open>[\s\S]*?<summary class="profile-directory-toggle">/);
     assert.match(source, /<strong data-profile-current>/);
     assert.doesNotMatch(source, /class="profile-rail"/);
     assert.doesNotMatch(source, /<header class="profile-section-head">\s*<span/);
     assert.doesNotMatch(source, /<span aria-hidden="true">P\d{2}<\/span>/);
-    assert.equal(matches(source, /data-profile-section="[^"]+"/g).length, 6);
-    for (const kind of ['education', 'experience', 'publications', 'interests', 'projects', 'skills']) {
+    assert.equal(matches(source, /data-profile-section="[^"]+"/g).length, 5);
+    for (const kind of ['education', 'publications', 'interests', 'projects', 'skills']) {
       assert.match(source, new RegExp(`data-profile-kind="${kind}"`));
     }
     assert.ok(source.indexOf('data-profile-kind="publications"') < source.indexOf('data-profile-kind="interests"'));
@@ -1293,9 +1291,9 @@ test('research profile has complete English and Chinese fixed-language records',
     assert.equal(matches(source, /class="resume-publication-index"/g).length, staticPublications.length);
     assert.equal(matches(source, /class="resume-author-self"/g).length, staticPublications.length);
     const profileNavigation = matches(source, /class="profile-section-nav"[\s\S]*?<\/nav>/g)[0][0];
-    assert.equal(profileNavigation.match(/<a href=/g)?.length, 6);
-    assert.equal(profileNavigation.match(/<a [^>]*aria-label=/g)?.length, 6);
-    assert.equal(profileNavigation.match(/data-mobile-label=/g)?.length, 6);
+    assert.equal(profileNavigation.match(/<a href=/g)?.length, 5);
+    assert.equal(profileNavigation.match(/<a [^>]*aria-label=/g)?.length, 5);
+    assert.equal(profileNavigation.match(/data-mobile-label=/g)?.length, 5);
     assert.equal(metaContent(source, 'og:type'), 'profile');
     assert.equal(metaContent(source, 'profile:first_name'), 'Chenxu');
     assert.equal(metaContent(source, 'profile:last_name'), 'Wang');

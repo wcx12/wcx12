@@ -137,7 +137,8 @@ test('homepage prioritizes verified identity and defers optional data requests',
   assert.ok(indexSource.includes(`<strong id="focusAreaCount">${researchConfig.interests.length} / ${expectedTopics}</strong>`));
   assert.match(indexSource, /"propertyID": "ORCID"/);
   assert.match(indexSource, /data-i18n="hero_affiliation">Beijing Institute of Technology/);
-  assert.match(indexSource, /Shenzhen Houlang Pengpai/);
+  assert.match(indexSource, /data-i18n="hero_status_value">Shenzhen, China/);
+  assert.doesNotMatch(indexSource, /"worksFor"|"jobTitle"|data-i18n="timeline_2026"/);
   assert.doesNotMatch(indexSource, /fonts\.(?:googleapis|gstatic)\.com/i);
   assert.match(indexSource, /rel="preload" href="\.\/assets\/fonts\/space-grotesk-latin\.woff2" as="font" type="font\/woff2" crossorigin/);
   assert.doesNotMatch(indexSource, /rel="preload"[^>]+jetbrains-mono/i);
@@ -411,7 +412,7 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
   assert.match(chineseIndexSource, /href="\.\/resume\/"[^>]*>履历<\/a>/);
   assert.match(chineseIndexSource, /<noscript>[\s\S]*无需 JavaScript 也可以浏览研究主页[\s\S]*href="\.\.\/"[\s\S]*<\/noscript>/);
 
-  for (const key of ['hero_kicker', 'hero_status_value', 'hero_preview_description', 'about_line1', 'writing_title', 'timeline_2026']) {
+  for (const key of ['hero_kicker', 'hero_status_value', 'hero_preview_description', 'about_line1', 'writing_title']) {
     assert.ok(chineseIndexSource.includes(homepageI18n.zh[key]), `Chinese homepage is missing static translation ${key}`);
   }
   assert.doesNotMatch(chineseIndexSource, /Machine Learning Researcher|View Publications|Research Interests|Technical notes and research logs/);
@@ -429,7 +430,7 @@ test('Chinese homepage is a complete fixed-language mirror with stable deep link
 
 test('homepage exposes navigation and hero meaning without runtime-only semantics', () => {
   assert.match(indexSource, /<nav\b[^>]*class="site-navigation top-actions-nav"[^>]+aria-label="Primary navigation"/i);
-  assert.match(indexSource, /id="typeTarget"[^>]*>Startup builder in Shenzhen<\/span>/i);
+  assert.match(indexSource, /id="typeTarget"[^>]*>Shenzhen, China<\/span>/i);
   assert.match(indexSource, /<canvas\s+id="heroPreviewCanvas"\s+aria-hidden="true"><\/canvas>/i);
   assert.match(indexSource, /id="heroPreviewMeta"[\s\S]*?\.\/research\/point-cloud-registration\/[\s\S]*?Robust point set registration/i);
   assert.match(indexSource, /limited labels\.<br \/> Research spanning/);
