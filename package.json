@@ -29,7 +29,7 @@
     "gray-matter": "^4.0.3",
     "highlight.js": "^11.11.1",
     "image-size": "2.0.4",
-    "js-yaml": "3.15.2",
+    "js-yaml": "5.4.3",
     "katex": "^0.16.47",
     "markdown-it": "^14.3.2",
     "markdown-it-anchor": "^9.2.0",
