@@ -4073,15 +4073,17 @@ function publicationArea(publication) {
 }
 
 async function renderPublicationsMarkdown() {
-  const sections = staticPublications.map((publication) => {
+  const groups = new Map();
+  for (const publication of staticPublications) {
     const status = publicationStatusLabel(publication, 'en');
-    const heading = status;
+    if (!groups.has(status)) groups.set(status, []);
     const codeLines = publication.code_url
       ? `\n- Official implementation: ${publication.code_url}\n- Hosting note: ${implementationNote(publication, 'en')}`
       : '';
     const dates = [publication.online_date ? `\n- Online publication: ${publication.online_date}` : '', publication.issue_date ? `\n- Issue date: ${publication.issue_date}` : ''].join('');
-    return `## ${heading}\n\n### ${publication.title}\n\n- Record: ${absoluteUrl(publicationRoute('en', publication))}\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${status}${publication.open_access ? '; open access' : ''}${dates}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`;
-  });
+    groups.get(status).push(`### ${publication.title}\n\n- Record: ${absoluteUrl(publicationRoute('en', publication))}\n- Authors: ${readableAuthors(publication)}\n- Citation: ${publicationCitationLine(publication)}\n- Status: ${status}${publication.open_access ? '; open access' : ''}${dates}\n- DOI: ${publication.link}\n- BibTeX: ${absoluteUrl(citationFilePath(publication, 'bib'))}\n- RIS: ${absoluteUrl(citationFilePath(publication, 'ris'))}${codeLines}\n- Research area: ${publicationArea(publication)}`);
+  }
+  const sections = [...groups].map(([status, records]) => `## ${status}\n\n${records.join('\n\n')}`);
   const markdown = `# Publications\n\n${sections.join('\n\n')}\n\nOnly publications authored by Chenxu Wang (wcx12) are listed here. The interactive publication view on the homepage also links each entry to its DOI record.\n`;
   await fs.writeFile(path.join(rootDir, 'publications.md'), markdown);
 }

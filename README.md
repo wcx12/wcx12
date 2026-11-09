@@ -27,7 +27,7 @@
 
 ## Selected Publications
 - **TF-VPR: A novel benchmark for training-free visual place recognition.** Neurocomputing 681 (2026), 133399. [DOI](https://doi.org/10.1016/j.neucom.2026.133399)
-- **Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification.** Neurocomputing 699 (2026), 134314; issue scheduled for 28 October 2026. [DOI](https://doi.org/10.1016/j.neucom.2026.134314)
+- **Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification.** Neurocomputing 699 (2026), 134314; published, issue date 28 October 2026. [DOI](https://doi.org/10.1016/j.neucom.2026.134314)
 
 Full author lists and research mappings are available in the [publication index](https://wcx12.github.io/wcx12/publications/).
 

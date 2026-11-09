@@ -224,16 +224,19 @@ test('online and issue dates are independent; legacy publication dates never imp
   assert.doesNotMatch(publicationHighwireMeta(paper, '/paper/'), /citation_online_date/);
   assert.match(publicationDatesHtml({ ...paper, online_date: '2026-07-01' }, 'en'), /Online publication/);
   assert.match(publicationHighwireMeta({ ...paper, online_date: '2026-07-01' }, '/paper/'), /citation_online_date" content="2026\/07\/01"/);
-  const scheduled = staticPublications.find((item) => item.slug === 'synergistic-learning-active-learning');
-  assert.equal(scheduled.issue_date, '2026-10-28');
-  const schema = publicationSchema(scheduled);
-  assert.equal(schema.datePublished, scheduled.year);
-  assert.notEqual(schema.datePublished, `${scheduled.year}-01-01`);
-  assert.equal(schema.isPartOf.datePublished, scheduled.issue_date);
-  assert.doesNotMatch(publicationHighwireMeta(scheduled, '/paper/'), /citation_online_date/);
+  const published = staticPublications.find((item) => item.slug === 'synergistic-learning-active-learning');
+  assert.equal(published.issue_date, '2026-10-28');
+  const schema = publicationSchema(published);
+  assert.equal(schema.datePublished, published.issue_date);
+  assert.equal(schema.isPartOf.datePublished, published.issue_date);
+  assert.doesNotMatch(publicationHighwireMeta(published, '/paper/'), /citation_online_date/);
+  assert.equal(publicationStatusLabel(published, 'en'), 'Published');
+  assert.equal(publicationStatusLabel(published, 'zh'), '已发表');
+  assert.equal(publicationCountSummary(staticPublications, 'en'), '2 Published');
+  assert.equal(publicationCountSummary(staticPublications, 'zh'), '2 篇已发表');
+  const scheduled = { ...published, status: 'In press', status_key: 'in_press', published_date: undefined };
+  assert.equal(publicationSchema(scheduled).datePublished, scheduled.year);
   assert.equal(publicationStatusLabel(scheduled, 'en'), 'Issue scheduled');
-  assert.match(publicationCountSummary(staticPublications, 'en'), /Issue scheduled/);
-  assert.doesNotMatch(publicationCountSummary(staticPublications, 'en'), /In press|in press/);
 });
 
 test('resume source retains education and location without withdrawn employment', async () => {

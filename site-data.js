@@ -307,19 +307,20 @@ export const staticPublications = [
     "title": "Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification",
     "venue": "Neurocomputing",
     "year": "2026",
-    "updated_at": "2026-09-12",
+    "updated_at": "2026-11-09",
     "issue_date": "2026-10-28",
     "issueLabel": {
       "en": "Volume date: 28 October 2026",
       "zh": "卷期日期：2026 年 10 月 28 日"
     },
+    "published_date": "2026-10-28",
     "publishedLabel": {
-      "en": "",
-      "zh": ""
+      "en": "Published",
+      "zh": "已发表"
     },
-    "status": "In press",
-    "status_key": "in_press",
-    "statusZh": "录用待刊",
+    "status": "Published",
+    "status_key": "published",
+    "statusZh": "已发表",
     "volume": "699",
     "article_number": "134314",
     "issn": "0925-2312",

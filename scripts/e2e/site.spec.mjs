@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { profileData } from '../../profile-data.js';
 
 const article = 'blog/posts/tiger-generative-retrieval-reading/';
@@ -111,12 +112,48 @@ test('blocked local storage and missing optional APIs do not lose publications',
   await home(page);
   await page.locator('.command-row [data-view="publications"]').click();
   await expect(page.locator('#pubList')).toContainText('TF-VPR');
-  await expect(page.locator('#pubList')).toContainText('Issue scheduled');
+  await expect(page.locator('#pubList')).toContainText('Synergistic learning');
+  await expect(page.locator('#pubList')).toContainText('Published');
+  await expect(page.locator('#pubList')).not.toContainText('Issue scheduled');
   await expect(page.locator('#pubList')).not.toContainText('In press');
   await page.locator('.pub-detail').first().click();
   await expect(page.getByRole('dialog').filter({ hasText: 'TF-VPR' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.pub-detail').first()).toBeFocused();
+});
+
+test('published medical paper stays consistent across languages, profile and citation downloads', async ({ page }, testInfo) => {
+  for (const [prefix, status, summary] of [['', 'Published', '2 Published'], ['zh/', '已发表', '2 篇已发表']]) {
+    await page.goto(`${prefix}resume/`);
+    await expect(page.locator('.profile-facts')).toContainText(summary);
+    const entry = page.locator('.resume-publication-entry').filter({ hasText: 'Synergistic learning' });
+    await expect(entry.locator('.resume-publication-status')).toHaveText(status);
+    await entry.locator('h3 a').click();
+    await expect(page).toHaveURL(/publications\/synergistic-learning-active-learning\/$/);
+    const record = page.locator('.publication-record-meta');
+    await expect(record).toContainText(status);
+    await expect(record).toContainText('699');
+    await expect(record).toContainText('134314');
+    await expect(record.locator('time')).toHaveAttribute('datetime', '2026-10-28');
+    await expect(record).not.toContainText(/In press|Issue scheduled|录用待刊|卷期已安排|Online publication|在线发表/);
+    for (const format of ['BibTeX', 'RIS']) {
+      const completed = page.waitForEvent('download');
+      await page.getByRole('link', { name: format, exact: true }).click();
+      const download = await completed;
+      expect(download.suggestedFilename()).toMatch(/134314\.(bib|ris)$/);
+      const citation = await readFile(await download.path(), 'utf8');
+      expect(citation).toContain('134314');
+      expect(citation).toContain('699');
+      expect(citation).not.toMatch(/in press|issue scheduled/i);
+    }
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await record.scrollIntoViewIfNeeded();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`published-${prefix ? 'zh' : 'en'}-${width}.png`) });
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+  }
 });
 
 test('article terms, disclosures, keyboard scrolling, deep links and return', async ({ page }) => {
