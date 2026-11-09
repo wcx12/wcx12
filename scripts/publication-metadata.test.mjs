@@ -23,11 +23,12 @@ test('cover dates do not invent unknown online publication dates', () => {
     assert.equal(paper.onlineLabel, undefined, `${paper.slug}: no unsupported online-date label`);
   }
   assert.equal(synergistic.issue_date, '2026-10-28');
-  assert.equal(synergistic.published_date, undefined);
+  assert.equal(synergistic.published_date, synergistic.issue_date);
+  assert.deepEqual(synergistic.publishedLabel, { en: 'Published', zh: '已发表' });
 });
 
 // Bibliographic fields verified against publisher-deposited Crossref records.
-test('publication date clarification preserves scholarly identities and raw statuses', () => {
+test('verified publication records preserve scholarly identities and published statuses', () => {
   const fields = ['slug', 'title', 'authors', 'doi', 'link', 'venue', 'year', 'volume',
     'article_number', 'citation_month', 'citation_date', 'status', 'status_key', 'code_url'];
   const expected = [
@@ -59,8 +60,8 @@ test('publication date clarification preserves scholarly identities and raw stat
       article_number: '134314',
       citation_month: 'oct',
       citation_date: '2026/10',
-      status: 'In press',
-      status_key: 'in_press',
+      status: 'Published',
+      status_key: 'published',
       code_url: 'https://github.com/ddfs430/Synergistic-Learning'
     }
   ];
@@ -78,11 +79,11 @@ test('README describes the canonical study period without claiming current enrol
   assert.doesNotMatch(readme, /BIT Student|I am studying|Expected graduation|badge\/Graduation-/);
 });
 
-test('README distinguishes the scheduled volume from an unverified online publication date', async () => {
+test('README records the published issue without inventing an online publication date', async () => {
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   const record = readme.split(/\r?\n/).find((line) => line.includes(synergistic.doi));
   assert.ok(record);
   assert.ok(record.includes(`${synergistic.venue} ${synergistic.volume} (${synergistic.year}), ${synergistic.article_number}`));
-  assert.ok(record.includes(`issue scheduled for ${synergistic.issueLabel.en.replace('Volume date: ', '')}`));
-  assert.doesNotMatch(record, /in press|published online/i);
+  assert.ok(record.includes(`published, issue date ${synergistic.issueLabel.en.replace('Volume date: ', '')}`));
+  assert.doesNotMatch(record, /in press|issue scheduled|published online/i);
 });

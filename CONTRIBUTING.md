@@ -108,6 +108,13 @@ site as well as the current tracked sources; this does not erase Git history
 or third-party caches.
 
 - Add or update repository and publication records in `site-data.js`.
+- Verify status changes with publisher records, not merely the current date.
+  On 2026-11-09, the [Synergistic Learning publisher record](https://www.sciencedirect.com/science/article/pii/S0925231226017121)
+  lists Neurocomputing 699, article 134314, dated 28 October 2026.
+  [Publisher-deposited Crossref metadata](https://api.crossref.org/works/10.1016/j.neucom.2026.134314)
+  confirms October 2026 print publication and version-of-record links.
+  Its status is now Published. The issue date is not the first-online date:
+  Crossref provides no `published-online` value, so `online_date` stays unset.
 - Map records to research topics in `research-config.json`.
 - Keep profile facts that are not generated from canonical data synchronized in
   `resume.md` and `resume.zh.md`.

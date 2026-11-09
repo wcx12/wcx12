@@ -16,14 +16,12 @@
 - Hosting note: Official implementation hosted by ddfs430.
 - Research area: Visual Place Recognition
 
-## Issue scheduled
-
 ### Synergistic learning for active learning: A unified training objective for sample-efficient medical image classification
 
 - Record: https://wcx12.github.io/wcx12/publications/synergistic-learning-active-learning/
 - Authors: Chenxu Wang, QingTong Meng, Qianxun Lin, Bonan Zhang, and Fusen Guo
 - Citation: Neurocomputing 699 (2026), 134314
-- Status: Issue scheduled; open access
+- Status: Published; open access
 - Issue date: 2026-10-28
 - DOI: https://doi.org/10.1016/j.neucom.2026.134314
 - BibTeX: https://wcx12.github.io/wcx12/publications/citations/10-1016-j-neucom-2026-134314.bib

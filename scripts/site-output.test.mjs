@@ -1868,6 +1868,8 @@ test('local draft preview rejects rebinding and symlink escapes', async () => {
 
 test('public publication source and generated profile contain every canonical DOI', async () => {
   const source = await fs.readFile(path.join(rootDir, 'publications.md'), 'utf8');
+  const headings = [...source.matchAll(/^## (.+)$/gm)].map((match) => match[1]);
+  assert.deepEqual(headings, [...new Set(staticPublications.map((paper) => publicationStatusLabel(paper, 'en')))]);
   const profile = await fs.readFile(path.join(rootDir, 'resume', 'index.html'), 'utf8');
   for (const publication of staticPublications) {
     const escapedDoi = publication.doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
