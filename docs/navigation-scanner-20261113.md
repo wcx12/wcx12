@@ -56,3 +56,16 @@ the PR and Pages run must separately record the final gate and online results.
 
 Rollback uses an ordinary revert PR and the existing build/deployment pipeline;
 do not rewrite history. Private note content and permission settings are unchanged.
+
+### Final local checks
+
+Build/package: 15 artifact tests passed. Validation: 46 content, 63 homepage and
+135 site tests passed. Initial full Chromium run: 78 passed, three old entry-path
+assumptions failed; all three passed after opening the retained lab explicitly.
+Focused Chromium/WebKit follow-up: nine passed and one existing WebGL skip.
+Final scanner checks: six passed across Chromium and WebKit, including three
+themes with scoped axe checks, focus visibility, local record scrolling, legacy
+links and reduced motion. Scoped axe is not a full accessibility certification.
+Evidence: output/navigation-verified.log and
+D:/HuaweiMoveData/Users/Cory/Desktop/temp/navigation-scanner-verified/.
+Production release and paired performance results remain subject to PR #31 CI.

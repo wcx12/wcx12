@@ -28,11 +28,18 @@ export function mountResearchScanner(host) {
   const code = host.querySelector('pre');
   code.tabIndex = 0;
   code.setAttribute('aria-label', t('Structured research record', '结构化研究记录'));
+  code.addEventListener('keydown', event => {
+    if (event.key !== 'Home' && event.key !== 'End') return;
+    event.preventDefault();
+    code.scrollTop = event.key === 'Home' ? 0 : code.scrollHeight;
+  });
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let progress = matchMedia('(max-width: 767px)').matches ? 0 : 48, frame = 0, start = 0, visible = false, dragging = false;
   const draw = () => {
     stage.style.setProperty('--cut', progress+'%');
     range.value = String(Math.round(progress));
+    code.tabIndex = progress > 0 ? 0 : -1;
+    code.parentElement.setAttribute('aria-hidden', String(progress === 0));
     if (!ctx) return;
     const {width:w,height:h} = stage.getBoundingClientRect(), dpr = Math.min(devicePixelRatio, 2);
     if (canvas.width !== Math.round(w*dpr) || canvas.height !== Math.round(h*dpr)) {canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
@@ -48,6 +55,7 @@ export function mountResearchScanner(host) {
     ctx.globalAlpha=1;
   };
   const stop=()=>{cancelAnimationFrame(frame);frame=0;host.querySelector('.scanner-play').setAttribute('aria-pressed','false');};
+  code.addEventListener('focus',()=>{stop();progress=100;draw();});
   range.addEventListener('input',()=>{stop();progress=Number(range.value);draw();});
   const scrub=e=>{const r=stage.getBoundingClientRect();progress=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100));draw();};
   stage.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('pre'))return;stop();dragging=true;stage.setPointerCapture(e.pointerId);scrub(e);});

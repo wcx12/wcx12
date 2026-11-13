@@ -28,7 +28,8 @@ body:has(#researchScanner) .work-poster{pointer-events:none}
 .scanner-source{display:block;margin-top:30px;opacity:.8}
 .scanner-paper-mark{position:absolute;right:40px;top:25px;font-size:70px;color:var(--scanner-accent)}
 .scanner-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
-.scanner-line{position:absolute;left:var(--cut);inset-block:0;width:2px;background:var(--scanner-accent);box-shadow:0 0 16px var(--scanner-accent);pointer-events:none;z-index:3}
+.scanner-line{position:absolute;left:var(--cut);inset-block:0;width:44px;margin-left:-22px;cursor:ew-resize;z-index:3}
+.scanner-line::before{content:"";position:absolute;left:21px;inset-block:0;width:2px;background:var(--scanner-accent);box-shadow:0 0 16px var(--scanner-accent)}
 .scanner-line span{position:absolute;top:0;right:8px;font:10px monospace;color:var(--scanner-accent)}
 .scanner-controls{display:flex;align-items:center;gap:20px;margin-top:18px}
 .scanner-play{background:transparent;color:inherit;border:1px solid var(--line,#687277);border-radius:4px;width:44px;height:44px;flex:none;cursor:pointer}
