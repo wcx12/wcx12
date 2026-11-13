@@ -63,7 +63,9 @@ try {
       await expect(page.locator('.selected-work a[href*="publications/tf-vpr"]')).toBeVisible();
     }
     if (route.endsWith('research/agent/')) {
-      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
+      const directives = (await page.locator('meta[name="robots"]').getAttribute('content')).split(',').map(value => value.trim());
+      assert.ok(directives.includes('index') && directives.includes('follow'), route);
+      assert.ok(!directives.includes('noindex') && !directives.includes('nofollow'), route);
     }
     if (route.includes('tiger-generative')) await expect(page.locator('.katex').first()).toBeVisible();
     if (route === 'missing-release-check/') {
