@@ -2353,6 +2353,8 @@ async function computeAssetVersion(posts) {
     'hero-topic-art.js',
     'hero-editorial.js',
     'node_modules/three/build/three.core.js',
+    'research-scanner.js',
+    'research-scanner.css',
     'node_modules/three/build/three.module.js',
     'node_modules/esbuild/package.json',
     'theme-init.js',
@@ -2431,7 +2433,7 @@ async function stampHomepageAssets() {
     if (!pattern.test(stamped)) throw new Error(`Unable to stamp homepage asset using ${pattern}.`);
     stamped = stamped.replace(pattern, replacement);
   }
-  for (const name of ['site-motion.css', 'featured-posters.css', 'hero-scene.css', 'site-motion.js']) {
+  for (const name of ['research-scanner.css', 'site-motion.css', 'featured-posters.css', 'hero-scene.css', 'site-motion.js']) {
     const escaped = name.replaceAll('.', '\\.');
     stamped = stamped.replace(new RegExp(`((?:href|src)="${escaped})(?:\\?v=[a-f0-9]{12})?(")`, 'g'), `$1?v=${assetVersion}$2`);
   }
@@ -2576,6 +2578,7 @@ async function renderChineseHomepage() {
     ['href="site-motion.css', 'href="../site-motion.css', 'Chinese shared motion stylesheet path'],
     ['href="featured-posters.css', 'href="../featured-posters.css', 'Chinese poster stylesheet path'],
     ['href="hero-scene.css', 'href="../hero-scene.css', 'Chinese spatial hero stylesheet path'],
+    ['href="research-scanner.css', 'href="../research-scanner.css', 'Chinese scanner stylesheet path'],
     ['src="site-motion.js', 'src="../site-motion.js', 'Chinese shared motion module path'],
     ['href="site-tokens.css', 'href="../site-tokens.css', 'Chinese shared tokens path'],
     ['src="homepage-bootstrap.js', 'src="../homepage-bootstrap.js', 'Chinese bootstrap path']
@@ -2813,6 +2816,8 @@ async function renderDraftPreviews(posts, renderer) {
   await fs.rm(previewRoot, { recursive: true, force: true });
   await fs.mkdir(previewRoot, { recursive: true });
   const scaffold = [
+    'research-scanner.js',
+    'research-scanner.css',
     '404.html',
     'site-tokens.css',
     'content.css',

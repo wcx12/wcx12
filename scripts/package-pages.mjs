@@ -15,6 +15,8 @@ const publicFiles = [
   'index.html',
   'repo-map.js',
   'research-canvas.js',
+  'research-scanner.js',
+  'research-scanner.css',
   'topic-experiences.js',
   'topic-perception.js',
   'topic-perception.css',

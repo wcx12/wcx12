@@ -216,6 +216,7 @@ let repoMapFeature = null;
 let pendingResearchBinding = null;
 
 function initCustomCursor() {
+  if (document.getElementById('researchScanner')) return;
   if (!customCursor || !window.matchMedia('(pointer: fine) and (min-width: 720px)').matches) return;
 
   const hoverSelector = 'a, button, select, input, textarea, [role="button"], .pub-card, #interestCanvas';
@@ -1001,6 +1002,8 @@ function preferredScrollBehavior() {
 function activateView(viewId, options = {}) {
   const { focusHeading = false, historyMode = 'push', scroll = true, scrollFeature = false } = options;
   const resolvedViewId = VALID_VIEW_IDS.has(viewId) ? viewId : 'about';
+  const lab = document.getElementById('researchLab');
+  if (lab && (resolvedViewId !== 'about' || location.hash)) lab.open = true;
   const generation = ++activationGeneration;
   document.querySelectorAll('.site-nav-link[data-site-section]').forEach(link => {
     if (link.dataset.siteSection === resolvedViewId) link.setAttribute('aria-current', 'location');

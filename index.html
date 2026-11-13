@@ -42,13 +42,14 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <script src="theme-init.js?v=edf77c743038"></script>
-  <link rel="stylesheet" href="site-tokens.css?v=edf77c743038" />
-  <link rel="stylesheet" href="styles.css?v=edf77c743038" />
-  <link rel="stylesheet" href="site-nav.css?v=edf77c743038" />
-  <link rel="stylesheet" href="site-motion.css?v=edf77c743038" />
-  <link rel="stylesheet" href="featured-posters.css?v=edf77c743038" />
-  <link rel="stylesheet" href="hero-scene.css?v=edf77c743038" />
+  <script src="theme-init.js?v=b4bf098b3790"></script>
+  <link rel="stylesheet" href="site-tokens.css?v=b4bf098b3790" />
+  <link rel="stylesheet" href="styles.css?v=b4bf098b3790" />
+  <link rel="stylesheet" href="site-nav.css?v=b4bf098b3790" />
+  <link rel="stylesheet" href="site-motion.css?v=b4bf098b3790" />
+  <link rel="stylesheet" href="featured-posters.css?v=b4bf098b3790" />
+  <link rel="stylesheet" href="hero-scene.css?v=b4bf098b3790" />
+  <link rel="stylesheet" href="research-scanner.css?v=b4bf098b3790" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -168,7 +169,7 @@
         </div>
       </div>
 
-      <aside class="hero-preview-panel" aria-label="Research concept preview" data-i18n-aria="aria_hero_preview">
+      <aside class="hero-preview-panel" hidden aria-label="Research concept preview" data-i18n-aria="aria_hero_preview">
         <div class="hero-preview-head">
           <span class="panel-eyebrow" data-i18n="hero_preview_label">Research Concept</span>
           <span id="heroPreviewStatus" class="hero-preview-status" data-i18n="hero_preview_live">concept</span>
@@ -213,6 +214,8 @@
       </section>
     </noscript>
 
+    <section id="researchScanner" class="research-scanner" aria-label="Research representations"></section>
+
     <section class="selected-work" aria-labelledby="selected-work-title">
       <h2 id="selected-work-title" data-i18n="selected_work">Selected work</h2>
       <div class="selected-work-list">
@@ -256,6 +259,8 @@
       <a href="./publications/" data-i18n="btn_publications">Publications</a>
     </section>
 
+    <details id="researchLab" class="research-lab">
+      <summary><span data-lab-label>Interactive lab</span></summary>
     <section class="console" inert aria-label="Interactive portfolio tools" data-i18n-aria="aria_interactive_portfolio">
       <h2 class="tools-title" data-i18n="tools_title">Explore the work</h2>
       <nav class="command-row" aria-label="Interactive tools" data-i18n-aria="aria_interactive_tools">
@@ -492,6 +497,7 @@
         </div>
       </div>
     </section>
+    </details>
   </main>
 
   <div id="detailModal" class="modal" aria-hidden="true">
@@ -593,7 +599,7 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="site-motion.js?v=edf77c743038"></script>
-  <script type="module" src="homepage-bootstrap.js?v=edf77c743038"></script>
+  <script type="module" src="site-motion.js?v=b4bf098b3790"></script>
+  <script type="module" src="homepage-bootstrap.js?v=b4bf098b3790"></script>
 </body>
 </html>

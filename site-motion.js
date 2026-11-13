@@ -54,7 +54,11 @@ function transitionTheme(update, source) {
 }
 
 let homeEnhancements;
+let lastPreview;
 function preview(detail) {
+  lastPreview = detail;
+  const legacy = document.getElementById('legacyPreview');
+  if (legacy && !legacy.open) return;
   if (!homeEnhancements) {
     const url = new URL('./featured-posters.js', import.meta.url);
     url.search = new URL(import.meta.url).search;
@@ -63,6 +67,7 @@ function preview(detail) {
   homeEnhancements.then(module => module.enhanceHeroPreview(detail)).catch(() => {});
 }
 function attachCards(container) {
+  if (document.getElementById('researchScanner')) return;
   container.querySelectorAll('.interactive-card').forEach(card => {
     if (card.dataset.interactiveBound) return;
     card.dataset.interactiveBound = 'true';
@@ -83,6 +88,42 @@ function attachCards(container) {
   });
 }
 window.SiteMotion = { enabled, animate, transitionTheme, preview, attachCards };
+const scannerHost = document.getElementById('researchScanner');
+if (scannerHost) {
+  const cover = document.querySelector('[data-work-poster="vpr"] canvas');
+  if (cover) {
+    let paint;
+    const observer = new IntersectionObserver(async ([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      const url = new URL('./topic-perception.js', import.meta.url);
+      url.search = new URL(import.meta.url).search;
+      try {
+        const module = await import(url.href);
+        paint = () => { module.paintPlacePreview(cover, { night: false, highlight: false }); cover.closest('[data-work-poster]').dataset.painted = 'true'; };
+        paint();
+        new ResizeObserver(paint).observe(cover);
+        new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+      } catch { /* The static cover and work link remain available. */ }
+    });
+    observer.observe(cover);
+  }
+  const lab = document.getElementById('researchLab');
+  const previous = document.querySelector('.hero-preview-panel');
+  if (lab && previous) {
+    const legacy = document.createElement('details');
+    legacy.id = 'legacyPreview';
+    const summary = document.createElement('summary');
+    summary.textContent = document.documentElement.lang.startsWith('zh') ? '主题概念预览' : 'Topic concept previews';
+    legacy.append(summary, previous);
+    previous.hidden = false;
+    lab.append(legacy);
+    legacy.addEventListener('toggle', () => { if (legacy.open && lastPreview) preview(lastPreview); });
+  }
+  const url = new URL('./research-scanner.js', import.meta.url);
+  url.search = new URL(import.meta.url).search;
+  import(url.href).then(module => module.mountResearchScanner(scannerHost)).catch(() => { scannerHost.hidden = true; });
+}
 syncMotion();
 reduced.addEventListener('change', syncMotion);
 document.addEventListener('visibilitychange', syncMotion);

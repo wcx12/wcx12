@@ -196,6 +196,8 @@ async function expectedAssetVersion() {
     'hero-topic-art.js',
     'hero-editorial.js',
     'node_modules/three/build/three.core.js',
+    'research-scanner.js',
+    'research-scanner.css',
     'node_modules/three/build/three.module.js',
     'node_modules/esbuild/package.json',
     'theme-init.js',
