@@ -1,6 +1,20 @@
 import { test, expect } from '@playwright/test';
 import { createHash } from 'node:crypto';
 
+// These tests exercise retained, explicitly activated laboratory previews.
+test.beforeEach(async ({ page }) => {
+  const navigate = page.goto.bind(page);
+  page.goto = async (...args) => {
+    const response = await navigate(...args);
+    if (await page.locator('#researchLab').count()) {
+      await expect(page.locator('#legacyPreview')).toBeAttached();
+      if (!(await page.locator('#researchLab').getAttribute('open'))) await page.locator('#researchLab > summary').click();
+      await page.locator('#legacyPreview > summary').click();
+    }
+    return response;
+  };
+});
+
 async function pixelStats(page, png) {
   return page.evaluate(async data => {
     const image = new Image();
@@ -121,6 +135,9 @@ test('spatial hero is nonblank, responds to pointer and topic input, then settle
   await page.waitForTimeout(3500);
   expect(requests.some(url => url.includes('/assets/vendor/three/'))).toBe(false);
   const fallback = page.locator('#heroPreviewCanvas');
+  // Opening the disclosure leaves the pointer over its content after scrolling.
+  // Keep it outside the scene until the explicit hover activation below.
+  await page.mouse.move(20, 20);
   const still = hash(await fallback.screenshot());
   await page.waitForTimeout(400);
   expect(hash(await fallback.screenshot())).toBe(still);
@@ -179,8 +196,9 @@ test('homepage themes, widths and replay controls retain visible content', async
     await page.screenshot({ path: info.outputPath('home-' + theme + '-390.png'), fullPage: true });
   }
   const replay = page.locator('[data-work-poster="tokens"] button');
-  await replay.click();
-  await expect(replay).toHaveAccessibleName('重播预览');
+  await expect(replay).toBeHidden();
+  await expect(page.locator('[data-work-poster="tokens"]')).toBeVisible();
+  await expect(page.locator('.scanner-play')).toHaveAccessibleName('扫描一次');
   await page.locator('.selected-work h3 a').first().click();
   await expect(page.locator('h1')).toContainText('TF-VPR');
   expect(errors).toEqual([]);
@@ -215,6 +233,9 @@ test('reduced motion does not download WebGL and unavailable 3D leaves the homep
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.route('**/assets/vendor/three/**', route => route.abort());
   await page.reload();
+  await expect(page.locator('#legacyPreview')).toBeAttached();
+  await page.locator('#researchLab > summary').click();
+  await page.locator('#legacyPreview > summary').click();
   await expect(page.locator('#heroPreviewCanvas')).toBeVisible();
   await page.locator('[data-scene-interest="agent"]').click();
   await expect(page.locator('.hero-preview-title strong')).toContainText('Agent');
@@ -289,6 +310,7 @@ test('work navigation clears shared names on Back and saved motion-off stops smo
   await page.goBack();
   expect(await page.locator('.selected-work h3').evaluateAll(nodes => nodes.filter(node => node.style.viewTransitionName === 'work-heading').length)).toBeLessThanOrEqual(1);
   await page.locator('[data-motion-setting]').uncheck();
+  if (!(await page.locator('#researchLab').getAttribute('open'))) await page.locator('#researchLab > summary').click();
   await page.evaluate(() => {
     window.scrollOptions = [];
     const original = Element.prototype.scrollIntoView;

@@ -3,8 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { profileData } from '../../profile-data.js';
 
 const article = 'blog/posts/tiger-generative-retrieval-reading/';
+async function openResearchLab(page) {
+  const lab = page.locator('#researchLab');
+  if (await lab.getAttribute('open') === null) await lab.locator(':scope > summary').click();
+}
 async function home(page) {
   await page.goto('./');
+  await openResearchLab(page);
   await expect(page.locator('#openCommand')).toBeVisible();
 }
 async function menu(page) {
@@ -83,6 +88,7 @@ test('command input preserves IME and keyboard selection remains visible', async
   await expect(page.locator('#publications')).toBeVisible();
   for (const [route, queries] of [['./', [['Blog', 'writing'], ['Resume', 'profile']]], ['zh/', [['博客', 'writing'], ['履历', 'profile'], ['论文', 'publications']]]]) {
     await page.goto(route);
+    await openResearchLab(page);
     for (const [query, view] of queries) {
       await page.locator('#openCommand').click();
       await input.fill(query);
@@ -96,6 +102,7 @@ for (const dependency of ['script.js', 'site-data.js', 'homepage-i18n.js', 'scri
   test(`failed ${dependency} keeps static paths and recovery available`, async ({ page }) => {
     await page.route(`**/wcx12/${dependency}?*`, route => route.abort());
     await page.goto('zh/');
+    await openResearchLab(page);
     await expect(page.locator('.enhancement-error')).toBeVisible();
     await expect(page.locator('#openCommand')).not.toBeVisible();
     await page.locator('.enhancement-fallback a[href*="publications"]').click();

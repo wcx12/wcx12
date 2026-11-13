@@ -5,6 +5,8 @@ const topics = [
 ];
 async function explorer(page, path = './') {
   await page.goto(path);
+  const lab = page.locator('#researchLab');
+  if (await lab.getAttribute('open') === null) await lab.locator(':scope > summary').click();
   await page.locator('.command-row [data-view="research"]').click();
   await expect(page.locator('#interestDemoAction')).toBeEnabled();
 }

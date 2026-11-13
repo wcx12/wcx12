@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { createHash } from 'node:crypto';
 
+// Legacy subject scenes are now opt-in laboratory tools, not the homepage hero.
+test.beforeEach(async ({ page }) => {
+  const navigate = page.goto.bind(page);
+  page.goto = async (...args) => {
+    const response = await navigate(...args);
+    await expect(page.locator('#legacyPreview')).toBeAttached();
+    await page.locator('#researchLab > summary').click();
+    await page.locator('#legacyPreview > summary').click();
+    return response;
+  };
+});
+
 const topics = [
   ['vpr', 'vpr', '同一地标'],
   ['medical-image-analysis', 'medical', '标注'],

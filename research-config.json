@@ -98,6 +98,7 @@
             "zh": "智能体系统"
           },
           "animation": "agent",
+          "indexable": true,
           "description": {
             "en": "Agentic workflows with planning, tool use, retrieval, and evaluation loops.",
             "zh": "关注规划、工具调用、检索与评测闭环的大模型智能体工作流。"

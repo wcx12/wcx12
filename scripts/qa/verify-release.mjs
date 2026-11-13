@@ -16,7 +16,7 @@ const normalized = value => value.replace(/\r\n?/g, '\n');
 const report = { at: new Date().toISOString(), base: base.href,
   sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   files: [], pages: [], errors: [] };
-const routes = ['', 'zh/', 'research/vpr/', 'publications/tf-vpr/',
+const routes = ['', 'zh/', 'research/vpr/', 'research/agent/', 'zh/research/agent/', 'publications/tf-vpr/',
   'blog/posts/tiger-generative-retrieval-reading/', 'resume/'];
 const browser = await chromium.launch();
 report.engine = browser.version();
@@ -28,7 +28,7 @@ try {
     'site-motion.js', 'site-motion.css', 'featured-posters.js', 'featured-posters.css',
     'hero-scene.js', 'hero-scene.css', 'assets/vendor/three/three.module.min.js',
     'hero-topic-art.js',
-    'hero-editorial.js',
+    'hero-editorial.js', 'research-scanner.js', 'research-scanner.css', 'sitemap.xml',
     'script.js', 'site-data.js', 'blog/assets/blog.js', 'blog/assets/blog.css', '404.html'];
   for (const file of [...routes.map(route => `${route}index.html`), ...resources]) {
     const url = new URL(file, base);
@@ -55,13 +55,20 @@ try {
     assert.equal(row.status, route === 'missing-release-check/' ? 404 : 200);
     await expect(page.locator('h1')).toBeVisible();
     if (!route) {
+      await expect(page.locator('.scanner-stage')).toBeVisible();
+      await expect(page.locator('#researchLab')).not.toHaveAttribute('open', '');
+      await page.locator('#researchLab > summary').click();
       await expect(page.locator('#openCommand')).toBeVisible();
+      await page.locator('#researchLab > summary').click();
       await expect(page.locator('.selected-work a[href*="publications/tf-vpr"]')).toBeVisible();
+    }
+    if (route.endsWith('research/agent/')) {
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
     }
     if (route.includes('tiger-generative')) await expect(page.locator('.katex').first()).toBeVisible();
     if (route === 'missing-release-check/') {
       await page.locator('a[href="/wcx12/"]').first().click();
-      await expect(page.locator('#openCommand')).toBeVisible();
+      await expect(page.locator('.scanner-stage')).toBeVisible();
     }
     row.overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     assert.equal(row.overflow, false, route);
