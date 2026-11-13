@@ -1,5 +1,7 @@
 .hero-preview-panel[hidden]{display:none!important}
-.research-scanner:empty{display:none}
+.research-scanner{min-height:640px}
+.research-scanner[hidden]{display:none}
+@media(max-width:767px){.research-scanner{min-height:820px}}
 body:has(#researchScanner) .hero{grid-template-columns:1fr;min-height:0;padding-block:48px 32px}
 body:has(#researchScanner) .hero-copy{max-width:850px}
 body:has(#researchScanner) .quick-stats{display:none}
@@ -19,6 +21,7 @@ body:has(#researchScanner) .work-poster{pointer-events:none}
 .scanner-code,.scanner-document{position:absolute;inset:0;padding:30px 36px;box-sizing:border-box;overflow:hidden}
 .scanner-code{clip-path:inset(0 calc(100% - var(--cut)) 0 0);background:color-mix(in srgb,var(--scanner-accent) 4%,transparent)}
 .scanner-code pre{font:14px/1.8 monospace;color:var(--scanner-accent);white-space:pre-wrap;overflow-wrap:anywhere;margin-top:18px;max-width:650px}
+.scanner-code pre{max-height:calc(100% - 38px);overflow:auto;scrollbar-width:thin;scrollbar-color:var(--scanner-accent) transparent;cursor:text}
 .scanner-document{clip-path:inset(0 0 0 var(--cut));background:var(--panel);border-block:1px solid var(--line,#687277)}
 .scanner-document h3{font-size:30px;line-height:1.3;max-width:740px;margin:24px 0 16px;font-weight:500}
 .scanner-document p{font-size:17px;max-width:700px}

@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 test('scanner, simplified entry and legacy routes stay usable',async({page},info)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  for(const prefix of ['','zh/']){
@@ -27,6 +28,21 @@ test('scanner, simplified entry and legacy routes stay usable',async({page},info
  await expect(page.locator('#interestTitle')).toContainText('Agent');
  }
  expect(errors).toEqual([]);
+});
+
+test('structured records remain keyboard-readable and scanner accessibility checks pass',async({page})=>{
+ await page.goto('zh/');
+ await page.locator('.scanner-tabs button').filter({hasText:'major-intel'}).click();
+ await page.locator('.scanner-controls input').fill('100');
+ const code=page.locator('.scanner-code pre');await code.focus();await expect(code).toBeFocused();
+ await code.press('Control+End');
+ await expect(code).toContainText('private');
+ await expect.poll(()=>code.evaluate(e=>e.scrollTop+e.clientHeight>=e.scrollHeight-2)).toBe(true);
+ for(const theme of ['neon','warm','mono']){
+ await page.locator('#themeSelect').selectOption(theme);
+ const result=await new AxeBuilder({page}).include('#researchScanner').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+ expect(result.violations).toEqual([]);
+ }
 });
 
 test('scanner plays only on request and stops for reduced motion', async ({page}, info) => {

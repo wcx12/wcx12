@@ -151,12 +151,25 @@ See `docs/topic-experiences-20260926.md` for the redesign decisions and evidence
 
 ## Motion and visual previews
 
+The homepage's primary navigation uses the standalone section pages. Duplicate
+browser panels are retained in the default-collapsed `#researchLab`; legacy hash
+links open it. Subject previews are inside the additional `#legacyPreview`
+disclosure. Keep both disclosures native and preserve these deep links.
+
+`research-scanner.js/css` presents public work as readable material and structured
+records, with a reversible range/drag boundary and one opt-in six-second scan.
+It is illustrative, not live inference or measured compression. Preserve native
+keyboard controls, code-region scrolling, no-autoplay behavior and offscreen /
+reduced-motion cancellation. Its assets belong to the build fingerprint, preview
+scaffold and Pages allowlist. Homepage cursor tracking and poster replay are off;
+the place cover is painted once on demand and on resize/theme changes.
+
 `site-motion.js/css` owns finite transitions, motion preferences, navigation
 indicators and reading-position feedback. Its `SiteMotion` API is optional:
 failed enhancements must not block links, content or theme changes. The footer
 switch stores only `wcx12-motion`; an OS reduced-motion preference takes priority.
 
-The homepage loads `featured-posters.js` after its content initializes. This
+The lab loads `featured-posters.js` when its subject preview is opened. This
 module owns cover previews and the hero controller, keeping decoration out of
 the application module. `hero-scene.js/css` loads Three.js only when the hero is
 visible, motion is enabled, and a visitor activates 3D (button/keyboard, or a

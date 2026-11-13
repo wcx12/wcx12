@@ -4,6 +4,7 @@ import { staticPublications } from './site-data.js';
 export function mountResearchScanner(host) {
   const zh = document.documentElement.lang.startsWith('zh');
   const t = (en, cn) => zh ? cn : en;
+  host.setAttribute('aria-label', t('Research representations', '研究内容与结构化表示'));
   const paper = staticPublications.find(p => p.title.startsWith('TF-VPR'));
   const rows = [
     { label: 'TF-VPR', title: paper.title,
@@ -24,6 +25,9 @@ export function mountResearchScanner(host) {
   if (labLabel) labLabel.textContent = t('Interactive lab', '交互实验室');
   const stage = host.querySelector('.scanner-stage'), range = host.querySelector('input');
   const canvas = host.querySelector('canvas'), ctx = canvas.getContext('2d');
+  const code = host.querySelector('pre');
+  code.tabIndex = 0;
+  code.setAttribute('aria-label', t('Structured research record', '结构化研究记录'));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let progress = matchMedia('(max-width: 767px)').matches ? 0 : 48, frame = 0, start = 0, visible = false, dragging = false;
   const draw = () => {
@@ -46,7 +50,7 @@ export function mountResearchScanner(host) {
   const stop=()=>{cancelAnimationFrame(frame);frame=0;host.querySelector('.scanner-play').setAttribute('aria-pressed','false');};
   range.addEventListener('input',()=>{stop();progress=Number(range.value);draw();});
   const scrub=e=>{const r=stage.getBoundingClientRect();progress=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100));draw();};
-  stage.addEventListener('pointerdown',e=>{if(e.button!==0)return;stop();dragging=true;stage.setPointerCapture(e.pointerId);scrub(e);});
+  stage.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('pre'))return;stop();dragging=true;stage.setPointerCapture(e.pointerId);scrub(e);});
   stage.addEventListener('pointermove',e=>{if(dragging)scrub(e);});
   for(const event of ['pointerup','pointercancel','lostpointercapture'])stage.addEventListener(event,()=>{dragging=false;});
   const play=host.querySelector('.scanner-play');

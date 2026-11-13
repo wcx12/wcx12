@@ -2485,6 +2485,7 @@ function renderHomepageNoscript(language) {
       <style>
         .console,
         .hero-preview-panel,
+        #researchScanner,
         #themeSelect,
         #openCommand { display: none !important; }
         .hero { grid-template-columns: minmax(0, 1fr) !important; }
