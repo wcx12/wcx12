@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-// The scanner uses canonical public records; optional ORCID enrichment is tested
+// The scanner illustrates a query without executing it; optional ORCID enrichment is tested
 // separately with rate-limit and storage-failure fixtures in site.spec.mjs.
 test.beforeEach(async ({page}) => {
  await page.route('https://pub.orcid.org/**', route=>route.fulfill({headers:{'access-control-allow-origin':'*'},json:{group:[]}}));
@@ -11,9 +11,13 @@ test('scanner, simplified entry and legacy routes stay usable',async({page},info
  await page.goto(prefix||'./');await expect(page.locator('.scanner-stage')).toBeVisible();
  await expect(page.locator('#researchLab')).not.toHaveAttribute('open','');
  await expect(page.locator('.hero-preview-panel')).not.toBeVisible();
- for(const label of ['TF-VPR','major-intel','TIGER']){
+ const labels=prefix ? ['1. 问题','2. 查询 / 工具','3. 有据回答'] : ['1. Question','2. Query / tools','3. Source-backed response'];
+ for(const label of labels){
  await page.locator('.scanner-tabs button').filter({hasText:label}).click();
- await expect(page.locator('.scanner-code pre')).toContainText(label);
+ await expect(page.locator('.scanner-tabs button').filter({hasText:label})).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('.scanner-code pre')).toContainText(prefix ? /学校|输入/ : /University|university|inputs/);
+ await expect(page.locator('.scanner-disclaimer')).toContainText(prefix ? '私有数据库未运行' : 'Private database not running');
+ await expect(page.locator('.scanner-link')).toHaveAttribute('href',prefix ? '../zh/projects/#project-major-intel' : './projects/#project-major-intel');
  await page.locator('.scanner-controls input').fill('100');
  await expect(page.locator('.scanner-stage')).toHaveCSS('--cut','100%');
  await page.locator('.scanner-controls input').press('Home');
@@ -28,7 +32,7 @@ test('scanner, simplified entry and legacy routes stay usable',async({page},info
  await page.screenshot({path:info.outputPath(`${prefix?'zh':'en'}-${theme}-${width}.png`)});
  }
  }
- await page.locator('.scanner-link').click();await expect(page).toHaveURL(/research\/generative-retrieval\/$/);
+ await page.locator('.scanner-link').click();await expect(page).toHaveURL(/projects\/#project-major-intel$/);
  await page.goto(prefix+'#research/agent');await expect(page.locator('#researchLab')).toHaveAttribute('open','');
  await expect(page.locator('#interestTitle')).toContainText('Agent');
  await page.waitForLoadState('networkidle');
@@ -38,11 +42,11 @@ test('scanner, simplified entry and legacy routes stay usable',async({page},info
 
 test('structured records remain keyboard-readable and scanner accessibility checks pass',async({page})=>{
  await page.goto('zh/');
- await page.locator('.scanner-tabs button').filter({hasText:'major-intel'}).click();
+ await page.locator('.scanner-tabs button').filter({hasText:'2. 查询 / 工具'}).click();
  await page.locator('.scanner-controls input').fill('100');
  const code=page.locator('.scanner-code pre');await code.focus();await expect(code).toBeFocused();
  await code.press('Control+End');
- await expect(code).toContainText('private');
+ await expect(code).toContainText('私有数据库未运行');
  await expect.poll(()=>code.evaluate(e=>e.scrollTop+e.clientHeight>=e.scrollHeight-2)).toBe(true);
  await page.locator('.scanner-controls input').fill('0');
  await expect(code).toHaveAttribute('tabindex','-1');

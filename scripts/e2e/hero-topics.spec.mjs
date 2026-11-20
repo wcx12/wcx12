@@ -92,7 +92,8 @@ test('editorial content reflows with enlarged text and the two final triangles s
               }).map(el => el.className);
             });
             expect(outside, `${route} ${width} ${fontSize} ${id} ${stage}`).toEqual([]);
-            expect(await page.evaluate(() => document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+            const overflow = await page.evaluate(() => ({width: innerWidth, scroll: document.documentElement.scrollWidth, elements: [...document.querySelectorAll('body *')].filter(el => {const r=el.getBoundingClientRect();return r.width && r.right>innerWidth+1;}).map(el => ({tag:el.tagName, class:el.className, text:el.textContent.slice(0,70)})).slice(0,20)}));
+            expect(overflow.scroll<=overflow.width, JSON.stringify({route,width,fontSize,...overflow})).toBe(true);
           }
         }
       }
