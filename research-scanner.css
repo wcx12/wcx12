@@ -14,8 +14,8 @@ body:has(#researchScanner) .work-poster{pointer-events:none}
 .scanner-heading h2{font-size:28px;line-height:1.35;margin:8px 0 0}
 .scanner-heading p{font-size:14px;max-width:300px}
 .scanner-eyebrow,.scanner-kind,.scanner-source{font:12px/1.6 monospace;letter-spacing:0}
-.scanner-tabs{display:flex;gap:24px;border-bottom:1px solid var(--line,#687277)}
-.scanner-tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:inherit;min-height:44px;padding:10px 0;cursor:pointer}
+.scanner-tabs{display:flex;flex-wrap:wrap;gap:8px 24px;border-bottom:1px solid var(--line,#687277)}
+.scanner-tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:inherit;min-height:44px;max-width:100%;white-space:normal;overflow-wrap:anywhere;padding:10px 0;cursor:pointer}
 .scanner-tabs button[aria-pressed="true"]{border-bottom-color:var(--scanner-accent);color:var(--scanner-accent)}
 .scanner-stage{position:relative;height:360px;isolation:isolate;overflow:clip;touch-action:pan-y;cursor:ew-resize;--cut:48%;margin-top:24px}
 .scanner-code,.scanner-document{position:absolute;inset:0;padding:30px 36px;box-sizing:border-box;overflow:hidden}
@@ -36,7 +36,7 @@ body:has(#researchScanner) .work-poster{pointer-events:none}
 .scanner-controls label{display:flex;align-items:center;gap:18px;flex:1;font-size:13px;min-width:0}
 .scanner-controls label span{white-space:nowrap}
 .scanner-controls input{width:100%;max-width:400px;min-width:60px;accent-color:var(--scanner-accent);height:44px}
-.scanner-link{min-height:44px;display:flex;align-items:center;white-space:nowrap;color:var(--scanner-accent)}
+.scanner-link{min-height:44px;min-width:0;display:flex;align-items:center;white-space:normal;overflow-wrap:anywhere;color:var(--scanner-accent)}
 .scanner-disclaimer{font-size:12px;line-height:1.6;margin-top:12px}
 .research-lab{width:100%;max-width:1200px;margin:24px auto 60px;border-block:1px solid var(--line,#687277)}
 @media(min-width:768px){.scanner-document h3,.scanner-document p,.scanner-kind,.scanner-source{display:block;margin-left:52%}.scanner-document h3{font-size:26px;margin-top:18px}.scanner-paper-mark{left:12%;right:auto;top:90px;font-size:120px;opacity:.25}.scanner-code pre{max-width:46%;font-size:13px;line-height:1.65}}
