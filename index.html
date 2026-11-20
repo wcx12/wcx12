@@ -42,14 +42,14 @@
   <meta name="twitter:description" content="Research portfolio of Chenxu Wang (wcx12), covering point-cloud registration, visual place recognition, medical image analysis, LLM agents, and AI for Education." />
   <meta name="twitter:image" content="https://wcx12.github.io/wcx12/assets/og-home.png" />
   <meta name="twitter:image:alt" content="wcx12 machine learning research portfolio" />
-  <script src="theme-init.js?v=7bafc250776c"></script>
-  <link rel="stylesheet" href="site-tokens.css?v=7bafc250776c" />
-  <link rel="stylesheet" href="styles.css?v=7bafc250776c" />
-  <link rel="stylesheet" href="site-nav.css?v=7bafc250776c" />
-  <link rel="stylesheet" href="site-motion.css?v=7bafc250776c" />
-  <link rel="stylesheet" href="featured-posters.css?v=7bafc250776c" />
-  <link rel="stylesheet" href="hero-scene.css?v=7bafc250776c" />
-  <link rel="stylesheet" href="research-scanner.css?v=7bafc250776c" />
+  <script src="theme-init.js?v=d4af8bff2e15"></script>
+  <link rel="stylesheet" href="site-tokens.css?v=d4af8bff2e15" />
+  <link rel="stylesheet" href="styles.css?v=d4af8bff2e15" />
+  <link rel="stylesheet" href="site-nav.css?v=d4af8bff2e15" />
+  <link rel="stylesheet" href="site-motion.css?v=d4af8bff2e15" />
+  <link rel="stylesheet" href="featured-posters.css?v=d4af8bff2e15" />
+  <link rel="stylesheet" href="hero-scene.css?v=d4af8bff2e15" />
+  <link rel="stylesheet" href="research-scanner.css?v=d4af8bff2e15" />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -215,7 +215,6 @@
       </section>
     </noscript>
 
-    <section id="researchScanner" class="research-scanner" aria-label="Research representations"></section>
 
     <section class="selected-work" aria-labelledby="selected-work-title">
       <h2 id="selected-work-title" data-i18n="selected_work">Selected work</h2>
@@ -228,17 +227,17 @@
           </figure>
           <span data-i18n="selected_paper">Paper</span>
           <h3><a href="./publications/tf-vpr/">TF-VPR</a></h3>
-          <p data-i18n="selected_paper_desc">Recognizing places with frozen foundation models, without task-specific fine-tuning. Method, benchmark results, and official code.</p>
+          <p data-i18n="selected_paper_desc">Recognize places without task-specific fine-tuning. Frozen visual models, graph and prototype cross-attention form place descriptors. Paper, benchmarks and code available.</p>
           <p class="selected-work-evidence">Neurocomputing · 2026</p>
         </article>
         <article>
           <figure class="work-poster" data-work-poster="source">
-            <div class="poster-source" aria-hidden="true"><span data-poster-layer><b>01</b> function_calls / registry.py</span><span data-poster-layer><b>02</b> retrieval_tools.py</span><span data-poster-layer><b>03</b> source_tables + tool_trace</span><span class="source-gap" data-poster-layer><b>04</b> data_gaps</span></div>
-            <figcaption><span data-i18n="poster_source_caption">Public interface structure · not a live run</span><button type="button" data-i18n-aria="poster_replay" data-i18n-title="poster_replay" aria-label="Replay preview" title="Replay preview"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg></button></figcaption>
+            <div class="poster-source" aria-hidden="true"><span data-poster-layer data-i18n="project_step_question">01 Ask a question</span><span data-poster-layer data-i18n="project_step_query">02 Query the sources</span><span data-poster-layer data-i18n="project_step_compare">03 Compare the evidence</span><span class="source-gap" data-poster-layer data-i18n="project_step_gaps">04 Identify missing data</span></div>
+            <figcaption><span data-i18n="poster_source_caption">Question to evidence · workflow illustration</span><button type="button" data-i18n-aria="poster_replay" data-i18n-title="poster_replay" aria-label="Replay preview" title="Replay preview"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg></button></figcaption>
           </figure>
           <span data-i18n="selected_project">Engineering prototype</span>
           <h3><a href="./projects/#project-major-intel">major-intel</a></h3>
-          <p data-i18n="selected_project_desc">College-major research through SQL-backed agent tools. Public code and traces; core database remains private.</p>
+          <p data-i18n="selected_project_desc">Compare college majors using sources, not guesses. This SQL-backed agent prototype records queries and evidence gaps. Code is public; the database is private.</p>
         </article>
         <article>
           <figure class="work-poster" data-work-poster="tokens">
@@ -247,10 +246,12 @@
           </figure>
           <span data-i18n="selected_note">Reading notes</span>
           <h3><a href="./research/generative-retrieval/" data-i18n="selected_note_title">TIGER &amp; Semantic IDs</a></h3>
-          <p data-i18n="selected_note_desc">From residual quantization to generative recommendation.</p>
+          <p data-i18n="selected_note_desc">How do item descriptions become generatable IDs? Notes on TIGER, residual quantization and experimental evidence, with separate codebook experiments.</p>
         </article>
       </div>
     </section>
+
+    <section id="researchScanner" class="research-scanner" aria-label="Agent query walkthrough"></section>
 
     <section class="enhancement-fallback" aria-live="polite">
       <p class="enhancement-pending" data-i18n="enhancement_pending">Loading interactive tools.</p>
@@ -600,7 +601,7 @@
     <p data-i18n="footer">© 2026 wcx12</p>
   </footer>
 
-  <script type="module" src="site-motion.js?v=7bafc250776c"></script>
-  <script type="module" src="homepage-bootstrap.js?v=7bafc250776c"></script>
+  <script type="module" src="site-motion.js?v=d4af8bff2e15"></script>
+  <script type="module" src="homepage-bootstrap.js?v=d4af8bff2e15"></script>
 </body>
 </html>

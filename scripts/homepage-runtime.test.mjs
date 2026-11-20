@@ -106,7 +106,9 @@ test('homepage paints before loading its full interaction module and keeps visua
   ]);
   assert.ok(bootstrapBytes < 2 * 1024, `homepage bootstrap grew to ${bootstrapBytes} bytes`);
   assert.ok(appBytes < 152 * 1024, `homepage application grew to ${appBytes} bytes`);
-  assert.ok(translationBytes < 27 * 1024, `homepage translations grew to ${translationBytes} bytes`);
+  // Bilingual work summaries and four visitor-facing workflow labels replace terse metadata.
+  // Allow 1 KiB for that content while preserving the combined runtime budget below.
+  assert.ok(translationBytes < 28 * 1024, `homepage translations grew to ${translationBytes} bytes`);
   assert.ok(appBytes + translationBytes + schemaBytes < 190 * 1024, 'homepage runtime split increased total JavaScript unexpectedly');
 });
 

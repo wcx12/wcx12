@@ -30,6 +30,13 @@ import {
 
 // Importing the generator exposes pure renderers; these tests never build or write pages.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+test('representative work precedes the optional Agent walkthrough in both languages', async () => {
+  for (const file of ['index.html', 'zh/index.html']) {
+    const html = await fs.readFile(path.join(root, file), 'utf8');
+    assert.ok(html.indexOf('<section class="selected-work"') < html.indexOf('<section id="researchScanner"'));
+    for (const key of ['selected_paper_desc', 'selected_project_desc', 'selected_note_desc']) assert.ok(html.includes(key));
+  }
+});
 const { posts } = await loadPosts(root);
 const chineseWritingSystem = posts.find((post) => post.slug === 'building-a-research-writing-system-zh');
 const config = JSON.parse(await fs.readFile(path.join(root, 'research-config.json'), 'utf8'));
